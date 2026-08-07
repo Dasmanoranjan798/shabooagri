@@ -1,0 +1,278 @@
+import crypto from "node:crypto";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import type { User } from "@prisma/client";
+import { env } from "../../config/env";
+import { AppError } from "../../shared/errors/AppError";
+import * as authRepository from "./auth.repository";
+import type { AccessTokenPayload, AuthenticatedUser, RefreshTokenPayload } from "./auth.types";
+import type {
+  LogoutInput,
+  OtpRequestInput,
+  OtpVerifyInput,
+  PasswordLoginInput,
+  PinLoginInput,
+  RefreshInput,
+  RegisterInput,
+} from "./auth.validators";
+
+const BCRYPT_ROUNDS = 10;
+const OTP_EXPIRY_MINUTES = 5;
+const OTP_MAX_ATTEMPTS = 5;
+
+interface TokenPair {
+  accessToken: string;
+  refreshToken: string;
+}
+
+// jsonwebtoken accepts "15m" / "30d" style strings for signing but we also
+// need the equivalent Date to store alongside the refresh token row, so it
+// can be checked/expired without re-parsing the JWT. Only s/m/h/d are used
+// anywhere in this app's config, so that's all this supports.
+function addDuration(base: Date, duration: string): Date {
+  const match = /^(\d+)([smhd])$/.exec(duration);
+  if (!match) throw new Error(`Unsupported duration format: ${duration}`);
+  const value = Number(match[1]);
+  const unitMs = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 }[match[2] as "s" | "m" | "h" | "d"];
+  return new Date(base.getTime() + value * unitMs);
+}
+
+function hashRefreshToken(token: string): string {
+  // Deterministic (unlike bcrypt) on purpose: the DB needs to look a
+  // presented refresh token up by its hash. Safe without a per-token salt
+  // because the input is a high-entropy signed JWT, not a low-entropy
+  // secret like a password — there is nothing for a rainbow table to target.
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function generateOtpCode(): string {
+  return crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
+}
+
+function toPublicUser(user: User) {
+  const { passwordHash: _passwordHash, pinHash: _pinHash, ...publicUser } = user;
+  return publicUser;
+}
+
+async function issueTokenPair(user: User): Promise<TokenPair> {
+  const accessPayload: AccessTokenPayload = {
+    sub: user.id,
+    companyId: user.companyId,
+    roleId: user.roleId,
+    type: "access",
+  };
+  const accessToken = jwt.sign(accessPayload, env.JWT_ACCESS_SECRET, {
+    expiresIn: env.JWT_ACCESS_EXPIRES_IN,
+  } as jwt.SignOptions);
+
+  const refreshPayload: RefreshTokenPayload = {
+    sub: user.id,
+    companyId: user.companyId,
+    type: "refresh",
+  };
+  const refreshToken = jwt.sign(refreshPayload, env.JWT_REFRESH_SECRET, {
+    expiresIn: env.JWT_REFRESH_EXPIRES_IN,
+  } as jwt.SignOptions);
+
+  await authRepository.createRefreshToken({
+    userId: user.id,
+    tokenHash: hashRefreshToken(refreshToken),
+    expiresAt: addDuration(new Date(), env.JWT_REFRESH_EXPIRES_IN),
+  });
+
+  return { accessToken, refreshToken };
+}
+
+// §6: Owner creates Manager/Driver/Customer accounts. Phase 1 has no
+// Employees/Customers admin UI yet to do that through, so this endpoint is
+// the only way to create a user — which makes its own gate the only thing
+// standing between "single-tenant SaaS" and "anyone can mint themselves an
+// Owner account." Two rules, enforced in order:
+//   1. Zero users in the company yet → anonymous registration is allowed,
+//      and the new user is forced to Owner regardless of requested role —
+//      nobody exists yet who could have authorized anything else.
+//   2. At least one user already exists → the caller must be an
+//      authenticated Owner or Manager. This is a inline role check, not
+//      the RBAC module — RBAC (per-permission, custom roles) is deferred.
+const ROLES_ALLOWED_TO_REGISTER_USERS = ["owner", "manager"];
+
+export async function register(input: RegisterInput, requestingUser?: AuthenticatedUser) {
+  const company = await authRepository.findSingleTenantCompany();
+  const existingUserCount = await authRepository.countUsersInCompany(company.id);
+
+  let roleKey: string = input.roleKey;
+
+  if (existingUserCount === 0) {
+    roleKey = "owner";
+  } else {
+    if (!requestingUser) {
+      throw new AppError(401, "Authentication required to register additional users");
+    }
+    const requestingRole = await authRepository.findRoleById(requestingUser.roleId);
+    if (
+      !requestingRole ||
+      requestingRole.companyId !== company.id ||
+      !ROLES_ALLOWED_TO_REGISTER_USERS.includes(requestingRole.systemKey)
+    ) {
+      throw new AppError(403, "Only an Owner or Manager can register new users");
+    }
+  }
+
+  const role = await authRepository.findRoleByKey(company.id, roleKey);
+  if (!role) {
+    throw new AppError(400, `Unknown role: ${roleKey}`);
+  }
+
+  if (input.email || input.mobileNumber) {
+    const existing = await authRepository.findUserByIdentifier(company.id, input.email ?? input.mobileNumber!);
+    if (existing) {
+      throw new AppError(409, "A user with this email or mobile number already exists");
+    }
+  }
+
+  const user = await authRepository.createUser({
+    company: { connect: { id: company.id } },
+    role: { connect: { id: role.id } },
+    fullName: input.fullName,
+    email: input.email,
+    mobileNumber: input.mobileNumber,
+    passwordHash: input.password ? await bcrypt.hash(input.password, BCRYPT_ROUNDS) : undefined,
+    pinHash: input.pin ? await bcrypt.hash(input.pin, BCRYPT_ROUNDS) : undefined,
+  });
+
+  const tokens = await issueTokenPair(user);
+  return { user: toPublicUser(user), ...tokens };
+}
+
+export async function requestOtp(input: OtpRequestInput) {
+  const company = await authRepository.findSingleTenantCompany();
+  const user = await authRepository.findUserByIdentifier(company.id, input.identifier);
+  if (!user) {
+    throw new AppError(404, "No account found for this identifier");
+  }
+
+  const code = generateOtpCode();
+  await authRepository.createOtpCode({
+    identifier: input.identifier,
+    codeHash: await bcrypt.hash(code, BCRYPT_ROUNDS),
+    purpose: "LOGIN",
+    expiresAt: addDuration(new Date(), `${OTP_EXPIRY_MINUTES}m`),
+  });
+
+  // No SMS/email provider is wired up yet (OTP_SMS_PROVIDER_KEY /
+  // OTP_EMAIL_PROVIDER_KEY are placeholders — see backend/.env.example).
+  // Until one exists, the OTP is logged server-side, and echoed in the
+  // response outside production so it can actually be tested end-to-end.
+  console.log(`[dev-only] OTP for ${input.identifier}: ${code}`);
+  return {
+    message: "OTP sent",
+    devOtp: env.NODE_ENV !== "production" ? code : undefined,
+  };
+}
+
+export async function verifyOtpAndLogin(input: OtpVerifyInput) {
+  const otp = await authRepository.findActiveOtp(input.identifier, "LOGIN");
+  if (!otp) {
+    throw new AppError(400, "No active OTP for this identifier — request a new one");
+  }
+  if (otp.attemptCount >= OTP_MAX_ATTEMPTS) {
+    throw new AppError(429, "Too many incorrect attempts — request a new OTP");
+  }
+
+  const matches = await bcrypt.compare(input.code, otp.codeHash);
+  if (!matches) {
+    await authRepository.incrementOtpAttempt(otp.id);
+    throw new AppError(401, "Incorrect OTP code");
+  }
+  await authRepository.consumeOtp(otp.id);
+
+  const company = await authRepository.findSingleTenantCompany();
+  const user = await authRepository.findUserByIdentifier(company.id, input.identifier);
+  if (!user) {
+    throw new AppError(404, "No account found for this identifier");
+  }
+
+  const updatedUser = await authRepository.updateLastLogin(user.id);
+  const tokens = await issueTokenPair(updatedUser);
+  return { user: toPublicUser(updatedUser), ...tokens };
+}
+
+export async function loginWithPassword(input: PasswordLoginInput) {
+  const company = await authRepository.findSingleTenantCompany();
+  const user = await authRepository.findUserByIdentifier(company.id, input.identifier);
+  if (!user?.passwordHash) {
+    throw new AppError(401, "Invalid credentials");
+  }
+
+  const matches = await bcrypt.compare(input.password, user.passwordHash);
+  if (!matches) {
+    throw new AppError(401, "Invalid credentials");
+  }
+
+  const updatedUser = await authRepository.updateLastLogin(user.id);
+  const tokens = await issueTokenPair(updatedUser);
+  return { user: toPublicUser(updatedUser), ...tokens };
+}
+
+export async function loginWithPin(input: PinLoginInput) {
+  const company = await authRepository.findSingleTenantCompany();
+  const user = await authRepository.findUserByIdentifier(company.id, input.identifier);
+  if (!user?.pinHash) {
+    throw new AppError(401, "Invalid credentials");
+  }
+
+  const matches = await bcrypt.compare(input.pin, user.pinHash);
+  if (!matches) {
+    throw new AppError(401, "Invalid credentials");
+  }
+
+  const updatedUser = await authRepository.updateLastLogin(user.id);
+  const tokens = await issueTokenPair(updatedUser);
+  return { user: toPublicUser(updatedUser), ...tokens };
+}
+
+export async function refreshTokens(input: RefreshInput) {
+  let payload: RefreshTokenPayload;
+  try {
+    payload = jwt.verify(input.refreshToken, env.JWT_REFRESH_SECRET) as RefreshTokenPayload;
+  } catch {
+    throw new AppError(401, "Invalid or expired refresh token");
+  }
+  if (payload.type !== "refresh") {
+    throw new AppError(401, "Invalid token type");
+  }
+
+  const tokenHash = hashRefreshToken(input.refreshToken);
+  const stored = await authRepository.findValidRefreshTokenByHash(tokenHash);
+  if (!stored) {
+    throw new AppError(401, "Refresh token has been revoked or expired");
+  }
+
+  const user = await authRepository.findUserById(payload.sub);
+  if (!user) {
+    throw new AppError(401, "User no longer exists");
+  }
+
+  // Rotation: the presented refresh token is single-use. Revoking it here
+  // means a leaked-but-already-used token cannot be replayed.
+  await authRepository.revokeRefreshToken(stored.id);
+  const tokens = await issueTokenPair(user);
+  return { user: toPublicUser(user), ...tokens };
+}
+
+export async function logout(input: LogoutInput) {
+  const tokenHash = hashRefreshToken(input.refreshToken);
+  const stored = await authRepository.findValidRefreshTokenByHash(tokenHash);
+  if (stored) {
+    await authRepository.revokeRefreshToken(stored.id);
+  }
+  return { message: "Logged out" };
+}
+
+export async function getProfile(userId: string) {
+  const user = await authRepository.findUserById(userId);
+  if (!user) {
+    throw new AppError(404, "User not found");
+  }
+  return toPublicUser(user);
+}
