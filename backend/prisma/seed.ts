@@ -37,6 +37,11 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     "job.update_status",
     "payment.receive",
     "report.generate",
+    // Auth's registration bootstrap rule (approved separately) allows both
+    // Owner and Manager to register new users once the company has one —
+    // this is what that rule now checks via RBAC instead of a hardcoded
+    // role-key comparison.
+    "user.manage",
   ],
   driver: ["job.update_status"],
   farmer: [],

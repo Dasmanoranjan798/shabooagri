@@ -18,10 +18,6 @@ export function findRoleByKey(companyId: string, systemKey: string) {
   });
 }
 
-export function findRoleById(id: string) {
-  return prisma.role.findUnique({ where: { id } });
-}
-
 export function countUsersInCompany(companyId: string) {
   return prisma.user.count({ where: { companyId } });
 }

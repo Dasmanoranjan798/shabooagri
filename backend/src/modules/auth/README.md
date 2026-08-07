@@ -7,7 +7,9 @@ JWTs every other module relies on to know who is calling. Per §5, three
 login methods ship in Phase 1: Email/Mobile + OTP, Email + Password, and
 PIN (for quick driver/field access). This module answers "who are you,"
 never "what are you allowed to do" — permission checks belong to the RBAC
-module, which is not built yet.
+module (`modules/rbac/`), which `auth.service.register` now calls for its
+one internal permission check (see below) rather than duplicating any
+role logic itself.
 
 ## Architecture
 
@@ -57,16 +59,18 @@ validate `role_id` when creating a user.
   / `OTP_EMAIL_PROVIDER_KEY` in `.env.example` are placeholders), so this
   is the only way to test the OTP flow today.
 - `POST /auth/register` is gated by company bootstrap state, not a fixed
-  auth requirement (§6 "Owner creates Manager/Driver/Customer accounts",
-  applied without waiting for the full RBAC module):
+  auth requirement (§6 "Owner creates Manager/Driver/Customer accounts"):
   - If the company currently has **zero** users, registration is anonymous
     and the new user is **forced to Owner** regardless of the `roleKey`
     requested — there is no one yet who could authorize any other role.
   - If the company already has at least one user, the caller must present
-    a valid access token belonging to an Owner or Manager (checked via
-    `auth.middleware.ts`'s `optionalAuthMiddleware` + an inline role
-    lookup in `auth.service.register`), or the request is rejected before
-    a role is even resolved.
+    a valid access token (via `optionalAuthMiddleware`) and hold the
+    `user.manage` permission, checked through `rbac.service.userHasPermission`
+    — the same function `requirePermission` uses for route-level gating
+    elsewhere. This used to be a hardcoded "role is Owner or Manager"
+    comparison inline in this module; it was replaced once the RBAC module
+    existed so there is exactly one place permissions are decided, not two
+    that could drift apart. See `modules/rbac/README.md`.
   - This closes the anonymous-signup hole from the first version of this
     module — self-registration as Owner/Manager/anything is no longer
     possible once an Owner exists.
@@ -86,8 +90,9 @@ validate `role_id` when creating a user.
 
 ## Permissions required
 
-None enforced yet — RBAC is a separate, not-yet-built module. `/auth/me`
-only requires a *valid* token, not any particular permission.
+`POST /auth/register` requires `user.manage` once the company has any
+users (see above). Every other endpoint, including `/auth/me`, requires
+only a *valid* token — no specific permission.
 
 ## Configuration
 
@@ -102,9 +107,11 @@ only requires a *valid* token, not any particular permission.
   Phase 2 adds multi-company support — everything else already takes a
   `companyId` parameter.
 - The 4 system roles and their permission set (`prisma/seed.ts`) are seed
-  data required to satisfy `users.role_id`'s foreign key, matching the §6
-  table exactly. This is **not** the RBAC module — there is no role/permission
-  management API, and `auth.middleware.ts` does not check permissions at all.
+  data required to satisfy `users.role_id`'s foreign key, enforced by the
+  RBAC module (`modules/rbac/`) — see its README for the full permission
+  table, including why Manager holds `user.manage`. There is still no
+  role/permission *management* API (Phase 2); `auth.middleware.ts` itself
+  still only authenticates and does not check permissions.
 - `users.email` / `users.mobileNumber` are unique per company, not globally,
   so the same email could exist under a different company once Phase 2
   multi-tenancy ships.
@@ -153,6 +160,23 @@ Bootstrap-gate round (after the fix above, starting from zero users again):
     that Manager's own token then creates a Farmer → 201 — confirms
     Manager, not just Owner, can register users per the stated rule.
 
+RBAC-rewire round (after replacing the hardcoded role check with
+`rbac.service.userHasPermission(roleId, "user.manage")`, starting from
+zero users again, to confirm behavior didn't change):
+
+25. Bootstrap: first registration, no token, `roleKey: "driver"` → 201,
+    role in the database is still **Owner**.
+26. Second registration, no token → still 401.
+27. Owner's token creates a Driver → still 201.
+28. That Driver's own token attempting to register anyone → now 403 with
+    `"Missing required permission: user.manage"` (message changed to
+    reflect the permission check; the rejection itself is unchanged).
+29. Owner creates a Manager, and that Manager's token creates a Farmer →
+    both still 201 — confirms Manager keeps registration rights now that
+    it comes from the seeded `user.manage` permission instead of a
+    hardcoded role-key comparison.
+
 All synthetic test users, refresh tokens, and OTP codes created during
-both rounds of testing were deleted from `shabooagri_db` afterward; the
-pilot company was left with its seeded roles/permissions and zero users.
+all three rounds of testing were deleted from `shabooagri_db` afterward;
+the pilot company was left with its seeded roles/permissions and zero
+users.

@@ -5,6 +5,7 @@ import type { User } from "@prisma/client";
 import { env } from "../../config/env";
 import { AppError } from "../../shared/errors/AppError";
 import * as authRepository from "./auth.repository";
+import * as rbacService from "../rbac/rbac.service";
 import type { AccessTokenPayload, AuthenticatedUser, RefreshTokenPayload } from "./auth.types";
 import type {
   LogoutInput,
@@ -91,10 +92,12 @@ async function issueTokenPair(user: User): Promise<TokenPair> {
 //   1. Zero users in the company yet → anonymous registration is allowed,
 //      and the new user is forced to Owner regardless of requested role —
 //      nobody exists yet who could have authorized anything else.
-//   2. At least one user already exists → the caller must be an
-//      authenticated Owner or Manager. This is a inline role check, not
-//      the RBAC module — RBAC (per-permission, custom roles) is deferred.
-const ROLES_ALLOWED_TO_REGISTER_USERS = ["owner", "manager"];
+//   2. At least one user already exists → the caller must be authenticated
+//      and hold the 'user.manage' permission, checked through rbac.service
+//      (seeded onto Owner and Manager — see prisma/seed.ts) so this and
+//      requirePermission() share one source of truth instead of each
+//      module hardcoding its own role-name comparison.
+const REGISTER_USER_PERMISSION = "user.manage";
 
 export async function register(input: RegisterInput, requestingUser?: AuthenticatedUser) {
   const company = await authRepository.findSingleTenantCompany();
@@ -108,13 +111,9 @@ export async function register(input: RegisterInput, requestingUser?: Authentica
     if (!requestingUser) {
       throw new AppError(401, "Authentication required to register additional users");
     }
-    const requestingRole = await authRepository.findRoleById(requestingUser.roleId);
-    if (
-      !requestingRole ||
-      requestingRole.companyId !== company.id ||
-      !ROLES_ALLOWED_TO_REGISTER_USERS.includes(requestingRole.systemKey)
-    ) {
-      throw new AppError(403, "Only an Owner or Manager can register new users");
+    const allowed = await rbacService.userHasPermission(requestingUser.roleId, REGISTER_USER_PERMISSION);
+    if (!allowed) {
+      throw new AppError(403, `Missing required permission: ${REGISTER_USER_PERMISSION}`);
     }
   }
 
