@@ -1,0 +1,660 @@
+// ShabooAgri Phase 1 schema — approved proposal, 2026-08-07.
+// Every tenant-scoped model carries companyId so Phase 2 multi-tenant admin
+// requires no schema rework (see docs/ShabooAgri_Goal_Specification.md §2/§9/§10).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums (fixed workflow/system states — not business-configurable terminology) ----------
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  ON_JOB
+  OFF_DUTY
+}
+
+enum FuelType {
+  DIESEL
+  PETROL
+  ELECTRIC
+  OTHER
+}
+
+enum MachineStatus {
+  WORKING
+  AVAILABLE
+  REPAIR
+  OFFLINE
+}
+
+enum BookingStatus {
+  PENDING
+  ACCEPTED
+  ON_THE_WAY
+  WORKING
+  COMPLETED
+  CANCELLED
+}
+
+enum JobStatus {
+  NOT_STARTED
+  WORKING
+  PAUSED
+  COMPLETED
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  BANK_TRANSFER
+  CREDIT
+}
+
+enum OtpPurpose {
+  LOGIN
+  VERIFY
+  RESET
+}
+
+// ---------- Tenancy, terminology (§9), white-label (§10) ----------
+
+model Company {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  slug          String   @unique
+  logoUrl       String?  @map("logo_url")
+  themeColor    String?  @default("#1B7A3E") @map("theme_color")
+  accentColor   String?  @map("accent_color")
+  currency      String   @default("INR")
+  timezone      String   @default("Asia/Kolkata")
+  language      String   @default("en")
+  invoicePrefix String?  @default("INV") @map("invoice_prefix")
+  printLayout   Json?    @map("print_layout")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  terminologySettings  TerminologySetting[]
+  roles                Role[]
+  users                User[]
+  customers            Customer[]
+  employees            Employee[]
+  drivers              Driver[]
+  villages             Village[]
+  machineTypes         MachineType[]
+  machines             Machine[]
+  pricingMethods       PricingMethod[]
+  bookings             Booking[]
+  bookingAttachments   BookingAttachment[]
+  jobs                 Job[]
+  jobStatusLogs        JobStatusLog[]
+  jobPhotos            JobPhoto[]
+  jobFuelEntries       JobFuelEntry[]
+  maintenanceSchedules MaintenanceSchedule[]
+  maintenanceRecords   MaintenanceRecord[]
+  expenseCategories    ExpenseCategory[]
+  expenses             Expense[]
+  invoices             Invoice[]
+  payments             Payment[]
+  auditLogs            AuditLog[]
+
+  @@map("companies")
+}
+
+model TerminologySetting {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId            String   @map("company_id") @db.Uuid
+  termKey              String   @map("term_key") // 'customer' | 'driver' | 'machine' | 'booking' | 'invoice'
+  displayLabelSingular String   @map("display_label_singular")
+  displayLabelPlural   String   @map("display_label_plural")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, termKey])
+  @@map("terminology_settings")
+}
+
+// ---------- RBAC (§6) — enforced from stored data in Phase 1, no admin UI yet ----------
+
+model Role {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId    String   @map("company_id") @db.Uuid
+  systemKey    String   @map("system_key") // 'owner' | 'manager' | 'driver' | 'farmer'
+  name         String
+  isSystemRole Boolean  @default(true) @map("is_system_role")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  company         Company          @relation(fields: [companyId], references: [id])
+  users           User[]
+  rolePermissions RolePermission[]
+
+  @@unique([companyId, systemKey])
+  @@map("roles")
+}
+
+model Permission {
+  id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key         String @unique // e.g. 'booking.create', 'payment.receive'
+  description String
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ---------- Users, Customers, Employees, Drivers ----------
+
+model User {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId    String     @map("company_id") @db.Uuid
+  roleId       String     @map("role_id") @db.Uuid
+  fullName     String     @map("full_name")
+  email        String?
+  mobileNumber String?    @map("mobile_number")
+  passwordHash String?    @map("password_hash")
+  pinHash      String?    @map("pin_hash")
+  status       UserStatus @default(ACTIVE)
+  lastLoginAt  DateTime?  @map("last_login_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+  role    Role    @relation(fields: [roleId], references: [id])
+
+  customerProfile Customer?
+  employeeProfile Employee?
+  refreshTokens   RefreshToken[]
+  auditLogs       AuditLog[]
+
+  managedBookings     Booking[]           @relation("BookingManager")
+  createdBookings     Booking[]           @relation("BookingCreatedBy")
+  uploadedAttachments BookingAttachment[]
+  jobStatusChanges    JobStatusLog[]
+  uploadedJobPhotos   JobPhoto[]
+  recordedFuelEntries JobFuelEntry[]
+  recordedExpenses    Expense[]
+  receivedPayments    Payment[]
+
+  @@unique([companyId, email])
+  @@unique([companyId, mobileNumber])
+  @@map("users")
+}
+
+model Customer {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  userId    String?  @unique @map("user_id") @db.Uuid
+  name      String
+  villageId String   @map("village_id") @db.Uuid
+  phone     String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company  Company   @relation(fields: [companyId], references: [id])
+  user     User?     @relation(fields: [userId], references: [id])
+  village  Village   @relation(fields: [villageId], references: [id])
+  bookings Booking[]
+  invoices Invoice[]
+
+  @@map("customers")
+}
+
+model Employee {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId        String           @map("company_id") @db.Uuid
+  userId           String?          @unique @map("user_id") @db.Uuid
+  name             String
+  phone            String?
+  roleTitle        String?          @map("role_title")
+  employmentStatus EmploymentStatus @default(ACTIVE) @map("employment_status")
+  joinedDate       DateTime?        @map("joined_date") @db.Date
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id])
+  driver  Driver?
+
+  @@map("employees")
+}
+
+model Driver {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId          String             @map("company_id") @db.Uuid
+  employeeId         String             @unique @map("employee_id") @db.Uuid
+  licenseNumber      String?            @map("license_number")
+  licenseExpiryDate  DateTime?          @map("license_expiry_date") @db.Date
+  availabilityStatus AvailabilityStatus @default(AVAILABLE) @map("availability_status")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  company          Company   @relation(fields: [companyId], references: [id])
+  employee         Employee  @relation(fields: [employeeId], references: [id])
+  assignedMachines Machine[] @relation("MachineAssignedDriver")
+  bookings         Booking[]
+  jobs             Job[]
+
+  @@map("drivers")
+}
+
+model Village {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String @map("company_id") @db.Uuid
+  name      String
+
+  company   Company    @relation(fields: [companyId], references: [id])
+  customers Customer[]
+  bookings  Booking[]
+
+  @@unique([companyId, name])
+  @@map("villages")
+}
+
+// ---------- Machines (§8.3) ----------
+
+model MachineType {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String @map("company_id") @db.Uuid
+  name      String
+
+  company  Company   @relation(fields: [companyId], references: [id])
+  machines Machine[]
+
+  @@unique([companyId, name])
+  @@map("machine_types")
+}
+
+model Machine {
+  id                   String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId            String        @map("company_id") @db.Uuid
+  machineTypeId        String        @map("machine_type_id") @db.Uuid
+  registrationNumber   String        @map("registration_number")
+  brand                String?
+  model                String?
+  purchaseYear         Int?          @map("purchase_year")
+  fuelType             FuelType      @default(DIESEL) @map("fuel_type")
+  status               MachineStatus @default(AVAILABLE)
+  hourMeterReading     Decimal       @default(0) @map("hour_meter_reading") @db.Decimal(10, 2)
+  insuranceNumber      String?       @map("insurance_number")
+  insuranceExpiryDate  DateTime?     @map("insurance_expiry_date") @db.Date
+  assignedDriverId     String?       @map("assigned_driver_id") @db.Uuid
+  nextServiceDueHours  Decimal?      @map("next_service_due_hours") @db.Decimal(10, 2)
+  lastServiceDate      DateTime?     @map("last_service_date") @db.Date
+  lastServiceHourMeter Decimal?      @map("last_service_hour_meter") @db.Decimal(10, 2)
+  photoUrl             String?       @map("photo_url")
+  isActive             Boolean       @default(true) @map("is_active")
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+
+  company        Company     @relation(fields: [companyId], references: [id])
+  machineType    MachineType @relation(fields: [machineTypeId], references: [id])
+  assignedDriver Driver?     @relation("MachineAssignedDriver", fields: [assignedDriverId], references: [id])
+
+  bookings             Booking[]
+  jobs                 Job[]
+  jobFuelEntries       JobFuelEntry[]
+  maintenanceSchedules MaintenanceSchedule[]
+  maintenanceRecords   MaintenanceRecord[]
+  expenses             Expense[]
+
+  @@unique([companyId, registrationNumber])
+  @@map("machines")
+}
+
+// ---------- Pricing engine (§8.2) — data-driven, new methods are inserts, not code changes ----------
+
+model PricingMethod {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String  @map("company_id") @db.Uuid
+  key       String // per_hour | per_minute | per_acre | per_job | minimum_charge | custom
+  label     String
+  unit      String? // hour | minute | acre | null (fixed/custom)
+  isActive  Boolean @default(true) @map("is_active")
+
+  company  Company   @relation(fields: [companyId], references: [id])
+  bookings Booking[]
+
+  @@unique([companyId, key])
+  @@map("pricing_methods")
+}
+
+// ---------- Bookings (§8.1) & Jobs (§8.4) — deliberately separate tables, see §7 ----------
+
+model Booking {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId       String        @map("company_id") @db.Uuid
+  bookingNumber   String        @map("booking_number")
+  customerId      String        @map("customer_id") @db.Uuid
+  villageId       String        @map("village_id") @db.Uuid
+  location        String?
+  machineId       String?       @map("machine_id") @db.Uuid
+  driverId        String?       @map("driver_id") @db.Uuid
+  managerId       String        @map("manager_id") @db.Uuid
+  scheduledDate   DateTime      @map("scheduled_date") @db.Date
+  scheduledTime   DateTime?     @map("scheduled_time") @db.Time
+  estimatedHours  Decimal?      @map("estimated_hours") @db.Decimal(6, 2)
+  estimatedAcres  Decimal?      @map("estimated_acres") @db.Decimal(8, 2)
+  pricingMethodId String        @map("pricing_method_id") @db.Uuid
+  rate            Decimal       @db.Decimal(10, 2)
+  status          BookingStatus @default(PENDING)
+  notes           String?
+  createdBy       String        @map("created_by") @db.Uuid
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  company       Company       @relation(fields: [companyId], references: [id])
+  customer      Customer      @relation(fields: [customerId], references: [id])
+  village       Village       @relation(fields: [villageId], references: [id])
+  machine       Machine?      @relation(fields: [machineId], references: [id])
+  driver        Driver?       @relation(fields: [driverId], references: [id])
+  manager       User          @relation("BookingManager", fields: [managerId], references: [id])
+  creator       User          @relation("BookingCreatedBy", fields: [createdBy], references: [id])
+  pricingMethod PricingMethod @relation(fields: [pricingMethodId], references: [id])
+
+  attachments BookingAttachment[]
+  job         Job?
+  invoice     Invoice?
+
+  @@unique([companyId, bookingNumber])
+  @@index([companyId, status])
+  @@map("bookings")
+}
+
+model BookingAttachment {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  bookingId  String   @map("booking_id") @db.Uuid
+  fileUrl    String   @map("file_url")
+  uploadedBy String   @map("uploaded_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  company  Company @relation(fields: [companyId], references: [id])
+  booking  Booking @relation(fields: [bookingId], references: [id])
+  uploader User    @relation(fields: [uploadedBy], references: [id])
+
+  @@map("booking_attachments")
+}
+
+model Job {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId              String    @map("company_id") @db.Uuid
+  bookingId              String    @unique @map("booking_id") @db.Uuid
+  machineId              String    @map("machine_id") @db.Uuid
+  driverId               String    @map("driver_id") @db.Uuid
+  status                 JobStatus @default(NOT_STARTED)
+  startTime              DateTime? @map("start_time")
+  endTime                DateTime? @map("end_time")
+  totalPausedDurationSec Int       @default(0) @map("total_paused_duration_sec")
+  actualHours            Decimal?  @map("actual_hours") @db.Decimal(6, 2)
+  completedAcres         Decimal?  @map("completed_acres") @db.Decimal(8, 2)
+  fuelUsedLitres         Decimal?  @map("fuel_used_litres") @db.Decimal(8, 2)
+  notes                  String?
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+  booking Booking @relation(fields: [bookingId], references: [id])
+  machine Machine @relation(fields: [machineId], references: [id])
+  driver  Driver  @relation(fields: [driverId], references: [id])
+
+  statusLogs  JobStatusLog[]
+  photos      JobPhoto[]
+  fuelEntries JobFuelEntry[]
+
+  @@index([companyId, status])
+  @@map("jobs")
+}
+
+model JobStatusLog {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String    @map("company_id") @db.Uuid
+  jobId     String    @map("job_id") @db.Uuid
+  status    JobStatus
+  changedBy String    @map("changed_by") @db.Uuid
+  changedAt DateTime  @default(now()) @map("changed_at")
+  note      String?
+
+  company       Company @relation(fields: [companyId], references: [id])
+  job           Job     @relation(fields: [jobId], references: [id])
+  changedByUser User    @relation(fields: [changedBy], references: [id])
+
+  @@map("job_status_log")
+}
+
+model JobPhoto {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  jobId      String   @map("job_id") @db.Uuid
+  fileUrl    String   @map("file_url")
+  caption    String?
+  uploadedBy String   @map("uploaded_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  company  Company @relation(fields: [companyId], references: [id])
+  job      Job     @relation(fields: [jobId], references: [id])
+  uploader User    @relation(fields: [uploadedBy], references: [id])
+
+  @@map("job_photos")
+}
+
+// ---------- Fuel, Maintenance, Expenses (§4 modules) ----------
+
+model JobFuelEntry {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  jobId      String   @map("job_id") @db.Uuid
+  machineId  String   @map("machine_id") @db.Uuid
+  litres     Decimal  @db.Decimal(8, 2)
+  cost       Decimal? @db.Decimal(10, 2)
+  recordedBy String   @map("recorded_by") @db.Uuid
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  company  Company @relation(fields: [companyId], references: [id])
+  job      Job     @relation(fields: [jobId], references: [id])
+  machine  Machine @relation(fields: [machineId], references: [id])
+  recorder User    @relation(fields: [recordedBy], references: [id])
+
+  @@map("job_fuel_entries")
+}
+
+model MaintenanceSchedule {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId     String   @map("company_id") @db.Uuid
+  machineId     String   @map("machine_id") @db.Uuid
+  intervalHours Decimal? @map("interval_hours") @db.Decimal(8, 2)
+  intervalDays  Int?     @map("interval_days")
+  description   String?
+  isActive      Boolean  @default(true) @map("is_active")
+
+  company Company             @relation(fields: [companyId], references: [id])
+  machine Machine             @relation(fields: [machineId], references: [id])
+  records MaintenanceRecord[]
+
+  @@map("maintenance_schedules")
+}
+
+model MaintenanceRecord {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId             String   @map("company_id") @db.Uuid
+  machineId             String   @map("machine_id") @db.Uuid
+  maintenanceScheduleId String?  @map("maintenance_schedule_id") @db.Uuid
+  serviceDate           DateTime @map("service_date") @db.Date
+  hourMeterAtService    Decimal? @map("hour_meter_at_service") @db.Decimal(10, 2)
+  description           String?
+  cost                  Decimal? @db.Decimal(10, 2)
+  performedBy           String?  @map("performed_by")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  company  Company              @relation(fields: [companyId], references: [id])
+  machine  Machine              @relation(fields: [machineId], references: [id])
+  schedule MaintenanceSchedule? @relation(fields: [maintenanceScheduleId], references: [id])
+
+  @@map("maintenance_records")
+}
+
+model ExpenseCategory {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String @map("company_id") @db.Uuid
+  name      String
+
+  company  Company   @relation(fields: [companyId], references: [id])
+  expenses Expense[]
+
+  @@unique([companyId, name])
+  @@map("expense_categories")
+}
+
+model Expense {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  categoryId  String   @map("category_id") @db.Uuid
+  machineId   String?  @map("machine_id") @db.Uuid
+  amount      Decimal  @db.Decimal(10, 2)
+  description String?
+  incurredBy  String   @map("incurred_by") @db.Uuid
+  expenseDate DateTime @map("expense_date") @db.Date
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  company        Company         @relation(fields: [companyId], references: [id])
+  category       ExpenseCategory @relation(fields: [categoryId], references: [id])
+  machine        Machine?        @relation(fields: [machineId], references: [id])
+  incurredByUser User            @relation(fields: [incurredBy], references: [id])
+
+  @@map("expenses")
+}
+
+// ---------- Payments & Invoices (§8.5) ----------
+// balanceAmount is a plain stored column maintained by payments.service.ts on write,
+// not a DB-generated column — consistent with the approved "no hidden logic in the
+// database, business rules live in the service layer" decision.
+
+model Invoice {
+  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId           String        @map("company_id") @db.Uuid
+  invoiceNumber       String        @map("invoice_number")
+  bookingId           String        @unique @map("booking_id") @db.Uuid
+  customerId          String        @map("customer_id") @db.Uuid
+  totalAmount         Decimal       @map("total_amount") @db.Decimal(10, 2)
+  paidAmount          Decimal       @default(0) @map("paid_amount") @db.Decimal(10, 2)
+  balanceAmount       Decimal       @default(0) @map("balance_amount") @db.Decimal(10, 2)
+  status              InvoiceStatus @default(UNPAID)
+  invoiceDate         DateTime      @default(now()) @map("invoice_date") @db.Date
+  dueDate             DateTime?     @map("due_date") @db.Date
+  printLayoutSnapshot Json?         @map("print_layout_snapshot")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+
+  company  Company   @relation(fields: [companyId], references: [id])
+  booking  Booking   @relation(fields: [bookingId], references: [id])
+  customer Customer  @relation(fields: [customerId], references: [id])
+  payments Payment[]
+
+  @@unique([companyId, invoiceNumber])
+  @@index([companyId, status])
+  @@map("invoices")
+}
+
+model Payment {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId       String        @map("company_id") @db.Uuid
+  invoiceId       String        @map("invoice_id") @db.Uuid
+  amount          Decimal       @db.Decimal(10, 2)
+  paymentMethod   PaymentMethod @map("payment_method")
+  referenceNumber String?       @map("reference_number")
+  receivedBy      String        @map("received_by") @db.Uuid
+  receivedAt      DateTime      @default(now()) @map("received_at")
+  notes           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  company  Company @relation(fields: [companyId], references: [id])
+  invoice  Invoice @relation(fields: [invoiceId], references: [id])
+  receiver User    @relation(fields: [receivedBy], references: [id])
+
+  @@index([invoiceId])
+  @@map("payments")
+}
+
+// ---------- Auth support (§5) ----------
+
+model OtpCode {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identifier   String // mobile number or email
+  codeHash     String     @map("code_hash")
+  purpose      OtpPurpose
+  expiresAt    DateTime   @map("expires_at")
+  consumedAt   DateTime?  @map("consumed_at")
+  attemptCount Int        @default(0) @map("attempt_count")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  @@map("otp_codes")
+}
+
+model RefreshToken {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  userAgent String?   @map("user_agent")
+  ipAddress String?   @map("ip_address")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("refresh_tokens")
+}
+
+// ---------- Audit (flagged addition, approved) ----------
+
+model AuditLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id") @db.Uuid
+  action     String
+  changes    Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id])
+
+  @@map("audit_log")
+}
