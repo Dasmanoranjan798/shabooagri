@@ -5,6 +5,7 @@ import { ProtectedRoute } from "./ProtectedRoute";
 import { LoginPage } from "../features/auth/LoginPage";
 import { DashboardPage } from "../features/dashboard/DashboardPage";
 import { BookingsPage } from "../features/bookings/BookingsPage";
+import { JobsPage } from "../features/jobs/JobsPage";
 import { PlaceholderPage } from "../features/placeholder/PlaceholderPage";
 import { getTerm } from "../lib/terminology";
 
@@ -40,13 +41,9 @@ export function App() {
           <Route
             path="/jobs"
             element={
-              <ProtectedRoute permission="operations.view">
+              <ProtectedRoute>
                 <AppLayout>
-                  <PlaceholderPage
-                    title="Jobs Execution"
-                    icon="🚜"
-                    description="Live job tracking, pause/resume timing, fuel, and completion logging."
-                  />
+                  <JobsPage />
                 </AppLayout>
               </ProtectedRoute>
             }

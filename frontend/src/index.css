@@ -1754,3 +1754,222 @@ button {
   color: var(--color-text);
 }
 
+/* §11.6 Job Execution / In Progress Screen Styles */
+.sa-job-execution-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.sa-field-header-card {
+  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
+  color: white;
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sa-field-machine {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.sa-field-icon {
+  font-size: 2.2rem;
+}
+
+.sa-field-machine h3 {
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.sa-field-sub {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.sa-field-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding-top: 0.75rem;
+}
+
+@media (max-width: 600px) {
+  .sa-field-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sa-finfo-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.sa-finfo-label {
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.sa-finfo-val {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.sa-timer-card {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.sa-timer-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.sa-timer-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.sa-timer-clock {
+  font-size: 2.4rem;
+  font-weight: 900;
+  font-family: monospace, monospace;
+  color: var(--color-primary);
+  line-height: 1.1;
+}
+
+.sa-timer-start {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.sa-timer-right {
+  display: flex;
+  gap: 1rem;
+}
+
+.sa-stat-box {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.85rem;
+  text-align: center;
+  min-width: 90px;
+}
+
+.sa-stat-num {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--color-text);
+  display: block;
+}
+
+.sa-stat-lbl {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.sa-job-workflow-actions {
+  width: 100%;
+}
+
+.sa-action-main-btn {
+  width: 100%;
+  font-size: 1.1rem;
+  padding: 0.9rem;
+  border-radius: var(--radius-md);
+}
+
+.sa-action-btn-group {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 0.75rem;
+}
+
+.sa-quick-field-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.sa-qaction-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.sa-qaction-item:active {
+  transform: scale(0.96);
+  background-color: var(--color-primary-light);
+}
+
+.sa-qaction-icon {
+  font-size: 1.4rem;
+  margin-bottom: 0.25rem;
+}
+
+.sa-qaction-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.sa-fuel-logs-section, .sa-photos-section {
+  border-top: 1px solid var(--color-border);
+  padding-top: 1rem;
+}
+
+.sa-fuel-logs-section h4, .sa-photos-section h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.sa-fuel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.sa-fuel-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--color-bg);
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.sa-fuel-time {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+

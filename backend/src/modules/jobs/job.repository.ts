@@ -14,11 +14,23 @@ const scoped = createScopedRepository(prisma.job);
 const includeRelations = {
   booking: {
     include: {
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          village: { select: { id: true, name: true } },
+        },
+      },
+      village: { select: { id: true, name: true } },
       pricingMethod: true,
     },
   },
   machine: true,
-  driver: true,
+  driver: {
+    include: {
+      employee: { select: { id: true, name: true } },
+    },
+  },
 } satisfies Prisma.JobInclude;
 
 export interface JobListFilter {

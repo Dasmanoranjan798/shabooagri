@@ -12,6 +12,7 @@ import type {
   UpdateBookingPayload,
   VillageOption,
 } from "../types/booking";
+import type { Job, JobFuelEntry, JobPhoto, CompleteJobPayload, UpdateJobPayload } from "../types/job";
 
 const TOKEN_KEY = "shabooagri_token";
 const REFRESH_TOKEN_KEY = "shabooagri_refresh_token";
@@ -295,6 +296,139 @@ export const api = {
   async listPricingMethods(): Promise<PricingMethodOption[]> {
     const res = await fetchWithAuth("/pricing-methods");
     if (!res.ok) return [];
+    return res.json();
+  },
+
+  // Jobs
+  async listJobs(): Promise<Job[]> {
+    const res = await fetchWithAuth("/jobs");
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to fetch jobs" }));
+      throw new ApiError(res.status, err.message || "Failed to load jobs");
+    }
+    return res.json();
+  },
+
+  async getJobById(id: string): Promise<Job> {
+    const res = await fetchWithAuth(`/jobs/${id}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Job not found" }));
+      throw new ApiError(res.status, err.message || "Job not found");
+    }
+    return res.json();
+  },
+
+  async updateJobDetails(id: string, data: UpdateJobPayload): Promise<Job> {
+    const res = await fetchWithAuth(`/jobs/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to update job details" }));
+      throw new ApiError(res.status, err.message || "Failed to update job");
+    }
+    return res.json();
+  },
+
+  async startJob(id: string, startTime?: string): Promise<Job> {
+    const res = await fetchWithAuth(`/jobs/${id}/start`, {
+      method: "POST",
+      body: JSON.stringify(startTime ? { startTime } : {}),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to start job" }));
+      throw new ApiError(res.status, err.message || "Failed to start job");
+    }
+    return res.json();
+  },
+
+  async pauseJob(id: string, note?: string): Promise<Job> {
+    const res = await fetchWithAuth(`/jobs/${id}/pause`, {
+      method: "POST",
+      body: JSON.stringify(note ? { note } : {}),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to pause job" }));
+      throw new ApiError(res.status, err.message || "Failed to pause job");
+    }
+    return res.json();
+  },
+
+  async resumeJob(id: string, note?: string): Promise<Job> {
+    const res = await fetchWithAuth(`/jobs/${id}/resume`, {
+      method: "POST",
+      body: JSON.stringify(note ? { note } : {}),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to resume job" }));
+      throw new ApiError(res.status, err.message || "Failed to resume job");
+    }
+    return res.json();
+  },
+
+  async completeJob(id: string, payload: CompleteJobPayload = {}): Promise<Job> {
+    const res = await fetchWithAuth(`/jobs/${id}/complete`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to complete job" }));
+      throw new ApiError(res.status, err.message || "Failed to complete job");
+    }
+    return res.json();
+  },
+
+  async listJobFuelEntries(id: string): Promise<JobFuelEntry[]> {
+    const res = await fetchWithAuth(`/jobs/${id}/fuel-entries`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to fetch fuel entries" }));
+      throw new ApiError(res.status, err.message || "Failed to load fuel entries");
+    }
+    return res.json();
+  },
+
+  async addJobFuelEntry(id: string, litres: number, cost?: number): Promise<JobFuelEntry> {
+    const res = await fetchWithAuth(`/jobs/${id}/fuel-entries`, {
+      method: "POST",
+      body: JSON.stringify({ litres, cost }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to add fuel entry" }));
+      throw new ApiError(res.status, err.message || "Failed to add fuel entry");
+    }
+    return res.json();
+  },
+
+  async listJobPhotos(id: string): Promise<JobPhoto[]> {
+    const res = await fetchWithAuth(`/jobs/${id}/photos`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to fetch job photos" }));
+      throw new ApiError(res.status, err.message || "Failed to load job photos");
+    }
+    return res.json();
+  },
+
+  async uploadJobPhoto(id: string, file: File, caption?: string): Promise<JobPhoto> {
+    const token = getStoredToken();
+    const formData = new FormData();
+    formData.append("file", file);
+    if (caption) formData.append("caption", caption);
+
+    const headers = new Headers();
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+
+    const res = await fetch(`/jobs/${id}/photos`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Photo upload failed" }));
+      throw new ApiError(res.status, err.message || "Failed to upload photo");
+    }
     return res.json();
   },
 };
