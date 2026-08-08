@@ -3,11 +3,11 @@ import * as authService from "../auth/auth.service";
 import type { AuthenticatedUser } from "../auth/auth.types";
 import * as customerService from "../customers/customer.service";
 import * as driverService from "../drivers/driver.service";
-import * as employeeService from "../employees/employee.service";
+import * as jobService from "../jobs/job.service";
 import * as machineService from "../machines/machine.service";
 import * as pricingMethodService from "../pricing-methods/pricingMethod.service";
-import * as rbacService from "../rbac/rbac.service";
 import * as villageService from "../villages/village.service";
+import { resolveCallerScope } from "../../shared/access/callerScope";
 import { AppError } from "../../shared/errors/AppError";
 import { calculateAmount, type PricingUnit } from "../../shared/pricing/pricing-calculator";
 import * as bookingAttachmentRepository from "./bookingAttachment.repository";
@@ -59,41 +59,6 @@ function withEstimatedAmount<T extends BookingWithRelations>(booking: T) {
     estimatedAmount = null;
   }
   return { ...booking, estimatedAmount };
-}
-
-type CallerScope =
-  | { kind: "company" }
-  | { kind: "driver"; driverId: string }
-  | { kind: "customer"; customerId: string }
-  | { kind: "none" };
-
-// Owner/Manager (operations.view) see every booking in the company. A
-// Driver sees only bookings assigned to their own Driver profile; a Farmer
-// sees only bookings on their own Customer record. This is the
-// "ownership-scoped query" the Customers module's README flagged as the
-// intended future access pattern for these two roles, now implemented.
-// Resolution is by data linkage (does this user have a Driver/Customer
-// record), not by hardcoding role keys.
-async function resolveCallerScope(companyId: string, user: AuthenticatedUser): Promise<CallerScope> {
-  const hasCompanyView = await rbacService.userHasPermission(user.roleId, "operations.view");
-  if (hasCompanyView) {
-    return { kind: "company" };
-  }
-
-  const employee = await employeeService.getByUserId(companyId, user.id);
-  if (employee) {
-    const driver = await driverService.getByEmployeeId(companyId, employee.id);
-    if (driver) {
-      return { kind: "driver", driverId: driver.id };
-    }
-  }
-
-  const customer = await customerService.getByUserId(companyId, user.id);
-  if (customer) {
-    return { kind: "customer", customerId: customer.id };
-  }
-
-  return { kind: "none" };
 }
 
 export async function list(companyId: string, user: AuthenticatedUser) {
@@ -198,7 +163,26 @@ export async function updateStatus(companyId: string, id: string, nextStatus: Bo
     throw new AppError(400, `Cannot transition a booking from ${booking.status} to ${nextStatus}`);
   }
 
+  // §7 step 5 ("machine travels to location") is the point a Job — which
+  // requires both machineId and driverId to be non-null per its schema —
+  // can meaningfully exist. Rather than create it silently incomplete,
+  // reject the transition itself if either is still unassigned; this also
+  // gives a booking's own "on the way" status real meaning (there IS a
+  // machine+driver en route, not just a status label).
+  if (nextStatus === "ON_THE_WAY" && (!booking.machineId || !booking.driverId)) {
+    throw new AppError(400, "A booking needs both a machine and a driver assigned before it can go on the way");
+  }
+
   const updated = await bookingRepository.updateScopedWithRelations(companyId, id, { status: nextStatus });
+
+  // One Job per Booking (schema: bookings.id is unique on jobs.booking_id),
+  // created exactly once, right here — never via a client-facing "create
+  // job" endpoint. jobService owns the jobs table entirely from this point
+  // on; Bookings never touches it again after this call.
+  if (nextStatus === "ON_THE_WAY") {
+    await jobService.createForBooking(companyId, id, updated!.machineId!, updated!.driverId!);
+  }
+
   return withEstimatedAmount(updated!);
 }
 
