@@ -16,6 +16,7 @@ export default defineConfig({
       '/machines': 'http://localhost:4000',
       '/machine-types': 'http://localhost:4000',
       '/drivers': 'http://localhost:4000',
+      '/employees': 'http://localhost:4000',
       '/pricing-methods': 'http://localhost:4000',
       '/uploads': 'http://localhost:4000',
       '/health': 'http://localhost:4000',

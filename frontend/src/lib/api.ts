@@ -6,13 +6,13 @@ import type {
   BookingStatus,
   CreateBookingPayload,
   CustomerOption,
-  DriverOption,
   PricingMethodOption,
   UpdateBookingPayload,
   VillageOption,
 } from "../types/booking";
 import type { Job, JobFuelEntry, JobPhoto, CompleteJobPayload, UpdateJobPayload } from "../types/job";
 import type { Machine, MachineType, CreateMachinePayload, UpdateMachinePayload } from "../types/machine";
+import type { Driver, CreateDriverPayload, UpdateDriverPayload, EmployeeOption } from "../types/driver";
 
 const TOKEN_KEY = "shabooagri_token";
 const REFRESH_TOKEN_KEY = "shabooagri_refresh_token";
@@ -336,8 +336,57 @@ export const api = {
     return res.json();
   },
 
-  async listDrivers(): Promise<DriverOption[]> {
+  async listDrivers(): Promise<Driver[]> {
     const res = await fetchWithAuth("/drivers");
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  async getDriverById(id: string): Promise<Driver> {
+    const res = await fetchWithAuth(`/drivers/${id}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Driver not found" }));
+      throw new ApiError(res.status, err.message || "Driver not found");
+    }
+    return res.json();
+  },
+
+  async createDriver(payload: CreateDriverPayload): Promise<Driver> {
+    const res = await fetchWithAuth("/drivers", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to create driver profile" }));
+      throw new ApiError(res.status, err.message || "Failed to create driver profile");
+    }
+    return res.json();
+  },
+
+  async updateDriver(id: string, payload: UpdateDriverPayload): Promise<Driver> {
+    const res = await fetchWithAuth(`/drivers/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to update driver" }));
+      throw new ApiError(res.status, err.message || "Failed to update driver");
+    }
+    return res.json();
+  },
+
+  async deleteDriver(id: string): Promise<void> {
+    const res = await fetchWithAuth(`/drivers/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to delete driver" }));
+      throw new ApiError(res.status, err.message || "Failed to delete driver");
+    }
+  },
+
+  async listEmployees(): Promise<EmployeeOption[]> {
+    const res = await fetchWithAuth("/employees");
     if (!res.ok) return [];
     return res.json();
   },
