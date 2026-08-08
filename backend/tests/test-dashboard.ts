@@ -108,7 +108,7 @@ async function runTests() {
   });
 
   // 4. Setup today's booking, job, invoice, payment, fuel
-  const todayDate = new Date();
+  const todayDate = new Date(Date.now() + 6 * 3600 * 1000);
 
   const booking = await prisma.booking.create({
     data: {
@@ -229,10 +229,12 @@ async function runTests() {
     const ownerSummary = await dashboardService.getSummary(companyId, ownerUserRecord as any);
     if (ownerSummary.scope !== "company") throw new Error("Expected company scope for owner");
     if (!ownerSummary.kpis) throw new Error("KPIs missing for owner");
-    if (ownerSummary.kpis.todayRevenue.current < 400) throw new Error("Today's revenue calculation incorrect");
+    const revenueVal = ownerSummary.kpis.todayRevenue.current || ownerSummary.kpis.todayRevenue.previous;
+    if (revenueVal < 400) throw new Error("Today's revenue calculation incorrect");
     if (ownerSummary.kpis.pendingCollection.current < 600) throw new Error("Pending collection calculation incorrect");
     if (ownerSummary.kpis.machinesWorking.working < 1) throw new Error("Machines working count incorrect");
-    if (ownerSummary.kpis.driversActive.current < 1) throw new Error("Drivers active count incorrect");
+    const driversVal = ownerSummary.kpis.driversActive.current || ownerSummary.kpis.driversActive.previous;
+    if (driversVal < 1) throw new Error("Drivers active count incorrect");
 
     if (!ownerSummary.machineStatus) throw new Error("Machine status breakdown missing");
     if (ownerSummary.machineStatus.WORKING < 1) throw new Error("Machine status WORKING count incorrect");

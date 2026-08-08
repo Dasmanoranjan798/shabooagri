@@ -53,6 +53,11 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
   const [estimatedAcres, setEstimatedAcres] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
 
+  // Quick Create Farmer inline state
+  const [isCreatingFarmer, setIsCreatingFarmer] = useState(false);
+  const [newFarmerName, setNewFarmerName] = useState("");
+  const [newFarmerPhone, setNewFarmerPhone] = useState("");
+
   const [isLoadingOptions, setIsLoadingOptions] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -131,6 +136,27 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
     const selected = customers.find((c) => c.id === cId);
     if (selected && selected.villageId) {
       setVillageId(selected.villageId);
+    }
+  };
+
+  const handleQuickCreateFarmer = async () => {
+    if (!newFarmerName.trim() || !villageId) {
+      setError(`Please select a ${villageTerm} and enter ${customerTerm} name.`);
+      return;
+    }
+    try {
+      const created = await api.createCustomer({
+        name: newFarmerName.trim(),
+        phone: newFarmerPhone.trim() || undefined,
+        villageId,
+      });
+      setCustomers((prev) => [...prev, created]);
+      setCustomerId(created.id);
+      setIsCreatingFarmer(false);
+      setNewFarmerName("");
+      setNewFarmerPhone("");
+    } catch (err: any) {
+      setError(err.message || `Failed to create ${customerTerm}`);
     }
   };
 
@@ -235,20 +261,55 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
 
         {/* 1. Customer */}
         <div className="sa-input-group">
-          <label className="sa-input-label">{customerTerm} *</label>
-          <select
-            className="sa-input"
-            value={customerId}
-            onChange={(e) => handleCustomerChange(e.target.value)}
-            required
-          >
-            <option value="">-- Select {customerTerm} --</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} {c.village ? `(${c.village.name})` : ""}
-              </option>
-            ))}
-          </select>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+            <label className="sa-input-label" style={{ margin: 0 }}>{customerTerm} *</label>
+            <button
+              type="button"
+              className="sa-btn sa-btn-secondary"
+              style={{ fontSize: "0.75rem", padding: "2px 8px" }}
+              onClick={() => setIsCreatingFarmer(!isCreatingFarmer)}
+            >
+              {isCreatingFarmer ? "Cancel Quick Create" : `+ Quick Create ${customerTerm}`}
+            </button>
+          </div>
+
+          {isCreatingFarmer ? (
+            <div style={{ background: "var(--color-bg-secondary)", padding: "10px", borderRadius: "6px", border: "1px solid var(--color-border)" }}>
+              <div className="sa-form-grid-2">
+                <Input
+                  label={`${customerTerm} Name *`}
+                  type="text"
+                  placeholder="e.g. Ramesh Behera"
+                  value={newFarmerName}
+                  onChange={(e) => setNewFarmerName(e.target.value)}
+                />
+                <Input
+                  label="Mobile Number (Optional)"
+                  type="tel"
+                  placeholder="e.g. 9876543210"
+                  value={newFarmerPhone}
+                  onChange={(e) => setNewFarmerPhone(e.target.value)}
+                />
+              </div>
+              <Button type="button" variant="primary" size="sm" onClick={handleQuickCreateFarmer} style={{ marginTop: "8px" }}>
+                Save & Select {customerTerm}
+              </Button>
+            </div>
+          ) : (
+            <select
+              className="sa-input"
+              value={customerId}
+              onChange={(e) => handleCustomerChange(e.target.value)}
+              required
+            >
+              <option value="">-- Select {customerTerm} --</option>
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} {c.village ? `(${c.village.name})` : ""}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* 2. Village */}
