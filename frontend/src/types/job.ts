@@ -43,6 +43,7 @@ export interface Job {
     scheduledTime: string | null;
     rate: number;
     pricingMethod: { id: string; key: string; label: string; unit: string | null };
+    location?: string | null;
     customer?: { id: string; name: string; village?: { id: string; name: string } };
     village?: { id: string; name: string };
   };

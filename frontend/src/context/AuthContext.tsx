@@ -9,6 +9,8 @@ interface AuthContextType {
   isLoading: boolean;
   error: string | null;
   login: (identifier: string, password?: string, pin?: string) => Promise<void>;
+  requestOtp: (identifier: string) => Promise<{ message: string; devOtp?: string }>;
+  verifyOtp: (identifier: string, code: string) => Promise<void>;
   logout: () => void;
   hasPermission: (permissionKey: string) => boolean;
 }
@@ -52,6 +54,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const requestOtp = async (identifier: string) => {
+    setError(null);
+    try {
+      return await api.requestOtp(identifier);
+    } catch (err: any) {
+      const message = err.message || "Failed to request OTP";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const verifyOtp = async (identifier: string, code: string) => {
+    setError(null);
+    try {
+      const res = await api.verifyOtp(identifier, code);
+      setUser(res.user);
+    } catch (err: any) {
+      const message = err.message || "Invalid OTP code";
+      setError(message);
+      throw err;
+    }
+  };
+
   const logout = () => {
     api.logout();
     setUser(null);
@@ -76,6 +101,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         error,
         login,
+        requestOtp,
+        verifyOtp,
         logout,
         hasPermission,
       }}

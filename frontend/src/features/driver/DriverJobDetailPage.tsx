@@ -161,6 +161,20 @@ export const DriverJobDetailPage: React.FC = () => {
       {actionErr && <div className="sa-driver-job-err">⚠ {actionErr}</div>}
 
       <div className="sa-driver-job-actions">
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.booking.location || village)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="sa-driver-action-btn"
+          style={{
+            backgroundColor: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
+            color: "#4f46e5",
+            textDecoration: "none",
+          }}
+        >
+          🗺️ Navigate
+        </a>
         {job.status === "NOT_STARTED" && (
           <button
             className="sa-driver-action-btn sa-driver-action-btn--start"

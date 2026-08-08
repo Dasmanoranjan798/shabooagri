@@ -92,11 +92,10 @@ async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Re
 export const api = {
   // Auth
   async login(identifier: string, password?: string, pin?: string): Promise<LoginResponse> {
-    const body: Record<string, string> = { identifier };
-    if (password) body.password = password;
-    if (pin) body.pin = pin;
+    const endpoint = pin ? "/auth/login/pin" : "/auth/login/password";
+    const body = pin ? { identifier, pin } : { identifier, password };
 
-    const res = await fetchWithAuth("/auth/login", {
+    const res = await fetchWithAuth(endpoint, {
       method: "POST",
       body: JSON.stringify(body),
     });
@@ -106,6 +105,32 @@ export const api = {
       throw new ApiError(res.status, err.message || "Invalid credentials");
     }
 
+    const data: LoginResponse = await res.json();
+    setStoredTokens(data.accessToken, data.refreshToken);
+    return data;
+  },
+
+  async requestOtp(identifier: string): Promise<{ message: string; devOtp?: string }> {
+    const res = await fetchWithAuth("/auth/otp/request", {
+      method: "POST",
+      body: JSON.stringify({ identifier }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to request OTP" }));
+      throw new ApiError(res.status, err.message || "Failed to request OTP");
+    }
+    return res.json();
+  },
+
+  async verifyOtp(identifier: string, code: string): Promise<LoginResponse> {
+    const res = await fetchWithAuth("/auth/otp/verify", {
+      method: "POST",
+      body: JSON.stringify({ identifier, code }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Invalid OTP code" }));
+      throw new ApiError(res.status, err.message || "Invalid OTP code");
+    }
     const data: LoginResponse = await res.json();
     setStoredTokens(data.accessToken, data.refreshToken);
     return data;

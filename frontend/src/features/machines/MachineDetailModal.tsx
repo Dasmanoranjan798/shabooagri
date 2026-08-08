@@ -72,8 +72,20 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
 
           <div className="sa-detail-item">
             <span className="sa-detail-label">🔧 Next Service Due</span>
-            <span className="sa-detail-val">
-              {machine.nextServiceDueHours != null ? `${machine.nextServiceDueHours} hrs` : "Not scheduled"}
+            <span
+              className="sa-detail-val"
+              style={
+                machine.nextServiceDueHours != null &&
+                machine.nextServiceDueHours - machine.hourMeterReading <= 20
+                  ? { color: "var(--color-danger)", fontWeight: 800 }
+                  : {}
+              }
+            >
+              {machine.nextServiceDueHours != null
+                ? machine.nextServiceDueHours - machine.hourMeterReading <= 20
+                  ? `⚠️ ${machine.nextServiceDueHours - machine.hourMeterReading} hrs left (Service Due Soon)`
+                  : `${machine.nextServiceDueHours - machine.hourMeterReading} hrs left (${machine.nextServiceDueHours} hrs)`
+                : "Not scheduled"}
             </span>
           </div>
 
