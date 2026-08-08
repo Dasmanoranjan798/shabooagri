@@ -12,7 +12,8 @@ export async function getById(companyId: string, id: string) {
   if (!machine) {
     throw new AppError(404, "Machine not found");
   }
-  return machine;
+  const stats = await machineRepository.getMachineStats(companyId, id);
+  return { ...machine, stats };
 }
 
 // Cross-module read, not a duplicated query: this calls the Machine Types

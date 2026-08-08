@@ -30,6 +30,11 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
   const [address, setAddress] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
 
+  // Grant Farmer Portal Login Access state
+  const [grantLogin, setGrantLogin] = useState<boolean>(false);
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("Password123!");
+
   const [isLoadingVillages, setIsLoadingVillages] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +73,9 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
       setPhone("");
       setAddress("");
       setNotes("");
+      setGrantLogin(false);
+      setEmail("");
+      setPassword("Password123!");
     }
   }, [customerToEdit, isOpen]);
 
@@ -85,15 +93,34 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
     setIsSubmitting(true);
     setError(null);
 
-    const payload: CreateCustomerPayload = {
-      name: name.trim(),
-      villageId,
-      phone: phone.trim() || undefined,
-      address: address.trim() || undefined,
-      notes: notes.trim() || undefined,
-    };
-
     try {
+      let createdUserId: string | undefined = undefined;
+
+      if (!customerToEdit && grantLogin) {
+        if (!email.trim() && !phone.trim()) {
+          setError(`Email or Mobile Number is required to create a ${customerTerm} portal account`);
+          setIsSubmitting(false);
+          return;
+        }
+        const userRes = await api.register({
+          fullName: name.trim(),
+          email: email.trim() || undefined,
+          mobileNumber: phone.trim() || undefined,
+          password: password || "Password123!",
+          roleKey: "farmer",
+        });
+        createdUserId = userRes.user.id;
+      }
+
+      const payload: CreateCustomerPayload = {
+        name: name.trim(),
+        villageId,
+        phone: phone.trim() || undefined,
+        address: address.trim() || undefined,
+        notes: notes.trim() || undefined,
+        userId: createdUserId,
+      };
+
       if (customerToEdit) {
         await api.updateCustomer(customerToEdit.id, payload);
       } else {
@@ -182,6 +209,41 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
             placeholder="Special billing instructions, preferred equipment..."
           />
         </div>
+
+        {/* 5. Optional Farmer Portal Login Account */}
+        {!customerToEdit && (
+          <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: "12px", marginTop: "12px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.9rem" }}>
+              <input
+                type="checkbox"
+                checked={grantLogin}
+                onChange={(e) => setGrantLogin(e.target.checked)}
+              />
+              🌾 Grant {customerTerm} Portal Login Account
+            </label>
+
+            {grantLogin && (
+              <div style={{ background: "var(--color-bg-secondary)", padding: "10px", borderRadius: "6px", marginTop: "8px" }}>
+                <div className="sa-form-grid-2">
+                  <Input
+                    label="Email Address (Optional)"
+                    type="email"
+                    placeholder="e.g. farmer@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                  <Input
+                    label="Initial Password"
+                    type="text"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Password123!"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Form Actions */}
         <div className="sa-form-actions">

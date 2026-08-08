@@ -92,6 +92,24 @@ async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Re
 
 export const api = {
   // Auth
+  async register(payload: {
+    fullName: string;
+    email?: string;
+    mobileNumber?: string;
+    password?: string;
+    roleKey?: string;
+  }): Promise<{ user: User }> {
+    const res = await fetchWithAuth("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Registration failed" }));
+      throw new ApiError(res.status, err.message || "Failed to create user account");
+    }
+    return res.json();
+  },
+
   async login(identifier: string, password?: string, pin?: string): Promise<LoginResponse> {
     const endpoint = pin ? "/auth/login/pin" : "/auth/login/password";
     const body = pin ? { identifier, pin } : { identifier, password };

@@ -95,6 +95,28 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
           </div>
         </div>
 
+        {/* Machine Financial & Operational Stats Banner */}
+        <div className="sa-portal-kpi-row" style={{ marginTop: "12px", gap: "8px" }}>
+          <div className="sa-portal-kpi-card" style={{ padding: "8px 12px" }}>
+            <div className="sa-portal-kpi-label">Today's Hours</div>
+            <div className="sa-portal-kpi-value" style={{ fontSize: "1.1rem" }}>
+              {(machine as any).stats?.todayHours ?? 0} hrs
+            </div>
+          </div>
+          <div className="sa-portal-kpi-card" style={{ padding: "8px 12px" }}>
+            <div className="sa-portal-kpi-label">Today's Income</div>
+            <div className="sa-portal-kpi-value" style={{ fontSize: "1.1rem", color: "var(--color-primary)" }}>
+              ₹{(machine as any).stats?.todayIncome ?? 0}
+            </div>
+          </div>
+          <div className="sa-portal-kpi-card" style={{ padding: "8px 12px" }}>
+            <div className="sa-portal-kpi-label">This Month Income</div>
+            <div className="sa-portal-kpi-value" style={{ fontSize: "1.1rem", color: "#2563eb" }}>
+              ₹{(machine as any).stats?.thisMonthIncome ?? 0}
+            </div>
+          </div>
+        </div>
+
         {/* Insurance Info */}
         <div className="sa-notes-section">
           <h4>Insurance Details</h4>

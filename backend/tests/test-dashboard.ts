@@ -354,6 +354,7 @@ async function runTests() {
   } finally {
     console.log("Cleaning up synthetic test data...");
     await prisma.jobFuelEntry.deleteMany({ where: { companyId: { in: [companyId, secondCompany.id] } } });
+    await prisma.jobStatusLog.deleteMany({ where: { companyId: { in: [companyId, secondCompany.id] } } });
     await prisma.payment.deleteMany({ where: { companyId: { in: [companyId, secondCompany.id] } } });
     await prisma.invoice.deleteMany({ where: { companyId: { in: [companyId, secondCompany.id] } } });
     await prisma.job.deleteMany({ where: { companyId: { in: [companyId, secondCompany.id] } } });

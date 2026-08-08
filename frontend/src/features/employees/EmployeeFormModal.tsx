@@ -28,6 +28,12 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
   const [yearlySalary, setYearlySalary] = useState<string>("");
   const [joinedDate, setJoinedDate] = useState<string>("");
 
+  // Grant Login Access state
+  const [grantLogin, setGrantLogin] = useState<boolean>(false);
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("Password123!");
+  const [userRole, setUserRole] = useState<"manager" | "driver">("driver");
+
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,19 +73,38 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
     setIsSubmitting(true);
     setError(null);
 
-    const payload: CreateEmployeePayload = {
-      name: name.trim(),
-      roleTitle: roleTitle.trim() || undefined,
-      phone: phone.trim() || undefined,
-      employmentStatus,
-      compensationType,
-      hourlyRate: hourlyRate ? Number(hourlyRate) : undefined,
-      monthlySalary: monthlySalary ? Number(monthlySalary) : undefined,
-      yearlySalary: yearlySalary ? Number(yearlySalary) : undefined,
-      joinedDate: joinedDate || undefined,
-    };
-
     try {
+      let createdUserId: string | undefined = undefined;
+
+      if (!employeeToEdit && grantLogin) {
+        if (!email.trim() && !phone.trim()) {
+          setError("Email or Phone is required to create a user account");
+          setIsSubmitting(false);
+          return;
+        }
+        const userRes = await api.register({
+          fullName: name.trim(),
+          email: email.trim() || undefined,
+          mobileNumber: phone.trim() || undefined,
+          password: password || "Password123!",
+          roleKey: userRole,
+        });
+        createdUserId = userRes.user.id;
+      }
+
+      const payload: CreateEmployeePayload = {
+        name: name.trim(),
+        roleTitle: roleTitle.trim() || undefined,
+        phone: phone.trim() || undefined,
+        employmentStatus,
+        compensationType,
+        hourlyRate: hourlyRate ? Number(hourlyRate) : undefined,
+        monthlySalary: monthlySalary ? Number(monthlySalary) : undefined,
+        yearlySalary: yearlySalary ? Number(yearlySalary) : undefined,
+        joinedDate: joinedDate || undefined,
+        userId: createdUserId,
+      };
+
       if (employeeToEdit) {
         await api.updateEmployee(employeeToEdit.id, payload);
       } else {
@@ -202,6 +227,52 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
             />
           )}
         </div>
+
+        {/* 5. Optional User Account Creation */}
+        {!employeeToEdit && (
+          <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: "12px", marginTop: "12px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.9rem" }}>
+              <input
+                type="checkbox"
+                checked={grantLogin}
+                onChange={(e) => setGrantLogin(e.target.checked)}
+              />
+              🔑 Grant ShabooAgri Login Account
+            </label>
+
+            {grantLogin && (
+              <div style={{ background: "var(--color-bg-secondary)", padding: "10px", borderRadius: "6px", marginTop: "8px" }}>
+                <div className="sa-form-grid-2">
+                  <div className="sa-input-group">
+                    <label className="sa-input-label">Account Role *</label>
+                    <select
+                      className="sa-input"
+                      value={userRole}
+                      onChange={(e) => setUserRole(e.target.value as "manager" | "driver")}
+                    >
+                      <option value="driver">Driver / Operator</option>
+                      <option value="manager">Manager / Field Coordinator</option>
+                    </select>
+                  </div>
+                  <Input
+                    label="Email Address (Optional)"
+                    type="email"
+                    placeholder="e.g. staff@shabooagri.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                <Input
+                  label="Initial Password"
+                  type="text"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password123!"
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Form Actions */}
         <div className="sa-form-actions">
