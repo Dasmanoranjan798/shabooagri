@@ -15,6 +15,13 @@ export async function getById(companyId: string, id: string) {
   return driver;
 }
 
+// Not-found is expected (most employees aren't drivers) — used for identity
+// resolution (Bookings scoping a Driver user to their own assigned jobs),
+// not validation, so this returns null instead of throwing.
+export function getByEmployeeId(companyId: string, employeeId: string) {
+  return driverRepository.findByEmployeeIdScoped(companyId, employeeId);
+}
+
 // Cross-module read via the Employees module's own service — a Driver
 // profile only ever extends an existing Employee record, it never creates
 // or duplicates one.

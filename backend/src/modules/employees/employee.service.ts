@@ -15,6 +15,14 @@ export async function getById(companyId: string, id: string) {
   return employee;
 }
 
+// Not-found is a normal, expected outcome here (most users have no linked
+// employee record) — callers use this for identity resolution (e.g.
+// Bookings scoping a Driver to their own jobs), not validation, so it
+// returns null instead of throwing.
+export function getByUserId(companyId: string, userId: string) {
+  return employeeRepository.findByUserIdScoped(companyId, userId);
+}
+
 // Cross-module read via Auth's service (not a re-query of `users`): confirms
 // an optionally-supplied login account actually exists in this company
 // before linking it to an employee record.

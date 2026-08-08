@@ -8,3 +8,7 @@ export function findActiveForCompany(companyId: string) {
     orderBy: { label: "asc" },
   });
 }
+
+export function findActiveByIdScoped(companyId: string, id: string) {
+  return prisma.pricingMethod.findFirst({ where: { id, companyId, isActive: true } });
+}

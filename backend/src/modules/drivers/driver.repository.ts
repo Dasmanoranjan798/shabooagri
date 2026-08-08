@@ -18,6 +18,10 @@ export function findByIdScoped(companyId: string, id: string) {
   return scoped.findByIdScoped(companyId, id);
 }
 
+export function findByEmployeeIdScoped(companyId: string, employeeId: string) {
+  return prisma.driver.findFirst({ where: { companyId, employeeId } });
+}
+
 export function create(companyId: string, data: Omit<Prisma.DriverUncheckedCreateInput, "companyId">) {
   return prisma.driver.create({ data: { ...data, companyId } });
 }

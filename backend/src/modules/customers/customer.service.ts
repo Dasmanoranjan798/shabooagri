@@ -16,6 +16,14 @@ export async function getById(companyId: string, id: string) {
   return customer;
 }
 
+// Not-found is expected (most users aren't linked to a Customer record) —
+// used for identity resolution (Bookings scoping a Farmer user to their own
+// booking history), not validation, so this returns null instead of
+// throwing.
+export function getByUserId(companyId: string, userId: string) {
+  return customerRepository.findByUserIdScoped(companyId, userId);
+}
+
 export async function create(companyId: string, input: CreateCustomerInput) {
   await villageService.getById(companyId, input.villageId);
   if (input.userId) {
