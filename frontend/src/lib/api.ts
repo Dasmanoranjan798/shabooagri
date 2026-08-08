@@ -14,6 +14,7 @@ import type { Machine, MachineType, CreateMachinePayload, UpdateMachinePayload }
 import type { Driver, CreateDriverPayload, UpdateDriverPayload } from "../types/driver";
 import type { Customer, CreateCustomerPayload, UpdateCustomerPayload } from "../types/customer";
 import type { Employee, CreateEmployeePayload, UpdateEmployeePayload } from "../types/employee";
+import type { Invoice, PaymentRecord, ReceivePaymentPayload, ReceiptData } from "../types/payment";
 
 const TOKEN_KEY = "shabooagri_token";
 const REFRESH_TOKEN_KEY = "shabooagri_refresh_token";
@@ -614,6 +615,53 @@ export const api = {
       const err = await res.json().catch(() => ({ message: "Photo upload failed" }));
       throw new ApiError(res.status, err.message || "Failed to upload photo");
     }
+    return res.json();
+  },
+
+  // Payments & Invoices
+  async listInvoices(): Promise<Invoice[]> {
+    const res = await fetchWithAuth("/invoices");
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to fetch invoices" }));
+      throw new ApiError(res.status, err.message || "Failed to load invoices");
+    }
+    return res.json();
+  },
+
+  async getInvoiceById(id: string): Promise<Invoice> {
+    const res = await fetchWithAuth(`/invoices/${id}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Invoice not found" }));
+      throw new ApiError(res.status, err.message || "Invoice not found");
+    }
+    return res.json();
+  },
+
+  async receivePayment(invoiceId: string, payload: ReceivePaymentPayload): Promise<Invoice> {
+    const res = await fetchWithAuth(`/invoices/${invoiceId}/payments`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to record payment" }));
+      throw new ApiError(res.status, err.message || "Failed to record payment");
+    }
+    return res.json();
+  },
+
+  async getReceipt(invoiceId: string): Promise<ReceiptData> {
+    const res = await fetchWithAuth(`/invoices/${invoiceId}/receipt`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Receipt not found" }));
+      throw new ApiError(res.status, err.message || "Failed to load receipt");
+    }
+    return res.json();
+  },
+
+  async listPayments(invoiceId?: string): Promise<PaymentRecord[]> {
+    const url = invoiceId ? `/payments?invoiceId=${encodeURIComponent(invoiceId)}` : "/payments";
+    const res = await fetchWithAuth(url);
+    if (!res.ok) return [];
     return res.json();
   },
 };

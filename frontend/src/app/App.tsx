@@ -10,6 +10,7 @@ import { MachinesPage } from "../features/machines/MachinesPage";
 import { DriversPage } from "../features/drivers/DriversPage";
 import { CustomersPage } from "../features/customers/CustomersPage";
 import { EmployeesPage } from "../features/employees/EmployeesPage";
+import { PaymentsPage } from "../features/payments/PaymentsPage";
 import { PlaceholderPage } from "../features/placeholder/PlaceholderPage";
 
 export function App() {
@@ -99,13 +100,9 @@ export function App() {
           <Route
             path="/payments"
             element={
-              <ProtectedRoute permission="payment.receive">
+              <ProtectedRoute>
                 <AppLayout>
-                  <PlaceholderPage
-                    title="Payments & Invoices"
-                    icon="💳"
-                    description={`Invoicing, receipt generation, and payment collection.`}
-                  />
+                  <PaymentsPage />
                 </AppLayout>
               </ProtectedRoute>
             }
