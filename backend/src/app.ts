@@ -27,7 +27,15 @@ import { rbacRouter } from "./modules/rbac/rbac.routes";
 // this file must never contain business logic itself.
 export const app = express();
 
-app.use(cors({ origin: env.CORS_ORIGIN }));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, server-to-server) or any matching origin
+      callback(null, true);
+    },
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
 app.get("/health", async (_req, res) => {

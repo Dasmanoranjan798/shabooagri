@@ -84,6 +84,15 @@ async function runPhase3ATests() {
     },
   });
 
+  const yearlyDriverUser = await prisma.user.create({
+    data: {
+      companyId: company.id,
+      roleId: driverRole.id,
+      fullName: "Yearly Driver Amit",
+      email: `driver-yearly-${Date.now()}@test.com`,
+    },
+  });
+
   const authManager: AuthenticatedUser = {
     id: managerUser.id,
     companyId: company.id,
@@ -139,6 +148,15 @@ async function runPhase3ATests() {
     monthlySalary: 25000,
   });
   const monthlyDriver = await driverService.create(company.id, { employeeId: monthlyEmp.id });
+
+  // 3. Yearly Salaried Driver (₹3,60,000/year)
+  const yearlyEmp = await employeeService.create(company.id, {
+    name: "Yearly Driver Amit",
+    userId: yearlyDriverUser.id,
+    compensationType: "YEARLY",
+    yearlySalary: 360000,
+  });
+  const yearlyDriver = await driverService.create(company.id, { employeeId: yearlyEmp.id });
 
   // 3. Pricing Method (Per Hour ₹500/hr)
   const perHourPM = await prisma.pricingMethod.findFirst({
@@ -238,8 +256,22 @@ async function runPhase3ATests() {
   }
   console.log("✓ Manual after-work job generated invoice correctly using shared pricing engine: ₹" + manualJob.invoice.totalAmount);
 
-  // TEST 3: Driver Compensation Model (Hourly vs Monthly Salaried)
-  console.log("\n[TEST 3] Testing Driver Compensation Model...");
+  // Also create a manual job for Yearly Driver (5.0 hrs)
+  await jobService.createManualEntryJob(company.id, managerUser.id, authManager, {
+    customerId: customer.id,
+    villageId: village.id,
+    machineId: machine.id,
+    driverId: yearlyDriver.id,
+    scheduledDate: new Date(),
+    pricingMethodId: perHourPM.id,
+    rate: 500,
+    startTime: new Date(now - 8 * 3600 * 1000),
+    endTime: new Date(now - 3 * 3600 * 1000),
+    notes: "Yearly driver field work",
+  });
+
+  // TEST 3: Driver Compensation Model (Hourly vs Monthly vs Yearly Salaried)
+  console.log("\n[TEST 3] Testing Driver Compensation Model (Hourly / Monthly / Yearly)...");
 
   // 1. Hourly Driver Compensation Summary
   const hourlyComp = await driverCompensationService.getDriverCompensationSummary(company.id, hourlyDriver.id);
@@ -256,6 +288,14 @@ async function runPhase3ATests() {
   if (monthlyComp.totalWorkedHours !== 4.0) throw new Error(`Expected 4.0 worked hours, got ${monthlyComp.totalWorkedHours}`);
   if (monthlyComp.calculatedEarnings !== 25000) throw new Error(`Expected 25000 fixed monthly salary, got ${monthlyComp.calculatedEarnings}`);
   console.log("✓ Monthly Salaried Driver Compensation strictly preserved fixed salary without hourly multiplication:", monthlyComp.explanation);
+
+  // 3. Yearly Salaried Driver Compensation Summary
+  const yearlyComp = await driverCompensationService.getDriverCompensationSummary(company.id, yearlyDriver.id);
+  // Yearly driver worked 5.0 hours, but fixed annual salary is ₹3,60,000/year. Hours MUST NOT multiply into wages!
+  if (yearlyComp.compensationType !== "YEARLY") throw new Error("Expected compensationType YEARLY");
+  if (yearlyComp.totalWorkedHours !== 5.0) throw new Error(`Expected 5.0 worked hours, got ${yearlyComp.totalWorkedHours}`);
+  if (yearlyComp.calculatedEarnings !== 360000) throw new Error(`Expected 360000 fixed yearly salary, got ${yearlyComp.calculatedEarnings}`);
+  console.log("✓ Yearly Salaried Driver Compensation strictly preserved fixed annual salary without hourly multiplication:", yearlyComp.explanation);
 
   // TEST 4: Security & Access Control
   console.log("\n[TEST 4] Testing Security & Permission Scoping...");
