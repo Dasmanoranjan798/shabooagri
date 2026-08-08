@@ -17,6 +17,7 @@ import { pricingMethodRouter } from "./modules/pricing-methods/pricingMethod.rou
 import { villageRouter } from "./modules/villages/village.routes";
 import { invoiceRouter, paymentRouter } from "./modules/payments/payment.routes";
 import { dashboardRouter } from "./modules/dashboard/dashboard.routes";
+import { expenseRouter } from "./modules/expenses/expense.routes";
 
 // Express app assembly only. Module routers are mounted here once they exist —
 // this file must never contain business logic itself.
@@ -53,6 +54,7 @@ app.use("/bookings", bookingRouter);
 app.use("/jobs", jobRouter);
 app.use("/invoices", invoiceRouter);
 app.use("/payments", paymentRouter);
+app.use("/expenses", expenseRouter);
 app.use("/dashboard", dashboardRouter);
 
 // Must be registered after all routes.

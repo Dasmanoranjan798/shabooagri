@@ -15,6 +15,7 @@ import type { Driver, CreateDriverPayload, UpdateDriverPayload } from "../types/
 import type { Customer, CreateCustomerPayload, UpdateCustomerPayload } from "../types/customer";
 import type { Employee, CreateEmployeePayload, UpdateEmployeePayload } from "../types/employee";
 import type { Invoice, PaymentRecord, ReceivePaymentPayload, ReceiptData } from "../types/payment";
+import type { Expense, ExpenseCategory, CreateExpensePayload, UpdateExpensePayload } from "../types/expense";
 
 const TOKEN_KEY = "shabooagri_token";
 const REFRESH_TOKEN_KEY = "shabooagri_refresh_token";
@@ -663,5 +664,69 @@ export const api = {
     const res = await fetchWithAuth(url);
     if (!res.ok) return [];
     return res.json();
+  },
+
+  // Expenses
+  async listExpenseCategories(): Promise<ExpenseCategory[]> {
+    const res = await fetchWithAuth("/expenses/categories");
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  async listExpenses(filter: { categoryId?: string; machineId?: string } = {}): Promise<Expense[]> {
+    const params = new URLSearchParams();
+    if (filter.categoryId) params.set("categoryId", filter.categoryId);
+    if (filter.machineId) params.set("machineId", filter.machineId);
+    const queryString = params.toString() ? `?${params.toString()}` : "";
+
+    const res = await fetchWithAuth(`/expenses${queryString}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to fetch expenses" }));
+      throw new ApiError(res.status, err.message || "Failed to load expenses");
+    }
+    return res.json();
+  },
+
+  async getExpenseById(id: string): Promise<Expense> {
+    const res = await fetchWithAuth(`/expenses/${id}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Expense record not found" }));
+      throw new ApiError(res.status, err.message || "Expense record not found");
+    }
+    return res.json();
+  },
+
+  async createExpense(payload: CreateExpensePayload): Promise<Expense> {
+    const res = await fetchWithAuth("/expenses", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to record expense" }));
+      throw new ApiError(res.status, err.message || "Failed to record expense");
+    }
+    return res.json();
+  },
+
+  async updateExpense(id: string, payload: UpdateExpensePayload): Promise<Expense> {
+    const res = await fetchWithAuth(`/expenses/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to update expense" }));
+      throw new ApiError(res.status, err.message || "Failed to update expense");
+    }
+    return res.json();
+  },
+
+  async deleteExpense(id: string): Promise<void> {
+    const res = await fetchWithAuth(`/expenses/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to delete expense" }));
+      throw new ApiError(res.status, err.message || "Failed to delete expense");
+    }
   },
 };

@@ -11,6 +11,7 @@ import { DriversPage } from "../features/drivers/DriversPage";
 import { CustomersPage } from "../features/customers/CustomersPage";
 import { EmployeesPage } from "../features/employees/EmployeesPage";
 import { PaymentsPage } from "../features/payments/PaymentsPage";
+import { ExpensesPage } from "../features/expenses/ExpensesPage";
 import { PlaceholderPage } from "../features/placeholder/PlaceholderPage";
 
 export function App() {
@@ -113,11 +114,7 @@ export function App() {
             element={
               <ProtectedRoute permission="operations.view">
                 <AppLayout>
-                  <PlaceholderPage
-                    title="Expenses"
-                    icon="💸"
-                    description="Operational expenditure tracking."
-                  />
+                  <ExpensesPage />
                 </AppLayout>
               </ProtectedRoute>
             }
