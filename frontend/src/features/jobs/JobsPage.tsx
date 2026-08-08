@@ -7,6 +7,7 @@ import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import { JobExecutionModal } from "./JobExecutionModal";
+import { ManualJobEntryModal } from "./ManualJobEntryModal";
 
 const JOB_STATUS_FILTERS: Array<{ label: string; value: string }> = [
   { label: "All", value: "ALL" },
@@ -31,6 +32,7 @@ export const JobsPage: React.FC = () => {
 
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isExecutionModalOpen, setIsExecutionModalOpen] = useState<boolean>(false);
+  const [isManualEntryOpen, setIsManualEntryOpen] = useState<boolean>(false);
 
   const loadJobs = async () => {
     setIsLoading(true);
@@ -88,6 +90,11 @@ export const JobsPage: React.FC = () => {
         <div className="sa-page-header-text">
           <h2>Jobs Execution</h2>
           <p>Live field operations, equipment tracking, fuel & progress logging</p>
+        </div>
+        <div className="sa-page-header-actions">
+          <Button variant="primary" onClick={() => setIsManualEntryOpen(true)}>
+            📝 Log After-Work Entry
+          </Button>
         </div>
       </div>
 
@@ -290,6 +297,13 @@ export const JobsPage: React.FC = () => {
         onClose={() => setIsExecutionModalOpen(false)}
         job={selectedJob}
         onUpdate={loadJobs}
+      />
+
+      {/* Manual After-Work Entry Modal */}
+      <ManualJobEntryModal
+        isOpen={isManualEntryOpen}
+        onClose={() => setIsManualEntryOpen(false)}
+        onSuccess={loadJobs}
       />
     </div>
   );

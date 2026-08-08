@@ -8,7 +8,12 @@ import * as jobPhotoRepository from "./jobPhoto.repository";
 import * as jobRepository from "./job.repository";
 import * as bookingRepository from "../bookings/booking.repository";
 import * as jobStatusLogRepository from "./jobStatusLog.repository";
-import type { CompleteJobInput, PauseJobInput, ResumeJobInput, StartJobInput, UpdateJobInput } from "./job.validators";
+import * as customerService from "../customers/customer.service";
+import * as driverService from "../drivers/driver.service";
+import * as machineService from "../machines/machine.service";
+import * as pricingMethodService from "../pricing-methods/pricingMethod.service";
+import * as villageService from "../villages/village.service";
+import type { CompleteJobInput, CreateManualJobInput, PauseJobInput, ResumeJobInput, StartJobInput, UpdateJobInput } from "./job.validators";
 
 // Called only from booking.service.ts when a Booking moves to ON_THE_WAY —
 // there is no client-facing "create job" endpoint. Idempotent: if a Job
@@ -235,4 +240,70 @@ export async function addPhoto(
 export async function listPhotos(companyId: string, id: string, user: AuthenticatedUser) {
   await getById(companyId, id, user);
   return jobPhotoRepository.findAllForJob(companyId, id);
+}
+
+export async function createManualEntryJob(
+  companyId: string,
+  creatorUserId: string,
+  user: AuthenticatedUser,
+  input: CreateManualJobInput,
+) {
+  await Promise.all([
+    customerService.getById(companyId, input.customerId),
+    villageService.getById(companyId, input.villageId),
+    machineService.getById(companyId, input.machineId),
+    driverService.getById(companyId, input.driverId),
+    pricingMethodService.getById(companyId, input.pricingMethodId),
+  ]);
+
+  const startTime = new Date(input.startTime);
+  const endTime = new Date(input.endTime);
+  if (endTime < startTime) {
+    throw new AppError(400, "End time cannot be earlier than start time");
+  }
+
+  const durationSec = Math.max(0, Math.floor((endTime.getTime() - startTime.getTime()) / 1000));
+  const calculatedHours = Math.round((durationSec / 3600) * 100) / 100;
+  const actualHours = input.actualHours ?? calculatedHours;
+
+  const booking = await bookingRepository.create(companyId, {
+    customerId: input.customerId,
+    villageId: input.villageId,
+    location: input.location,
+    machineId: input.machineId,
+    driverId: input.driverId,
+    managerId: creatorUserId,
+    scheduledDate: input.scheduledDate,
+    pricingMethodId: input.pricingMethodId,
+    rate: input.rate,
+    notes: input.notes,
+    createdBy: creatorUserId,
+  });
+
+  await bookingRepository.updateScopedWithRelations(companyId, booking.id, { status: "COMPLETED" });
+
+  const job = await jobRepository.createManual(companyId, {
+    bookingId: booking.id,
+    machineId: input.machineId,
+    driverId: input.driverId,
+    executionMode: "MANUAL",
+    status: "COMPLETED",
+    startTime,
+    endTime,
+    totalPausedDurationSec: 0,
+    actualHours,
+    completedAcres: input.completedAcres,
+    fuelUsedLitres: input.fuelUsedLitres,
+    notes: input.notes,
+  });
+
+  await jobStatusLogRepository.create(companyId, job.id, "COMPLETED", creatorUserId, "Manual after-work entry");
+
+  if (input.fuelUsedLitres && input.fuelUsedLitres > 0) {
+    await fuelService.addEntry(companyId, job.id, input.machineId, creatorUserId, input.fuelUsedLitres, undefined);
+  }
+
+  const invoice = await paymentService.createInvoiceForCompletedJob(companyId, job);
+
+  return { ...job, invoice };
 }

@@ -8,7 +8,9 @@ import { prisma } from "../../db/prisma";
 // Phase 2 adds multi-tenant company management, this is the one place that
 // needs to change to real tenant resolution (e.g. by subdomain) — every
 // other Auth function already takes a companyId parameter and is unaffected.
-export function findSingleTenantCompany() {
+export async function findSingleTenantCompany() {
+  const pilot = await prisma.company.findFirst({ where: { slug: "pilot" } });
+  if (pilot) return pilot;
   return prisma.company.findFirstOrThrow();
 }
 

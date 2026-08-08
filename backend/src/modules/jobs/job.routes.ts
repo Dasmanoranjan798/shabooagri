@@ -38,3 +38,4 @@ jobRouter.post(
   jobPhotoUpload.single("file"),
   asyncHandler(jobController.addPhoto),
 );
+jobRouter.post("/manual", requirePermission("booking.create"), asyncHandler(jobController.createManualJob));

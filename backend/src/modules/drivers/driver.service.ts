@@ -1,4 +1,5 @@
 import * as employeeService from "../employees/employee.service";
+import * as driverCompensationService from "./driverCompensation.service";
 import { AppError } from "../../shared/errors/AppError";
 import * as driverRepository from "./driver.repository";
 import type { CreateDriverInput, UpdateDriverInput } from "./driver.validators";
@@ -50,4 +51,8 @@ export async function remove(companyId: string, id: string) {
   if (!deleted) {
     throw new AppError(404, "Driver not found");
   }
+}
+
+export function getCompensationSummary(companyId: string, id: string) {
+  return driverCompensationService.getDriverCompensationSummary(companyId, id);
 }

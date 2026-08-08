@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import type { CreateEmployeePayload, Employee, EmploymentStatus } from "../../types/employee";
+import type { CompensationType, CreateEmployeePayload, Employee, EmploymentStatus } from "../../types/employee";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/ui/Modal";
 import { Input } from "../../components/ui/Input";
@@ -22,6 +22,10 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
   const [roleTitle, setRoleTitle] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
   const [employmentStatus, setEmploymentStatus] = useState<EmploymentStatus>("ACTIVE");
+  const [compensationType, setCompensationType] = useState<CompensationType>("HOURLY");
+  const [hourlyRate, setHourlyRate] = useState<string>("");
+  const [monthlySalary, setMonthlySalary] = useState<string>("");
+  const [yearlySalary, setYearlySalary] = useState<string>("");
   const [joinedDate, setJoinedDate] = useState<string>("");
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -33,6 +37,10 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
       setRoleTitle(employeeToEdit.roleTitle || "");
       setPhone(employeeToEdit.phone || "");
       setEmploymentStatus(employeeToEdit.employmentStatus || "ACTIVE");
+      setCompensationType(employeeToEdit.compensationType || "HOURLY");
+      setHourlyRate(employeeToEdit.hourlyRate ? String(employeeToEdit.hourlyRate) : "");
+      setMonthlySalary(employeeToEdit.monthlySalary ? String(employeeToEdit.monthlySalary) : "");
+      setYearlySalary(employeeToEdit.yearlySalary ? String(employeeToEdit.yearlySalary) : "");
       setJoinedDate(
         employeeToEdit.joinedDate ? employeeToEdit.joinedDate.slice(0, 10) : ""
       );
@@ -41,6 +49,10 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
       setRoleTitle("");
       setPhone("");
       setEmploymentStatus("ACTIVE");
+      setCompensationType("HOURLY");
+      setHourlyRate("");
+      setMonthlySalary("");
+      setYearlySalary("");
       setJoinedDate("");
     }
   }, [employeeToEdit, isOpen]);
@@ -60,6 +72,10 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
       roleTitle: roleTitle.trim() || undefined,
       phone: phone.trim() || undefined,
       employmentStatus,
+      compensationType,
+      hourlyRate: hourlyRate ? Number(hourlyRate) : undefined,
+      monthlySalary: monthlySalary ? Number(monthlySalary) : undefined,
+      yearlySalary: yearlySalary ? Number(yearlySalary) : undefined,
       joinedDate: joinedDate || undefined,
     };
 
@@ -139,6 +155,52 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
             value={joinedDate}
             onChange={(e) => setJoinedDate(e.target.value)}
           />
+        </div>
+
+        {/* 4. Compensation Model */}
+        <div className="sa-form-grid-2" style={{ background: "var(--color-surface-secondary)", padding: "10px", borderRadius: "6px" }}>
+          <div className="sa-input-group">
+            <label className="sa-input-label">Compensation Type</label>
+            <select
+              className="sa-input"
+              value={compensationType}
+              onChange={(e) => setCompensationType(e.target.value as CompensationType)}
+            >
+              <option value="HOURLY">Hourly Wage (₹/hr × Job Hours)</option>
+              <option value="MONTHLY">Monthly Salary (Fixed ₹/month)</option>
+              <option value="YEARLY">Yearly Salary (Fixed ₹/year)</option>
+            </select>
+          </div>
+
+          {compensationType === "HOURLY" && (
+            <Input
+              label="Hourly Rate (₹/hr)"
+              type="number"
+              placeholder="e.g. 200"
+              value={hourlyRate}
+              onChange={(e) => setHourlyRate(e.target.value)}
+            />
+          )}
+
+          {compensationType === "MONTHLY" && (
+            <Input
+              label="Monthly Salary (₹/month)"
+              type="number"
+              placeholder="e.g. 25000"
+              value={monthlySalary}
+              onChange={(e) => setMonthlySalary(e.target.value)}
+            />
+          )}
+
+          {compensationType === "YEARLY" && (
+            <Input
+              label="Yearly Salary (₹/year)"
+              type="number"
+              placeholder="e.g. 300000"
+              value={yearlySalary}
+              onChange={(e) => setYearlySalary(e.target.value)}
+            />
+          )}
         </div>
 
         {/* Form Actions */}

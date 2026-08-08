@@ -10,6 +10,7 @@ driverRouter.use(authMiddleware);
 
 driverRouter.get("/", requirePermission("operations.view"), asyncHandler(driverController.list));
 driverRouter.get("/:id", requirePermission("operations.view"), asyncHandler(driverController.getById));
+driverRouter.get("/:id/compensation", asyncHandler(driverController.getCompensationSummary));
 driverRouter.post("/", requirePermission("driver.manage"), asyncHandler(driverController.create));
 driverRouter.patch("/:id", requirePermission("driver.manage"), asyncHandler(driverController.update));
 driverRouter.delete("/:id", requirePermission("driver.manage"), asyncHandler(driverController.remove));

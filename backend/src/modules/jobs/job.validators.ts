@@ -47,6 +47,23 @@ export const addJobPhotoSchema = z.object({
   caption: z.string().optional(),
 });
 
+export const createManualJobSchema = z.object({
+  customerId: z.string().uuid(),
+  villageId: z.string().uuid(),
+  machineId: z.string().uuid(),
+  driverId: z.string().uuid(),
+  scheduledDate: z.coerce.date(),
+  pricingMethodId: z.string().uuid(),
+  rate: z.coerce.number().positive(),
+  startTime: z.coerce.date(),
+  endTime: z.coerce.date(),
+  actualHours: z.coerce.number().nonnegative().optional(),
+  completedAcres: z.coerce.number().nonnegative().optional(),
+  fuelUsedLitres: z.coerce.number().nonnegative().optional(),
+  notes: z.string().optional(),
+  location: z.string().optional(),
+});
+
 export type StartJobInput = z.infer<typeof startJobSchema>;
 export type PauseJobInput = z.infer<typeof pauseJobSchema>;
 export type ResumeJobInput = z.infer<typeof resumeJobSchema>;
@@ -54,3 +71,4 @@ export type CompleteJobInput = z.infer<typeof completeJobSchema>;
 export type UpdateJobInput = z.infer<typeof updateJobSchema>;
 export type AddFuelEntryInput = z.infer<typeof addFuelEntrySchema>;
 export type AddJobPhotoInput = z.infer<typeof addJobPhotoSchema>;
+export type CreateManualJobInput = z.infer<typeof createManualJobSchema>;

@@ -899,5 +899,23 @@ export const api = {
     }
     return res.json();
   },
+
+  async createManualJob(payload: any): Promise<Job> {
+    const res = await fetchWithAuth("/jobs/manual", { method: "POST", body: JSON.stringify(payload) });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to create manual job" }));
+      throw new ApiError(res.status, err.message);
+    }
+    return res.json();
+  },
+
+  async getDriverCompensation(driverId: string): Promise<any> {
+    const res = await fetchWithAuth(`/drivers/${driverId}/compensation`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to fetch driver compensation" }));
+      throw new ApiError(res.status, err.message);
+    }
+    return res.json();
+  },
 };
 

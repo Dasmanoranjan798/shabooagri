@@ -1,4 +1,5 @@
 export type EmploymentStatus = "ACTIVE" | "INACTIVE";
+export type CompensationType = "HOURLY" | "MONTHLY" | "YEARLY";
 
 export interface Employee {
   id: string;
@@ -7,6 +8,10 @@ export interface Employee {
   phone: string | null;
   roleTitle: string | null;
   employmentStatus: EmploymentStatus;
+  compensationType?: CompensationType;
+  hourlyRate?: number | null;
+  monthlySalary?: number | null;
+  yearlySalary?: number | null;
   joinedDate: string | null;
   userId: string | null;
   isActive: boolean;
@@ -19,6 +24,10 @@ export interface CreateEmployeePayload {
   phone?: string;
   roleTitle?: string;
   employmentStatus?: EmploymentStatus;
+  compensationType?: CompensationType;
+  hourlyRate?: number;
+  monthlySalary?: number;
+  yearlySalary?: number;
   joinedDate?: string;
   userId?: string;
 }

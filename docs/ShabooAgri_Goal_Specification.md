@@ -225,4 +225,28 @@ ShabooAgri Phase 1 is complete when:
 
 ---
 
+## 14. Phase 3A — Manager-First Field Operations & Driver Compensation Specification
+
+### 14.1 Operational Philosophy: Manager-First Field Execution
+- **Central Coordinator:** The Owner/Manager is the primary operational user of ShabooAgri. All job management actions (creation, scheduling, starting, pausing, resuming, completing, manual entry) can be executed directly by authorized Managers on behalf of Drivers.
+- **Driver Phone Interaction is Optional:** Phone interaction by Drivers is optional for completing field work. Driver interface is simple and view-oriented for assigned work.
+
+### 14.2 Execution Modes: Live Execution & Manual / After-Work Entry
+- **Single Job Record Architecture:** Both Live Execution Mode and Manual / After-Work Entry Mode share the exact same `Job` record, database schema, pricing engine, invoice generator, and dashboard metrics.
+- **Live Execution Mode (`LIVE`):** Real-time field execution with `start`, `pause`, `resume`, `complete` status transitions and live counter.
+- **Manual / After-Work Entry Mode (`MANUAL` / `AFTER_WORK`):** Allows Manager/Owner to log completed jobs after field work finishes (recording Farmer, Village, Machine, Driver, Work Date, Start Time, End Time, actual hours, acres, fuel, and notes). Automatically derives work duration, calculates invoice amounts, and updates driver work records.
+
+### 14.3 Driver Compensation & Employment Model
+- **Work Hours ≠ Salary Calculation:** Driver operational work duration (hours worked) is tracked as field history. Driver compensation calculation depends strictly on employment agreement type:
+  1. `HOURLY`: Earnings are calculated directly from worked job hours (`actualHours × hourlyRate`).
+  2. `MONTHLY`: Fixed monthly salary (`monthlySalary`). Job hours are tracked for operational history only and MUST NOT be converted to hourly wages.
+  3. `YEARLY`: Fixed annual salary (`yearlySalary`). Job hours are tracked for operational history only.
+
+### 14.4 Role Scoping & Access Rules
+- **Manager:** Full operational control (create farmer/booking/job, execute status transitions, perform after-work entry, record fuel/acres, receive payment).
+- **Driver:** Restricted view of assigned jobs, machine status, farmer location, completed work duration, and compensation info where applicable.
+- **Farmer:** Portal view-only (bookings, completed work, invoices, payment receipts, balance).
+
+---
+
 *End of specification. This document supersedes informal notes; update it in place as scope changes rather than creating parallel spec documents.*

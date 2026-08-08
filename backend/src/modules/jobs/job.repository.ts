@@ -65,7 +65,30 @@ export function findByBookingIdScoped(companyId: string, bookingId: string) {
 
 export function create(companyId: string, bookingId: string, machineId: string, driverId: string) {
   return prisma.job.create({
-    data: { companyId, bookingId, machineId, driverId },
+    data: { companyId, bookingId, machineId, driverId, executionMode: "LIVE" },
+    include: includeRelations,
+  });
+}
+
+export function createManual(
+  companyId: string,
+  data: {
+    bookingId: string;
+    machineId: string;
+    driverId: string;
+    executionMode: "MANUAL" | "LIVE";
+    status: "COMPLETED";
+    startTime: Date;
+    endTime: Date;
+    totalPausedDurationSec: number;
+    actualHours: number;
+    completedAcres?: number;
+    fuelUsedLitres?: number;
+    notes?: string;
+  },
+) {
+  return prisma.job.create({
+    data: { ...data, companyId },
     include: includeRelations,
   });
 }

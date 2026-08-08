@@ -6,6 +6,7 @@ import {
   addFuelEntrySchema,
   addJobPhotoSchema,
   completeJobSchema,
+  createManualJobSchema,
   pauseJobSchema,
   resumeJobSchema,
   startJobSchema,
@@ -87,4 +88,11 @@ export async function addPhoto(req: Request, res: Response) {
   const fileUrl = `/uploads/job-photos/${user.companyId}/${req.params.id}/${req.file.filename}`;
   const photo = await jobService.addPhoto(user.companyId, req.params.id, user, fileUrl, caption);
   res.status(201).json(photo);
+}
+
+export async function createManualJob(req: Request, res: Response) {
+  const user = requireUser(req);
+  const input = createManualJobSchema.parse(req.body);
+  const job = await jobService.createManualEntryJob(user.companyId, user.id, user, input);
+  res.status(201).json(job);
 }

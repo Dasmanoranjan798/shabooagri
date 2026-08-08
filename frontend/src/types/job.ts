@@ -1,4 +1,5 @@
 export type JobStatus = "NOT_STARTED" | "WORKING" | "PAUSED" | "COMPLETED";
+export type JobExecutionMode = "LIVE" | "MANUAL";
 
 export interface JobFuelEntry {
   id: string;
@@ -25,6 +26,7 @@ export interface Job {
   machineId: string;
   driverId: string;
   status: JobStatus;
+  executionMode?: JobExecutionMode;
   startTime: string | null;
   endTime: string | null;
   totalPausedDurationSec: number;
@@ -72,4 +74,21 @@ export interface UpdateJobPayload {
   completedAcres?: number;
   actualHours?: number;
   notes?: string;
+}
+
+export interface CreateManualJobPayload {
+  customerId: string;
+  villageId: string;
+  machineId: string;
+  driverId: string;
+  scheduledDate: string;
+  pricingMethodId: string;
+  rate: number;
+  startTime: string;
+  endTime: string;
+  actualHours?: number;
+  completedAcres?: number;
+  fuelUsedLitres?: number;
+  notes?: string;
+  location?: string;
 }
