@@ -243,3 +243,34 @@ export async function getReceipt(companyId: string, invoiceId: string, user: Aut
     })),
   };
 }
+
+// ---- Dashboard aggregation pass-throughs (called by dashboard.service.ts) ----
+// These do not reimplement business logic — they delegate to
+// payment.repository.ts which contains all aggregation queries. Dashboard
+// calls paymentService.* instead of the repository directly so module
+// boundaries are preserved (§4/§3 of Goal Specification).
+
+export function getDashboardRevenueInWindow(companyId: string, fromUtc: Date, toUtc: Date) {
+  return paymentRepository.sumReceivedInWindow(companyId, fromUtc, toUtc);
+}
+
+export function getDashboardPendingBalance(companyId: string) {
+  return paymentRepository.sumPendingBalance(companyId);
+}
+
+export function getDashboardPendingBalanceBefore(companyId: string, before: Date) {
+  return paymentRepository.sumPendingBalanceCreatedBefore(companyId, before);
+}
+
+export function getDashboardIncomeByDay(companyId: string, fromUtc: Date, toUtc: Date) {
+  return paymentRepository.getReceivedByDay(companyId, fromUtc, toUtc);
+}
+
+export function getDashboardIncomeByMonth(companyId: string, fromUtc: Date, toUtc: Date) {
+  return paymentRepository.getReceivedByMonth(companyId, fromUtc, toUtc);
+}
+
+export function getDashboardPendingInvoices(companyId: string) {
+  return paymentRepository.findPendingInvoices(companyId);
+}
+

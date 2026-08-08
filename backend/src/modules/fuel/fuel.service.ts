@@ -21,3 +21,12 @@ export function listForJob(companyId: string, jobId: string) {
 export function sumLitresForJob(companyId: string, jobId: string) {
   return fuelRepository.sumLitresForJob(companyId, jobId);
 }
+
+// Returns daily fuel totals within a UTC date window. Used by the Dashboard
+// fuel-consumption chart. Dashboard passes UTC boundaries for the company's
+// timezone-corrected period so the date bucketing is correct per company
+// timezone. The Fuel module doesn't itself interpret timezone — that concern
+// belongs to the Dashboard service.
+export function getLitresByDay(companyId: string, fromUtc: Date, toUtc: Date) {
+  return fuelRepository.getLitresByDay(companyId, fromUtc, toUtc);
+}
