@@ -13,8 +13,8 @@ export function findSingleTenantCompany() {
 }
 
 export function findRoleByKey(companyId: string, systemKey: string) {
-  return prisma.role.findUnique({
-    where: { companyId_systemKey: { companyId, systemKey } },
+  return prisma.role.findFirst({
+    where: { companyId, systemKey },
   });
 }
 

@@ -151,7 +151,7 @@ model TerminologySetting {
 model Role {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId    String   @map("company_id") @db.Uuid
-  systemKey    String   @map("system_key") // 'owner' | 'manager' | 'driver' | 'farmer'
+  systemKey    String?  @map("system_key") // 'owner' | 'manager' | 'driver' | 'farmer' | null for custom roles
   name         String
   isSystemRole Boolean  @default(true) @map("is_system_role")
   createdAt    DateTime @default(now()) @map("created_at")
@@ -160,7 +160,7 @@ model Role {
   users           User[]
   rolePermissions RolePermission[]
 
-  @@unique([companyId, systemKey])
+  @@unique([companyId, name])
   @@map("roles")
 }
 

@@ -135,8 +135,8 @@ async function main() {
 
   for (const roleDef of SYSTEM_ROLES) {
     const role = await prisma.role.upsert({
-      where: { companyId_systemKey: { companyId: company.id, systemKey: roleDef.systemKey } },
-      update: {},
+      where: { companyId_name: { companyId: company.id, name: roleDef.name } },
+      update: { systemKey: roleDef.systemKey },
       create: {
         companyId: company.id,
         systemKey: roleDef.systemKey,

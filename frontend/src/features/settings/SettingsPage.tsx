@@ -5,6 +5,8 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import { useAuth } from "../../context/AuthContext";
+import { setCustomTerms } from "../../lib/terminology";
+import { RoleManagementCard } from "./RoleManagementCard";
 
 const TERM_KEYS = ["customer", "driver", "machine", "booking", "invoice", "village"] as const;
 type TermKey = (typeof TERM_KEYS)[number];
@@ -77,6 +79,7 @@ export const SettingsPage: React.FC = () => {
         }
       }
       setTermForm(termMap);
+      setCustomTerms(termMap);
     } catch (err: any) {
       setError(err.message || "Failed to load settings");
     } finally {
@@ -125,6 +128,7 @@ export const SettingsPage: React.FC = () => {
           displayLabelPlural: termForm[key].plural,
         })),
       });
+      setCustomTerms(termForm);
       setTermSaved(true);
       setTimeout(() => setTermSaved(false), 3000);
     } catch (err: any) {
@@ -275,6 +279,9 @@ export const SettingsPage: React.FC = () => {
             )}
           </form>
         </Card>
+
+        {/* Roles & Permissions (RBAC) */}
+        <RoleManagementCard canManage={canManage} />
 
         {/* Terminology */}
         <Card title="Business Terminology" subtitle="Customise how the app labels your business entities (§9)">
