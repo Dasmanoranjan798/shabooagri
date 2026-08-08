@@ -12,7 +12,10 @@ import { CustomersPage } from "../features/customers/CustomersPage";
 import { EmployeesPage } from "../features/employees/EmployeesPage";
 import { PaymentsPage } from "../features/payments/PaymentsPage";
 import { ExpensesPage } from "../features/expenses/ExpensesPage";
-import { PlaceholderPage } from "../features/placeholder/PlaceholderPage";
+import { FuelPage } from "../features/fuel/FuelPage";
+import { MaintenancePage } from "../features/maintenance/MaintenancePage";
+import { ReportsPage } from "../features/reports/ReportsPage";
+import { SettingsPage } from "../features/settings/SettingsPage";
 
 export function App() {
   return (
@@ -125,11 +128,7 @@ export function App() {
             element={
               <ProtectedRoute permission="operations.view">
                 <AppLayout>
-                  <PlaceholderPage
-                    title="Fuel Tracking"
-                    icon="⛽"
-                    description="Equipment refueling logs and consumption metrics."
-                  />
+                  <FuelPage />
                 </AppLayout>
               </ProtectedRoute>
             }
@@ -140,11 +139,7 @@ export function App() {
             element={
               <ProtectedRoute permission="operations.view">
                 <AppLayout>
-                  <PlaceholderPage
-                    title="Maintenance"
-                    icon="🔧"
-                    description="Service schedules, countdowns, and maintenance records."
-                  />
+                  <MaintenancePage />
                 </AppLayout>
               </ProtectedRoute>
             }
@@ -155,11 +150,7 @@ export function App() {
             element={
               <ProtectedRoute permission="report.generate">
                 <AppLayout>
-                  <PlaceholderPage
-                    title="Reports"
-                    icon="📈"
-                    description="Financial summaries, machine utilization, and operational reports."
-                  />
+                  <ReportsPage />
                 </AppLayout>
               </ProtectedRoute>
             }
@@ -168,13 +159,9 @@ export function App() {
           <Route
             path="/settings"
             element={
-              <ProtectedRoute permission="settings.manage">
+              <ProtectedRoute>
                 <AppLayout>
-                  <PlaceholderPage
-                    title="Settings"
-                    icon="⚙️"
-                    description="Company configuration, branding, and terminology settings."
-                  />
+                  <SettingsPage />
                 </AppLayout>
               </ProtectedRoute>
             }

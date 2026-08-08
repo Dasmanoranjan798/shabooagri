@@ -16,6 +16,9 @@ import type { Customer, CreateCustomerPayload, UpdateCustomerPayload } from "../
 import type { Employee, CreateEmployeePayload, UpdateEmployeePayload } from "../types/employee";
 import type { Invoice, PaymentRecord, ReceivePaymentPayload, ReceiptData } from "../types/payment";
 import type { Expense, ExpenseCategory, CreateExpensePayload, UpdateExpensePayload } from "../types/expense";
+import type { FuelEntry } from "../types/fuel";
+import type { MaintenanceSchedule, MaintenanceRecord, CreateMaintenanceRecordPayload, CreateMaintenanceSchedulePayload } from "../types/maintenance";
+import type { CompanyProfile, UpdateCompanyProfilePayload, UpdateTerminologyPayload } from "../types/settings";
 
 const TOKEN_KEY = "shabooagri_token";
 const REFRESH_TOKEN_KEY = "shabooagri_refresh_token";
@@ -729,4 +732,95 @@ export const api = {
       throw new ApiError(res.status, err.message || "Failed to delete expense");
     }
   },
+
+  // Fuel
+  async listFuelEntries(filter: { machineId?: string; jobId?: string; from?: string; to?: string } = {}): Promise<FuelEntry[]> {
+    const params = new URLSearchParams();
+    if (filter.machineId) params.set("machineId", filter.machineId);
+    if (filter.jobId) params.set("jobId", filter.jobId);
+    if (filter.from) params.set("from", filter.from);
+    if (filter.to) params.set("to", filter.to);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const res = await fetchWithAuth(`/fuel/entries${qs}`);
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  // Maintenance Schedules
+  async listMaintenanceSchedules(machineId?: string): Promise<MaintenanceSchedule[]> {
+    const qs = machineId ? `?machineId=${encodeURIComponent(machineId)}` : "";
+    const res = await fetchWithAuth(`/maintenance/schedules${qs}`);
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  async createMaintenanceSchedule(payload: CreateMaintenanceSchedulePayload): Promise<MaintenanceSchedule> {
+    const res = await fetchWithAuth("/maintenance/schedules", { method: "POST", body: JSON.stringify(payload) });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to create schedule" }));
+      throw new ApiError(res.status, err.message);
+    }
+    return res.json();
+  },
+
+  async deleteMaintenanceSchedule(id: string): Promise<void> {
+    const res = await fetchWithAuth(`/maintenance/schedules/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to delete schedule" }));
+      throw new ApiError(res.status, err.message);
+    }
+  },
+
+  // Maintenance Records
+  async listMaintenanceRecords(machineId?: string): Promise<MaintenanceRecord[]> {
+    const qs = machineId ? `?machineId=${encodeURIComponent(machineId)}` : "";
+    const res = await fetchWithAuth(`/maintenance/records${qs}`);
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  async createMaintenanceRecord(payload: CreateMaintenanceRecordPayload): Promise<MaintenanceRecord> {
+    const res = await fetchWithAuth("/maintenance/records", { method: "POST", body: JSON.stringify(payload) });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to log service record" }));
+      throw new ApiError(res.status, err.message);
+    }
+    return res.json();
+  },
+
+  async deleteMaintenanceRecord(id: string): Promise<void> {
+    const res = await fetchWithAuth(`/maintenance/records/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to delete record" }));
+      throw new ApiError(res.status, err.message);
+    }
+  },
+
+  // Settings
+  async getCompanyProfile(): Promise<CompanyProfile> {
+    const res = await fetchWithAuth("/settings/profile");
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load company profile" }));
+      throw new ApiError(res.status, err.message);
+    }
+    return res.json();
+  },
+
+  async updateCompanyProfile(payload: UpdateCompanyProfilePayload): Promise<CompanyProfile> {
+    const res = await fetchWithAuth("/settings/profile", { method: "PATCH", body: JSON.stringify(payload) });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to update company profile" }));
+      throw new ApiError(res.status, err.message);
+    }
+    return res.json();
+  },
+
+  async updateTerminology(payload: UpdateTerminologyPayload): Promise<void> {
+    const res = await fetchWithAuth("/settings/terminology", { method: "PATCH", body: JSON.stringify(payload) });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to update terminology" }));
+      throw new ApiError(res.status, err.message);
+    }
+  },
 };
+

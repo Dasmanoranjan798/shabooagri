@@ -1,5 +1,15 @@
 import * as fuelRepository from "./fuel.repository";
 
+// Company-wide fuel entry listing — used by GET /fuel/entries route.
+// Filters (machineId, jobId, date range) are all optional.
+export function listAll(
+  companyId: string,
+  filter: { machineId?: string; jobId?: string; fromDate?: string; toDate?: string } = {},
+) {
+  return fuelRepository.findAllForCompany(companyId, filter);
+}
+
+
 // No cross-module validation here: the caller (job.service.ts) already
 // knows machineId is valid because it's the job's own machineId, not a
 // value the client supplies directly — see job.service.ts's addFuelEntry.

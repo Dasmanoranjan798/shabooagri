@@ -1,6 +1,36 @@
 import { prisma } from "../../db/prisma";
 
 // Only file in this module allowed to import the Prisma client.
+
+// Company-wide listing — used by GET /fuel/entries. Supports optional
+// filters so the UI can drill into a specific machine or date window.
+export function findAllForCompany(
+  companyId: string,
+  filter: { machineId?: string; jobId?: string; fromDate?: string; toDate?: string } = {},
+) {
+  const where: Record<string, unknown> = { companyId };
+  if (filter.machineId) where.machineId = filter.machineId;
+  if (filter.jobId) where.jobId = filter.jobId;
+  if (filter.fromDate || filter.toDate) {
+    where.recordedAt = {};
+    if (filter.fromDate) (where.recordedAt as Record<string, Date>).gte = new Date(filter.fromDate);
+    if (filter.toDate) {
+      const to = new Date(filter.toDate);
+      to.setDate(to.getDate() + 1); // inclusive end date: shift to next day midnight
+      (where.recordedAt as Record<string, Date>).lt = to;
+    }
+  }
+  return prisma.jobFuelEntry.findMany({
+    where,
+    orderBy: { recordedAt: "desc" },
+    include: {
+      machine: { select: { id: true, registrationNumber: true, brand: true, model: true } },
+      job: { select: { id: true } },
+      recorder: { select: { id: true, fullName: true } },
+    },
+  });
+}
+
 export function findAllForJob(companyId: string, jobId: string) {
   return prisma.jobFuelEntry.findMany({ where: { companyId, jobId }, orderBy: { recordedAt: "desc" } });
 }
