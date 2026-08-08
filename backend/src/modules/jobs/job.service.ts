@@ -6,6 +6,7 @@ import { resolveCallerScope } from "../../shared/access/callerScope";
 import { AppError } from "../../shared/errors/AppError";
 import * as jobPhotoRepository from "./jobPhoto.repository";
 import * as jobRepository from "./job.repository";
+import * as bookingRepository from "../bookings/booking.repository";
 import * as jobStatusLogRepository from "./jobStatusLog.repository";
 import type { CompleteJobInput, PauseJobInput, ResumeJobInput, StartJobInput, UpdateJobInput } from "./job.validators";
 
@@ -93,6 +94,7 @@ export async function start(companyId: string, id: string, user: AuthenticatedUs
 
   const startTime = input.startTime ?? new Date();
   const updated = await jobRepository.updateScopedWithRelations(companyId, id, { status: "WORKING", startTime });
+  await bookingRepository.updateScopedWithRelations(companyId, job.bookingId, { status: "WORKING" });
   await jobStatusLogRepository.create(companyId, id, "WORKING", user.id);
   return updated;
 }
@@ -149,11 +151,38 @@ export async function complete(companyId: string, id: string, user: Authenticate
     ...(input.completedAcres !== undefined ? { completedAcres: input.completedAcres } : {}),
     ...(input.notes !== undefined ? { notes: input.notes } : {}),
   });
+  await bookingRepository.updateScopedWithRelations(companyId, job.bookingId, { status: "COMPLETED" });
   await jobStatusLogRepository.create(companyId, id, "COMPLETED", user.id, input.notes);
   if (updated) {
     await paymentService.createInvoiceForCompletedJob(companyId, updated);
   }
   return updated;
+}
+
+export async function completeForBooking(companyId: string, bookingId: string) {
+  const existingJob = await jobRepository.findByBookingIdScoped(companyId, bookingId);
+  if (!existingJob || existingJob.status === "COMPLETED") return;
+
+  let totalPausedDurationSec = existingJob.totalPausedDurationSec;
+  if (existingJob.status === "PAUSED") {
+    totalPausedDurationSec += await currentPauseDurationSec(companyId, existingJob.id);
+  }
+
+  const endTime = new Date();
+  const startTime = existingJob.startTime ?? endTime;
+  const actualHours = computeActualHours(startTime, endTime, totalPausedDurationSec);
+
+  const updated = await jobRepository.updateScopedWithRelations(companyId, existingJob.id, {
+    status: "COMPLETED",
+    startTime,
+    endTime,
+    totalPausedDurationSec,
+    actualHours,
+  });
+
+  if (updated) {
+    await paymentService.createInvoiceForCompletedJob(companyId, updated);
+  }
 }
 
 export async function updateDetails(companyId: string, id: string, user: AuthenticatedUser, input: UpdateJobInput) {

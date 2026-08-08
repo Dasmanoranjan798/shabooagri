@@ -175,12 +175,12 @@ export async function updateStatus(companyId: string, id: string, nextStatus: Bo
 
   const updated = await bookingRepository.updateScopedWithRelations(companyId, id, { status: nextStatus });
 
-  // One Job per Booking (schema: bookings.id is unique on jobs.booking_id),
-  // created exactly once, right here — never via a client-facing "create
-  // job" endpoint. jobService owns the jobs table entirely from this point
-  // on; Bookings never touches it again after this call.
   if (nextStatus === "ON_THE_WAY") {
     await jobService.createForBooking(companyId, id, updated!.machineId!, updated!.driverId!);
+  }
+
+  if (nextStatus === "COMPLETED") {
+    await jobService.completeForBooking(companyId, id);
   }
 
   return withEstimatedAmount(updated!);
