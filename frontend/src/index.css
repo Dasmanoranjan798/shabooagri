@@ -1322,4 +1322,435 @@ button {
   .sa-bottom-nav {
     display: flex;
   }
+
+  .sa-desktop-only {
+    display: none;
+  }
+
+  .sa-mobile-only {
+    display: block;
+  }
 }
+
+@media (min-width: 769px) {
+  .sa-desktop-only {
+    display: block;
+  }
+  .sa-mobile-only {
+    display: none;
+  }
+}
+
+/* Page Header & Toolbar */
+.sa-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.sa-page-header-text h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1.2;
+}
+
+.sa-page-header-text p {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.sa-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.sa-filter-tabs {
+  display: flex;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 3px;
+  gap: 2px;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.sa-tab-btn {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  transition: var(--transition);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sa-tab-btn.is-active {
+  background-color: var(--color-primary);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.sa-tab-count {
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+.sa-toolbar-search {
+  min-width: 260px;
+}
+
+/* Table Clickable Row */
+.sa-clickable-row {
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.sa-table-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sa-icon-action {
+  font-size: 1rem;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+}
+
+.sa-icon-action:hover {
+  background-color: var(--color-border);
+}
+
+/* Modals */
+.sa-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(2px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.sa-modal-content {
+  width: 100%;
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  animation: sa-modal-pop 0.2s ease-out;
+}
+
+@keyframes sa-modal-pop {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.sa-modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sa-modal-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.sa-modal-close {
+  font-size: 1.2rem;
+  color: var(--color-text-muted);
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+}
+
+.sa-modal-close:hover {
+  color: var(--color-text);
+  background-color: var(--color-bg);
+}
+
+.sa-modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.sa-modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+/* Booking Form Elements */
+.sa-booking-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sa-form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .sa-form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sa-segmented-control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  background-color: var(--color-bg);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.sa-segmented-btn {
+  flex: 1;
+  min-width: 80px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  transition: var(--transition);
+  text-align: center;
+}
+
+.sa-segmented-btn.is-active {
+  background-color: var(--color-primary);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.sa-textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.sa-estimate-banner {
+  background-color: var(--color-primary-light);
+  border: 1px solid rgba(27, 122, 62, 0.2);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: var(--color-primary-dark);
+}
+
+.sa-estimate-banner strong {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.sa-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+/* Detail Modal Styles */
+.sa-modal-booking-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sa-status-action-bar {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sa-action-bar-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.sa-action-bar-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sa-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  background-color: var(--color-bg);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+}
+
+.sa-detail-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.sa-detail-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.sa-detail-val {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.sa-assign-section, .sa-notes-section, .sa-attachments-section {
+  margin-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 1rem;
+}
+
+.sa-assign-section h4, .sa-notes-section h4, .sa-attachments-section h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.sa-inline-assign {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sa-notes-text {
+  font-size: 0.85rem;
+  background-color: var(--color-bg);
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+}
+
+.sa-attachment-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.sa-attachment-item {
+  height: 80px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  display: block;
+}
+
+.sa-attachment-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+
+.sa-attachment-img:hover {
+  transform: scale(1.05);
+}
+
+.sa-upload-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Mobile Booking Card List */
+.sa-mobile-booking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sa-mobile-booking-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.sa-mobile-booking-card:active {
+  background-color: var(--color-primary-light);
+}
+
+.sa-booking-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.sa-booking-num {
+  font-weight: 800;
+  color: var(--color-primary);
+  font-size: 0.95rem;
+}
+
+.sa-booking-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.sa-bcard-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.sa-bcard-label {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.sa-bcard-val {
+  font-weight: 600;
+  color: var(--color-text);
+}
+

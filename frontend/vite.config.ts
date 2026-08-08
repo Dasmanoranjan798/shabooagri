@@ -9,6 +9,13 @@ export default defineConfig({
     proxy: {
       '/auth': 'http://localhost:4000',
       '/dashboard': 'http://localhost:4000',
+      '/bookings': 'http://localhost:4000',
+      '/customers': 'http://localhost:4000',
+      '/villages': 'http://localhost:4000',
+      '/machines': 'http://localhost:4000',
+      '/drivers': 'http://localhost:4000',
+      '/pricing-methods': 'http://localhost:4000',
+      '/uploads': 'http://localhost:4000',
       '/health': 'http://localhost:4000',
     },
   },

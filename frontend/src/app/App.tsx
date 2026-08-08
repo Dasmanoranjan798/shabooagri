@@ -4,6 +4,7 @@ import { AppLayout } from "../layouts/AppLayout";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { LoginPage } from "../features/auth/LoginPage";
 import { DashboardPage } from "../features/dashboard/DashboardPage";
+import { BookingsPage } from "../features/bookings/BookingsPage";
 import { PlaceholderPage } from "../features/placeholder/PlaceholderPage";
 import { getTerm } from "../lib/terminology";
 
@@ -28,13 +29,9 @@ export function App() {
           <Route
             path="/bookings"
             element={
-              <ProtectedRoute permission="operations.view">
+              <ProtectedRoute>
                 <AppLayout>
-                  <PlaceholderPage
-                    title={getTerm("booking", true)}
-                    icon="📅"
-                    description={`Manage ${getTerm("booking", true).toLowerCase()}, customer schedules, and assignments.`}
-                  />
+                  <BookingsPage />
                 </AppLayout>
               </ProtectedRoute>
             }
