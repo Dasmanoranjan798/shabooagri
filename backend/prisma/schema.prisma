@@ -98,6 +98,9 @@ model Company {
   // NEVER decremented or reused, even if the booking that consumed a
   // number is later hard-deleted — see bookings/README.md.
   nextBookingNumber Int @default(1) @map("next_booking_number")
+  // Monotonic counter backing Invoice.invoiceNumber (INV-000001, ...).
+  // Incremented atomically on every invoice creation — see payments/README.md.
+  nextInvoiceNumber Int @default(1) @map("next_invoice_number")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 

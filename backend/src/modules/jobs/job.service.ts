@@ -1,6 +1,7 @@
 import type { JobStatus } from "@prisma/client";
 import type { AuthenticatedUser } from "../auth/auth.types";
 import * as fuelService from "../fuel/fuel.service";
+import * as paymentService from "../payments/payment.service";
 import { resolveCallerScope } from "../../shared/access/callerScope";
 import { AppError } from "../../shared/errors/AppError";
 import * as jobPhotoRepository from "./jobPhoto.repository";
@@ -149,6 +150,9 @@ export async function complete(companyId: string, id: string, user: Authenticate
     ...(input.notes !== undefined ? { notes: input.notes } : {}),
   });
   await jobStatusLogRepository.create(companyId, id, "COMPLETED", user.id, input.notes);
+  if (updated) {
+    await paymentService.createInvoiceForCompletedJob(companyId, updated);
+  }
   return updated;
 }
 

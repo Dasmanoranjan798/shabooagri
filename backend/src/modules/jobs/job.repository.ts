@@ -12,7 +12,11 @@ const scoped = createScopedRepository(prisma.job);
 // module. Needed here so Farmer-scope filtering/visibility can check
 // booking.customerId without a second query.
 const includeRelations = {
-  booking: true,
+  booking: {
+    include: {
+      pricingMethod: true,
+    },
+  },
   machine: true,
   driver: true,
 } satisfies Prisma.JobInclude;
