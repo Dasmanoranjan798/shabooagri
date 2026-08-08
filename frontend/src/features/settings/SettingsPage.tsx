@@ -105,6 +105,9 @@ export const SettingsPage: React.FC = () => {
         invoicePrefix: profileForm.invoicePrefix || null,
         themeColor: profileForm.themeColor || null,
       });
+      if (profileForm.themeColor) {
+        document.documentElement.style.setProperty("--color-primary", profileForm.themeColor);
+      }
       setProfileSaved(true);
       setTimeout(() => setProfileSaved(false), 3000);
       await loadProfile();

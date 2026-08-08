@@ -101,8 +101,12 @@ export async function updateRole(companyId: string, id: string, name?: string, p
 }
 
 export async function deleteRole(companyId: string, id: string) {
-  const role = await prisma.role.findFirst({ where: { id, companyId } });
+  const role = await prisma.role.findFirst({
+    where: { id, companyId },
+    include: { _count: { select: { users: true } } },
+  });
   if (!role || role.isSystemRole) return false;
+  if (role._count.users > 0) return false;
 
   await prisma.rolePermission.deleteMany({ where: { roleId: id } });
   await prisma.role.delete({ where: { id } });
@@ -112,6 +116,9 @@ export async function deleteRole(companyId: string, id: string) {
 export async function assignUserRole(companyId: string, userId: string, roleId: string) {
   const role = await prisma.role.findFirst({ where: { id: roleId, companyId } });
   if (!role) return null;
+
+  const user = await prisma.user.findFirst({ where: { id: userId, companyId } });
+  if (!user) return null;
 
   return prisma.user.update({
     where: { id: userId },

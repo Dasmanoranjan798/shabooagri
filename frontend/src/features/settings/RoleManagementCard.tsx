@@ -248,8 +248,8 @@ export const RoleManagementCard: React.FC<RoleManagementCardProps> = ({ canManag
                 required
               >
                 <option value="">Select User…</option>
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.userId || ""}>
+                {employees.filter((emp) => emp.userId).map((emp) => (
+                  <option key={emp.id} value={emp.userId!}>
                     {emp.name} ({emp.roleTitle || "Staff"})
                   </option>
                 ))}

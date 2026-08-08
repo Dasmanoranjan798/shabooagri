@@ -1,6 +1,20 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import type { SystemRoleKey, User } from "../types/auth";
 import { api, clearStoredTokens, getStoredToken } from "../lib/api";
+import { setCustomTerms } from "../lib/terminology";
+
+function applyBranding(themeColor?: string | null, accentColor?: string | null) {
+  if (themeColor) {
+    document.documentElement.style.setProperty("--color-primary", themeColor);
+  } else {
+    document.documentElement.style.removeProperty("--color-primary");
+  }
+  if (accentColor) {
+    document.documentElement.style.setProperty("--color-accent", accentColor);
+  } else {
+    document.documentElement.style.removeProperty("--color-accent");
+  }
+}
 
 interface AuthContextType {
   user: User | null;
@@ -22,6 +36,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  const syncCompanyBranding = async () => {
+    try {
+      const profile = await api.getCompanyProfile();
+      applyBranding(profile.themeColor, profile.accentColor);
+      if (profile.terminologySettings && profile.terminologySettings.length > 0) {
+        const termMap: Record<string, { singular: string; plural: string }> = {};
+        for (const ts of profile.terminologySettings) {
+          termMap[ts.termKey] = {
+            singular: ts.displayLabelSingular,
+            plural: ts.displayLabelPlural,
+          };
+        }
+        setCustomTerms(termMap);
+      }
+    } catch {
+      // Ignore fallback to defaults
+    }
+  };
+
   useEffect(() => {
     async function initAuth() {
       const token = getStoredToken();
@@ -32,6 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const currentUser = await api.me();
         setUser(currentUser);
+        await syncCompanyBranding();
       } catch {
         clearStoredTokens();
         setUser(null);
@@ -47,6 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await api.login(identifier, password, pin);
       setUser(res.user);
+      await syncCompanyBranding();
     } catch (err: any) {
       const message = err.message || "Failed to log in";
       setError(message);
@@ -70,6 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await api.verifyOtp(identifier, code);
       setUser(res.user);
+      await syncCompanyBranding();
     } catch (err: any) {
       const message = err.message || "Invalid OTP code";
       setError(message);
@@ -80,6 +116,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     api.logout();
     setUser(null);
+    applyBranding(null, null);
+    setCustomTerms({});
   };
 
   const roleKey = user?.role?.systemKey || null;
