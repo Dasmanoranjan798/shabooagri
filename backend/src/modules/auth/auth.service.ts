@@ -275,3 +275,16 @@ export async function getProfile(userId: string) {
   }
   return toPublicUser(user);
 }
+
+// For other modules (Employees, Customers) that let a business record
+// optionally link to an existing login account (e.g. granting a driver or
+// farmer portal access). Scoped by company, unlike getProfile above, since
+// this is used to validate a caller-supplied userId rather than "give me
+// my own profile."
+export async function getUserForCompany(companyId: string, userId: string) {
+  const user = await authRepository.findUserById(userId);
+  if (!user || user.companyId !== companyId) {
+    throw new AppError(404, "User not found");
+  }
+  return toPublicUser(user);
+}

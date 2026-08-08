@@ -4,6 +4,13 @@ import { env } from "./config/env";
 import { prisma } from "./db/prisma";
 import { errorMiddleware } from "./middleware/error.middleware";
 import { authRouter } from "./modules/auth/auth.routes";
+import { machineTypeRouter } from "./modules/machine-types/machineType.routes";
+import { machineRouter } from "./modules/machines/machine.routes";
+import { employeeRouter } from "./modules/employees/employee.routes";
+import { driverRouter } from "./modules/drivers/driver.routes";
+import { customerRouter } from "./modules/customers/customer.routes";
+import { pricingMethodRouter } from "./modules/pricing-methods/pricingMethod.routes";
+import { villageRouter } from "./modules/villages/village.routes";
 
 // Express app assembly only. Module routers are mounted here once they exist —
 // this file must never contain business logic itself.
@@ -22,6 +29,13 @@ app.get("/health", async (_req, res) => {
 });
 
 app.use("/auth", authRouter);
+app.use("/villages", villageRouter);
+app.use("/machine-types", machineTypeRouter);
+app.use("/machines", machineRouter);
+app.use("/employees", employeeRouter);
+app.use("/drivers", driverRouter);
+app.use("/customers", customerRouter);
+app.use("/pricing-methods", pricingMethodRouter);
 
 // Must be registered after all routes.
 app.use(errorMiddleware);
