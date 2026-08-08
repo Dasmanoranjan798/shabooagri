@@ -93,6 +93,11 @@ model Company {
   invoicePrefix String?  @default("INV") @map("invoice_prefix")
   printLayout   Json?    @map("print_layout")
   isActive      Boolean  @default(true) @map("is_active")
+  // Monotonic counter backing Booking.bookingNumber (BK-000001, ...).
+  // Incremented atomically ("SET x = x + 1") on every booking creation and
+  // NEVER decremented or reused, even if the booking that consumed a
+  // number is later hard-deleted — see bookings/README.md.
+  nextBookingNumber Int @default(1) @map("next_booking_number")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 

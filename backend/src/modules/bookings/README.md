@@ -36,9 +36,10 @@ owned, not built yet): `jobs.booking_id`, `invoices.booking_id`.
 ## Business rules encoded here
 
 - **Booking number**: auto-generated per company as `BK-000001`,
-  `BK-000002`, ... A count-then-insert-with-retry-on-conflict strategy
-  (see "Important assumptions" — flagged as a Phase 1 concurrency
-  trade-off).
+  `BK-000002`, ... Backed by a strictly monotonic counter
+  (`companies.next_booking_number`) that is only ever incremented, never
+  recomputed from the bookings table — a hard-deleted booking's number is
+  never reassigned (see "Important assumptions").
 - **Machine/Driver nullable at creation** (§8.1 schema note): a booking
   can be created before either is decided, then assigned later via the
   dedicated assign-machine / assign-driver endpoints.
@@ -125,24 +126,25 @@ None.
 
 ## Important assumptions
 
-- **Booking number generation is count-then-retry, not a DB sequence.**
-  `generateBookingNumber` counts existing bookings for the company and
-  formats `count + 1`; `create()` retries (up to 5 times) on a unique-
-  constraint conflict. Correct and simple at Phase 1's single-pilot-
-  company, low-concurrency scale, but has two known consequences worth
-  being explicit about rather than discovering by surprise later: (1) two
-  truly simultaneous booking creations could collide and require more than
-  one retry; (2) confirmed by testing — after `DELETE /bookings/:id`
-  removes a booking, the count drops, so the *next* booking created can be
-  assigned the same booking number the deleted one had (e.g. delete
-  `BK-000002`, the next new booking also becomes `BK-000002`). Since
-  `booking.delete` is framed above as "correcting a mistake, not a job
-  that didn't happen," reusing that number is arguably correct — the
-  original should never have existed — but it does mean "booking number"
-  is not a stable historical identifier if any deletes ever happen. A
-  per-company DB sequence (never reused, even across deletes) would remove
-  both issues — worth doing before this scales past a pilot or if deletes
-  turn out to be common.
+- **Booking number generation is a monotonic counter on `companies`, not a
+  count of the bookings table.** An earlier version counted existing
+  bookings and used `count + 1`, which meant a hard-deleted booking's
+  number could be reassigned to the next booking created — confirmed by
+  testing, then fixed before anything was built on top of Bookings (real
+  trust risk once invoices/receipts/driver messages reference the
+  number, not a cosmetic issue). The fix:
+  `companies.next_booking_number` (migration
+  `20260808052323_add_company_next_booking_number`) is incremented
+  atomically (`SET next_booking_number = next_booking_number + 1
+  RETURNING next_booking_number`) on every booking creation and never
+  decremented, recomputed, or read from the bookings table — so a number
+  is claimed exactly once, ever, regardless of later deletes. The
+  increment is a single UPDATE statement, so Postgres's normal row lock
+  on the company row serializes concurrent creates without needing an
+  explicit transaction; verified with 5 simultaneous booking creations
+  producing 5 distinct, gapless numbers. Also re-verified the original
+  bug is gone: create → hard-delete → create again now produces a new,
+  never-before-used number.
 - **Per-minute pricing derives its quantity from `estimatedHours × 60`.**
   The schema (matching §8.1's field list exactly) has `estimatedHours` and
   `estimatedAcres`, no separate `estimatedMinutes`. Rather than add a
@@ -222,11 +224,14 @@ linked Customer record):
   `per_minute` (rate × hours×60), `per_acre` (rate × acres) — plus
   `per_job` (flat rate, quantity ignored) and the "no estimate entered
   yet" case (`estimatedAmount: null`, not a thrown error).
-- **Booking-number reuse after delete**: confirmed directly — the number
-  freed by the deleted booking above was reassigned to the very next
-  booking created. Expected given the count-based generator (see
-  "Important assumptions"), not a bug, but worth having actually observed
-  it rather than only reasoning about it.
+- **Booking-number monotonicity**: initially caught the opposite of what's
+  true today — the original count-based generator reassigned a deleted
+  booking's number to the next one created, confirmed directly by
+  testing. Replaced with the atomic `companies.next_booking_number`
+  counter and re-tested the same scenario (create → hard-delete → create
+  again): the new booking gets a fresh, never-before-used number. Also
+  fired 5 concurrent booking creations and confirmed 5 distinct, gapless
+  numbers with no collision.
 
 All synthetic bookings, attachments, uploaded files, and their supporting
 villages/machines/employees/drivers/customers/users were deleted

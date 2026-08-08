@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../../db/prisma";
 import { createScopedRepository } from "../../shared/db/scopedRepository";
 
@@ -50,44 +50,33 @@ export function findByIdScoped(companyId: string, id: string) {
   return scoped.findByIdScoped(companyId, id);
 }
 
-const MAX_BOOKING_NUMBER_ATTEMPTS = 5;
-
-// Sequential per company (BK-000001, BK-000002, ...). Phase 1 is a single
-// pilot company at low concurrency, so count-then-retry-on-conflict is
-// sufficient; a genuinely concurrency-safe generator (a DB sequence per
-// company) is a Phase 2 concern if simultaneous booking creation ever makes
-// the race likely in practice.
-async function generateBookingNumber(companyId: string): Promise<string> {
-  const count = await prisma.booking.count({ where: { companyId } });
-  return `BK-${String(count + 1).padStart(6, "0")}`;
-}
-
-function isDuplicateBookingNumberError(err: unknown): boolean {
-  return (
-    err instanceof Prisma.PrismaClientKnownRequestError &&
-    err.code === "P2002" &&
-    ((err.meta?.target as string[] | undefined)?.includes("booking_number") ?? false)
-  );
+// Sequential per company (BK-000001, BK-000002, ...) and strictly
+// monotonic: companies.next_booking_number is only ever incremented, never
+// read-and-recomputed from the bookings table, so a hard-deleted booking's
+// number can never be reassigned. The increment itself is a single atomic
+// UPDATE ("SET x = x + 1 RETURNING x") — Postgres serializes concurrent
+// updates to the same row via its normal row lock, so two simultaneous
+// booking creations still get two distinct numbers without needing an
+// explicit transaction or a retry loop.
+async function claimNextBookingNumber(companyId: string): Promise<string> {
+  const company = await prisma.company.update({
+    where: { id: companyId },
+    data: { nextBookingNumber: { increment: 1 } },
+    select: { nextBookingNumber: true },
+  });
+  const claimedNumber = company.nextBookingNumber - 1;
+  return `BK-${String(claimedNumber).padStart(6, "0")}`;
 }
 
 export async function create(
   companyId: string,
   data: Omit<Prisma.BookingUncheckedCreateInput, "companyId" | "bookingNumber">,
 ) {
-  for (let attempt = 0; attempt < MAX_BOOKING_NUMBER_ATTEMPTS; attempt++) {
-    const bookingNumber = await generateBookingNumber(companyId);
-    try {
-      return await prisma.booking.create({
-        data: { ...data, companyId, bookingNumber },
-        include: includeRelations,
-      });
-    } catch (err) {
-      if (!isDuplicateBookingNumberError(err) || attempt === MAX_BOOKING_NUMBER_ATTEMPTS - 1) {
-        throw err;
-      }
-    }
-  }
-  throw new Error("Failed to generate a unique booking number");
+  const bookingNumber = await claimNextBookingNumber(companyId);
+  return prisma.booking.create({
+    data: { ...data, companyId, bookingNumber },
+    include: includeRelations,
+  });
 }
 
 // Returned with relations so callers (service layer computing
