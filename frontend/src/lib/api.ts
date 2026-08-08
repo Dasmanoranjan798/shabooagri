@@ -7,12 +7,12 @@ import type {
   CreateBookingPayload,
   CustomerOption,
   DriverOption,
-  MachineOption,
   PricingMethodOption,
   UpdateBookingPayload,
   VillageOption,
 } from "../types/booking";
 import type { Job, JobFuelEntry, JobPhoto, CompleteJobPayload, UpdateJobPayload } from "../types/job";
+import type { Machine, MachineType, CreateMachinePayload, UpdateMachinePayload } from "../types/machine";
 
 const TOKEN_KEY = "shabooagri_token";
 const REFRESH_TOKEN_KEY = "shabooagri_refresh_token";
@@ -281,8 +281,57 @@ export const api = {
     return res.json();
   },
 
-  async listMachines(): Promise<MachineOption[]> {
+  async listMachines(): Promise<Machine[]> {
     const res = await fetchWithAuth("/machines");
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  async getMachineById(id: string): Promise<Machine> {
+    const res = await fetchWithAuth(`/machines/${id}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Machine not found" }));
+      throw new ApiError(res.status, err.message || "Machine not found");
+    }
+    return res.json();
+  },
+
+  async createMachine(payload: CreateMachinePayload): Promise<Machine> {
+    const res = await fetchWithAuth("/machines", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to create machine" }));
+      throw new ApiError(res.status, err.message || "Failed to create machine");
+    }
+    return res.json();
+  },
+
+  async updateMachine(id: string, payload: UpdateMachinePayload): Promise<Machine> {
+    const res = await fetchWithAuth(`/machines/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to update machine" }));
+      throw new ApiError(res.status, err.message || "Failed to update machine");
+    }
+    return res.json();
+  },
+
+  async deleteMachine(id: string): Promise<void> {
+    const res = await fetchWithAuth(`/machines/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to delete machine" }));
+      throw new ApiError(res.status, err.message || "Failed to delete machine");
+    }
+  },
+
+  async listMachineTypes(): Promise<MachineType[]> {
+    const res = await fetchWithAuth("/machine-types");
     if (!res.ok) return [];
     return res.json();
   },

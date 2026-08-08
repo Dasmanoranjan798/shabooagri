@@ -6,6 +6,7 @@ import { LoginPage } from "../features/auth/LoginPage";
 import { DashboardPage } from "../features/dashboard/DashboardPage";
 import { BookingsPage } from "../features/bookings/BookingsPage";
 import { JobsPage } from "../features/jobs/JobsPage";
+import { MachinesPage } from "../features/machines/MachinesPage";
 import { PlaceholderPage } from "../features/placeholder/PlaceholderPage";
 import { getTerm } from "../lib/terminology";
 
@@ -69,11 +70,7 @@ export function App() {
             element={
               <ProtectedRoute permission="operations.view">
                 <AppLayout>
-                  <PlaceholderPage
-                    title={getTerm("machine", true)}
-                    icon="🚚"
-                    description={`Equipment fleet records, hour meters, fuel types, and availability.`}
-                  />
+                  <MachinesPage />
                 </AppLayout>
               </ProtectedRoute>
             }
