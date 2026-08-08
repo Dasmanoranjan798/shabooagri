@@ -3,7 +3,6 @@ import type { MaintenanceRecord, CreateMaintenanceRecordPayload } from "../../ty
 import type { Machine } from "../../types/machine";
 import { api } from "../../lib/api";
 import { Card } from "../../components/ui/Card";
-import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import { Modal } from "../../components/ui/Modal";
