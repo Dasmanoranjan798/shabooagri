@@ -9,6 +9,7 @@ import { JobsPage } from "../features/jobs/JobsPage";
 import { MachinesPage } from "../features/machines/MachinesPage";
 import { DriversPage } from "../features/drivers/DriversPage";
 import { CustomersPage } from "../features/customers/CustomersPage";
+import { EmployeesPage } from "../features/employees/EmployeesPage";
 import { PlaceholderPage } from "../features/placeholder/PlaceholderPage";
 
 export function App() {
@@ -89,11 +90,7 @@ export function App() {
             element={
               <ProtectedRoute permission="operations.view">
                 <AppLayout>
-                  <PlaceholderPage
-                    title="Employees"
-                    icon="👔"
-                    description="Company staff directory and login access linkage."
-                  />
+                  <EmployeesPage />
                 </AppLayout>
               </ProtectedRoute>
             }

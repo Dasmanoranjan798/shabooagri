@@ -11,8 +11,9 @@ import type {
 } from "../types/booking";
 import type { Job, JobFuelEntry, JobPhoto, CompleteJobPayload, UpdateJobPayload } from "../types/job";
 import type { Machine, MachineType, CreateMachinePayload, UpdateMachinePayload } from "../types/machine";
-import type { Driver, CreateDriverPayload, UpdateDriverPayload, EmployeeOption } from "../types/driver";
+import type { Driver, CreateDriverPayload, UpdateDriverPayload } from "../types/driver";
 import type { Customer, CreateCustomerPayload, UpdateCustomerPayload } from "../types/customer";
+import type { Employee, CreateEmployeePayload, UpdateEmployeePayload } from "../types/employee";
 
 const TOKEN_KEY = "shabooagri_token";
 const REFRESH_TOKEN_KEY = "shabooagri_refresh_token";
@@ -428,10 +429,53 @@ export const api = {
     }
   },
 
-  async listEmployees(): Promise<EmployeeOption[]> {
+  async listEmployees(): Promise<Employee[]> {
     const res = await fetchWithAuth("/employees");
     if (!res.ok) return [];
     return res.json();
+  },
+
+  async getEmployeeById(id: string): Promise<Employee> {
+    const res = await fetchWithAuth(`/employees/${id}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Employee not found" }));
+      throw new ApiError(res.status, err.message || "Employee not found");
+    }
+    return res.json();
+  },
+
+  async createEmployee(payload: CreateEmployeePayload): Promise<Employee> {
+    const res = await fetchWithAuth("/employees", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to create employee record" }));
+      throw new ApiError(res.status, err.message || "Failed to create employee record");
+    }
+    return res.json();
+  },
+
+  async updateEmployee(id: string, payload: UpdateEmployeePayload): Promise<Employee> {
+    const res = await fetchWithAuth(`/employees/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to update employee" }));
+      throw new ApiError(res.status, err.message || "Failed to update employee");
+    }
+    return res.json();
+  },
+
+  async deleteEmployee(id: string): Promise<void> {
+    const res = await fetchWithAuth(`/employees/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to delete employee" }));
+      throw new ApiError(res.status, err.message || "Failed to delete employee");
+    }
   },
 
   async listPricingMethods(): Promise<PricingMethodOption[]> {
