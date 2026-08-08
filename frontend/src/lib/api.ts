@@ -5,7 +5,6 @@ import type {
   BookingAttachment,
   BookingStatus,
   CreateBookingPayload,
-  CustomerOption,
   PricingMethodOption,
   UpdateBookingPayload,
   VillageOption,
@@ -13,6 +12,7 @@ import type {
 import type { Job, JobFuelEntry, JobPhoto, CompleteJobPayload, UpdateJobPayload } from "../types/job";
 import type { Machine, MachineType, CreateMachinePayload, UpdateMachinePayload } from "../types/machine";
 import type { Driver, CreateDriverPayload, UpdateDriverPayload, EmployeeOption } from "../types/driver";
+import type { Customer, CreateCustomerPayload, UpdateCustomerPayload } from "../types/customer";
 
 const TOKEN_KEY = "shabooagri_token";
 const REFRESH_TOKEN_KEY = "shabooagri_refresh_token";
@@ -269,10 +269,53 @@ export const api = {
   },
 
   // Master Data Option Lookups
-  async listCustomers(): Promise<CustomerOption[]> {
+  async listCustomers(): Promise<Customer[]> {
     const res = await fetchWithAuth("/customers");
     if (!res.ok) return [];
     return res.json();
+  },
+
+  async getCustomerById(id: string): Promise<Customer> {
+    const res = await fetchWithAuth(`/customers/${id}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Customer not found" }));
+      throw new ApiError(res.status, err.message || "Customer not found");
+    }
+    return res.json();
+  },
+
+  async createCustomer(payload: CreateCustomerPayload): Promise<Customer> {
+    const res = await fetchWithAuth("/customers", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to create customer" }));
+      throw new ApiError(res.status, err.message || "Failed to create customer");
+    }
+    return res.json();
+  },
+
+  async updateCustomer(id: string, payload: UpdateCustomerPayload): Promise<Customer> {
+    const res = await fetchWithAuth(`/customers/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to update customer" }));
+      throw new ApiError(res.status, err.message || "Failed to update customer");
+    }
+    return res.json();
+  },
+
+  async deleteCustomer(id: string): Promise<void> {
+    const res = await fetchWithAuth(`/customers/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to delete customer" }));
+      throw new ApiError(res.status, err.message || "Failed to delete customer");
+    }
   },
 
   async listVillages(): Promise<VillageOption[]> {

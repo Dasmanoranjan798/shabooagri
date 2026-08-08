@@ -8,8 +8,8 @@ import { BookingsPage } from "../features/bookings/BookingsPage";
 import { JobsPage } from "../features/jobs/JobsPage";
 import { MachinesPage } from "../features/machines/MachinesPage";
 import { DriversPage } from "../features/drivers/DriversPage";
+import { CustomersPage } from "../features/customers/CustomersPage";
 import { PlaceholderPage } from "../features/placeholder/PlaceholderPage";
-import { getTerm } from "../lib/terminology";
 
 export function App() {
   return (
@@ -56,11 +56,7 @@ export function App() {
             element={
               <ProtectedRoute permission="operations.view">
                 <AppLayout>
-                  <PlaceholderPage
-                    title={getTerm("customer", true)}
-                    icon="👥"
-                    description={`Customer profiles, village linkage, and ${getTerm("booking").toLowerCase()} history.`}
-                  />
+                  <CustomersPage />
                 </AppLayout>
               </ProtectedRoute>
             }
