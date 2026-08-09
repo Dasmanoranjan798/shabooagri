@@ -22,6 +22,12 @@ invoiceRouter.post(
   asyncHandler(paymentController.receivePayment),
 );
 
+invoiceRouter.patch(
+  "/:id/tax",
+  requirePermission("payment.receive"),
+  asyncHandler(paymentController.updateInvoiceTax),
+);
+
 // Scoped payment history routes
 paymentRouter.get("/", asyncHandler(paymentController.listPayments));
 paymentRouter.get("/:id", asyncHandler(paymentController.getPaymentById));

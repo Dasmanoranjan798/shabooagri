@@ -162,11 +162,47 @@ export const api = {
       throw new ApiError(res.status, err.message || "Session expired");
     }
     const data = await res.json();
-    return data.user;
+    return data;
   },
 
   async logout(): Promise<void> {
     clearStoredTokens();
+  },
+
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    const res = await fetchWithAuth("/auth/password-reset/request", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to request password reset" }));
+      throw new ApiError(res.status, err.message || "Failed to request password reset");
+    }
+    return res.json();
+  },
+
+  async verifyPasswordResetToken(email: string, token: string): Promise<{ valid: boolean }> {
+    const res = await fetchWithAuth("/auth/password-reset/verify-token", {
+      method: "POST",
+      body: JSON.stringify({ email, token }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Invalid or expired reset token" }));
+      throw new ApiError(res.status, err.message || "Invalid or expired reset token");
+    }
+    return res.json();
+  },
+
+  async confirmPasswordReset(email: string, token: string, newPassword: string): Promise<{ message: string; tenantSlug?: string }> {
+    const res = await fetchWithAuth("/auth/password-reset/confirm", {
+      method: "POST",
+      body: JSON.stringify({ email, token, newPassword }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Password reset failed" }));
+      throw new ApiError(res.status, err.message || "Password reset failed");
+    }
+    return res.json();
   },
 
   // Dashboard
@@ -702,6 +738,18 @@ export const api = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Receipt not found" }));
       throw new ApiError(res.status, err.message || "Failed to load receipt");
+    }
+    return res.json();
+  },
+
+  async updateInvoiceTax(invoiceId: string, payload: { isGstApplicable: boolean; taxRate?: number }): Promise<Invoice> {
+    const res = await fetchWithAuth(`/invoices/${invoiceId}/tax`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to update tax configuration" }));
+      throw new ApiError(res.status, err.message || "Failed to update tax configuration");
     }
     return res.json();
   },

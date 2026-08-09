@@ -112,8 +112,39 @@ model Company {
   // Monotonic counter backing Invoice.invoiceNumber (INV-000001, ...).
   // Incremented atomically on every invoice creation — see payments/README.md.
   nextInvoiceNumber Int @default(1) @map("next_invoice_number")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Phase B Business Identity fields
+  address         String?  @map("address")
+  city            String?  @map("city")
+  district        String?  @map("district")
+  state           String?  @map("state")
+  pincode         String?  @map("pincode")
+  country         String?  @default("India") @map("country")
+  phone           String?  @map("phone")
+  email           String?  @map("email")
+  isGstRegistered Boolean  @default(false) @map("is_gst_registered")
+  gstin           String?  @map("gstin")
+  pan             String?  @map("pan")
+
+  // Phase B Bank & Payment Details
+  bankName        String?  @map("bank_name")
+  accountNumber   String?  @map("account_number")
+  ifscCode        String?  @map("ifsc_code")
+  upiId           String?  @map("upi_id")
+
+  // Phase B Tax defaults
+  defaultTaxRate  Decimal? @default(0) @map("default_tax_rate") @db.Decimal(5, 2)
+  taxInclusive    Boolean  @default(false) @map("tax_inclusive")
+
+  // Phase C Equipment & Operational Rules
+  serviceAlertHours  Int     @default(50) @map("service_alert_hours")
+  insuranceAlertDays Int     @default(30) @map("insurance_alert_days")
+  licenseAlertDays   Int     @default(30) @map("license_alert_days")
+  requireJobPhoto    Boolean @default(false) @map("require_job_photo")
+  requireJobFuelLog  Boolean @default(false) @map("require_job_fuel_log")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   terminologySettings  TerminologySetting[]
   roles                Role[]
@@ -138,6 +169,9 @@ model Company {
   invoices             Invoice[]
   payments             Payment[]
   auditLogs            AuditLog[]
+  saasLicenses         License[]
+  saasFeedbacks        CustomerFeedback[]
+  ssoTokens            SsoToken[]
 
   @@map("companies")
 }
@@ -219,6 +253,7 @@ model User {
   employeeProfile Employee?
   refreshTokens   RefreshToken[]
   auditLogs       AuditLog[]
+  ssoTokens       SsoToken[]
 
   managedBookings     Booking[]           @relation("BookingManager")
   createdBookings     Booking[]           @relation("BookingCreatedBy")
@@ -243,6 +278,9 @@ model Customer {
   phone     String?
   address   String?
   notes     String?
+  // Phase B Customer GST fields (Optional)
+  isGstApplicable Boolean @default(false) @map("is_gst_applicable")
+  gstin           String? @map("gstin")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -602,6 +640,14 @@ model Invoice {
   invoiceDate         DateTime      @default(now()) @map("invoice_date") @db.Date
   dueDate             DateTime?     @map("due_date") @db.Date
   printLayoutSnapshot Json?         @map("print_layout_snapshot")
+  // Phase B Invoice GST control
+  isGstApplicable     Boolean       @default(false) @map("is_gst_applicable")
+  subtotalAmount      Decimal?      @map("subtotal_amount") @db.Decimal(10, 2)
+  taxRate             Decimal?      @default(0) @map("tax_rate") @db.Decimal(5, 2)
+  taxAmount           Decimal?      @default(0) @map("tax_amount") @db.Decimal(10, 2)
+  cgstAmount          Decimal?      @default(0) @map("cgst_amount") @db.Decimal(10, 2)
+  sgstAmount          Decimal?      @default(0) @map("sgst_amount") @db.Decimal(10, 2)
+  igstAmount          Decimal?      @default(0) @map("igst_amount") @db.Decimal(10, 2)
   createdAt           DateTime      @default(now()) @map("created_at")
   updatedAt           DateTime      @updatedAt @map("updated_at")
 
@@ -669,16 +715,236 @@ model RefreshToken {
 
 model AuditLog {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId  String   @map("company_id") @db.Uuid
+  companyId  String?  @map("company_id") @db.Uuid
   userId     String?  @map("user_id") @db.Uuid
+  saasUserId String?  @map("saas_user_id") @db.Uuid
   entityType String   @map("entity_type")
   entityId   String   @map("entity_id") @db.Uuid
   action     String
   changes    Json?
   createdAt  DateTime @default(now()) @map("created_at")
 
-  company Company @relation(fields: [companyId], references: [id])
-  user    User?   @relation(fields: [userId], references: [id])
+  company  Company?  @relation(fields: [companyId], references: [id])
+  user     User?     @relation(fields: [userId], references: [id])
+  saasUser SaasUser? @relation(fields: [saasUserId], references: [id])
 
   @@map("audit_log")
 }
+
+// ---------- Commercial SaaS Control Plane (Milestone S1) ----------
+
+enum SaasUserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum SaasLeadStatus {
+  NEW
+  CONTACTED
+  IN_CONVERSATION
+  CONVERTED
+  CLOSED
+}
+
+enum LicenseStatus {
+  REGISTERED
+  PAYMENT_PENDING
+  PAYMENT_VERIFIED
+  LICENSE_ACTIVE
+  EXPIRING_SOON
+  EXPIRED
+  RENEWED
+}
+
+enum SaasPaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum ContactEnquiryStatus {
+  UNREAD
+  IN_REVIEW
+  RESOLVED
+}
+
+enum CustomerFeedbackStatus {
+  SUBMITTED
+  IN_REVIEW
+  PLANNED
+  RESOLVED
+  CLOSED
+}
+
+model SaasUser {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email           String         @unique
+  phone           String?
+  passwordHash    String         @map("password_hash")
+  isEmailVerified Boolean        @default(false) @map("is_email_verified")
+  status          SaasUserStatus @default(ACTIVE)
+  isPlatformAdmin Boolean        @default(false) @map("is_platform_admin")
+  lastLoginAt     DateTime?      @map("last_login_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  customerProfile   SaaSCustomerProfile?
+  assignedLeads     SaaSLead[]           @relation("LeadAssignedAdmin")
+  createdLeads      SaaSLead[]           @relation("LeadCreatedByUser")
+  licenses          License[]
+  payments          SaaSPayment[]
+  assignedEnquiries ContactEnquiry[]     @relation("EnquiryAssignedAdmin")
+  feedbacks         CustomerFeedback[]
+  auditLogs         AuditLog[]
+  ssoTokens         SsoToken[]
+
+  @@map("saas_users")
+}
+
+model SaaSCustomerProfile {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  saasUserId    String   @unique @map("saas_user_id") @db.Uuid
+  businessName  String   @map("business_name")
+  contactPerson String   @map("contact_person")
+  phone         String
+  email         String?
+  address       String?
+  city          String?
+  state         String?
+  pincode       String?
+  gstin         String?
+  pan           String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  saasUser SaasUser @relation(fields: [saasUserId], references: [id], onDelete: Cascade)
+
+  @@map("saas_customer_profiles")
+}
+
+model SaaSLead {
+  id                  String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String
+  businessName        String?        @map("business_name")
+  phone               String
+  email               String?
+  source              String?        @default("WEBSITE")
+  status              SaasLeadStatus @default(NEW)
+  followUpNotes       String?        @map("follow_up_notes")
+  assignedAdminId     String?        @map("assigned_admin_id") @db.Uuid
+  createdBySaasUserId String?        @map("created_by_saas_user_id") @db.Uuid
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+
+  assignedAdmin SaasUser? @relation("LeadAssignedAdmin", fields: [assignedAdminId], references: [id])
+  createdByUser SaasUser? @relation("LeadCreatedByUser", fields: [createdBySaasUserId], references: [id])
+
+  @@map("saas_leads")
+}
+
+model License {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  licenseNumber String        @unique @map("license_number")
+  saasUserId    String        @map("saas_user_id") @db.Uuid
+  companyId     String?       @map("company_id") @db.Uuid
+  paymentId     String?       @unique @map("payment_id") @db.Uuid
+  startDate     DateTime?     @map("start_date")
+  expiryDate    DateTime?     @map("expiry_date")
+  status        LicenseStatus @default(REGISTERED)
+  renewalCount  Int           @default(0) @map("renewal_count")
+  notes         String?
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  saasUser SaasUser     @relation(fields: [saasUserId], references: [id])
+  company  Company?     @relation(fields: [companyId], references: [id])
+  payment  SaaSPayment? @relation(fields: [paymentId], references: [id])
+
+  @@map("licenses")
+}
+
+model SaaSPayment {
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  saasUserId       String            @map("saas_user_id") @db.Uuid
+  licenseId        String?           @map("license_id") @db.Uuid
+  gatewayOrderId   String?           @map("gateway_order_id")
+  gatewayPaymentId String?           @map("gateway_payment_id")
+  gatewaySignature String?           @map("gateway_signature")
+  paymentReference String?           @map("payment_reference")
+  baseAmount       Decimal           @map("base_amount") @db.Decimal(10, 2)
+  gstAmount        Decimal           @map("gst_amount") @db.Decimal(10, 2)
+  totalAmount      Decimal           @map("total_amount") @db.Decimal(10, 2)
+  cgstAmount       Decimal?          @map("cgst_amount") @db.Decimal(10, 2)
+  sgstAmount       Decimal?          @map("sgst_amount") @db.Decimal(10, 2)
+  igstAmount       Decimal?          @map("igst_amount") @db.Decimal(10, 2)
+  currency         String            @default("INR")
+  status           SaasPaymentStatus @default(PENDING)
+  paymentMethod    String?           @map("payment_method")
+  gatewayPayload   Json?             @map("gateway_payload")
+  notes            String?
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  saasUser SaasUser @relation(fields: [saasUserId], references: [id])
+  license  License?
+
+  @@map("saas_payments")
+}
+
+model ContactEnquiry {
+  id              String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String
+  businessName    String?              @map("business_name")
+  phone           String
+  email           String
+  subject         String
+  message         String
+  status          ContactEnquiryStatus @default(UNREAD)
+  responseNotes   String?              @map("response_notes")
+  assignedAdminId String?              @map("assigned_admin_id") @db.Uuid
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+
+  assignedAdmin SaasUser? @relation("EnquiryAssignedAdmin", fields: [assignedAdminId], references: [id])
+
+  @@map("contact_enquiries")
+}
+
+model CustomerFeedback {
+  id         String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  saasUserId String                 @map("saas_user_id") @db.Uuid
+  companyId  String?                @map("company_id") @db.Uuid
+  category   String
+  rating     Int?
+  comment    String
+  status     CustomerFeedbackStatus @default(SUBMITTED)
+  adminNotes String?                @map("admin_notes")
+  createdAt  DateTime               @default(now()) @map("created_at")
+  updatedAt  DateTime               @updatedAt @map("updated_at")
+
+  saasUser SaasUser @relation(fields: [saasUserId], references: [id])
+  company  Company? @relation(fields: [companyId], references: [id])
+
+  @@map("customer_feedbacks")
+}
+
+model SsoToken {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tokenHash  String    @unique @map("token_hash")
+  saasUserId String    @map("saas_user_id") @db.Uuid
+  companyId  String    @map("company_id") @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  expiresAt  DateTime  @map("expires_at")
+  usedAt     DateTime? @map("used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  saasUser SaasUser @relation(fields: [saasUserId], references: [id])
+  company  Company  @relation(fields: [companyId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@map("sso_tokens")
+}
+
+

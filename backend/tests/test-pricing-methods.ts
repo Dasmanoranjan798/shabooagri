@@ -87,7 +87,7 @@ async function runPricingTests() {
   if (!job1.invoice || Number(job1.invoice.totalAmount) !== 1250) {
     throw new Error(`Expected Per Hour invoice amount 1250, got ${job1.invoice?.totalAmount}`);
   }
-  console.log("✔ Per Hour pricing method verified: ₹" + job1.invoice.totalAmount);
+  console.log(" Per Hour pricing method verified: ₹" + job1.invoice.totalAmount);
 
   // TEST 2: Per Minute (90 mins × ₹10/min = ₹900)
   console.log("\n[TEST 2] Pricing Method 2: PER MINUTE (90 mins × ₹10/min)...");
@@ -110,7 +110,7 @@ async function runPricingTests() {
   if (!job2.invoice || Number(job2.invoice.totalAmount) !== 900) {
     throw new Error(`Expected Per Minute invoice amount 900, got ${job2.invoice?.totalAmount}`);
   }
-  console.log("✔ Per Minute pricing method verified: ₹" + job2.invoice.totalAmount);
+  console.log(" Per Minute pricing method verified: ₹" + job2.invoice.totalAmount);
 
   // TEST 3: Per Acre (4.0 acres × ₹600/acre = ₹2400)
   console.log("\n[TEST 3] Pricing Method 3: PER ACRE (4 acres × ₹600/acre)...");
@@ -134,7 +134,7 @@ async function runPricingTests() {
   if (!job3.invoice || Number(job3.invoice.totalAmount) !== 2400) {
     throw new Error(`Expected Per Acre invoice amount 2400, got ${job3.invoice?.totalAmount}`);
   }
-  console.log("✔ Per Acre pricing method verified: ₹" + job3.invoice.totalAmount);
+  console.log(" Per Acre pricing method verified: ₹" + job3.invoice.totalAmount);
 
   // TEST 4: Per Job / Fixed Rate (Fixed ₹5000)
   console.log("\n[TEST 4] Pricing Method 4: PER JOB / FIXED (Fixed ₹5000)...");
@@ -157,10 +157,10 @@ async function runPricingTests() {
   if (!job4.invoice || Number(job4.invoice.totalAmount) !== 5000) {
     throw new Error(`Expected Per Job invoice amount 5000, got ${job4.invoice?.totalAmount}`);
   }
-  console.log("✔ Per Job / Fixed Rate pricing method verified: ₹" + job4.invoice.totalAmount);
+  console.log(" Per Job / Fixed Rate pricing method verified: ₹" + job4.invoice.totalAmount);
 
   console.log("\n==================================================");
-  console.log("🎉 ALL FOUR PRICING METHODS VERIFIED SUCCESSFULLY!");
+  console.log(" ALL FOUR PRICING METHODS VERIFIED SUCCESSFULLY!");
   console.log("==================================================");
 }
 

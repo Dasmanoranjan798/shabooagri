@@ -1,4 +1,16 @@
 import React, { useEffect, useState } from "react";
+import {
+  Calendar,
+  Plus,
+  AlertTriangle,
+  RotateCcw,
+  Pencil,
+  Trash2,
+  User,
+  Tractor,
+  UserCheck,
+  Banknote
+} from "lucide-react";
 import type { Booking } from "../../types/booking";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
@@ -128,8 +140,8 @@ export const BookingsPage: React.FC = () => {
         </div>
 
         {canCreate && (
-          <Button variant="primary" size="md" onClick={handleOpenCreate}>
-            ➕ New {getTerm("booking")}
+          <Button variant="primary" size="md" onClick={handleOpenCreate} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <Plus size={16} /> New {getTerm("booking")}
           </Button>
         )}
       </div>
@@ -174,18 +186,22 @@ export const BookingsPage: React.FC = () => {
       ) : error ? (
         <div className="sa-error-container">
           <div className="sa-error-card">
-            <span className="sa-error-icon">⚠️</span>
+            <span className="sa-error-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+              <AlertTriangle size={32} color="var(--color-error, #D32F2F)" />
+            </span>
             <h3>Error Loading Bookings</h3>
             <p>{error}</p>
-            <Button variant="primary" onClick={loadBookings}>
-              🔄 Retry
+            <Button variant="primary" onClick={loadBookings} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <RotateCcw size={16} /> Retry
             </Button>
           </div>
         </div>
       ) : filteredBookings.length === 0 ? (
         <Card>
           <div className="sa-empty-state">
-            <span className="sa-empty-icon">📅</span>
+            <span className="sa-empty-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+              <Calendar size={32} color="var(--color-text-muted)" />
+            </span>
             <h3>No {bookingTerm} Found</h3>
             <p>
               {searchQuery || activeFilter !== "ALL"
@@ -193,8 +209,8 @@ export const BookingsPage: React.FC = () => {
                 : `No ${bookingTerm.toLowerCase()} created yet.`}
             </p>
             {canCreate && (
-              <Button variant="primary" size="md" onClick={handleOpenCreate} style={{ marginTop: "1rem" }}>
-                ➕ Create First {getTerm("booking")}
+              <Button variant="primary" size="md" onClick={handleOpenCreate} style={{ marginTop: "1rem", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <Plus size={16} /> Create First {getTerm("booking")}
               </Button>
             )}
           </div>
@@ -266,7 +282,7 @@ export const BookingsPage: React.FC = () => {
                                 title="Edit Booking"
                                 onClick={(e) => handleOpenEdit(b, e)}
                               >
-                                ✏️
+                                <Pencil size={15} />
                               </button>
                             )}
                             {canDelete && (
@@ -276,7 +292,7 @@ export const BookingsPage: React.FC = () => {
                                 disabled={deletingId === b.id}
                                 onClick={(e) => handleDelete(b.id, e)}
                               >
-                                🗑️
+                                <Trash2 size={15} />
                               </button>
                             )}
                           </div>
@@ -307,31 +323,41 @@ export const BookingsPage: React.FC = () => {
 
                   <div className="sa-booking-card-main">
                     <div className="sa-bcard-row">
-                      <span className="sa-bcard-label">👤 {customerTerm}:</span>
+                      <span className="sa-bcard-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <User size={14} /> {customerTerm}:
+                      </span>
                       <span className="sa-bcard-val">{b.customer.name} ({b.village.name})</span>
                     </div>
 
                     <div className="sa-bcard-row">
-                      <span className="sa-bcard-label">🚜 {machineTerm}:</span>
+                      <span className="sa-bcard-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <Tractor size={14} /> {machineTerm}:
+                      </span>
                       <span className="sa-bcard-val">
                         {b.machine ? b.machine.registrationNumber : "Unassigned"}
                       </span>
                     </div>
 
                     <div className="sa-bcard-row">
-                      <span className="sa-bcard-label">👨‍🌾 {driverTerm}:</span>
+                      <span className="sa-bcard-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <UserCheck size={14} /> {driverTerm}:
+                      </span>
                       <span className="sa-bcard-val">
                         {b.driver ? b.driver.employee.name : "Unassigned"}
                       </span>
                     </div>
 
                     <div className="sa-bcard-row">
-                      <span className="sa-bcard-label">📅 Date:</span>
+                      <span className="sa-bcard-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <Calendar size={14} /> Date:
+                      </span>
                       <span className="sa-bcard-val">{b.scheduledDate.slice(0, 10)}</span>
                     </div>
 
                     <div className="sa-bcard-row">
-                      <span className="sa-bcard-label">💰 Amount:</span>
+                      <span className="sa-bcard-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <Banknote size={14} /> Amount:
+                      </span>
                       <span className="sa-bcard-val sa-amount-bold">
                         {b.estimatedAmount != null ? formatCurrency(b.estimatedAmount) : formatCurrency(b.rate)}
                       </span>

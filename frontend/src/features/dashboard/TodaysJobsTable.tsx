@@ -1,4 +1,5 @@
 import React from "react";
+import { Calendar, User, Tractor, UserCheck, CreditCard } from "lucide-react";
 import type { JobRow } from "../../types/dashboard";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { formatCurrency } from "../../lib/theme";
@@ -17,7 +18,9 @@ export const TodaysJobsTable: React.FC<TodaysJobsTableProps> = ({ jobs, isMobile
   if (!jobs || jobs.length === 0) {
     return (
       <div className="sa-empty-state">
-        <span className="sa-empty-icon">📅</span>
+        <span className="sa-empty-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+          <Calendar size={28} />
+        </span>
         <p>No jobs scheduled for today.</p>
       </div>
     );
@@ -39,22 +42,30 @@ export const TodaysJobsTable: React.FC<TodaysJobsTableProps> = ({ jobs, isMobile
 
               <div className="sa-job-card-body">
                 <div className="sa-job-row">
-                  <span className="sa-job-label">👤 {customerTerm}:</span>
+                  <span className="sa-job-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <User size={14} /> {customerTerm}:
+                  </span>
                   <span className="sa-job-val">{job.customer.name} ({job.customer.village})</span>
                 </div>
                 <div className="sa-job-row">
-                  <span className="sa-job-label">🚜 {machineTerm}:</span>
+                  <span className="sa-job-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <Tractor size={14} /> {machineTerm}:
+                  </span>
                   <span className="sa-job-val">
                     {job.machine ? `${job.machine.registrationNumber} ${job.machine.brand ? `(${job.machine.brand})` : ""}` : "Unassigned"}
                   </span>
                 </div>
                 <div className="sa-job-row">
-                  <span className="sa-job-label">👨‍🌾 {driverTerm}:</span>
+                  <span className="sa-job-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <UserCheck size={14} /> {driverTerm}:
+                  </span>
                   <span className="sa-job-val">{job.driver ? job.driver.name : "Unassigned"}</span>
                 </div>
                 {job.invoice && (
                   <div className="sa-job-row">
-                    <span className="sa-job-label">💳 Amount:</span>
+                    <span className="sa-job-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                      <CreditCard size={14} /> Amount:
+                    </span>
                     <span className="sa-job-val sa-amount-bold">
                       {formatCurrency(job.invoice.totalAmount)}
                       {job.invoice.balanceAmount > 0 && (

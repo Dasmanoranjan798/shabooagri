@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import type { Invoice, ReceiptData } from "../../types/payment";
 import { api } from "../../lib/api";
 import { getTerm } from "../../lib/terminology";
+import { useAuth } from "../../context/AuthContext";
 import { Modal } from "../../components/ui/Modal";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -12,6 +13,7 @@ interface ReceiptModalProps {
   isOpen: boolean;
   onClose: () => void;
   onReceivePayment: (invoice: Invoice) => void;
+  onInvoiceUpdated?: () => void;
 }
 
 export const ReceiptModal: React.FC<ReceiptModalProps> = ({
@@ -19,7 +21,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   isOpen,
   onClose,
   onReceivePayment,
+  onInvoiceUpdated,
 }) => {
+  const { hasPermission } = useAuth();
   const customerTerm = getTerm("customer");
   const machineTerm = getTerm("machine");
   const driverTerm = getTerm("driver");
@@ -27,6 +31,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isEditingTax, setIsEditingTax] = useState<boolean>(false);
+  const [taxFormGst, setTaxFormGst] = useState<boolean>(false);
+  const [taxFormRate, setTaxFormRate] = useState<number>(18);
+  const [isSavingTax, setIsSavingTax] = useState<boolean>(false);
 
   useEffect(() => {
     if (invoice && isOpen) {
@@ -34,9 +42,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
       async function loadReceipt() {
         setIsLoading(true);
         setError(null);
+        setIsEditingTax(false);
         try {
           const data = await api.getReceipt(invId);
           setReceiptData(data);
+          setTaxFormGst(data.invoice.isGstApplicable ?? false);
+          setTaxFormRate(data.invoice.taxRate ?? 18);
         } catch (err: any) {
           setError(err.message || "Failed to load receipt details");
         } finally {
@@ -53,8 +64,47 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     window.print();
   };
 
+  const handleSaveTax = async () => {
+    if (!inv) return;
+    setIsSavingTax(true);
+    setError(null);
+    try {
+      const updatedInvoice = await api.updateInvoiceTax(inv.id, {
+        isGstApplicable: taxFormGst,
+        taxRate: taxFormGst ? taxFormRate : 0,
+      });
+      setReceiptData((prev) => (prev ? { ...prev, invoice: updatedInvoice } : null));
+      setIsEditingTax(false);
+      if (onInvoiceUpdated) {
+        onInvoiceUpdated();
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to update tax configuration");
+    } finally {
+      setIsSavingTax(false);
+    }
+  };
+
   const inv = receiptData?.invoice || invoice;
   const company = receiptData?.company;
+  const customer = receiptData?.customer || inv.customer;
+
+  // Build full company address line
+  const addressParts = [
+    company?.address,
+    company?.city,
+    company?.district,
+    company?.state,
+    company?.pincode ? `PIN: ${company.pincode}` : null,
+    company?.country && company.country !== "India" ? company.country : null,
+  ].filter(Boolean);
+  const fullAddress = addressParts.join(", ");
+
+  const hasBankDetails = Boolean(
+    company?.bankName || company?.accountNumber || company?.ifscCode || company?.upiId
+  );
+
+  const canManageTax = hasPermission("payment.receive") || hasPermission("company.manage");
 
   return (
     <Modal
@@ -68,64 +118,132 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           </Badge>
         </div>
       }
-      maxWidth="650px"
+      maxWidth="680px"
     >
       {isLoading ? (
         <div className="sa-center-viewport" style={{ padding: "2rem" }}>
-          <Spinner size="md" label="Loading printable receipt..." />
+          <Spinner size="md" label="Loading printable document..." />
         </div>
       ) : error ? (
         <div className="sa-alert sa-alert-danger">{error}</div>
       ) : (
         <div className="sa-receipt-container">
-          {/* Company Branding & Receipt Header */}
-          <div className="sa-receipt-header">
+          {/* Company Branding & Header */}
+          <div className="sa-receipt-header" style={{ display: "flex", justifyContent: "space-between", gap: "16px" }}>
             <div>
-              <h2 className="sa-receipt-brand">{company?.name || "ShabooAgri Operational Fleet"}</h2>
-              {company?.address && <p className="sa-receipt-sub">{company.address}</p>}
-              {company?.phone && <p className="sa-receipt-sub">📞 Contact: {company.phone}</p>}
+              <h2 className="sa-receipt-brand" style={{ margin: "0 0 4px 0", fontSize: "1.25rem", color: "var(--color-primary)" }}>
+                {company?.name || "ShabooAgri Operational Fleet"}
+              </h2>
+              {fullAddress && <p className="sa-receipt-sub" style={{ margin: "0 0 2px 0", fontSize: "0.82rem", color: "var(--color-text-muted)" }}>{fullAddress}</p>}
+              <div style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", display: "flex", flexWrap: "wrap", gap: "12px", marginTop: "4px" }}>
+                {company?.phone && <span>Phone: {company.phone}</span>}
+                {company?.email && <span>Email: {company.email}</span>}
+                {company?.gstin && <span><strong>GSTIN:</strong> {company.gstin}</span>}
+                {company?.pan && <span><strong>PAN:</strong> {company.pan}</span>}
+              </div>
             </div>
 
-            <div style={{ textAlign: "right" }}>
-              <div className="sa-receipt-inv-num">INVOICE #{inv.invoiceNumber}</div>
-              <div className="sa-receipt-date">
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div className="sa-receipt-inv-num" style={{ fontSize: "1.1rem", fontWeight: 700 }}>INVOICE #{inv.invoiceNumber}</div>
+              <div className="sa-receipt-date" style={{ fontSize: "0.82rem", color: "var(--color-text-muted)" }}>
                 Date: {new Date(inv.createdAt).toLocaleDateString("en-IN")}
               </div>
             </div>
           </div>
 
-          <hr className="sa-divider" />
+          <hr className="sa-divider" style={{ margin: "14px 0" }} />
 
           {/* Customer & Booking Details */}
           <div className="sa-detail-grid" style={{ marginBottom: "1rem" }}>
             <div className="sa-detail-item">
-              <span className="sa-detail-label">👤 {customerTerm} Name</span>
-              <span className="sa-detail-val">{inv.customer?.name || "Customer"}</span>
+              <span className="sa-detail-label">{customerTerm} Name</span>
+              <span className="sa-detail-val">{customer?.name || inv.customer?.name || "Customer"}</span>
             </div>
 
             <div className="sa-detail-item">
-              <span className="sa-detail-label">🏘️ Village</span>
-              <span className="sa-detail-val">{inv.customer?.village?.name || "N/A"}</span>
+              <span className="sa-detail-label">Village / Location</span>
+              <span className="sa-detail-val">
+                {typeof customer?.village === "string" ? customer.village : inv.customer?.village?.name || "N/A"}
+              </span>
             </div>
 
+            {customer?.gstin && (
+              <div className="sa-detail-item">
+                <span className="sa-detail-label">{customerTerm} GSTIN</span>
+                <span className="sa-detail-val" style={{ fontFamily: "monospace" }}>{customer.gstin}</span>
+              </div>
+            )}
+
             <div className="sa-detail-item">
-              <span className="sa-detail-label">🚜 {machineTerm}</span>
+              <span className="sa-detail-label">{machineTerm}</span>
               <span className="sa-detail-val">
                 {inv.booking?.machine?.registrationNumber || "N/A"} ({inv.booking?.machine?.brand || ""})
               </span>
             </div>
 
             <div className="sa-detail-item">
-              <span className="sa-detail-label">👨‍🌾 Assigned {driverTerm}</span>
+              <span className="sa-detail-label">Assigned {driverTerm}</span>
               <span className="sa-detail-val">
                 {inv.booking?.driver?.employee?.name || "N/A"}
               </span>
             </div>
           </div>
 
-          {/* Financial Breakdown Table */}
+          {/* Optional Invoice GST Controls & Financial Breakdown Table */}
           <div className="sa-notes-section">
-            <h4>Billing Summary</h4>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <h4 style={{ margin: 0, fontSize: "0.95rem" }}>Billing Summary</h4>
+              {canManageTax && !isEditingTax && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingTax(true)}
+                  style={{ background: "none", border: "none", color: "var(--color-primary)", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600 }}
+                >
+                  {inv.isGstApplicable ? "Edit GST Settings" : "+ Add GST/Tax to Invoice"}
+                </button>
+              )}
+            </div>
+
+            {isEditingTax && (
+              <div style={{ background: "var(--color-surface-secondary)", border: "1px solid var(--color-border)", borderRadius: "8px", padding: "12px", marginBottom: "12px" }}>
+                <div style={{ fontWeight: 600, fontSize: "0.85rem", marginBottom: "8px" }}>Invoice Tax Application</div>
+                <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={taxFormGst}
+                      onChange={(e) => setTaxFormGst(e.target.checked)}
+                    />
+                    Apply GST to this Invoice
+                  </label>
+
+                  {taxFormGst && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{ fontSize: "0.82rem" }}>GST Tax Rate (%):</span>
+                      <input
+                        type="number"
+                        className="sa-input"
+                        style={{ width: "80px", padding: "4px 8px" }}
+                        value={taxFormRate}
+                        onChange={(e) => setTaxFormRate(Number(e.target.value))}
+                        min={0}
+                        max={100}
+                        step={0.5}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+                  <Button variant="primary" size="sm" onClick={handleSaveTax} disabled={isSavingTax}>
+                    {isSavingTax ? "Updating…" : "Apply Tax Changes"}
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setIsEditingTax(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
             <table className="sa-table sa-receipt-table">
               <thead>
                 <tr>
@@ -134,25 +252,38 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>Service Charge ({inv.booking?.pricingMethod?.name || "Standard Rate"})</td>
-                  <td style={{ textAlign: "right" }}>₹{inv.subtotalAmount.toLocaleString("en-IN")}</td>
-                </tr>
-                {inv.discountAmount > 0 && (
+                {inv.isGstApplicable ? (
+                  <>
+                    <tr>
+                      <td>Taxable Service Value ({inv.booking?.pricingMethod?.name || "Equipment Rental"})</td>
+                      <td style={{ textAlign: "right" }}>₹{(inv.subtotalAmount ?? inv.totalAmount).toLocaleString("en-IN")}</td>
+                    </tr>
+                    {Boolean(inv.cgstAmount) && (
+                      <tr>
+                        <td>CGST ({((inv.taxRate ?? 18) / 2)}%)</td>
+                        <td style={{ textAlign: "right" }}>+₹{inv.cgstAmount?.toLocaleString("en-IN")}</td>
+                      </tr>
+                    )}
+                    {Boolean(inv.sgstAmount) && (
+                      <tr>
+                        <td>SGST ({((inv.taxRate ?? 18) / 2)}%)</td>
+                        <td style={{ textAlign: "right" }}>+₹{inv.sgstAmount?.toLocaleString("en-IN")}</td>
+                      </tr>
+                    )}
+                    {Boolean(inv.igstAmount) && (
+                      <tr>
+                        <td>IGST ({inv.taxRate}%)</td>
+                        <td style={{ textAlign: "right" }}>+₹{inv.igstAmount?.toLocaleString("en-IN")}</td>
+                      </tr>
+                    )}
+                  </>
+                ) : (
                   <tr>
-                    <td>Discount</td>
-                    <td style={{ textAlign: "right", color: "#16a34a" }}>
-                      -₹{inv.discountAmount.toLocaleString("en-IN")}
-                    </td>
+                    <td>Service Charge ({inv.booking?.pricingMethod?.name || "Standard Equipment Rental"})</td>
+                    <td style={{ textAlign: "right" }}>₹{inv.totalAmount.toLocaleString("en-IN")}</td>
                   </tr>
                 )}
-                {inv.taxAmount > 0 && (
-                  <tr>
-                    <td>Taxes</td>
-                    <td style={{ textAlign: "right" }}>+₹{inv.taxAmount.toLocaleString("en-IN")}</td>
-                  </tr>
-                )}
-                <tr className="sa-tr-total">
+                <tr className="sa-tr-total" style={{ fontWeight: 700, background: "var(--color-surface-secondary)" }}>
                   <td>Total Invoice Amount</td>
                   <td style={{ textAlign: "right", fontSize: "1.1rem" }}>
                     ₹{inv.totalAmount.toLocaleString("en-IN")}
@@ -174,10 +305,23 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             </table>
           </div>
 
+          {/* Business Bank & Payment Transfer Details (if configured) */}
+          {hasBankDetails && (
+            <div style={{ marginTop: "1rem", background: "var(--color-surface-secondary)", borderRadius: "8px", padding: "12px 16px", border: "1px solid var(--color-border)" }}>
+              <h4 style={{ margin: "0 0 6px 0", fontSize: "0.88rem", color: "var(--color-primary)" }}>Bank Transfer & Payment Details</h4>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "8px", fontSize: "0.82rem" }}>
+                {company?.bankName && <div><strong>Bank Name:</strong> {company.bankName}</div>}
+                {company?.accountNumber && <div><strong>Account No:</strong> <span style={{ fontFamily: "monospace" }}>{company.accountNumber}</span></div>}
+                {company?.ifscCode && <div><strong>IFSC Code:</strong> <span style={{ fontFamily: "monospace" }}>{company.ifscCode}</span></div>}
+                {company?.upiId && <div><strong>UPI ID:</strong> <span style={{ fontFamily: "monospace" }}>{company.upiId}</span></div>}
+              </div>
+            </div>
+          )}
+
           {/* Payment History Table */}
           {inv.payments && inv.payments.length > 0 && (
             <div className="sa-notes-section" style={{ marginTop: "1rem" }}>
-              <h4>Payment Collections History</h4>
+              <h4 style={{ margin: "0 0 8px 0", fontSize: "0.95rem" }}>Payment Collections History</h4>
               <table className="sa-table">
                 <thead>
                   <tr>
@@ -212,7 +356,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           {/* Action Controls */}
           <div className="sa-form-actions" style={{ marginTop: "1.5rem" }}>
             <Button variant="secondary" size="md" onClick={handlePrint}>
-              🖨️ Print Receipt
+              Print Document
             </Button>
 
             {inv.balanceAmount > 0 && (
@@ -224,7 +368,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   onReceivePayment(inv);
                 }}
               >
-                💵 Receive Payment (₹{inv.balanceAmount.toLocaleString("en-IN")} Due)
+                Receive Payment (₹{inv.balanceAmount.toLocaleString("en-IN")} Due)
               </Button>
             )}
           </div>

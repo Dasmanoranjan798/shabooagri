@@ -6,8 +6,10 @@ import { env } from "../../config/env";
 import { AppError } from "../../shared/errors/AppError";
 import * as authRepository from "./auth.repository";
 import * as rbacService from "../rbac/rbac.service";
+import { sendPasswordResetEmail } from "../../shared/services/mail.service";
 import type { AccessTokenPayload, AuthenticatedUser, RefreshTokenPayload } from "./auth.types";
 import type {
+  ConfirmPasswordResetInput,
   LogoutInput,
   OtpRequestInput,
   OtpVerifyInput,
@@ -15,6 +17,8 @@ import type {
   PinLoginInput,
   RefreshInput,
   RegisterInput,
+  RequestPasswordResetInput,
+  VerifyPasswordResetTokenInput,
 } from "./auth.validators";
 
 const BCRYPT_ROUNDS = 10;
@@ -82,6 +86,10 @@ async function issueTokenPair(user: User): Promise<TokenPair> {
   });
 
   return { accessToken, refreshToken };
+}
+
+export async function issueSsoTokenPair(user: User): Promise<TokenPair> {
+  return issueTokenPair(user);
 }
 
 // §6: Owner creates Manager/Driver/Customer accounts. Phase 1 has no
@@ -288,3 +296,109 @@ export async function getUserForCompany(companyId: string, userId: string) {
   }
   return toPublicUser(user);
 }
+
+const PASSWORD_RESET_EXPIRY_MINUTES = 15;
+
+export async function requestPasswordReset(
+  input: RequestPasswordResetInput,
+  tenantCompany?: any,
+  requestHost?: string
+) {
+  const company = tenantCompany || (await authRepository.findSingleTenantCompany());
+  const normalizedEmail = input.email.trim().toLowerCase();
+  
+  let user: any = await authRepository.findUserByIdentifier(company.id, normalizedEmail);
+  let targetCompany = company;
+
+  if (!user) {
+    const globalUser = await authRepository.findUserByGlobalEmail(normalizedEmail);
+    if (globalUser) {
+      user = globalUser;
+      if (globalUser.company) {
+        targetCompany = globalUser.company;
+      }
+    }
+  }
+
+  if (user && user.status === "ACTIVE") {
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const expiresAt = addDuration(new Date(), `${PASSWORD_RESET_EXPIRY_MINUTES}m`);
+
+    await authRepository.createOtpCode({
+      identifier: normalizedEmail,
+      codeHash: tokenHash,
+      purpose: "RESET",
+      expiresAt,
+    });
+
+    let baseUrl = env.APP_URL;
+    const tenantSlug = targetCompany.slug || "";
+
+    if (requestHost && (requestHost.includes(".shabooagri.com") || requestHost.includes(".localhost"))) {
+      const protocol = requestHost.includes("localhost") ? "http" : "https";
+      baseUrl = `${protocol}://${requestHost}`;
+    } else if (tenantSlug && tenantSlug !== "pilot" && env.APP_URL.includes("shabooagri.com")) {
+      baseUrl = `https://${tenantSlug}.shabooagri.com`;
+    }
+
+    const resetLink = `${baseUrl}/reset-password?token=${rawToken}&email=${encodeURIComponent(normalizedEmail)}${tenantSlug ? `&tenant=${encodeURIComponent(tenantSlug)}` : ""}`;
+    await sendPasswordResetEmail(normalizedEmail, resetLink);
+  }
+
+  // Always return generic response to prevent account enumeration
+  return {
+    message: "If an account with that email exists, a password reset link has been sent.",
+  };
+}
+
+export async function verifyPasswordResetToken(input: VerifyPasswordResetTokenInput) {
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const tokenHash = crypto.createHash("sha256").update(input.token).digest("hex");
+  const activeOtp = await authRepository.findActiveOtp(normalizedEmail, "RESET");
+
+  if (!activeOtp || activeOtp.codeHash !== tokenHash) {
+    throw new AppError(400, "Invalid or expired password reset token");
+  }
+
+  return { valid: true };
+}
+
+export async function confirmPasswordReset(input: ConfirmPasswordResetInput, tenantCompany?: any) {
+  const company = tenantCompany || (await authRepository.findSingleTenantCompany());
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const tokenHash = crypto.createHash("sha256").update(input.token).digest("hex");
+  const activeOtp = await authRepository.findActiveOtp(normalizedEmail, "RESET");
+
+  if (!activeOtp || activeOtp.codeHash !== tokenHash) {
+    throw new AppError(400, "Invalid or expired password reset token");
+  }
+
+  let user: any = await authRepository.findUserByIdentifier(company.id, normalizedEmail);
+  let targetCompany = company;
+
+  if (!user) {
+    const globalUser = await authRepository.findUserByGlobalEmail(normalizedEmail);
+    if (globalUser) {
+      user = globalUser;
+      if (globalUser.company) {
+        targetCompany = globalUser.company;
+      }
+    }
+  }
+
+  if (!user) {
+    throw new AppError(400, "Invalid or expired password reset token");
+  }
+
+  const newPasswordHash = await bcrypt.hash(input.newPassword, BCRYPT_ROUNDS);
+  await authRepository.updateUserPassword(user.id, newPasswordHash);
+  await authRepository.consumeOtp(activeOtp.id);
+  await authRepository.revokeAllUserRefreshTokens(user.id);
+
+  return {
+    message: "Password has been successfully reset. You may now log in with your new password.",
+    tenantSlug: targetCompany.slug || null,
+  };
+}
+

@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { AppError } from "../../shared/errors/AppError";
 import * as authService from "./auth.service";
 import {
+  confirmPasswordResetSchema,
   logoutSchema,
   otpRequestSchema,
   otpVerifySchema,
@@ -9,6 +10,8 @@ import {
   pinLoginSchema,
   refreshSchema,
   registerSchema,
+  requestPasswordResetSchema,
+  verifyPasswordResetTokenSchema,
 } from "./auth.validators";
 
 // Thin HTTP layer: parse the request, call the service, shape the response.
@@ -63,3 +66,22 @@ export async function me(req: Request, res: Response) {
   const profile = await authService.getProfile(req.user.id);
   res.status(200).json(profile);
 }
+
+export async function requestPasswordReset(req: Request, res: Response) {
+  const input = requestPasswordResetSchema.parse(req.body);
+  const result = await authService.requestPasswordReset(input, req.tenantCompany, req.headers.host);
+  res.status(200).json(result);
+}
+
+export async function verifyPasswordResetToken(req: Request, res: Response) {
+  const input = verifyPasswordResetTokenSchema.parse(req.body);
+  const result = await authService.verifyPasswordResetToken(input);
+  res.status(200).json(result);
+}
+
+export async function confirmPasswordReset(req: Request, res: Response) {
+  const input = confirmPasswordResetSchema.parse(req.body);
+  const result = await authService.confirmPasswordReset(input, req.tenantCompany);
+  res.status(200).json(result);
+}
+

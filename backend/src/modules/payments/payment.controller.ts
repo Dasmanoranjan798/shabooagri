@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { requireUser } from "../../shared/utils/requireUser";
 import * as paymentService from "./payment.service";
-import { receivePaymentSchema } from "./payment.validators";
+import { receivePaymentSchema, updateInvoiceTaxSchema } from "./payment.validators";
 
 export async function listInvoices(req: Request, res: Response) {
   const user = requireUser(req);
@@ -20,6 +20,13 @@ export async function receivePayment(req: Request, res: Response) {
   const input = receivePaymentSchema.parse(req.body);
   const result = await paymentService.receivePayment(user.companyId, req.params.id, user, input);
   res.status(201).json(result);
+}
+
+export async function updateInvoiceTax(req: Request, res: Response) {
+  const user = requireUser(req);
+  const input = updateInvoiceTaxSchema.parse(req.body);
+  const result = await paymentService.updateInvoiceTax(user.companyId, req.params.id, user, input);
+  res.json(result);
 }
 
 export async function listPayments(req: Request, res: Response) {

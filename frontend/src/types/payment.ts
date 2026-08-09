@@ -32,6 +32,11 @@ export interface Invoice {
   paidAmount: number;
   balanceAmount: number;
   status: InvoiceStatus;
+  isGstApplicable?: boolean;
+  taxRate?: number;
+  cgstAmount?: number;
+  sgstAmount?: number;
+  igstAmount?: number;
   dueDate?: string | null;
   notes?: string | null;
   createdAt: string;
@@ -40,7 +45,10 @@ export interface Invoice {
     id: string;
     name: string;
     phone?: string | null;
+    address?: string | null;
     village?: { id: string; name: string } | null;
+    isGstApplicable?: boolean;
+    gstin?: string | null;
   } | null;
   booking?: {
     id: string;
@@ -66,6 +74,27 @@ export interface ReceiptData {
     phone?: string | null;
     email?: string | null;
     address?: string | null;
+    city?: string | null;
+    district?: string | null;
+    state?: string | null;
+    pincode?: string | null;
+    country?: string | null;
+    isGstRegistered?: boolean;
+    gstin?: string | null;
+    pan?: string | null;
+    bankName?: string | null;
+    accountNumber?: string | null;
+    ifscCode?: string | null;
+    upiId?: string | null;
   };
   invoice: Invoice;
+  customer?: {
+    id: string;
+    name: string;
+    phone?: string | null;
+    address?: string | null;
+    village?: string | null;
+    isGstApplicable?: boolean;
+    gstin?: string | null;
+  };
 }

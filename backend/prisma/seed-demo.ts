@@ -190,7 +190,7 @@ async function seedDemoData() {
     data: { companyId: company.id, employeeId: empYearly.id },
   });
 
-  console.log("✓ Real-world demo data seeded successfully.");
+  console.log(" Real-world demo data seeded successfully.");
   console.log("--------------------------------------------------");
   console.log("Demo Owner Login:   owner@shabooagri.com / Password123! (or 9999999999)");
   console.log("Demo Manager Login: manager@shabooagri.com / Password123! (or 8888888888)");

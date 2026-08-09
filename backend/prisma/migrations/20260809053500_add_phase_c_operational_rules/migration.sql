@@ -1,0 +1,7 @@
+-- AlterTable Companies
+ALTER TABLE "companies"
+  ADD COLUMN IF NOT EXISTS "service_alert_hours" INTEGER NOT NULL DEFAULT 50,
+  ADD COLUMN IF NOT EXISTS "insurance_alert_days" INTEGER NOT NULL DEFAULT 30,
+  ADD COLUMN IF NOT EXISTS "license_alert_days" INTEGER NOT NULL DEFAULT 30,
+  ADD COLUMN IF NOT EXISTS "require_job_photo" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS "require_job_fuel_log" BOOLEAN NOT NULL DEFAULT false;

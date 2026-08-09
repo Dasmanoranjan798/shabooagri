@@ -28,8 +28,19 @@ export function findUserByIdentifier(companyId: string, identifier: string) {
   return prisma.user.findFirst({
     where: {
       companyId,
-      OR: [{ email: identifier }, { mobileNumber: identifier }],
+      // FIX 2: email match is case-insensitive (Prisma uses Postgres ILIKE).
+      // Mobile number matching remains exact — numbers are case-agnostic already.
+      OR: [{ email: { equals: identifier, mode: "insensitive" } }, { mobileNumber: identifier }],
     },
+  });
+}
+
+export function findUserByGlobalEmail(email: string) {
+  return prisma.user.findFirst({
+    where: {
+      email: { equals: email, mode: "insensitive" },
+    },
+    include: { company: true },
   });
 }
 
@@ -48,6 +59,17 @@ export function updateLastLogin(userId: string) {
   return prisma.user.update({
     where: { id: userId },
     data: { lastLoginAt: new Date() },
+    // FIX 1: include role relation so the login response user object has the same
+    // shape as /auth/me, preventing a TypeError crash in AppLayout.hasPermission().
+    include: {
+      role: {
+        include: {
+          rolePermissions: {
+            include: { permission: true },
+          },
+        },
+      },
+    },
   });
 }
 
@@ -103,3 +125,18 @@ export function revokeRefreshToken(id: string) {
     data: { revokedAt: new Date() },
   });
 }
+
+export function revokeAllUserRefreshTokens(userId: string) {
+  return prisma.refreshToken.updateMany({
+    where: { userId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+}
+
+export function updateUserPassword(userId: string, passwordHash: string) {
+  return prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash },
+  });
+}
+

@@ -165,7 +165,7 @@ async function runPhase3ATests() {
     data: { companyId: company.id, key: "per_hour", label: "Per Hour", unit: "hour" },
   });
 
-  console.log("✓ Test seeds created successfully.");
+  console.log(" Test seeds created successfully.");
 
   // TEST 1: Manager-Controlled Live Job Execution
   console.log("\n[TEST 1] Testing Manager-Controlled Live Job Execution...");
@@ -178,31 +178,31 @@ async function runPhase3ATests() {
     pricingMethodId: perHourPM.id,
     rate: 500,
   });
-  console.log("✓ Booking created by Manager:", booking.bookingNumber);
+  console.log(" Booking created by Manager:", booking.bookingNumber);
 
   // Transition PENDING -> ACCEPTED -> ON_THE_WAY to initialize job
   await bookingService.updateStatus(company.id, booking.id, "ACCEPTED");
   await bookingService.updateStatus(company.id, booking.id, "ON_THE_WAY");
   let job = await jobService.list(company.id, authManager).then((list) => list.find((j) => j.bookingId === booking.id));
   if (!job) throw new Error("Job was not initialized for booking!");
-  console.log("✓ Job initialized with status NOT_STARTED");
+  console.log(" Job initialized with status NOT_STARTED");
 
   // Manager starts job
   const now = Date.now();
   const startTime = new Date(now - 3 * 3600 * 1000); // 3 hours ago
   job = await jobService.start(company.id, job.id, authManager, { startTime });
   if (job.status !== "WORKING") throw new Error("Manager failed to start job!");
-  console.log("✓ Manager started job on behalf of driver.");
+  console.log(" Manager started job on behalf of driver.");
 
   // Manager pauses job
   job = await jobService.pause(company.id, job.id, authManager, { note: "Tea break" });
   if (job.status !== "PAUSED") throw new Error("Manager failed to pause job!");
-  console.log("✓ Manager paused job.");
+  console.log(" Manager paused job.");
 
   // Manager resumes job
   job = await jobService.resume(company.id, job.id, authManager, { note: "Resumed field work" });
   if (job.status !== "WORKING") throw new Error("Manager failed to resume job!");
-  console.log("✓ Manager resumed job.");
+  console.log(" Manager resumed job.");
 
   // Manager completes job with 2.5 actual hours worked & 2 acres
   const endTime = new Date(now);
@@ -214,7 +214,7 @@ async function runPhase3ATests() {
   });
   if (job.status !== "COMPLETED") throw new Error("Manager failed to complete job!");
   if (Number(job.actualHours) !== 2.5) throw new Error(`Expected actualHours 2.5, got ${job.actualHours}`);
-  console.log("✓ Manager completed job. Worked duration:", job.actualHours, "hrs.");
+  console.log(" Manager completed job. Worked duration:", job.actualHours, "hrs.");
 
   // Verify Invoice Auto-Generation & Pricing Engine Calculation
   const invoices = await paymentService.listInvoices(company.id, authManager);
@@ -224,7 +224,7 @@ async function runPhase3ATests() {
   if (Number(liveInvoice.totalAmount) !== 1250) {
     throw new Error(`Expected invoice total 1250, got ${liveInvoice.totalAmount}`);
   }
-  console.log("✓ Live Job Invoice auto-generated with correct total: ₹" + liveInvoice.totalAmount);
+  console.log(" Live Job Invoice auto-generated with correct total: ₹" + liveInvoice.totalAmount);
 
   // TEST 2: Manual / After-Work Entry Mode
   console.log("\n[TEST 2] Testing After-Work / Manual Entry Mode...");
@@ -248,13 +248,13 @@ async function runPhase3ATests() {
   if (manualJob.executionMode !== "MANUAL") throw new Error("Manual job executionMode must be MANUAL");
   if (manualJob.status !== "COMPLETED") throw new Error("Manual job status must be COMPLETED");
   if (Number(manualJob.actualHours) !== 4.0) throw new Error(`Expected manual job hours 4.0, got ${manualJob.actualHours}`);
-  console.log("✓ Manual after-work job created successfully with duration 4.0 hrs.");
+  console.log(" Manual after-work job created successfully with duration 4.0 hrs.");
 
   // Verify Manual Job Invoice calculation (4.0 hrs × ₹600/hr = ₹2400)
   if (!manualJob.invoice || Number(manualJob.invoice.totalAmount) !== 2400) {
     throw new Error(`Expected manual job invoice 2400, got ${manualJob.invoice?.totalAmount}`);
   }
-  console.log("✓ Manual after-work job generated invoice correctly using shared pricing engine: ₹" + manualJob.invoice.totalAmount);
+  console.log(" Manual after-work job generated invoice correctly using shared pricing engine: ₹" + manualJob.invoice.totalAmount);
 
   // Also create a manual job for Yearly Driver (5.0 hrs)
   await jobService.createManualEntryJob(company.id, managerUser.id, authManager, {
@@ -279,7 +279,7 @@ async function runPhase3ATests() {
   if (hourlyComp.compensationType !== "HOURLY") throw new Error("Expected compensationType HOURLY");
   if (hourlyComp.totalWorkedHours !== 2.5) throw new Error(`Expected 2.5 worked hours, got ${hourlyComp.totalWorkedHours}`);
   if (hourlyComp.calculatedEarnings !== 750) throw new Error(`Expected 750 hourly earnings, got ${hourlyComp.calculatedEarnings}`);
-  console.log("✓ Hourly Driver Compensation calculated correctly:", hourlyComp.explanation, "-> ₹" + hourlyComp.calculatedEarnings);
+  console.log(" Hourly Driver Compensation calculated correctly:", hourlyComp.explanation, "-> ₹" + hourlyComp.calculatedEarnings);
 
   // 2. Monthly Salaried Driver Compensation Summary
   const monthlyComp = await driverCompensationService.getDriverCompensationSummary(company.id, monthlyDriver.id);
@@ -287,7 +287,7 @@ async function runPhase3ATests() {
   if (monthlyComp.compensationType !== "MONTHLY") throw new Error("Expected compensationType MONTHLY");
   if (monthlyComp.totalWorkedHours !== 4.0) throw new Error(`Expected 4.0 worked hours, got ${monthlyComp.totalWorkedHours}`);
   if (monthlyComp.calculatedEarnings !== 25000) throw new Error(`Expected 25000 fixed monthly salary, got ${monthlyComp.calculatedEarnings}`);
-  console.log("✓ Monthly Salaried Driver Compensation strictly preserved fixed salary without hourly multiplication:", monthlyComp.explanation);
+  console.log(" Monthly Salaried Driver Compensation strictly preserved fixed salary without hourly multiplication:", monthlyComp.explanation);
 
   // 3. Yearly Salaried Driver Compensation Summary
   const yearlyComp = await driverCompensationService.getDriverCompensationSummary(company.id, yearlyDriver.id);
@@ -295,7 +295,7 @@ async function runPhase3ATests() {
   if (yearlyComp.compensationType !== "YEARLY") throw new Error("Expected compensationType YEARLY");
   if (yearlyComp.totalWorkedHours !== 5.0) throw new Error(`Expected 5.0 worked hours, got ${yearlyComp.totalWorkedHours}`);
   if (yearlyComp.calculatedEarnings !== 360000) throw new Error(`Expected 360000 fixed yearly salary, got ${yearlyComp.calculatedEarnings}`);
-  console.log("✓ Yearly Salaried Driver Compensation strictly preserved fixed annual salary without hourly multiplication:", yearlyComp.explanation);
+  console.log(" Yearly Salaried Driver Compensation strictly preserved fixed annual salary without hourly multiplication:", yearlyComp.explanation);
 
   // TEST 4: Security & Access Control
   console.log("\n[TEST 4] Testing Security & Permission Scoping...");
@@ -306,7 +306,7 @@ async function runPhase3ATests() {
     throw new Error("SECURITY FAILURE: Farmer was allowed to complete a job!");
   } catch (err: any) {
     if (err.message.includes("SECURITY FAILURE")) throw err;
-    console.log("✓ Farmer job modification correctly rejected with 403 Forbidden / Not Assigned.");
+    console.log(" Farmer job modification correctly rejected with 403 Forbidden / Not Assigned.");
   }
 
   // Cross-Company Isolation check
@@ -324,7 +324,7 @@ async function runPhase3ATests() {
     throw new Error("TENANT ISOLATION FAILURE: Tenant B accessed Tenant A job!");
   } catch (err: any) {
     if (err.message.includes("TENANT ISOLATION")) throw err;
-    console.log("✓ Cross-company tenant isolation correctly enforced with HTTP 404 Not Found.");
+    console.log(" Cross-company tenant isolation correctly enforced with HTTP 404 Not Found.");
   }
 
   console.log("==================================================");

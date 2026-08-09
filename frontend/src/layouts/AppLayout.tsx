@@ -1,15 +1,36 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  LayoutDashboard,
+  Calendar,
+  Tractor,
+  Users,
+  UserCheck,
+  Briefcase,
+  CreditCard,
+  TrendingDown,
+  Fuel,
+  Wrench,
+  BarChart3,
+  Settings,
+  Search,
+  Bell,
+  LogOut,
+  Menu,
+  X,
+  Home,
+  Truck
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { getTerm } from "../lib/terminology";
-import { defaultTheme } from "../lib/theme";
+import { defaultTheme, getCompanyLogoUrl, getCompanyName } from "../lib/theme";
 import { Badge } from "../components/ui/Badge";
 
 interface NavItem {
   key: string;
   label: string;
   path: string;
-  icon: string;
+  icon: React.ReactNode;
   permission?: string;
 }
 
@@ -24,20 +45,23 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
   const machineTerm = getTerm("machine", true);
   const bookingTerm = getTerm("booking", true);
 
+  const companyLogoUrl = getCompanyLogoUrl();
+  const companyDisplayName = getCompanyName();
+
   const navItems: NavItem[] = [
-    { key: "dashboard", label: "Dashboard", path: "/", icon: "📊", permission: "dashboard.view" },
-    { key: "bookings", label: bookingTerm, path: "/bookings", icon: "📅", permission: "operations.view" },
-    { key: "jobs", label: "Jobs", path: "/jobs", icon: "🚜", permission: "operations.view" },
-    { key: "customers", label: customerTerm, path: "/customers", icon: "👥", permission: "operations.view" },
-    { key: "machines", label: machineTerm, path: "/machines", icon: "🚜", permission: "operations.view" },
-    { key: "drivers", label: driverTerm, path: "/drivers", icon: "👨‍🌾", permission: "operations.view" },
-    { key: "employees", label: "Employees", path: "/employees", icon: "👔", permission: "operations.view" },
-    { key: "payments", label: "Payments", path: "/payments", icon: "💳", permission: "payment.receive" },
-    { key: "expenses", label: "Expenses", path: "/expenses", icon: "💸", permission: "operations.view" },
-    { key: "fuel", label: "Fuel", path: "/fuel", icon: "⛽", permission: "operations.view" },
-    { key: "maintenance", label: "Maintenance", path: "/maintenance", icon: "🔧", permission: "operations.view" },
-    { key: "reports", label: "Reports", path: "/reports", icon: "📈", permission: "report.generate" },
-    { key: "settings", label: "Settings", path: "/settings", icon: "⚙️", permission: "settings.manage" },
+    { key: "dashboard", label: "Dashboard", path: "/", icon: <LayoutDashboard size={18} />, permission: "dashboard.view" },
+    { key: "bookings", label: bookingTerm, path: "/bookings", icon: <Calendar size={18} />, permission: "operations.view" },
+    { key: "jobs", label: "Jobs", path: "/jobs", icon: <Tractor size={18} />, permission: "operations.view" },
+    { key: "customers", label: customerTerm, path: "/customers", icon: <Users size={18} />, permission: "operations.view" },
+    { key: "machines", label: machineTerm, path: "/machines", icon: <Truck size={18} />, permission: "operations.view" },
+    { key: "drivers", label: driverTerm, path: "/drivers", icon: <UserCheck size={18} />, permission: "operations.view" },
+    { key: "employees", label: "Employees", path: "/employees", icon: <Briefcase size={18} />, permission: "operations.view" },
+    { key: "payments", label: "Payments", path: "/payments", icon: <CreditCard size={18} />, permission: "payment.receive" },
+    { key: "expenses", label: "Expenses", path: "/expenses", icon: <TrendingDown size={18} />, permission: "operations.view" },
+    { key: "fuel", label: "Fuel", path: "/fuel", icon: <Fuel size={18} />, permission: "operations.view" },
+    { key: "maintenance", label: "Maintenance", path: "/maintenance", icon: <Wrench size={18} />, permission: "operations.view" },
+    { key: "reports", label: "Reports", path: "/reports", icon: <BarChart3 size={18} />, permission: "report.generate" },
+    { key: "settings", label: "Settings", path: "/settings", icon: <Settings size={18} />, permission: "settings.manage" },
   ];
 
   // Filter items by caller permission / role
@@ -71,8 +95,18 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
       <aside className="sa-sidebar">
         <div className="sa-sidebar-brand">
           <div className="sa-brand-logo">
-            <span className="sa-brand-icon">🚜</span>
-            <span className="sa-brand-title">{defaultTheme.companyName}</span>
+            {companyLogoUrl ? (
+              <img
+                src={companyLogoUrl}
+                alt="Company Logo"
+                style={{ height: "32px", width: "32px", objectFit: "contain", borderRadius: "6px" }}
+              />
+            ) : (
+              <span className="sa-brand-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+                <Tractor size={22} />
+              </span>
+            )}
+            <span className="sa-brand-title">{companyDisplayName || defaultTheme.companyName}</span>
           </div>
           <span className="sa-brand-subtext">{defaultTheme.brandSubtext}</span>
         </div>
@@ -104,7 +138,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             </div>
           </div>
           <button className="sa-btn-logout" onClick={handleLogout} title="Logout">
-            🚪 Logout
+            <LogOut size={16} style={{ marginRight: "6px" }} /> Logout
           </button>
         </div>
       </aside>
@@ -119,10 +153,12 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle menu"
             >
-              ☰
+              <Menu size={20} />
             </button>
             <div className="sa-search-box">
-              <span className="sa-search-icon">🔍</span>
+              <span className="sa-search-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+                <Search size={16} />
+              </span>
               <input
                 type="text"
                 placeholder="Global search (Booking #, Customer, Machine)..."
@@ -133,12 +169,14 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
           <div className="sa-topbar-right">
             <div className="sa-date-badge">
-              <span className="sa-date-icon">📅</span>
+              <span className="sa-date-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+                <Calendar size={14} />
+              </span>
               <span>{currentDateStr}</span>
             </div>
 
             <button className="sa-icon-btn" title="Notifications">
-              🔔
+              <Bell size={18} />
               <span className="sa-badge-count">3</span>
             </button>
 
@@ -156,11 +194,13 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             <div className="sa-mobile-drawer" onClick={(e) => e.stopPropagation()}>
               <div className="sa-drawer-header">
                 <div className="sa-brand-logo">
-                  <span className="sa-brand-icon">🚜</span>
+                  <span className="sa-brand-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+                    <Tractor size={22} />
+                  </span>
                   <span className="sa-brand-title">{defaultTheme.companyName}</span>
                 </div>
                 <button className="sa-drawer-close" onClick={() => setMobileMenuOpen(false)}>
-                  ✕
+                  <X size={20} />
                 </button>
               </div>
 
@@ -193,7 +233,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
               <div className="sa-drawer-footer">
                 <button className="sa-btn-logout-full" onClick={handleLogout}>
-                  🚪 Logout
+                  <LogOut size={16} style={{ marginRight: "6px" }} /> Logout
                 </button>
               </div>
             </div>
@@ -206,26 +246,26 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         {/* Mobile Bottom Navigation Bar */}
         <nav className="sa-bottom-nav">
           <Link to="/" className={`sa-bottom-item ${location.pathname === "/" ? "is-active" : ""}`}>
-            <span className="sa-bottom-icon">🏠</span>
+            <span className="sa-bottom-icon" style={{ display: "inline-flex", alignItems: "center" }}><Home size={20} /></span>
             <span className="sa-bottom-label">Home</span>
           </Link>
           <Link to="/jobs" className={`sa-bottom-item ${location.pathname === "/jobs" ? "is-active" : ""}`}>
-            <span className="sa-bottom-icon">🚜</span>
+            <span className="sa-bottom-icon" style={{ display: "inline-flex", alignItems: "center" }}><Tractor size={20} /></span>
             <span className="sa-bottom-label">Jobs</span>
           </Link>
           <Link to="/machines" className={`sa-bottom-item ${location.pathname === "/machines" ? "is-active" : ""}`}>
-            <span className="sa-bottom-icon">🚚</span>
+            <span className="sa-bottom-icon" style={{ display: "inline-flex", alignItems: "center" }}><Truck size={20} /></span>
             <span className="sa-bottom-label">Fleet</span>
           </Link>
           <Link to="/customers" className={`sa-bottom-item ${location.pathname === "/customers" ? "is-active" : ""}`}>
-            <span className="sa-bottom-icon">👥</span>
+            <span className="sa-bottom-icon" style={{ display: "inline-flex", alignItems: "center" }}><Users size={20} /></span>
             <span className="sa-bottom-label">{getTerm("customer", true)}</span>
           </Link>
           <button
             className="sa-bottom-item"
             onClick={() => setMobileMenuOpen(true)}
           >
-            <span className="sa-bottom-icon">☰</span>
+            <span className="sa-bottom-icon" style={{ display: "inline-flex", alignItems: "center" }}><Menu size={20} /></span>
             <span className="sa-bottom-label">More</span>
           </button>
         </nav>
@@ -233,3 +273,4 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
     </div>
   );
 };
+

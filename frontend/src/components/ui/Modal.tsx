@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { X } from "lucide-react";
 
 interface ModalProps {
   isOpen: boolean;
@@ -43,7 +44,7 @@ export const Modal: React.FC<ModalProps> = ({
         <div className="sa-modal-header">
           <h3 className="sa-modal-title">{title}</h3>
           <button className="sa-modal-close" onClick={onClose} aria-label="Close modal">
-            ✕
+            <X size={18} />
           </button>
         </div>
 

@@ -1,13 +1,15 @@
+@import "tailwindcss";
+
 /* ShabooAgri Design System - Green Primary Theme & High Outdoor Visibility */
 
 :root {
-  --color-primary: #1b7a3e;
-  --color-primary-dark: #13582c;
+  --color-primary: #0b4f26;
+  --color-primary-dark: #07381a;
   --color-primary-light: #e6f4ea;
-  --color-primary-hover: #166533;
+  --color-primary-hover: #13582c;
   --color-accent: #2ecc71;
   
-  --color-bg: #f8fafc;
+  --color-bg: #f4f6f8;
   --color-surface: #ffffff;
   --color-border: #e2e8f0;
   --color-border-light: #f1f5f9;
@@ -19,21 +21,22 @@
   --color-success: #16a34a;
   --color-warning: #d97706;
   --color-danger: #dc2626;
-  --color-info: #2563eb;
+  --color-info: #0284c7;
   --color-purple: #7c3aed;
   
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
+  --radius-xl: 18px;
   --radius-full: 9999px;
   
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+  --shadow-lg: 0 10px 25px -5px rgb(0 0 0 / 0.08), 0 4px 10px -4px rgb(0 0 0 / 0.04);
   
-  --transition: all 0.2s ease-in-out;
+  --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   color-scheme: light;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 * {
@@ -923,40 +926,57 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--color-bg);
+  background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
   padding: 1.5rem;
 }
 
 .sa-login-card {
   width: 100%;
-  max-width: 400px;
-  background-color: var(--color-surface);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-lg);
-  padding: 2rem;
+  max-width: 440px;
+  background-color: #ffffff;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+  padding: 2.25rem 2rem;
 }
 
 .sa-login-header {
   text-align: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.75rem;
 }
 
 .sa-login-brand {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.65rem;
   color: var(--color-primary);
+  margin-bottom: 0.25rem;
+}
+
+.sa-login-brand h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
 }
 
 .sa-login-logo {
-  font-size: 2rem;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25);
 }
 
 .sa-login-subtext {
   font-size: 0.85rem;
-  color: var(--color-text-muted);
+  color: #64748b;
+  font-weight: 500;
   margin-top: 4px;
 }
 
@@ -2896,6 +2916,21 @@ button {
   color: var(--color-text-muted);
   font-weight: 600;
   margin-top: 2px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 

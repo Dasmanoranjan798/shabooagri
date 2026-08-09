@@ -1,4 +1,5 @@
 import type { JobStatus } from "@prisma/client";
+import { prisma } from "../../db/prisma";
 import type { AuthenticatedUser } from "../auth/auth.types";
 import * as fuelService from "../fuel/fuel.service";
 import * as paymentService from "../payments/payment.service";
@@ -136,6 +137,21 @@ export async function complete(companyId: string, id: string, user: Authenticate
   await assertCanWriteJob(companyId, job, user);
   assertStatus(job, ["WORKING", "PAUSED"], "complete");
 
+  // Phase C: Backend Enforcement of Mandatory Job Completion Rules
+  const company = await prisma.company.findUnique({ where: { id: companyId } });
+  if (company?.requireJobPhoto) {
+    const photos = await jobPhotoRepository.findAllForJob(companyId, id);
+    if (photos.length === 0) {
+      throw new AppError(400, "A completion photo is required before completing this job");
+    }
+  }
+  if (company?.requireJobFuelLog) {
+    const fuelEntries = await fuelService.listForJob(companyId, id);
+    if (fuelEntries.length === 0) {
+      throw new AppError(400, "A fuel-log entry is required before completing this job");
+    }
+  }
+
   // Close out an in-progress pause before computing hours, or the final
   // pause segment would silently count as worked time.
   let totalPausedDurationSec = job.totalPausedDurationSec;
@@ -255,6 +271,11 @@ export async function createManualEntryJob(
     driverService.getById(companyId, input.driverId),
     pricingMethodService.getById(companyId, input.pricingMethodId),
   ]);
+
+  const company = await prisma.company.findUnique({ where: { id: companyId } });
+  if (company?.requireJobFuelLog && (!input.fuelUsedLitres || input.fuelUsedLitres <= 0)) {
+    throw new AppError(400, "A fuel-log entry is required before completing this job");
+  }
 
   const startTime = new Date(input.startTime);
   const endTime = new Date(input.endTime);

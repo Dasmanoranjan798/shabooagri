@@ -22,6 +22,7 @@ import { fuelRouter } from "./modules/fuel/fuel.routes";
 import { maintenanceRouter } from "./modules/maintenance/maintenance.routes";
 import { settingsRouter } from "./modules/settings/settings.routes";
 import { rbacRouter } from "./modules/rbac/rbac.routes";
+import { saasRouter } from "./modules/saas/saas.routes";
 
 // Express app assembly only. Module routers are mounted here once they exist —
 // this file must never contain business logic itself.
@@ -47,12 +48,16 @@ app.get("/health", async (_req, res) => {
   }
 });
 
+import { tenantResolverMiddleware } from "./middleware/tenantResolver.middleware";
+
 // Phase 1 local-disk stub for booking attachments (see booking.upload.ts) —
 // served back out as static files rather than through an authenticated
 // route, so this is only as private as the URL is hard to guess. Fine for
 // a pilot; revisit (signed URLs / object storage) before wider rollout.
 app.use("/uploads/booking-attachments", express.static(BOOKING_ATTACHMENT_UPLOAD_ROOT));
 app.use("/uploads/job-photos", express.static(JOB_PHOTO_UPLOAD_ROOT));
+
+app.use(tenantResolverMiddleware);
 
 app.use("/auth", authRouter);
 app.use("/villages", villageRouter);
@@ -72,6 +77,7 @@ app.use("/maintenance", maintenanceRouter);
 app.use("/settings", settingsRouter);
 app.use("/rbac", rbacRouter);
 app.use("/dashboard", dashboardRouter);
+app.use("/saas", saasRouter);
 
 // Must be registered after all routes.
 app.use(errorMiddleware);

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Play, X, User, MapPin, Calendar, Clock, Tag, Banknote } from "lucide-react";
 import type { Booking, BookingAttachment, BookingStatus, DriverOption, MachineOption } from "../../types/booking";
 import { api } from "../../lib/api";
 import { formatCurrency } from "../../lib/theme";
@@ -163,8 +164,9 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
                   size="sm"
                   isLoading={isUpdatingStatus}
                   onClick={() => handleStatusChange(opt.next)}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
                 >
-                  ▶ {opt.label}
+                  <Play size={14} /> {opt.label}
                 </Button>
               ))}
               {canCancel && (
@@ -173,8 +175,9 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
                   size="sm"
                   isLoading={isUpdatingStatus}
                   onClick={() => handleStatusChange("CANCELLED")}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
                 >
-                  ✕ Cancel Booking
+                  <X size={14} /> Cancel Booking
                 </Button>
               )}
             </div>
@@ -184,36 +187,48 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
         {/* Grid Details */}
         <div className="sa-detail-grid">
           <div className="sa-detail-item">
-            <span className="sa-detail-label">👤 {customerTerm}</span>
+            <span className="sa-detail-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+              <User size={14} /> {customerTerm}
+            </span>
             <span className="sa-detail-val">{booking.customer.name}</span>
           </div>
 
           <div className="sa-detail-item">
-            <span className="sa-detail-label">🏘️ Village</span>
+            <span className="sa-detail-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+              <MapPin size={14} /> Village
+            </span>
             <span className="sa-detail-val">{booking.village.name}</span>
           </div>
 
           <div className="sa-detail-item">
-            <span className="sa-detail-label">📅 Scheduled Date</span>
+            <span className="sa-detail-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+              <Calendar size={14} /> Scheduled Date
+            </span>
             <span className="sa-detail-val">{booking.scheduledDate.slice(0, 10)}</span>
           </div>
 
           <div className="sa-detail-item">
-            <span className="sa-detail-label">🕒 Scheduled Time</span>
+            <span className="sa-detail-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+              <Clock size={14} /> Scheduled Time
+            </span>
             <span className="sa-detail-val">
               {booking.scheduledTime ? booking.scheduledTime.slice(11, 16) : "Not set"}
             </span>
           </div>
 
           <div className="sa-detail-item">
-            <span className="sa-detail-label">🏷️ Rate & Method</span>
+            <span className="sa-detail-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+              <Tag size={14} /> Rate & Method
+            </span>
             <span className="sa-detail-val">
               {formatCurrency(booking.rate)} / {booking.pricingMethod.label}
             </span>
           </div>
 
           <div className="sa-detail-item">
-            <span className="sa-detail-label">💰 Estimated Amount</span>
+            <span className="sa-detail-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+              <Banknote size={14} /> Estimated Amount
+            </span>
             <span className="sa-detail-val sa-amount-bold">
               {booking.estimatedAmount != null ? formatCurrency(booking.estimatedAmount) : "N/A"}
             </span>

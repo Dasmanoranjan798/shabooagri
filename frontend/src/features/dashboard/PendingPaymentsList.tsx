@@ -1,4 +1,5 @@
 import React from "react";
+import { CheckCircle2 } from "lucide-react";
 import type { PendingPaymentItem } from "../../types/dashboard";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { formatCurrency } from "../../lib/theme";
@@ -11,7 +12,9 @@ export const PendingPaymentsList: React.FC<PendingPaymentsListProps> = ({ paymen
   if (!payments || payments.length === 0) {
     return (
       <div className="sa-empty-state">
-        <span className="sa-empty-icon">✅</span>
+        <span className="sa-empty-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+          <CheckCircle2 size={28} color="var(--color-success, #2E7D32)" />
+        </span>
         <p>No pending payments outstanding.</p>
       </div>
     );

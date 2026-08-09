@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Home, Calendar, CreditCard, User, Sprout, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 interface FarmerPortalLayoutProps {
@@ -7,10 +8,10 @@ interface FarmerPortalLayoutProps {
 }
 
 const PORTAL_NAV = [
-  { key: "home", label: "Home", icon: "🏠", path: "/portal" },
-  { key: "bookings", label: "Bookings", icon: "📅", path: "/portal/bookings" },
-  { key: "invoices", label: "Invoices", icon: "💳", path: "/portal/invoices" },
-  { key: "profile", label: "Profile", icon: "👤", path: "/portal/profile" },
+  { key: "home", label: "Home", icon: <Home size={20} />, path: "/portal" },
+  { key: "bookings", label: "Bookings", icon: <Calendar size={20} />, path: "/portal/bookings" },
+  { key: "invoices", label: "Invoices", icon: <CreditCard size={20} />, path: "/portal/invoices" },
+  { key: "profile", label: "Profile", icon: <User size={20} />, path: "/portal/profile" },
 ];
 
 export const FarmerPortalLayout: React.FC<FarmerPortalLayoutProps> = ({ children }) => {
@@ -31,11 +32,13 @@ export const FarmerPortalLayout: React.FC<FarmerPortalLayoutProps> = ({ children
       {/* Top bar */}
       <header className="sa-portal-header">
         <div className="sa-portal-header-brand">
-          <span className="sa-portal-header-icon">🌾</span>
+          <span className="sa-portal-header-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+            <Sprout size={22} />
+          </span>
           <span className="sa-portal-header-title">My Farming Portal</span>
         </div>
-        <button className="sa-portal-logout" onClick={handleLogout} aria-label="Logout">
-          <span style={{ fontSize: "1.1rem" }}>⎋</span>
+        <button className="sa-portal-logout" onClick={handleLogout} aria-label="Logout" title="Logout">
+          <LogOut size={18} />
         </button>
       </header>
 
@@ -51,7 +54,7 @@ export const FarmerPortalLayout: React.FC<FarmerPortalLayoutProps> = ({ children
             className={`sa-portal-tab-item ${isActive(item.path) ? "is-active" : ""}`}
             aria-current={isActive(item.path) ? "page" : undefined}
           >
-            <span className="sa-portal-tab-icon">{item.icon}</span>
+            <span className="sa-portal-tab-icon" style={{ display: "inline-flex", alignItems: "center" }}>{item.icon}</span>
             <span className="sa-portal-tab-label">{item.label}</span>
           </Link>
         ))}
@@ -59,3 +62,4 @@ export const FarmerPortalLayout: React.FC<FarmerPortalLayoutProps> = ({ children
     </div>
   );
 };
+

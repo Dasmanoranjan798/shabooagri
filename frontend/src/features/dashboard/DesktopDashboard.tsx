@@ -1,4 +1,12 @@
 import React from "react";
+import {
+  Banknote,
+  TrendingUp,
+  Clock,
+  Tractor,
+  UserCheck,
+  CheckCircle2
+} from "lucide-react";
 import type {
   DashboardSummaryResponse,
   FuelSeriesResponse,
@@ -59,27 +67,27 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
             value={formatCurrency(kpis.todayRevenue.current)}
             subtitle="vs yesterday"
             delta={kpis.todayRevenue}
-            icon="💰"
+            icon={<Banknote size={20} />}
           />
           <KpiCard
             title="This Month Revenue"
             value={formatCurrency(kpis.monthRevenue.current)}
             subtitle="vs last month"
             delta={kpis.monthRevenue}
-            icon="📈"
+            icon={<TrendingUp size={20} />}
           />
           <KpiCard
             title="Pending Collection"
             value={formatCurrency(kpis.pendingCollection.current)}
             subtitle="Unpaid & Partial Invoices"
-            icon="⏳"
+            icon={<Clock size={20} />}
             badge={{ text: "Outstanding", variant: "warning" }}
           />
           <KpiCard
             title={`${machineTerm} Working`}
             value={`${kpis.machinesWorking.working} / ${kpis.machinesWorking.activeUsable}`}
             subtitle={`${kpis.machinesWorking.percent}% of active fleet`}
-            icon="🚜"
+            icon={<Tractor size={20} />}
             badge={{ text: `${kpis.machinesWorking.percent}%`, variant: "success" }}
           />
           <KpiCard
@@ -87,14 +95,14 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
             value={kpis.driversActive.current}
             subtitle="Deployed on site today"
             delta={kpis.driversActive}
-            icon="👨‍🌾"
+            icon={<UserCheck size={20} />}
           />
           <KpiCard
             title="Jobs Completed"
             value={kpis.jobsCompleted.current}
             subtitle="Completed today"
             delta={kpis.jobsCompleted}
-            icon="✅"
+            icon={<CheckCircle2 size={20} />}
           />
         </div>
       )}

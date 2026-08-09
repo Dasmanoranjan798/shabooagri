@@ -39,22 +39,86 @@ export async function createInvoiceForCompletedJob(companyId: string, job: JobWi
   const quantity = resolveJobWorkedQuantity(unit, job.actualHours, job.completedAcres);
   const rate = Number(job.booking.rate);
 
-  let totalAmount: number;
+  let calculatedAmount: number;
   try {
-    totalAmount = calculateAmount({ unit, rate, quantity });
+    calculatedAmount = calculateAmount({ unit, rate, quantity });
   } catch {
     // Fallback: if quantity was zero or missing for unit-based calculation,
     // evaluate base rate to avoid failing job completion.
-    totalAmount = Math.round(rate * 100) / 100;
+    calculatedAmount = Math.round(rate * 100) / 100;
   }
+
+  // Phase B Default: GST is OFF for normal farmer transactions unless explicitly toggled ON
+  const subtotalAmount = calculatedAmount;
+  const taxRate = 0;
+  const taxAmount = 0;
+  const cgstAmount = 0;
+  const sgstAmount = 0;
+  const igstAmount = 0;
+  const isGstApplicable = false;
+  const totalAmount = calculatedAmount;
 
   return invoiceRepository.create(companyId, {
     bookingId: job.bookingId,
     customerId: job.booking.customerId,
+    subtotalAmount,
+    taxRate,
+    taxAmount,
+    cgstAmount,
+    sgstAmount,
+    igstAmount,
+    isGstApplicable,
     totalAmount,
     paidAmount: 0,
     balanceAmount: totalAmount,
     status: "UNPAID",
+  });
+}
+
+export async function updateInvoiceTax(
+  companyId: string,
+  invoiceId: string,
+  user: AuthenticatedUser,
+  input: { isGstApplicable: boolean; taxRate?: number },
+) {
+  const invoice = await getInvoiceById(companyId, invoiceId, user);
+  const company = await prisma.company.findUnique({ where: { id: companyId } });
+
+  const subtotal = invoice.subtotalAmount ? Number(invoice.subtotalAmount) : Number(invoice.totalAmount);
+  let taxRate = 0;
+  let taxAmount = 0;
+  let cgstAmount = 0;
+  let sgstAmount = 0;
+  let igstAmount = 0;
+  let totalAmount = subtotal;
+
+  if (input.isGstApplicable) {
+    taxRate = input.taxRate ?? (company?.defaultTaxRate ? Number(company.defaultTaxRate) : 18);
+    taxAmount = Math.round((subtotal * (taxRate / 100)) * 100) / 100;
+    cgstAmount = Math.round((taxAmount / 2) * 100) / 100;
+    sgstAmount = Math.round((taxAmount - cgstAmount) * 100) / 100;
+    totalAmount = Math.round((subtotal + taxAmount) * 100) / 100;
+  }
+
+  const currentPaid = Number(invoice.paidAmount);
+  const newBalanceAmount = Math.max(0, Math.round((totalAmount - currentPaid) * 100) / 100);
+  const newStatus = newBalanceAmount === 0 ? "PAID" : currentPaid > 0 ? "PARTIALLY_PAID" : "UNPAID";
+
+  return prisma.invoice.update({
+    where: { id: invoiceId },
+    data: {
+      isGstApplicable: input.isGstApplicable,
+      subtotalAmount: subtotal,
+      taxRate,
+      taxAmount,
+      cgstAmount,
+      sgstAmount,
+      igstAmount,
+      totalAmount,
+      balanceAmount: newBalanceAmount,
+      status: newStatus,
+    },
+    include: invoiceRepository.invoiceIncludeRelations,
   });
 }
 
@@ -192,12 +256,34 @@ export async function getReceipt(companyId: string, invoiceId: string, user: Aut
       themeColor: company.themeColor,
       currency: company.currency,
       invoicePrefix: company.invoicePrefix,
+      address: company.address,
+      city: company.city,
+      district: company.district,
+      state: company.state,
+      pincode: company.pincode,
+      country: company.country,
+      phone: company.phone,
+      email: company.email,
+      isGstRegistered: company.isGstRegistered,
+      gstin: company.gstin,
+      pan: company.pan,
+      bankName: company.bankName,
+      accountNumber: company.accountNumber,
+      ifscCode: company.ifscCode,
+      upiId: company.upiId,
     },
     invoice: {
       id: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
       invoiceDate: invoice.invoiceDate,
       dueDate: invoice.dueDate,
+      subtotalAmount: invoice.subtotalAmount ? Number(invoice.subtotalAmount) : Number(invoice.totalAmount),
+      taxRate: invoice.taxRate ? Number(invoice.taxRate) : 0,
+      taxAmount: invoice.taxAmount ? Number(invoice.taxAmount) : 0,
+      cgstAmount: invoice.cgstAmount ? Number(invoice.cgstAmount) : 0,
+      sgstAmount: invoice.sgstAmount ? Number(invoice.sgstAmount) : 0,
+      igstAmount: invoice.igstAmount ? Number(invoice.igstAmount) : 0,
+      isGstApplicable: invoice.isGstApplicable,
       totalAmount: Number(invoice.totalAmount),
       paidAmount: Number(invoice.paidAmount),
       balanceAmount: Number(invoice.balanceAmount),
@@ -209,6 +295,8 @@ export async function getReceipt(companyId: string, invoiceId: string, user: Aut
       phone: invoice.customer.phone,
       address: invoice.customer.address,
       village: invoice.customer.village.name,
+      isGstApplicable: invoice.customer.isGstApplicable,
+      gstin: invoice.customer.gstin,
     },
     service: {
       bookingNumber: invoice.booking.bookingNumber,

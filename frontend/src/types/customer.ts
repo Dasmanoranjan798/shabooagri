@@ -7,6 +7,8 @@ export interface Customer {
   address: string | null;
   notes: string | null;
   userId: string | null;
+  isGstApplicable?: boolean;
+  gstin?: string | null;
   createdAt: string;
   updatedAt: string;
   village: {
@@ -22,6 +24,8 @@ export interface CreateCustomerPayload {
   address?: string;
   notes?: string;
   userId?: string;
+  isGstApplicable?: boolean;
+  gstin?: string;
 }
 
 export interface UpdateCustomerPayload extends Partial<CreateCustomerPayload> {}

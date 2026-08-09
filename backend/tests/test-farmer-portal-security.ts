@@ -118,7 +118,7 @@ async function runFarmerPortalSecurityTest() {
   if (farmerABookings.length !== 1 || farmerABookings[0].id !== bookingA.id) {
     throw new Error(`Farmer A should see exactly 1 booking (Booking A), but saw ${farmerABookings.length}`);
   }
-  console.log("✔ Farmer A lists ONLY their own booking (Booking A)");
+  console.log(" Farmer A lists ONLY their own booking (Booking A)");
 
   // TEST 2: Farmer A tries to fetch Booking B directly -> must return 404 Not Found
   console.log("\n[TEST 2] Testing Farmer A Direct Read of Farmer B's Booking...");
@@ -127,7 +127,7 @@ async function runFarmerPortalSecurityTest() {
     throw new Error("Farmer A should NOT be able to view Farmer B's booking!");
   } catch (err: any) {
     if (err.statusCode === 404 || err.message.includes("not found")) {
-      console.log("✔ Farmer A direct read of Farmer B's booking rejected cleanly with 404 Not Found");
+      console.log(" Farmer A direct read of Farmer B's booking rejected cleanly with 404 Not Found");
     } else {
       throw err;
     }
@@ -140,10 +140,10 @@ async function runFarmerPortalSecurityTest() {
   if (containsOtherCustomerInvoice) {
     throw new Error("Farmer A received invoices belonging to another customer!");
   }
-  console.log("✔ Farmer A invoice list strictly scoped to Farmer A's customerId");
+  console.log(" Farmer A invoice list strictly scoped to Farmer A's customerId");
 
   console.log("\n==================================================");
-  console.log("🎉 FARMER PORTAL & DATA ISOLATION SECURITY PASSED!");
+  console.log(" FARMER PORTAL & DATA ISOLATION SECURITY PASSED!");
   console.log("==================================================");
 }
 

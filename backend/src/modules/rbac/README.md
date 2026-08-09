@@ -63,18 +63,18 @@ Reads (does not create/edit — see Status below): `roles`, `permissions`,
 
 | Permission | Owner | Manager | Driver | Farmer |
 |---|---|---|---|---|
-| dashboard.view | ✓ | ✓ | | |
-| booking.create | ✓ | ✓ | | |
-| booking.edit | ✓ | ✓ | | |
-| booking.delete | ✓ | | | |
-| machine.assign | ✓ | ✓ | | |
-| driver.assign | ✓ | ✓ | | |
-| job.update_status | ✓ | ✓ | ✓ | |
-| payment.receive | ✓ | ✓ | | |
-| report.generate | ✓ | ✓ | | |
-| user.manage | ✓ | ✓ | | |
-| settings.manage | ✓ | | | |
-| data.export | ✓ | | | |
+| dashboard.view |  |  | | |
+| booking.create |  |  | | |
+| booking.edit |  |  | | |
+| booking.delete |  | | | |
+| machine.assign |  |  | | |
+| driver.assign |  |  | | |
+| job.update_status |  |  |  | |
+| payment.receive |  |  | | |
+| report.generate |  |  | | |
+| user.manage |  |  | | |
+| settings.manage |  | | | |
+| data.export |  | | | |
 
 Manager holding `user.manage` is not from the original §6 role
 description — it's what `auth.service.register`'s previously-hardcoded

@@ -7,7 +7,7 @@ interface KpiCardProps {
   value: string | number;
   subtitle?: string;
   delta?: { delta: number | null; deltaPercent: number | null } | null;
-  icon: string;
+  icon: React.ReactNode;
   badge?: { text: string; variant?: BadgeVariant };
 }
 
@@ -24,7 +24,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
   return (
     <Card className="sa-kpi-card">
       <div className="sa-kpi-header">
-        <span className="sa-kpi-icon">{icon}</span>
+        <span className="sa-kpi-icon" style={{ display: "inline-flex", alignItems: "center" }}>{icon}</span>
         {badge ? (
           <Badge variant={badge.variant || "info"} size="sm">
             {badge.text}

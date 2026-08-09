@@ -110,7 +110,7 @@ async function runTests() {
   });
   if (!perHourMethod) throw new Error("per_hour pricing method missing");
 
-  console.log("✔ User & Master Data setup complete");
+  console.log(" User & Master Data setup complete");
 
   // ----------------------------------------------------
   // TEST 1: Monotonic Counter & Delete-Adjacent Scenarios + Concurrency
@@ -171,7 +171,7 @@ async function runTests() {
   if (num2 <= num1) {
     throw new Error(`Monotonicity failed: ${inv2.invoiceNumber} <= ${inv1.invoiceNumber}`);
   }
-  console.log(`  ✔ Monotonicity verified (${inv1.invoiceNumber} -> deleted -> ${inv2.invoiceNumber})`);
+  console.log(`   Monotonicity verified (${inv1.invoiceNumber} -> deleted -> ${inv2.invoiceNumber})`);
 
   // Concurrency test: 5 simultaneous invoice creations
   console.log("  Testing concurrent invoice number generation...");
@@ -210,7 +210,7 @@ async function runTests() {
   if (uniqueNumbers.size !== 5) {
     throw new Error(`Concurrency test failed! Duplicate numbers generated: ${concNumbers.join(", ")}`);
   }
-  console.log(`  ✔ Concurrency test passed! 5 distinct numbers: ${concNumbers.join(", ")}`);
+  console.log(`   Concurrency test passed! 5 distinct numbers: ${concNumbers.join(", ")}`);
 
   // ----------------------------------------------------
   // TEST 2: Job Completion Auto-Invoice Generation
@@ -269,7 +269,7 @@ async function runTests() {
   if (Number(autoInvoice.balanceAmount) !== 525) {
     throw new Error(`Expected balance 525, got ${autoInvoice.balanceAmount}`);
   }
-  console.log("  ✔ Auto-invoice generation verified cleanly");
+  console.log("   Auto-invoice generation verified cleanly");
 
   // ----------------------------------------------------
   // TEST 3: Partial Payment then Full Payment Lifecycle
@@ -333,7 +333,7 @@ async function runTests() {
     throw new Error("Payment on fully paid invoice was not rejected!");
   }
 
-  console.log("  ✔ Payment transaction lifecycle verified cleanly");
+  console.log("   Payment transaction lifecycle verified cleanly");
 
   // ----------------------------------------------------
   // TEST 4: Scoped Read Verification & Receipt Generation
@@ -397,7 +397,7 @@ async function runTests() {
   if (receipt.payments.length !== 2) {
     throw new Error(`Expected 2 payments in receipt, got ${receipt.payments.length}`);
   }
-  console.log("  ✔ Scoped read & structured receipt generation verified");
+  console.log("   Scoped read & structured receipt generation verified");
 
   // ----------------------------------------------------
   // CLEANUP
@@ -418,13 +418,13 @@ async function runTests() {
   await prisma.machineType.deleteMany({ where: { companyId } });
   await prisma.user.deleteMany({ where: { id: { in: userIds } } });
 
-  console.log("✔ Cleanup finished successfully!");
-  console.log("\n🎉 ALL PAYMENTS & INVOICES TESTS PASSED SUCCESSFULLY!\n");
+  console.log(" Cleanup finished successfully!");
+  console.log("\n ALL PAYMENTS & INVOICES TESTS PASSED SUCCESSFULLY!\n");
 }
 
 runTests()
   .catch((err) => {
-    console.error("❌ Test failed:", err);
+    console.error(" Test failed:", err);
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());

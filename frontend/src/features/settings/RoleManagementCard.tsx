@@ -8,6 +8,17 @@ import { Modal } from "../../components/ui/Modal";
 import { Spinner } from "../../components/ui/Spinner";
 import { Badge } from "../../components/ui/Badge";
 import { Input } from "../../components/ui/Input";
+import {
+  Lock,
+  Plus,
+  Key,
+  Users,
+  Pencil,
+  Trash2,
+  UserPlus,
+  Folder,
+  AlertCircle
+} from "lucide-react";
 
 interface RoleManagementCardProps {
   canManage: boolean;
@@ -119,11 +130,11 @@ export const RoleManagementCard: React.FC<RoleManagementCardProps> = ({ canManag
     setAssignMsg(null);
     try {
       await api.assignUserRole(selectedUserId, selectedRoleId);
-      setAssignMsg("✓ User role updated successfully.");
+      setAssignMsg("User role updated successfully.");
       setTimeout(() => setAssignMsg(null), 3000);
       await loadData();
     } catch (err: any) {
-      setAssignMsg(`⚠ ${err.message || "Failed to assign role"}`);
+      setAssignMsg(`${err.message || "Failed to assign role"}`);
     } finally {
       setIsAssigning(false);
     }
@@ -146,7 +157,7 @@ export const RoleManagementCard: React.FC<RoleManagementCardProps> = ({ canManag
   }, {});
 
   if (isLoading) return <div className="sa-loading-state"><Spinner /><span>Loading RBAC configuration…</span></div>;
-  if (error) return <div className="sa-form-error">⚠ {error}</div>;
+  if (error) return <div className="sa-form-error">{error}</div>;
 
   return (
     <Card
@@ -154,16 +165,16 @@ export const RoleManagementCard: React.FC<RoleManagementCardProps> = ({ canManag
       subtitle="Manage system and custom roles with granular permission assignments (§6)"
     >
       {!canManage && (
-        <div className="sa-info-banner" style={{ marginBottom: "16px" }}>
-          🔒 Read-only — only administrators can configure roles and permissions.
+        <div className="sa-info-banner" style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
+          <Lock size={14} /> Read-only — only administrators can configure roles and permissions.
         </div>
       )}
 
       {/* Action Header */}
       {canManage && (
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "16px" }}>
-          <Button variant="primary" size="sm" onClick={openCreateModal}>
-            ➕ Create Custom Role
+          <Button variant="primary" size="sm" onClick={openCreateModal} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <Plus size={16} /> Create Custom Role
           </Button>
         </div>
       )}
@@ -190,8 +201,9 @@ export const RoleManagementCard: React.FC<RoleManagementCardProps> = ({ canManag
                 </Badge>
               </div>
 
-              <div style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", marginBottom: "12px" }}>
-                🔑 {permCount} permissions assigned • 👤 {userCount} users
+              <div style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", marginBottom: "12px", display: "flex", alignItems: "center", gap: "12px" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Key size={14} /> {permCount} perms</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Users size={14} /> {userCount} users</span>
               </div>
 
               {/* Permission pill summary */}
@@ -214,12 +226,12 @@ export const RoleManagementCard: React.FC<RoleManagementCardProps> = ({ canManag
 
               {canManage && (
                 <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                  <Button variant="secondary" size="sm" onClick={() => openEditModal(role)}>
-                    ✏️ Edit Permissions
+                  <Button variant="secondary" size="sm" onClick={() => openEditModal(role)} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <Pencil size={14} /> Edit Permissions
                   </Button>
                   {!role.isSystemRole && (
-                    <Button variant="danger" size="sm" onClick={() => handleDeleteRole(role.id)}>
-                      🗑️
+                    <Button variant="danger" size="sm" onClick={() => handleDeleteRole(role.id)} title="Delete role">
+                      <Trash2 size={14} />
                     </Button>
                   )}
                 </div>
@@ -232,9 +244,11 @@ export const RoleManagementCard: React.FC<RoleManagementCardProps> = ({ canManag
       {/* User Role Assignment Section */}
       {canManage && (
         <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: "16px", marginTop: "16px" }}>
-          <h4 style={{ margin: "16px 0 8px", fontSize: "0.95rem" }}>👤 Assign Role to User</h4>
+          <h4 style={{ margin: "16px 0 8px", fontSize: "0.95rem", display: "flex", alignItems: "center", gap: "6px" }}>
+            <UserPlus size={16} /> Assign Role to User
+          </h4>
           {assignMsg && (
-            <div style={{ fontSize: "0.85rem", marginBottom: "8px", color: assignMsg.startsWith("✓") ? "var(--color-success)" : "var(--color-danger)" }}>
+            <div style={{ fontSize: "0.85rem", marginBottom: "8px", color: !assignMsg.startsWith("Failed") ? "var(--color-success)" : "var(--color-danger)" }}>
               {assignMsg}
             </div>
           )}
@@ -286,7 +300,7 @@ export const RoleManagementCard: React.FC<RoleManagementCardProps> = ({ canManag
         maxWidth="680px"
       >
         <form onSubmit={handleSaveRole}>
-          {modalErr && <div className="sa-form-error" style={{ marginBottom: "12px" }}>⚠ {modalErr}</div>}
+          {modalErr && <div className="sa-form-error" style={{ marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px" }}><AlertCircle size={16} /> {modalErr}</div>}
 
           <Input
             label="Role Name"
@@ -305,8 +319,8 @@ export const RoleManagementCard: React.FC<RoleManagementCardProps> = ({ canManag
           <div style={{ maxHeight: "360px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "14px", paddingRight: "4px" }}>
             {Object.entries(groupedPermissions).map(([group, perms]) => (
               <div key={group} style={{ background: "var(--color-surface-secondary)", padding: "10px 12px", borderRadius: "6px" }}>
-                <div style={{ textTransform: "capitalize", fontWeight: 700, fontSize: "0.85rem", marginBottom: "6px", color: "var(--color-primary)" }}>
-                  📂 {group} Module
+                <div style={{ textTransform: "capitalize", fontWeight: 700, fontSize: "0.85rem", marginBottom: "6px", color: "var(--color-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Folder size={14} /> {group} Module
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "6px" }}>
                   {perms.map((p) => {
@@ -342,3 +356,4 @@ export const RoleManagementCard: React.FC<RoleManagementCardProps> = ({ canManag
     </Card>
   );
 };
+

@@ -235,7 +235,7 @@ async function runSecurityAuditTests() {
     description: "Oil filter change",
   });
 
-  console.log("✔ Test data created successfully for Company Alpha and Company Beta.\n");
+  console.log(" Test data created successfully for Company Alpha and Company Beta.\n");
 
   // ==================================================
   // TEST 1: MULTI-TENANT BACKEND ISOLATION
@@ -247,7 +247,7 @@ async function runSecurityAuditTests() {
     await customerService.getById(companyA.id, customerB.id);
     throw new Error("FAIL: Company A user was able to access Company B customer!");
   } catch (err: any) {
-    if (err.statusCode === 404) console.log("  ✔ Customer READ isolation: PASSED (404 returned)");
+    if (err.statusCode === 404) console.log("   Customer READ isolation: PASSED (404 returned)");
     else throw err;
   }
 
@@ -255,7 +255,7 @@ async function runSecurityAuditTests() {
     await customerService.update(companyA.id, customerB.id, { name: "Hacked Name" });
     throw new Error("FAIL: Company A user was able to update Company B customer!");
   } catch (err: any) {
-    if (err.statusCode === 404) console.log("  ✔ Customer WRITE isolation: PASSED (404 returned)");
+    if (err.statusCode === 404) console.log("   Customer WRITE isolation: PASSED (404 returned)");
     else throw err;
   }
 
@@ -264,7 +264,7 @@ async function runSecurityAuditTests() {
     await machineService.getById(companyA.id, machineB.id);
     throw new Error("FAIL: Company A user accessed Company B machine!");
   } catch (err: any) {
-    if (err.statusCode === 404) console.log("  ✔ Machine READ isolation: PASSED (404 returned)");
+    if (err.statusCode === 404) console.log("   Machine READ isolation: PASSED (404 returned)");
     else throw err;
   }
 
@@ -273,7 +273,7 @@ async function runSecurityAuditTests() {
     await driverService.getById(companyA.id, driverB.id);
     throw new Error("FAIL: Company A user accessed Company B driver!");
   } catch (err: any) {
-    if (err.statusCode === 404) console.log("  ✔ Driver READ isolation: PASSED (404 returned)");
+    if (err.statusCode === 404) console.log("   Driver READ isolation: PASSED (404 returned)");
     else throw err;
   }
 
@@ -282,7 +282,7 @@ async function runSecurityAuditTests() {
     await bookingService.getById(companyA.id, bookingB.id, authOwnerA);
     throw new Error("FAIL: Company A user accessed Company B booking!");
   } catch (err: any) {
-    if (err.statusCode === 404) console.log("  ✔ Booking READ isolation: PASSED (404 returned)");
+    if (err.statusCode === 404) console.log("   Booking READ isolation: PASSED (404 returned)");
     else throw err;
   }
 
@@ -291,7 +291,7 @@ async function runSecurityAuditTests() {
     await jobService.getById(companyA.id, jobB.id, authOwnerA);
     throw new Error("FAIL: Company A user accessed Company B job!");
   } catch (err: any) {
-    if (err.statusCode === 404) console.log("  ✔ Job READ isolation: PASSED (404 returned)");
+    if (err.statusCode === 404) console.log("   Job READ isolation: PASSED (404 returned)");
     else throw err;
   }
 
@@ -300,7 +300,7 @@ async function runSecurityAuditTests() {
     await paymentService.getInvoiceById(companyA.id, invoiceB.id, authOwnerA);
     throw new Error("FAIL: Company A user accessed Company B invoice!");
   } catch (err: any) {
-    if (err.statusCode === 404) console.log("  ✔ Invoice READ isolation: PASSED (404 returned)");
+    if (err.statusCode === 404) console.log("   Invoice READ isolation: PASSED (404 returned)");
     else throw err;
   }
 
@@ -309,7 +309,7 @@ async function runSecurityAuditTests() {
     await maintenanceService.getScheduleById(companyA.id, scheduleB.id);
     throw new Error("FAIL: Company A user accessed Company B maintenance schedule!");
   } catch (err: any) {
-    if (err.statusCode === 404) console.log("  ✔ Maintenance READ isolation: PASSED (404 returned)");
+    if (err.statusCode === 404) console.log("   Maintenance READ isolation: PASSED (404 returned)");
     else throw err;
   }
 
@@ -318,11 +318,11 @@ async function runSecurityAuditTests() {
     await rbacService.getRoleById(companyA.id, ownerRoleB.id);
     throw new Error("FAIL: Company A user accessed Company B role!");
   } catch (err: any) {
-    if (err.statusCode === 404) console.log("  ✔ RBAC Role READ isolation: PASSED (404 returned)");
+    if (err.statusCode === 404) console.log("   RBAC Role READ isolation: PASSED (404 returned)");
     else throw err;
   }
 
-  console.log("✔ ALL MULTI-TENANT ISOLATION TESTS PASSED!\n");
+  console.log(" ALL MULTI-TENANT ISOLATION TESTS PASSED!\n");
 
   // ==================================================
   // TEST 2: RBAC & CUSTOM ROLES LIFECYCLE
@@ -330,7 +330,7 @@ async function runSecurityAuditTests() {
   console.log("[TEST 2] Testing Custom Roles Creation, Editing, Assignment & Protection...");
 
   const customRole = await rbacService.createRole(companyA.id, "Alpha Dispatcher", ["booking.create", "booking.edit"]);
-  console.log(`  ✔ Custom role created: ${customRole.name} (${customRole.id})`);
+  console.log(`   Custom role created: ${customRole.name} (${customRole.id})`);
 
   const updatedRole = await rbacService.updateRole(companyA.id, customRole.id, "Alpha Chief Dispatcher", [
     "booking.create",
@@ -340,13 +340,13 @@ async function runSecurityAuditTests() {
   if (!permKeys.includes("driver.manage") || permKeys.includes("booking.edit")) {
     throw new Error("FAIL: Role permissions update failed!");
   }
-  console.log("  ✔ Custom role permission modification: PASSED");
+  console.log("   Custom role permission modification: PASSED");
 
   try {
     await rbacService.deleteRole(companyA.id, ownerRoleA.id);
     throw new Error("FAIL: System role deletion was not prevented!");
   } catch (err: any) {
-    if (err.message.includes("system role")) console.log("  ✔ System role deletion protection: PASSED");
+    if (err.message.includes("system role")) console.log("   System role deletion protection: PASSED");
     else throw err;
   }
 
@@ -354,7 +354,7 @@ async function runSecurityAuditTests() {
     await rbacService.updateRole(companyA.id, ownerRoleA.id, "Super Owner");
     throw new Error("FAIL: System role rename was not prevented!");
   } catch (err: any) {
-    if (err.message.includes("system roles")) console.log("  ✔ System role rename protection: PASSED");
+    if (err.message.includes("system roles")) console.log("   System role rename protection: PASSED");
     else throw err;
   }
 
@@ -362,13 +362,13 @@ async function runSecurityAuditTests() {
   if (assignedUser.roleId !== customRole.id) {
     throw new Error("FAIL: User role assignment failed!");
   }
-  console.log("  ✔ User role assignment in Company A: PASSED");
+  console.log("   User role assignment in Company A: PASSED");
 
   try {
     await rbacService.assignUserRole(companyA.id, managerUserA.id, ownerRoleB.id);
     throw new Error("FAIL: Cross-company role assignment succeeded!");
   } catch (err: any) {
-    if (err.statusCode === 404) console.log("  ✔ Cross-company role assignment prevention: PASSED (404)");
+    if (err.statusCode === 404) console.log("   Cross-company role assignment prevention: PASSED (404)");
     else throw err;
   }
 
@@ -376,7 +376,7 @@ async function runSecurityAuditTests() {
     await rbacService.assignUserRole(companyA.id, managerUserB.id, customRole.id);
     throw new Error("FAIL: Assigning Company A role to Company B user succeeded!");
   } catch (err: any) {
-    if (err.statusCode === 404) console.log("  ✔ Assigning Company A role to Company B user prevention: PASSED (404)");
+    if (err.statusCode === 404) console.log("   Assigning Company A role to Company B user prevention: PASSED (404)");
     else throw err;
   }
 
@@ -384,16 +384,16 @@ async function runSecurityAuditTests() {
     await rbacService.deleteRole(companyA.id, customRole.id);
     throw new Error("FAIL: Deletion of role in use by active user was allowed!");
   } catch (err: any) {
-    if (err.message.includes("active user")) console.log("  ✔ Custom role deletion in-use protection: PASSED");
+    if (err.message.includes("active user")) console.log("   Custom role deletion in-use protection: PASSED");
     else throw err;
   }
 
   await rbacService.assignUserRole(companyA.id, managerUserA.id, managerRoleA.id);
 
   await rbacService.deleteRole(companyA.id, customRole.id);
-  console.log("  ✔ Deletion of unassigned Custom Role: PASSED");
+  console.log("   Deletion of unassigned Custom Role: PASSED");
 
-  console.log("✔ ALL RBAC & CUSTOM ROLES TESTS PASSED!\n");
+  console.log(" ALL RBAC & CUSTOM ROLES TESTS PASSED!\n");
 
   // ==================================================
   // TEST 3: TERMINOLOGY & WHITE-LABEL BRANDING
@@ -445,9 +445,9 @@ async function runSecurityAuditTests() {
     throw new Error("FAIL: Terminology isolation failed!");
   }
 
-  console.log("  ✔ Company Alpha Branding & Terminology: Verified (Client / Pilots)");
-  console.log("  ✔ Company Beta Branding & Terminology: Verified (Grower / Operators)");
-  console.log("✔ ALL TERMINOLOGY & BRANDING TESTS PASSED!\n");
+  console.log("   Company Alpha Branding & Terminology: Verified (Client / Pilots)");
+  console.log("   Company Beta Branding & Terminology: Verified (Grower / Operators)");
+  console.log(" ALL TERMINOLOGY & BRANDING TESTS PASSED!\n");
 
   // ==================================================
   // CLEANUP SYNTHETIC TEST DATA
@@ -480,13 +480,13 @@ async function runSecurityAuditTests() {
   await prisma.role.deleteMany({ where: { companyId: { in: [companyA.id, companyB.id] } } });
   await prisma.company.deleteMany({ where: { id: { in: [companyA.id, companyB.id] } } });
 
-  console.log("✔ Cleanup complete.\n");
+  console.log(" Cleanup complete.\n");
   console.log("==================================================");
-  console.log("🎉 ALL PHASE 2 SECURITY & HARDENING TESTS PASSED!");
+  console.log(" ALL PHASE 2 SECURITY & HARDENING TESTS PASSED!");
   console.log("==================================================");
 }
 
 runSecurityAuditTests().catch((err) => {
-  console.error("❌ PHASE 2 SECURITY TEST FAILED:", err);
+  console.error(" PHASE 2 SECURITY TEST FAILED:", err);
   process.exit(1);
 });

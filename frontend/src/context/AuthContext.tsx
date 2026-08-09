@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import type { SystemRoleKey, User } from "../types/auth";
 import { api, clearStoredTokens, getStoredToken } from "../lib/api";
 import { setCustomTerms } from "../lib/terminology";
+import { setGlobalCompanyBranding, setGlobalCurrency } from "../lib/theme";
 
 function applyBranding(themeColor?: string | null, accentColor?: string | null) {
   if (themeColor) {
@@ -40,6 +41,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const profile = await api.getCompanyProfile();
       applyBranding(profile.themeColor, profile.accentColor);
+      setGlobalCurrency(profile.currency);
+      setGlobalCompanyBranding(profile.name, profile.logoUrl);
       if (profile.terminologySettings && profile.terminologySettings.length > 0) {
         const termMap: Record<string, { singular: string; plural: string }> = {};
         for (const ts of profile.terminologySettings) {

@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Home, Tractor, User, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 interface DriverLayoutProps {
@@ -7,9 +8,9 @@ interface DriverLayoutProps {
 }
 
 const DRIVER_NAV = [
-  { key: "home", label: "Home", icon: "🏠", path: "/driver" },
-  { key: "jobs", label: "Jobs", icon: "🚜", path: "/driver/jobs" },
-  { key: "profile", label: "Profile", icon: "👤", path: "/driver/profile" },
+  { key: "home", label: "Home", icon: <Home size={20} />, path: "/driver" },
+  { key: "jobs", label: "Jobs", icon: <Tractor size={20} />, path: "/driver/jobs" },
+  { key: "profile", label: "Profile", icon: <User size={20} />, path: "/driver/profile" },
 ];
 
 export const DriverLayout: React.FC<DriverLayoutProps> = ({ children }) => {
@@ -30,11 +31,13 @@ export const DriverLayout: React.FC<DriverLayoutProps> = ({ children }) => {
       {/* Top bar */}
       <header className="sa-driver-header">
         <div className="sa-driver-header-brand">
-          <span className="sa-driver-header-icon">🚜</span>
+          <span className="sa-driver-header-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+            <Tractor size={22} />
+          </span>
           <span className="sa-driver-header-title">ShabooAgri Driver</span>
         </div>
-        <button className="sa-driver-logout" onClick={handleLogout} aria-label="Logout">
-          <span style={{ fontSize: "1.1rem" }}>⎋</span>
+        <button className="sa-driver-logout" onClick={handleLogout} aria-label="Logout" title="Logout">
+          <LogOut size={18} />
         </button>
       </header>
 
@@ -50,7 +53,7 @@ export const DriverLayout: React.FC<DriverLayoutProps> = ({ children }) => {
             className={`sa-driver-tab-item ${isActive(item.path) ? "is-active" : ""}`}
             aria-current={isActive(item.path) ? "page" : undefined}
           >
-            <span className="sa-driver-tab-icon">{item.icon}</span>
+            <span className="sa-driver-tab-icon" style={{ display: "inline-flex", alignItems: "center" }}>{item.icon}</span>
             <span className="sa-driver-tab-label">{item.label}</span>
           </Link>
         ))}
@@ -58,3 +61,4 @@ export const DriverLayout: React.FC<DriverLayoutProps> = ({ children }) => {
     </div>
   );
 };
+
