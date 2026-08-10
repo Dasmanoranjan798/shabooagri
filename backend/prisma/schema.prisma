@@ -135,6 +135,7 @@ model Company {
   // Phase B Tax defaults
   defaultTaxRate  Decimal? @default(0) @map("default_tax_rate") @db.Decimal(5, 2)
   taxInclusive    Boolean  @default(false) @map("tax_inclusive")
+  isCessEnabled   Boolean  @default(false) @map("is_cess_enabled")
 
   // Phase C Equipment & Operational Rules
   serviceAlertHours  Int     @default(50) @map("service_alert_hours")
@@ -172,6 +173,7 @@ model Company {
   saasLicenses         License[]
   saasFeedbacks        CustomerFeedback[]
   ssoTokens            SsoToken[]
+  gstCessRules         GstCessRule[]
 
   @@map("companies")
 }
@@ -604,15 +606,22 @@ model ExpenseCategory {
 }
 
 model Expense {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId   String   @map("company_id") @db.Uuid
-  categoryId  String   @map("category_id") @db.Uuid
-  machineId   String?  @map("machine_id") @db.Uuid
-  amount      Decimal  @db.Decimal(10, 2)
-  description String?
-  incurredBy  String   @map("incurred_by") @db.Uuid
-  expenseDate DateTime @map("expense_date") @db.Date
-  createdAt   DateTime @default(now()) @map("created_at")
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId       String   @map("company_id") @db.Uuid
+  categoryId      String   @map("category_id") @db.Uuid
+  machineId       String?  @map("machine_id") @db.Uuid
+  amount          Decimal  @db.Decimal(10, 2)
+  description     String?
+  incurredBy      String   @map("incurred_by") @db.Uuid
+  expenseDate     DateTime @map("expense_date") @db.Date
+  hsnSacCode      String?  @map("hsn_sac_code")
+  isGstApplicable Boolean  @default(false) @map("is_gst_applicable")
+  isItcBlocked    Boolean  @default(false) @map("is_itc_blocked")
+  taxRate         Decimal? @default(0) @map("tax_rate") @db.Decimal(5, 2)
+  taxAmount       Decimal? @default(0) @map("tax_amount") @db.Decimal(10, 2)
+  cessRate        Decimal? @default(0) @map("cess_rate") @db.Decimal(5, 2)
+  cessAmount      Decimal? @default(0) @map("cess_amount") @db.Decimal(10, 2)
+  createdAt       DateTime @default(now()) @map("created_at")
 
   company        Company         @relation(fields: [companyId], references: [id])
   category       ExpenseCategory @relation(fields: [categoryId], references: [id])
@@ -620,6 +629,24 @@ model Expense {
   incurredByUser User            @relation(fields: [incurredBy], references: [id])
 
   @@map("expenses")
+}
+
+// ---------- GST CESS Rules (GST-C2) ----------
+model GstCessRule {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId          String   @map("company_id") @db.Uuid
+  hsnSacCodes        String[] @map("hsn_sac_codes")
+  cessRate           Decimal  @default(0) @map("cess_rate") @db.Decimal(5, 2)
+  specificCessAmount Decimal? @default(0) @map("specific_cess_amount") @db.Decimal(10, 2)
+  description        String?
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, isActive])
+  @@map("gst_cess_rules")
 }
 
 // ---------- Payments & Invoices (§8.5) ----------
@@ -642,12 +669,15 @@ model Invoice {
   printLayoutSnapshot Json?         @map("print_layout_snapshot")
   // Phase B Invoice GST control
   isGstApplicable     Boolean       @default(false) @map("is_gst_applicable")
+  hsnSacCode          String?       @map("hsn_sac_code")
   subtotalAmount      Decimal?      @map("subtotal_amount") @db.Decimal(10, 2)
   taxRate             Decimal?      @default(0) @map("tax_rate") @db.Decimal(5, 2)
   taxAmount           Decimal?      @default(0) @map("tax_amount") @db.Decimal(10, 2)
   cgstAmount          Decimal?      @default(0) @map("cgst_amount") @db.Decimal(10, 2)
   sgstAmount          Decimal?      @default(0) @map("sgst_amount") @db.Decimal(10, 2)
   igstAmount          Decimal?      @default(0) @map("igst_amount") @db.Decimal(10, 2)
+  cessRate            Decimal?      @default(0) @map("cess_rate") @db.Decimal(5, 2)
+  cessAmount          Decimal?      @default(0) @map("cess_amount") @db.Decimal(10, 2)
   createdAt           DateTime      @default(now()) @map("created_at")
   updatedAt           DateTime      @updatedAt @map("updated_at")
 
