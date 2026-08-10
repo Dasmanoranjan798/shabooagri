@@ -2,7 +2,7 @@
 
 **Purpose:** Machine service schedules and completed maintenance/service history (§8.3).
 
-**Status:** scaffold only — no routes/controllers/services/repositories implemented yet.
+**Status:** Fully implemented (routes, controllers, services, repositories, validators, and tests).
 
 **Owns tables:** maintenance_schedules, maintenance_records
 

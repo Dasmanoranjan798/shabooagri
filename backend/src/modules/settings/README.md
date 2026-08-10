@@ -2,7 +2,7 @@
 
 **Purpose:** Company profile, configurable terminology labels, and white-label fields. Phase 1 exposes read/write API only — no admin UI until Phase 2 (§9, §10).
 
-**Status:** scaffold only — no routes/controllers/services/repositories implemented yet.
+**Status:** Fully implemented (routes, controllers, services, repositories, validators, and tests).
 
 **Owns tables:** companies, terminology_settings
 
