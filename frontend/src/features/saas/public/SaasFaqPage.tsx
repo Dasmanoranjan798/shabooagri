@@ -70,50 +70,50 @@ export const SaasFaqPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
       <SaasHeader />
 
-      {/* HEADER SECTION */}
-      <section className="py-16 bg-gradient-to-b from-slate-900 to-slate-950 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950 border border-emerald-500/30 text-emerald-300 text-xs font-bold uppercase tracking-wider">
-            <HelpCircle className="w-4 h-4" />
+      {/* Hero Section */}
+      <section className="py-16 sm:py-20 bg-white border-b border-slate-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[#047857] text-xs font-bold uppercase tracking-wider">
+            <HelpCircle className="w-3.5 h-3.5" />
             <span>Frequently Asked Questions</span>
           </div>
-          <h1 className="text-4xl sm:text-5xl font-black text-white">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
             Everything You Need to Know About ShabooAgri
           </h1>
-          <p className="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto">
+          <p className="text-slate-600 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
             Got questions about pricing, licenses, machinery support, or software access? We have clear answers.
           </p>
         </div>
       </section>
 
-      {/* ACCORDION FAQ */}
-      <section className="py-16 lg:py-24 bg-slate-950">
+      {/* Accordion FAQ */}
+      <section className="py-16 sm:py-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="space-y-4">
+          <div className="space-y-3">
             {faqs.map((faq, idx) => {
               const isOpen = openIdx === idx;
               return (
                 <div
                   key={idx}
-                  className="bg-slate-900/80 rounded-2xl border border-slate-800 overflow-hidden transition-colors"
+                  className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden transition-all"
                 >
                   <button
                     onClick={() => setOpenIdx(isOpen ? null : idx)}
-                    className="w-full px-6 py-5 text-left flex items-center justify-between gap-4 font-bold text-white text-base sm:text-lg hover:text-emerald-400 focus:outline-none"
+                    className="w-full px-5 py-4 text-left flex items-center justify-between gap-4 font-bold text-slate-900 text-sm sm:text-base hover:text-[#047857] focus:outline-none"
                   >
                     <span>{faq.q}</span>
                     {isOpen ? (
-                      <ChevronUp className="w-5 h-5 text-emerald-400 shrink-0" />
+                      <ChevronUp className="w-4 h-4 text-[#047857] shrink-0" />
                     ) : (
-                      <ChevronDown className="w-5 h-5 text-slate-500 shrink-0" />
+                      <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
                     )}
                   </button>
 
                   {isOpen && (
-                    <div className="px-6 pb-6 pt-1 text-sm text-slate-300 leading-relaxed border-t border-slate-800/60 animate-fadeIn">
+                    <div className="px-5 pb-5 pt-1 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 animate-fadeIn">
                       {faq.a}
                     </div>
                   )}

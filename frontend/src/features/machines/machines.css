@@ -1,0 +1,12 @@
+/* Machines Module Styles */
+.sa-machines-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sa-machine-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}

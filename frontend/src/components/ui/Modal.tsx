@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import "./Modal/modal.css";
 import { X } from "lucide-react";
 
 interface ModalProps {

@@ -1,0 +1,227 @@
+/* Driver Mobile Surface Styles */
+.sa-driver-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sa-driver-greeting {
+  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
+  color: white;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-md);
+}
+
+.sa-driver-greeting-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.sa-driver-greeting-date {
+  font-size: 0.78rem;
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
+.sa-driver-greeting-badge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.sa-driver-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+}
+
+.sa-driver-kpi-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.sa-driver-kpi-label {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.sa-driver-kpi-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.sa-driver-section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 0.75rem;
+}
+
+.sa-driver-jobs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sa-driver-job-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sa-driver-job-card--today {
+  border-left: 4px solid var(--color-primary);
+}
+
+.sa-driver-job-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.sa-driver-job-customer {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--color-text);
+}
+
+.sa-driver-job-village {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.sa-driver-job-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  background-color: var(--color-bg);
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+}
+
+.sa-driver-job-meta-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.sa-driver-job-meta-label {
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.sa-driver-job-meta-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.sa-driver-timer-card {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: white;
+  padding: 1.25rem;
+  border-radius: var(--radius-lg);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sa-driver-timer-display {
+  font-family: monospace;
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #4ade80;
+}
+
+.sa-driver-job-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.sa-driver-action-btn {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+  cursor: pointer;
+}
+
+.sa-driver-action-btn--start {
+  background-color: #16a34a;
+  color: white;
+}
+
+.sa-driver-action-btn--pause {
+  background-color: #d97706;
+  color: white;
+}
+
+.sa-driver-action-btn--complete {
+  background-color: #2563eb;
+  color: white;
+}
+
+.sa-driver-profile-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sa-driver-profile-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: white;
+  font-size: 1.75rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.sa-driver-profile-name {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.sa-driver-profile-role {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  margin-top: 2px;
+}

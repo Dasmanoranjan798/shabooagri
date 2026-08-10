@@ -117,6 +117,7 @@ export interface RegisterSaasInput {
   businessName: string;
   contactPerson: string;
   phone: string;
+  businessType?: string;
   address?: string;
   city?: string;
   state?: string;

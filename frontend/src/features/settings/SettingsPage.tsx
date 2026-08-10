@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "./settings.css";
 import type { CompanyProfile } from "../../types/settings";
 import { api } from "../../lib/api";
 import { Card } from "../../components/ui/Card";

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "./maintenance.css";
 import type { MaintenanceRecord, CreateMaintenanceRecordPayload } from "../../types/maintenance";
 import type { Machine } from "../../types/machine";
 import { api } from "../../lib/api";

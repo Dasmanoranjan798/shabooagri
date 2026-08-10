@@ -1,0 +1,12 @@
+/* Employees & Staff Module Styles */
+.sa-employees-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sa-employee-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}

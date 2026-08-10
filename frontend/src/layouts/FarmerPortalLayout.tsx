@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import "./farmer-portal-layout.css";
 import { Home, Calendar, CreditCard, User, Sprout, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 

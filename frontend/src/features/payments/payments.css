@@ -1,0 +1,69 @@
+/* Payments & Receipt Module Styles */
+.sa-payments-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sa-receipt-container {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.sa-receipt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: 1rem;
+}
+
+.sa-receipt-brand {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--color-primary-dark);
+}
+
+.sa-receipt-date {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.sa-receipt-inv-num {
+  font-family: monospace;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.sa-receipt-sub {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.sa-receipt-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.sa-receipt-table th, .sa-receipt-table td {
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: 0.85rem;
+}
+
+.sa-tr-total {
+  font-weight: 800;
+  font-size: 1rem;
+  background-color: var(--color-bg);
+}
+
+.sa-tr-balance {
+  font-weight: 800;
+  color: var(--color-danger);
+}

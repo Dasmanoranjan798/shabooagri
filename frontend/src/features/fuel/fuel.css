@@ -1,0 +1,27 @@
+/* Fuel Module Styles */
+.sa-fuel-logs-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sa-fuel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sa-fuel-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.sa-fuel-time {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}

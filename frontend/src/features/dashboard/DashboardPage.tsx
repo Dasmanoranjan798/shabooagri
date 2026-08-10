@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "./dashboard.css";
 import { AlertTriangle, RotateCcw, Wrench, ShieldAlert, BadgeAlert } from "lucide-react";
 import type {
   DashboardSummaryResponse,

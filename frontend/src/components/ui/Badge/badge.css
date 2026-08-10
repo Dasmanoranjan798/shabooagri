@@ -1,0 +1,16 @@
+/* Enterprise Status Badges Primitive */
+.sa-badge {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+}
+
+.sa-badge-sm { font-size: 0.7rem; padding: 2px 8px; }
+.sa-badge-md { font-size: 0.78rem; padding: 3px 10px; }
+
+.sa-badge-success { background-color: #dcfce7; color: #15803d; }
+.sa-badge-warning { background-color: #fef3c7; color: #b45309; }
+.sa-badge-danger { background-color: #fee2e2; color: #b91c1c; }
+.sa-badge-info { background-color: #e0f2fe; color: #0369a1; }
+.sa-badge-neutral { background-color: #f1f5f9; color: #475569; }

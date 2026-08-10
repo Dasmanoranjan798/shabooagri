@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "./machines.css";
 import type { Machine } from "../../types/machine";
 import type { CompanyProfile } from "../../types/settings";
 import { api } from "../../lib/api";

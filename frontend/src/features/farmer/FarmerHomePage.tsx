@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import "./farmer-mobile.css";
 import { Link } from "react-router-dom";
 import type { Booking } from "../../types/booking";
 import type { Invoice } from "../../types/payment";

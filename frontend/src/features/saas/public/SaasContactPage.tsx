@@ -76,97 +76,96 @@ export const SaasContactPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
       <SaasHeader />
 
-      {/* HEADER SECTION */}
-      <section className="py-16 bg-gradient-to-b from-slate-900 to-slate-950 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950 border border-emerald-500/30 text-emerald-300 text-xs font-bold uppercase tracking-wider">
-            <Mail className="w-4 h-4" />
+      {/* Hero Section */}
+      <section className="py-16 sm:py-20 bg-white border-b border-slate-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[#047857] text-xs font-bold uppercase tracking-wider">
+            <Mail className="w-3.5 h-3.5" />
             <span>Commercial Contact & Support</span>
           </div>
-          <h1 className="text-4xl sm:text-5xl font-black text-white">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
             Get in Touch with ShabooAgri
           </h1>
-          <p className="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto">
+          <p className="text-slate-600 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
             Have questions about our software, fleet onboarding, or enterprise pricing? Send us a message and our agricultural technology team will assist you.
           </p>
         </div>
       </section>
 
-      {/* MAIN CONTACT CONTENT */}
-      <section className="py-16 lg:py-24 bg-slate-950">
+      {/* Main Content Section */}
+      <section className="py-16 sm:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
             
-            {/* CONTACT DETAILS (5 cols) */}
-            <div className="lg:col-span-5 space-y-8">
+            {/* Contact Details (5 cols) */}
+            <div className="lg:col-span-5 space-y-6">
               <div>
-                <h2 className="text-2xl font-black text-white mb-3">ShabooAgri Commercial Office</h2>
-                <p className="text-slate-400 text-sm leading-relaxed">
-                  Our team supports agricultural equipment owners, CHC operators, and contractors across major agricultural belts in Punjab, Haryana, UP, MP, Rajasthan, and beyond.
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-2">ShabooAgri Commercial Office</h2>
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  Our team supports agricultural equipment owners, CHC operators, and contractors across major agricultural belts in Punjab, Haryana, UP, MP, Odisha, Rajasthan, and beyond.
                 </p>
               </div>
 
-              <div className="space-y-6">
-                <div className="flex items-start gap-4 p-5 rounded-2xl bg-slate-900/80 border border-slate-800">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-950 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3.5 p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#047857] flex items-center justify-center shrink-0">
                     <MapPin className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white mb-1">Corporate Address</h3>
-                    <p className="text-xs text-slate-300">ShabooAgri Software Solutions, GT Road Agri-Tech Complex, Ludhiana, Punjab - 141001, India</p>
+                    <h3 className="text-sm font-bold text-slate-900 mb-0.5">Corporate Address</h3>
+                    <p className="text-xs text-slate-600 leading-relaxed">ShabooAgri Software Solutions, Bhubaneswar / Cuttack Agri-Tech Hub, Odisha - 751001, India</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-4 p-5 rounded-2xl bg-slate-900/80 border border-slate-800">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-950 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+                <div className="flex items-start gap-3.5 p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#047857] flex items-center justify-center shrink-0">
                     <Phone className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white mb-1">Phone / WhatsApp</h3>
-                    <p className="text-xs text-slate-300">+91 (800) SHABOO-AGRI / +91 98765 43210</p>
-                    <p className="text-[11px] text-slate-500 mt-1">Mon - Sat: 8:00 AM - 7:00 PM IST</p>
+                    <h3 className="text-sm font-bold text-slate-900 mb-0.5">Phone / WhatsApp</h3>
+                    <p className="text-xs text-slate-600">+91 94370 00000</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Mon - Sat: 8:00 AM - 7:00 PM IST</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-4 p-5 rounded-2xl bg-slate-900/80 border border-slate-800">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-950 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+                <div className="flex items-start gap-3.5 p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#047857] flex items-center justify-center shrink-0">
                     <Mail className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white mb-1">Email Support</h3>
-                    <p className="text-xs text-slate-300">support@shabooagri.com</p>
-                    <p className="text-xs text-slate-300">sales@shabooagri.com</p>
+                    <h3 className="text-sm font-bold text-slate-900 mb-0.5">Email Support</h3>
+                    <p className="text-xs text-slate-600">support@shabooagri.com</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* CONTACT FORM (7 cols) */}
-            <div className="lg:col-span-7 bg-slate-900/90 p-8 sm:p-10 rounded-3xl border border-slate-800 shadow-2xl">
-              <h2 className="text-2xl font-black text-white mb-6">Send Us a Commercial Message</h2>
+            {/* Contact Form (7 cols) */}
+            <div className="lg:col-span-7 bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-6">Send Us a Commercial Message</h2>
 
               {successMsg && (
-                <div className="mb-6 p-4 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-sm flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
+                <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs sm:text-sm font-medium flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-[#047857] shrink-0 mt-0.5" />
                   <span>{successMsg}</span>
                 </div>
               )}
 
               {errorMsg && (
-                <div className="mb-6 p-4 rounded-xl bg-rose-950/80 border border-rose-500/50 text-rose-300 text-sm flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm font-medium flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
                   <span>{errorMsg}</span>
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold uppercase text-slate-300 mb-1.5">
-                      Your Full Name <span className="text-rose-400">*</span>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Your Full Name <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -174,12 +173,12 @@ export const SaasContactPage: React.FC = () => {
                       value={formData.name}
                       onChange={handleChange}
                       placeholder="e.g. Ramesh Singh"
-                      className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500"
+                      className="w-full px-4 py-2.5 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase text-slate-300 mb-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
                       Business / CHC Name
                     </label>
                     <input
@@ -187,16 +186,16 @@ export const SaasContactPage: React.FC = () => {
                       name="businessName"
                       value={formData.businessName}
                       onChange={handleChange}
-                      placeholder="e.g. Ramesh Custom Hiring Centre"
-                      className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500"
+                      placeholder="e.g. Greenfields CHC"
+                      className="w-full px-4 py-2.5 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold uppercase text-slate-300 mb-1.5">
-                      Phone Number <span className="text-rose-400">*</span>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Phone Number <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="tel"
@@ -204,13 +203,13 @@ export const SaasContactPage: React.FC = () => {
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder="e.g. 9876543210"
-                      className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500"
+                      className="w-full px-4 py-2.5 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase text-slate-300 mb-1.5">
-                      Email Address <span className="text-rose-400">*</span>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Email Address <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="email"
@@ -218,30 +217,30 @@ export const SaasContactPage: React.FC = () => {
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="e.g. ramesh@example.com"
-                      className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500"
+                      className="w-full px-4 py-2.5 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                       required
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-300 mb-1.5">
-                    Subject <span className="text-rose-400">*</span>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                    Subject <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="subject"
                     value={formData.subject}
                     onChange={handleChange}
-                    placeholder="e.g. Custom Enterprise Plan Enquiry for 25 Harvesters"
-                    className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500"
+                    placeholder="e.g. Enterprise Plan Enquiry for 25 Harvesters"
+                    className="w-full px-4 py-2.5 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-300 mb-1.5">
-                    Message Details <span className="text-rose-400">*</span>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                    Message Details <span className="text-rose-500">*</span>
                   </label>
                   <textarea
                     name="message"
@@ -249,28 +248,30 @@ export const SaasContactPage: React.FC = () => {
                     value={formData.message}
                     onChange={handleChange}
                     placeholder="Tell us about your machinery fleet, location, and operational requirements..."
-                    className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500"
+                    className="w-full p-4 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                     required
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black text-base shadow-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Sending Message...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-5 h-5" />
-                      <span>SUBMIT ENQUIRY</span>
-                    </>
-                  )}
-                </button>
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-11 px-4 rounded-lg bg-[#047857] hover:bg-[#035436] text-white font-semibold text-sm shadow-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Sending Message...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        <span>Submit Commercial Enquiry</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </form>
             </div>
 

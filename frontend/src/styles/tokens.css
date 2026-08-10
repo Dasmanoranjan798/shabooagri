@@ -1,0 +1,44 @@
+/* ShabooAgri Central Design Tokens */
+
+:root {
+  /* Brand Primary Theme Colors */
+  --color-primary: #1b7a3e;
+  --color-primary-dark: #13582c;
+  --color-primary-light: #e6f4ea;
+  --color-primary-hover: #166533;
+  --color-accent: #2ecc71;
+  
+  /* Neutral Surfaces & Borders */
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-border-light: #f1f5f9;
+  
+  /* Typography Colors */
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
+  --color-text-inverse: #ffffff;
+  
+  /* System Status Colors */
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  --color-info: #2563eb;
+  --color-purple: #7c3aed;
+  
+  /* Radii Scale */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 9999px;
+  
+  /* Elevation Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  
+  /* Transitions */
+  --transition: all 0.2s ease-in-out;
+  color-scheme: light;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}

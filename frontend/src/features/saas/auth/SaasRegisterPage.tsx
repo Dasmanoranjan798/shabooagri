@@ -1,28 +1,27 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Tractor, User, Building, Phone, Mail, Lock, ArrowRight, Loader2, AlertCircle, MapPin } from "lucide-react";
+import { Tractor, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useSaasAuth } from "../../../context/SaasAuthContext";
-import { SaasHeader } from "../components/SaasHeader";
-import { SaasFooter } from "../components/SaasFooter";
 
 export const SaasRegisterPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { registerSaas } = useSaasAuth();
+
   const [formData, setFormData] = useState({
-    contactPerson: "",
     businessName: "",
+    businessEmail: "",
     phone: "",
-    email: "",
+    gstin: "",
+    businessType: "Tractor Owner",
     password: "",
-    city: "",
-    state: "",
+    confirmPassword: "",
   });
 
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const { registerSaas } = useSaasAuth();
-  const navigate = useNavigate();
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -30,64 +29,66 @@ export const SaasRegisterPage: React.FC = () => {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!formData.contactPerson.trim() || formData.contactPerson.length < 2) {
-      setErrorMsg("Please enter your name as contact person.");
+    if (!formData.businessName.trim() || !formData.businessEmail.trim() || !formData.phone.trim()) {
+      setErrorMsg("Please fill out all required business fields.");
       return;
     }
-    if (!formData.businessName.trim() || formData.businessName.length < 2) {
-      setErrorMsg("Please enter your business or Custom Hiring Centre name.");
-      return;
-    }
-    if (!formData.phone.trim() || formData.phone.length < 10) {
-      setErrorMsg("Please enter a valid 10-digit phone number.");
-      return;
-    }
-    if (!formData.email.trim() || !formData.email.includes("@")) {
-      setErrorMsg("Please enter a valid email address.");
-      return;
-    }
-    if (!formData.password || formData.password.length < 8) {
+
+    if (formData.password.length < 8) {
       setErrorMsg("Password must be at least 8 characters long.");
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setErrorMsg("Passwords do not match. Please verify your entry.");
       return;
     }
 
     setLoading(true);
     try {
       await registerSaas({
-        contactPerson: formData.contactPerson.trim(),
         businessName: formData.businessName.trim(),
+        contactPerson: formData.businessName.trim(),
+        email: formData.businessEmail.trim(),
         phone: formData.phone.trim(),
-        email: formData.email.trim(),
+        gstin: formData.gstin.trim(),
+        businessType: formData.businessType,
         password: formData.password,
-        city: formData.city.trim() || undefined,
-        state: formData.state.trim() || undefined,
       });
-
-      navigate("/saas/portal");
+      navigate("/portal");
     } catch (err: any) {
-      setErrorMsg(err.message || "Registration failed. Please check details.");
+      setErrorMsg(err.message || "Failed to create business account. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
-      <SaasHeader />
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-between font-sans">
+      
+      {/* Top minimal brand header */}
+      <header className="py-6 px-4 sm:px-8 max-w-7xl mx-auto w-full flex items-center justify-between">
+        <Link to="/saas" className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-[#15803d] flex items-center justify-center text-white shadow-xs">
+            <Tractor className="w-4.5 h-4.5" />
+          </div>
+          <span className="text-xl font-extrabold text-slate-900 tracking-tight">
+            Shaboo<span className="text-[#15803d]">Agri</span>
+          </span>
+        </Link>
+      </header>
 
-      <main className="flex-1 flex items-center justify-center py-12 sm:py-16 px-4">
-        <div className="w-full max-w-xl bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm space-y-6">
+      {/* Centered Registration Card */}
+      <main className="flex-1 flex items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
+        <div className="w-full max-w-[480px] bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm space-y-6">
           
-          <div className="text-center space-y-2">
-            <div className="w-10 h-10 rounded-lg bg-[#047857] mx-auto flex items-center justify-center text-white shadow-xs">
-              <Tractor className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Create Business Account</h1>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Register for ShabooAgri Commercial OS — <strong className="text-[#047857]">₹4,999/yr incl 18% GST</strong>
-              </p>
-            </div>
+          <div className="text-center space-y-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              Create your business account
+            </h1>
+            <p className="text-xs text-slate-500">
+              Start managing your agricultural machinery business with ShabooAgri.
+            </p>
           </div>
 
           {errorMsg && (
@@ -97,142 +98,136 @@ export const SaasRegisterPage: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* BUSINESS INFORMATION SECTION */}
+            <div className="space-y-4">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-1.5">
+                BUSINESS INFORMATION
+              </h2>
+
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Contact Person Name <span className="text-rose-500">*</span>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Business Name *
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
-                    <User className="w-4 h-4 text-slate-400" />
-                  </div>
+                <input
+                  type="text"
+                  name="businessName"
+                  value={formData.businessName}
+                  onChange={handleChange}
+                  placeholder="e.g. Kisan Agro Services"
+                  className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Business Email *
+                  </label>
                   <input
-                    type="text"
-                    name="contactPerson"
-                    value={formData.contactPerson}
+                    type="email"
+                    name="businessEmail"
+                    value={formData.businessEmail}
                     onChange={handleChange}
-                    placeholder="e.g. Ramesh Singh"
-                    className="w-full pl-9 pr-3.5 py-2.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-colors"
+                    placeholder="name@company.com"
+                    className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                     required
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Business / CHC Name <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
-                    <Building className="w-4 h-4 text-slate-400" />
-                  </div>
-                  <input
-                    type="text"
-                    name="businessName"
-                    value={formData.businessName}
-                    onChange={handleChange}
-                    placeholder="e.g. Greenfields Custom Hiring"
-                    className="w-full pl-9 pr-3.5 py-2.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-colors"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Phone Number <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
-                    <Phone className="w-4 h-4 text-slate-400" />
-                  </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Phone *
+                  </label>
                   <input
                     type="tel"
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
-                    placeholder="e.g. 9876543210"
-                    className="w-full pl-9 pr-3.5 py-2.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-colors"
+                    placeholder="9876543210"
+                    className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                     required
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Commercial Email <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
-                    <Mail className="w-4 h-4 text-slate-400" />
-                  </div>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="name@company.com"
-                    className="w-full pl-9 pr-3.5 py-2.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-colors"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                  City / Town
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
-                    <MapPin className="w-4 h-4 text-slate-400" />
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    GSTIN (Optional)
+                  </label>
                   <input
                     type="text"
-                    name="city"
-                    value={formData.city}
+                    name="gstin"
+                    value={formData.gstin}
                     onChange={handleChange}
-                    placeholder="e.g. Ludhiana / Karnal"
-                    className="w-full pl-9 pr-3.5 py-2.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-colors"
+                    placeholder="21AAAAA0000A1Z5"
+                    className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all uppercase"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Business Type
+                  </label>
+                  <select
+                    name="businessType"
+                    value={formData.businessType}
+                    onChange={handleChange}
+                    className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                  >
+                    <option value="Tractor Owner">Tractor Owner</option>
+                    <option value="Custom Hiring Centre">Custom Hiring Centre</option>
+                    <option value="Agricultural Contractor">Agricultural Contractor</option>
+                    <option value="Equipment Rental">Equipment Rental</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* ACCOUNT SECTION */}
+            <div className="space-y-4">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-1.5">
+                ACCOUNT
+              </h2>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Password *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Minimum 8 characters"
+                    className="w-full pl-3.5 pr-10 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                  State
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Confirm Password *
                 </label>
                 <input
-                  type="text"
-                  name="state"
-                  value={formData.state}
+                  type={showPassword ? "text" : "password"}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
                   onChange={handleChange}
-                  placeholder="e.g. Punjab / Haryana"
-                  className="w-full px-3.5 py-2.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-colors"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                Account Password <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
-                  <Lock className="w-4 h-4 text-slate-400" />
-                </div>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="At least 8 characters"
-                  className="w-full pl-9 pr-3.5 py-2.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-colors"
+                  placeholder="Re-enter password"
+                  className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                   required
                 />
               </div>
@@ -242,34 +237,33 @@ export const SaasRegisterPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 h-10.5 rounded-lg bg-[#047857] hover:bg-[#035436] text-white font-semibold text-sm shadow-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+                className="w-full h-11 px-4 rounded-lg bg-[#15803d] hover:bg-[#166534] text-white font-bold text-sm shadow-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
               >
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Registering...</span>
+                    <span>CREATING ACCOUNT...</span>
                   </>
                 ) : (
-                  <>
-                    <span>Register Business Account</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
+                  <span>CREATE BUSINESS ACCOUNT</span>
                 )}
               </button>
             </div>
           </form>
 
-          <div className="pt-4 border-t border-slate-100 text-center text-xs text-slate-500">
-            Already have a commercial account?{" "}
-            <Link to="/saas/login" className="text-[#047857] font-semibold hover:underline">
-              Sign In Here
+          <div className="pt-4 border-t border-slate-100 text-center text-xs text-slate-600 space-y-1">
+            <p>Already have an account?</p>
+            <Link to="/saas/login" className="font-bold text-[#15803d] hover:underline block">
+              Sign In
             </Link>
           </div>
 
         </div>
       </main>
 
-      <SaasFooter />
+      <footer className="py-6 text-center text-xs text-slate-400">
+        © 2026 ShabooAgri. All rights reserved.
+      </footer>
     </div>
   );
 };

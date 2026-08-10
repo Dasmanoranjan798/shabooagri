@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "./drivers.css";
 import type { Driver } from "../../types/driver";
 import type { CompanyProfile } from "../../types/settings";
 import { api } from "../../lib/api";

@@ -1,13 +1,12 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Tractor, Lock, Mail, ArrowRight, Loader2, AlertCircle } from "lucide-react";
+import { Tractor, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { useSaasAuth } from "../../../context/SaasAuthContext";
-import { SaasHeader } from "../components/SaasHeader";
-import { SaasFooter } from "../components/SaasFooter";
 
 export const SaasLoginPage: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -19,37 +18,48 @@ export const SaasLoginPage: React.FC = () => {
     setErrorMsg(null);
 
     if (!email.trim() || !password.trim()) {
-      setErrorMsg("Please enter both email and password.");
+      setErrorMsg("Please enter both email address and password.");
       return;
     }
 
     setLoading(true);
     try {
       await loginSaas({ email: email.trim(), password });
-      navigate("/saas/portal");
+      navigate("/portal");
     } catch (err: any) {
-      setErrorMsg(err.message || "Invalid credentials. Please try again.");
+      setErrorMsg(err.message || "Invalid email or password. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
-      <SaasHeader />
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-between font-sans">
+      
+      {/* Top minimal brand header */}
+      <header className="py-6 px-4 sm:px-8 max-w-7xl mx-auto w-full flex items-center justify-between">
+        <Link to="/saas" className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-[#15803d] flex items-center justify-center text-white shadow-xs">
+            <Tractor className="w-4.5 h-4.5" />
+          </div>
+          <span className="text-xl font-extrabold text-slate-900 tracking-tight">
+            Shaboo<span className="text-[#15803d]">Agri</span>
+          </span>
+        </Link>
+      </header>
 
-      <main className="flex-1 flex items-center justify-center py-12 sm:py-16 px-4">
-        <div className="w-full max-w-md bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm space-y-6">
+      {/* Centered Auth Card */}
+      <main className="flex-1 flex items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
+        <div className="w-full max-w-[400px] bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm space-y-6">
           
-          {/* Card Header */}
-          <div className="text-center space-y-2">
-            <div className="w-10 h-10 rounded-lg bg-[#047857] mx-auto flex items-center justify-center text-white shadow-xs">
-              <Tractor className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight">Commercial Sign In</h1>
-              <p className="text-xs text-slate-500 mt-0.5">Sign in to your ShabooAgri business portal</p>
-            </div>
+          {/* Heading */}
+          <div className="text-center space-y-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              Sign in to your business
+            </h1>
+            <p className="text-xs text-slate-500">
+              Access your ShabooAgri Business OS.
+            </p>
           </div>
 
           {errorMsg && (
@@ -62,40 +72,49 @@ export const SaasLoginPage: React.FC = () => {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                Commercial Email Address
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                EMAIL ADDRESS
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
-                  <Mail className="w-4 h-4 text-slate-400" />
-                </div>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@company.com"
-                  className="w-full pl-9 pr-3.5 py-2.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-colors"
-                  required
-                />
-              </div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@company.com"
+                className="w-full px-3.5 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                required
+                autoFocus
+              />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  PASSWORD
+                </label>
+                <Link
+                  to="/reset-password"
+                  className="text-xs font-semibold text-[#15803d] hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
-                  <Lock className="w-4 h-4 text-slate-400" />
-                </div>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pl-9 pr-3.5 py-2.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-colors"
+                  placeholder="••••••••••"
+                  className="w-full pl-3.5 pr-10 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
@@ -103,37 +122,35 @@ export const SaasLoginPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 h-10.5 rounded-lg bg-[#047857] hover:bg-[#035436] text-white font-semibold text-sm shadow-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+                className="w-full h-11 px-4 rounded-lg bg-[#15803d] hover:bg-[#166534] text-white font-bold text-sm shadow-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
               >
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Signing in...</span>
+                    <span>SIGNING IN...</span>
                   </>
                 ) : (
-                  <>
-                    <span>Sign In to Portal</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
+                  <span>SIGN IN</span>
                 )}
               </button>
             </div>
           </form>
 
-          {/* Footer Link */}
-          <div className="pt-4 border-t border-slate-100 text-center text-xs text-slate-500 space-y-1">
-            <p>
-              Don't have a commercial business account yet?{" "}
-              <Link to="/saas/register" className="font-semibold text-[#047857] hover:underline">
-                Register Business (₹4,999/yr)
-              </Link>
-            </p>
+          {/* Registration Link */}
+          <div className="pt-4 border-t border-slate-100 text-center text-xs text-slate-600 space-y-1">
+            <p>Don't have a business account?</p>
+            <Link to="/register" className="font-bold text-[#15803d] hover:underline block">
+              Create Business Account
+            </Link>
           </div>
 
         </div>
       </main>
 
-      <SaasFooter />
+      {/* Bottom subtle copyright */}
+      <footer className="py-6 text-center text-xs text-slate-400">
+        © 2026 ShabooAgri. All rights reserved.
+      </footer>
     </div>
   );
 };

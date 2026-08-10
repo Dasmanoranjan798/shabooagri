@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import "./driver-layout.css";
 import { Home, Tractor, User, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 

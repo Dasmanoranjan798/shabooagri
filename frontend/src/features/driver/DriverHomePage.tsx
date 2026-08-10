@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import "./driver-mobile.css";
 import { Link } from "react-router-dom";
 import type { Job } from "../../types/job";
 import { api } from "../../lib/api";

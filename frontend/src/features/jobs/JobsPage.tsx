@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "./jobs.css";
 import type { Job } from "../../types/job";
 import { api } from "../../lib/api";
 import { getTerm } from "../../lib/terminology";

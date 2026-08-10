@@ -95,50 +95,50 @@ export const SaasFeaturesPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
       <SaasHeader />
 
-      {/* HEADER SECTION */}
-      <section className="py-16 bg-gradient-to-b from-slate-900 to-slate-950 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950 border border-emerald-500/30 text-emerald-300 text-xs font-bold uppercase tracking-wider">
-            <Tractor className="w-4 h-4" />
+      {/* Hero Section */}
+      <section className="py-16 sm:py-20 bg-white border-b border-slate-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[#047857] text-xs font-bold uppercase tracking-wider">
+            <Tractor className="w-3.5 h-3.5" />
             <span>Comprehensive Feature Suite</span>
           </div>
-          <h1 className="text-4xl sm:text-5xl font-black text-white">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
             Designed Exclusively for Agricultural Machinery Operations
           </h1>
-          <p className="text-slate-400 text-base sm:text-lg max-w-3xl mx-auto">
+          <p className="text-slate-600 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
             Explore every module engineered into ShabooAgri to streamline bookings, dispatch drivers, control fuel costs, issue GST invoices, and track profitability.
           </p>
         </div>
       </section>
 
-      {/* MODULE GRID */}
-      <section className="py-16 lg:py-24 bg-slate-950">
+      {/* Module Grid */}
+      <section className="py-16 sm:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {moduleList.map((mod, idx) => {
               const IconComponent = mod.icon;
               return (
                 <div
                   key={idx}
-                  className="bg-slate-900/90 p-7 rounded-2xl border border-slate-800 hover:border-emerald-500/40 transition-all duration-200 flex flex-col justify-between"
+                  className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-sm hover:border-emerald-300 transition-all flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-4">
-                      <div className="w-12 h-12 rounded-xl bg-emerald-950 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow">
-                        <IconComponent className="w-6 h-6" />
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#047857] flex items-center justify-center">
+                        <IconComponent className="w-5 h-5" />
                       </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-md bg-slate-800 text-slate-300">
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
                         {mod.category}
                       </span>
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-2">{mod.title}</h3>
-                    <p className="text-sm text-slate-400 leading-relaxed">{mod.desc}</p>
+                    <h3 className="text-lg font-bold text-slate-900 mb-2">{mod.title}</h3>
+                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{mod.desc}</p>
                   </div>
 
-                  <div className="pt-6 mt-6 border-t border-slate-800/80 flex items-center gap-2 text-xs font-semibold text-emerald-400">
+                  <div className="pt-5 mt-5 border-t border-slate-100 flex items-center gap-2 text-xs font-semibold text-[#047857]">
                     <CheckCircle2 className="w-4 h-4" />
                     <span>Included in ₹4,999/yr License</span>
                   </div>
@@ -149,18 +149,18 @@ export const SaasFeaturesPage: React.FC = () => {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-16 bg-slate-900 border-t border-slate-800 text-center">
-        <div className="max-w-3xl mx-auto px-4 space-y-6">
-          <h2 className="text-3xl font-extrabold text-white">Ready to digitize your agricultural equipment fleet?</h2>
-          <p className="text-slate-400 text-sm sm:text-base">Start using ShabooAgri today and experience complete operational clarity.</p>
+      {/* CTA Section */}
+      <section className="py-16 bg-white border-t border-b border-slate-200 text-center">
+        <div className="max-w-3xl mx-auto px-4 space-y-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Ready to digitize your agricultural equipment fleet?</h2>
+          <p className="text-slate-600 text-xs sm:text-sm max-w-xl mx-auto">Start using ShabooAgri today and experience complete operational clarity across your entire machinery catalog.</p>
           <div className="pt-2">
             <Link
               to="/saas/register"
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-base shadow-xl transition-all"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-[#047857] hover:bg-[#035436] text-white font-semibold text-sm shadow-xs transition-colors"
             >
-              <span>REGISTER NOW — ₹4,999/YR INCL GST</span>
-              <ArrowRight className="w-5 h-5" />
+              <span>Register Now — ₹4,999/yr incl GST</span>
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>

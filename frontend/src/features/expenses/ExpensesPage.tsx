@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "./expenses.css";
 import type { Expense, ExpenseCategory } from "../../types/expense";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";

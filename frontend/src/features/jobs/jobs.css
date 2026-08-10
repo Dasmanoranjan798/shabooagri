@@ -1,0 +1,96 @@
+/* Jobs Module Styles */
+
+.sa-jobs-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sa-job-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border-light);
+  margin-bottom: 1rem;
+}
+
+.sa-job-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sa-job-execution-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.sa-field-header-card {
+  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
+  color: white;
+  padding: 1.25rem;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: var(--shadow-md);
+}
+
+.sa-field-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+}
+
+.sa-field-machine {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background-color: var(--color-bg);
+  border-radius: var(--radius-md);
+}
+
+.sa-timer-clock {
+  font-family: monospace;
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--color-primary);
+  text-align: center;
+  padding: 1rem;
+  background-color: var(--color-primary-light);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-primary-hover);
+}
+
+.sa-status-action-bar {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.sa-job-workflow-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.sa-inline-assign {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .sa-field-info-grid {
+    grid-template-columns: 1fr;
+  }
+}

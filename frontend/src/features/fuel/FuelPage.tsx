@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
+import "./fuel.css";
 import type { FuelEntry } from "../../types/fuel";
 import type { Machine } from "../../types/machine";
 import { api } from "../../lib/api";

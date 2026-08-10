@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "./reports.css";
 import type { DashboardSummaryResponse, IncomeSeriesResponse, FuelSeriesResponse, TimeRange } from "../../types/dashboard";
 import { api } from "../../lib/api";
 import { Card } from "../../components/ui/Card";

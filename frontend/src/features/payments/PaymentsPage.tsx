@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "./payments.css";
 import type { Invoice } from "../../types/payment";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
