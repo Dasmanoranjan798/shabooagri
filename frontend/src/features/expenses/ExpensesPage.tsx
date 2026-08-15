@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import "./expenses.css";
 import type { Expense, ExpenseCategory } from "../../types/expense";
 import { api } from "../../lib/api";
@@ -296,7 +297,7 @@ export const ExpensesPage: React.FC = () => {
  title="Edit Expense"
  onClick={(e) => handleOpenEdit(exp, e)}
  >
- 
+ <Pencil size={15} />
  </button>
  )}
  {canManage && (
@@ -306,7 +307,7 @@ export const ExpensesPage: React.FC = () => {
  disabled={deletingId === exp.id}
  onClick={(e) => handleDelete(exp.id, e)}
  >
- 
+ <Trash2 size={15} />
  </button>
  )}
  </div>

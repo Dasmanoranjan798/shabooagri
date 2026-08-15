@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import "./employees.css";
 import type { Employee } from "../../types/employee";
 import { api } from "../../lib/api";
@@ -232,7 +233,7 @@ export const EmployeesPage: React.FC = () => {
  title="Edit Employee"
  onClick={(e) => handleOpenEdit(emp, e)}
  >
- 
+ <Pencil size={15} />
  </button>
  )}
  {canManage && (
@@ -242,7 +243,7 @@ export const EmployeesPage: React.FC = () => {
  disabled={deletingId === emp.id}
  onClick={(e) => handleDelete(emp.id, e)}
  >
- 
+ <Trash2 size={15} />
  </button>
  )}
  </div>

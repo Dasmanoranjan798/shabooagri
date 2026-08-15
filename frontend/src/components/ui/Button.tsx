@@ -24,7 +24,7 @@ export const Button: React.FC<ButtonProps> = ({
       case "outline":
         return "sa-btn-secondary";
       case "danger":
-        return "sa-btn-logout-full";
+        return "sa-btn-danger";
       case "warning":
         return "sa-btn-primary";
       case "success":

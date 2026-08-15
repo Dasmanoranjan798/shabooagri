@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import "./customers.css";
 import type { Customer } from "../../types/customer";
 import { api } from "../../lib/api";
@@ -210,7 +211,7 @@ export const CustomersPage: React.FC = () => {
  title="Edit Customer"
  onClick={(e) => handleOpenEdit(c, e)}
  >
- 
+ <Pencil size={15} />
  </button>
  )}
  {canManage && (
@@ -220,7 +221,7 @@ export const CustomersPage: React.FC = () => {
  disabled={deletingId === c.id}
  onClick={(e) => handleDelete(c.id, e)}
  >
- 
+ <Trash2 size={15} />
  </button>
  )}
  </div>
