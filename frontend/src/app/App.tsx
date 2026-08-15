@@ -7,6 +7,7 @@ import { FarmerPortalLayout } from "../layouts/FarmerPortalLayout";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { ProtectedSaasRoute } from "./ProtectedSaasRoute";
 import { ProtectedSaasAdminRoute } from "./ProtectedSaasAdminRoute";
+import { Spinner } from "../components/ui/Spinner";
 
 // Operational Surface Pages
 import { LoginPage } from "../features/auth/LoginPage";
@@ -78,7 +79,7 @@ function RootRoute() {
     return <Navigate to="/driver" replace />;
   }
   if (roleKey === "farmer") {
-    return <Navigate to="/portal" replace />;
+    return <Navigate to="/farmer" replace />;
   }
   return (
     <AppLayout>
@@ -88,14 +89,35 @@ function RootRoute() {
 }
 
 function SmartRootRoute() {
-  if (!isTenantSubdomain()) {
-    return <SaasHomePage />;
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isTenantSubdomain()) {
+    return (
+      <ProtectedRoute>
+        <RootRoute />
+      </ProtectedRoute>
+    );
   }
-  return (
-    <ProtectedRoute>
-      <RootRoute />
-    </ProtectedRoute>
-  );
+
+  // Bare shabooagri.com: an anonymous visitor sees the marketing site, but
+  // a user already logged into the Business OS here (the single-tenant
+  // deployment isn't subdomain-scoped) must land on their dashboard, not
+  // get bounced back to a homepage they weren't trying to visit.
+  if (isLoading) {
+    return (
+      <div className="sa-center-viewport">
+        <Spinner size="lg" label="Loading..." />
+      </div>
+    );
+  }
+  if (isAuthenticated) {
+    return (
+      <ProtectedRoute>
+        <RootRoute />
+      </ProtectedRoute>
+    );
+  }
+  return <SaasHomePage />;
 }
 
 function SmartLoginRoute() {
@@ -563,9 +585,14 @@ export function App() {
               }
             />
 
-            {/* Farmer / Customer Portal Surface Routes (§11.10) */}
+            {/* Farmer / Customer Portal Surface Routes (§11.10) — deliberately
+                under /farmer, not /portal: /portal is already claimed by the
+                SaaS commercial billing portal above, and a duplicate path
+                previously made this entire surface unreachable (the earlier
+                declaration always won), silently sending every Farmer into
+                the wrong app. */}
             <Route
-              path="/portal"
+              path="/farmer"
               element={
                 <ProtectedRoute>
                   <FarmerPortalLayout>
@@ -576,7 +603,7 @@ export function App() {
             />
 
             <Route
-              path="/portal/bookings"
+              path="/farmer/bookings"
               element={
                 <ProtectedRoute>
                   <FarmerPortalLayout>
@@ -587,7 +614,7 @@ export function App() {
             />
 
             <Route
-              path="/portal/invoices"
+              path="/farmer/invoices"
               element={
                 <ProtectedRoute>
                   <FarmerPortalLayout>
@@ -598,7 +625,7 @@ export function App() {
             />
 
             <Route
-              path="/portal/profile"
+              path="/farmer/profile"
               element={
                 <ProtectedRoute>
                   <FarmerPortalLayout>

@@ -9,10 +9,10 @@ interface FarmerPortalLayoutProps {
 }
 
 const PORTAL_NAV = [
-  { key: "home", label: "Home", icon: <Home size={20} />, path: "/portal" },
-  { key: "bookings", label: "Bookings", icon: <Calendar size={20} />, path: "/portal/bookings" },
-  { key: "invoices", label: "Invoices", icon: <CreditCard size={20} />, path: "/portal/invoices" },
-  { key: "profile", label: "Profile", icon: <User size={20} />, path: "/portal/profile" },
+  { key: "home", label: "Home", icon: <Home size={20} />, path: "/farmer" },
+  { key: "bookings", label: "Bookings", icon: <Calendar size={20} />, path: "/farmer/bookings" },
+  { key: "invoices", label: "Invoices", icon: <CreditCard size={20} />, path: "/farmer/invoices" },
+  { key: "profile", label: "Profile", icon: <User size={20} />, path: "/farmer/profile" },
 ];
 
 export const FarmerPortalLayout: React.FC<FarmerPortalLayoutProps> = ({ children }) => {
@@ -26,7 +26,7 @@ export const FarmerPortalLayout: React.FC<FarmerPortalLayoutProps> = ({ children
   };
 
   const isActive = (path: string) =>
-    path === "/portal" ? location.pathname === "/portal" : location.pathname.startsWith(path);
+    path === "/farmer" ? location.pathname === "/farmer" : location.pathname.startsWith(path);
 
   return (
     <div className="sa-portal-shell">
