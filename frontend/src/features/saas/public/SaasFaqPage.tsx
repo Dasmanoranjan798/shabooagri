@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import "../saas.css";
 import { HelpCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { SaasHeader } from "../components/SaasHeader";
 import { SaasFooter } from "../components/SaasFooter";
@@ -70,13 +71,13 @@ export const SaasFaqPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-[var(--saas-bg)] text-slate-900 flex flex-col font-sans">
       <SaasHeader />
 
       {/* Hero Section */}
       <section className="py-16 sm:py-20 bg-white border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[#047857] text-xs font-bold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[var(--saas-primary)] text-xs font-bold uppercase tracking-wider">
             <HelpCircle className="w-3.5 h-3.5" />
             <span>Frequently Asked Questions</span>
           </div>
@@ -102,11 +103,11 @@ export const SaasFaqPage: React.FC = () => {
                 >
                   <button
                     onClick={() => setOpenIdx(isOpen ? null : idx)}
-                    className="w-full px-5 py-4 text-left flex items-center justify-between gap-4 font-bold text-slate-900 text-sm sm:text-base hover:text-[#047857] focus:outline-none"
+                    className="w-full px-5 py-4 text-left flex items-center justify-between gap-4 font-bold text-slate-900 text-sm sm:text-base hover:text-[var(--saas-primary)] focus:outline-none"
                   >
                     <span>{faq.q}</span>
                     {isOpen ? (
-                      <ChevronUp className="w-4 h-4 text-[#047857] shrink-0" />
+                      <ChevronUp className="w-4 h-4 text-[var(--saas-primary)] shrink-0" />
                     ) : (
                       <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
                     )}

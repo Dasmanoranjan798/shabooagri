@@ -1,33 +1,43 @@
 /* ShabooAgri Universal Base & CSS Reset */
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+/*
+ * Layered so Tailwind's `@layer utilities` (loaded by the public SaaS site
+ * and a few Tailwind-authored auth pages) can still override these resets.
+ * Unlayered rules always beat layered ones regardless of specificity, so
+ * without this, every Tailwind utility touching margin/padding/background/
+ * border on `*`, `button`, `a`, or form elements was silently discarded
+ * app-wide (e.g. `bg-*` on a <button>, `p-*`/`m-*`/`space-*`/`gap-*` anywhere).
+ */
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 
-body {
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  min-height: 100vh;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-}
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    min-height: 100vh;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 
-button {
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  background: none;
-}
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    background: none;
+  }
 
-input, select, textarea {
-  font-family: inherit;
+  input, select, textarea {
+    font-family: inherit;
+  }
 }
 
 /* Universal Utility Typography & Helpers */

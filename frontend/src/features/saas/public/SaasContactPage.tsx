@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import "../saas.css";
 import { Mail, Phone, MapPin, Send, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { SaasHeader } from "../components/SaasHeader";
 import { SaasFooter } from "../components/SaasFooter";
@@ -76,13 +77,13 @@ export const SaasContactPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-[var(--saas-bg)] text-slate-900 flex flex-col font-sans">
       <SaasHeader />
 
       {/* Hero Section */}
       <section className="py-16 sm:py-20 bg-white border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[#047857] text-xs font-bold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[var(--saas-primary)] text-xs font-bold uppercase tracking-wider">
             <Mail className="w-3.5 h-3.5" />
             <span>Commercial Contact & Support</span>
           </div>
@@ -111,7 +112,7 @@ export const SaasContactPage: React.FC = () => {
 
               <div className="space-y-4">
                 <div className="flex items-start gap-3.5 p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#047857] flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[var(--saas-primary)] flex items-center justify-center shrink-0">
                     <MapPin className="w-5 h-5" />
                   </div>
                   <div>
@@ -121,7 +122,7 @@ export const SaasContactPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-start gap-3.5 p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#047857] flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[var(--saas-primary)] flex items-center justify-center shrink-0">
                     <Phone className="w-5 h-5" />
                   </div>
                   <div>
@@ -132,7 +133,7 @@ export const SaasContactPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-start gap-3.5 p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#047857] flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[var(--saas-primary)] flex items-center justify-center shrink-0">
                     <Mail className="w-5 h-5" />
                   </div>
                   <div>
@@ -149,7 +150,7 @@ export const SaasContactPage: React.FC = () => {
 
               {successMsg && (
                 <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs sm:text-sm font-medium flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-[#047857] shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-5 h-5 text-[var(--saas-primary)] shrink-0 mt-0.5" />
                   <span>{successMsg}</span>
                 </div>
               )}
@@ -173,7 +174,7 @@ export const SaasContactPage: React.FC = () => {
                       value={formData.name}
                       onChange={handleChange}
                       placeholder="e.g. Ramesh Singh"
-                      className="w-full px-4 py-2.5 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                      className="w-full px-4 py-2.5 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[var(--saas-primary)] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                       required
                     />
                   </div>
@@ -187,7 +188,7 @@ export const SaasContactPage: React.FC = () => {
                       value={formData.businessName}
                       onChange={handleChange}
                       placeholder="e.g. Greenfields CHC"
-                      className="w-full px-4 py-2.5 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                      className="w-full px-4 py-2.5 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[var(--saas-primary)] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                     />
                   </div>
                 </div>
@@ -203,7 +204,7 @@ export const SaasContactPage: React.FC = () => {
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder="e.g. 9876543210"
-                      className="w-full px-4 py-2.5 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                      className="w-full px-4 py-2.5 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[var(--saas-primary)] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                       required
                     />
                   </div>
@@ -217,7 +218,7 @@ export const SaasContactPage: React.FC = () => {
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="e.g. ramesh@example.com"
-                      className="w-full px-4 py-2.5 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                      className="w-full px-4 py-2.5 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[var(--saas-primary)] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                       required
                     />
                   </div>
@@ -233,7 +234,7 @@ export const SaasContactPage: React.FC = () => {
                     value={formData.subject}
                     onChange={handleChange}
                     placeholder="e.g. Enterprise Plan Enquiry for 25 Harvesters"
-                    className="w-full px-4 py-2.5 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                    className="w-full px-4 py-2.5 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[var(--saas-primary)] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                     required
                   />
                 </div>
@@ -248,7 +249,7 @@ export const SaasContactPage: React.FC = () => {
                     value={formData.message}
                     onChange={handleChange}
                     placeholder="Tell us about your machinery fleet, location, and operational requirements..."
-                    className="w-full p-4 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                    className="w-full p-4 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[var(--saas-primary)] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                     required
                   />
                 </div>
@@ -257,7 +258,7 @@ export const SaasContactPage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full h-11 px-4 rounded-lg bg-[#047857] hover:bg-[#035436] text-white font-semibold text-sm shadow-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+                    className="w-full h-11 px-4 rounded-lg bg-[var(--saas-primary)] hover:bg-[var(--saas-primary-hover)] text-white font-semibold text-sm shadow-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
                   >
                     {loading ? (
                       <>

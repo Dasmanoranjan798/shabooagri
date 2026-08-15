@@ -1,4 +1,5 @@
 import React from "react";
+import "../saas.css";
 import { Link } from "react-router-dom";
 import { CheckCircle2, ShieldCheck, FileText, Calculator, ArrowRight } from "lucide-react";
 import { SaasHeader } from "../components/SaasHeader";
@@ -6,13 +7,13 @@ import { SaasFooter } from "../components/SaasFooter";
 
 export const SaasPricingPage: React.FC = () => {
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-[var(--saas-bg)] text-slate-900 flex flex-col font-sans">
       <SaasHeader />
 
       {/* Hero Section */}
       <section className="py-16 sm:py-20 bg-white border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[#047857] text-xs font-bold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[var(--saas-primary)] text-xs font-bold uppercase tracking-wider">
             <Calculator className="w-3.5 h-3.5" />
             <span>Commercial Pricing</span>
           </div>
@@ -32,7 +33,7 @@ export const SaasPricingPage: React.FC = () => {
             
             {/* Main Plan Card (7 cols) */}
             <div className="lg:col-span-7 bg-white p-6 sm:p-10 rounded-2xl border border-slate-200 shadow-sm space-y-8 relative">
-              <div className="inline-block bg-emerald-50 text-[#047857] border border-emerald-200 text-xs font-bold uppercase tracking-wider px-3.5 py-1 rounded-full">
+              <div className="inline-block bg-emerald-50 text-[var(--saas-primary)] border border-emerald-200 text-xs font-bold uppercase tracking-wider px-3.5 py-1 rounded-full">
                 RECOMMENDED ANNUAL LICENSE
               </div>
 
@@ -43,7 +44,7 @@ export const SaasPricingPage: React.FC = () => {
                 </div>
                 <div className="text-left sm:text-right">
                   <div className="text-4xl sm:text-5xl font-extrabold text-slate-900">₹4,999</div>
-                  <span className="text-xs font-bold text-[#047857] uppercase tracking-wider block mt-1">
+                  <span className="text-xs font-bold text-[var(--saas-primary)] uppercase tracking-wider block mt-1">
                     / year (INCLUDING 18% GST)
                   </span>
                 </div>
@@ -67,7 +68,7 @@ export const SaasPricingPage: React.FC = () => {
                     "Dedicated Support Portal",
                   ].map((item, idx) => (
                     <div key={idx} className="flex items-center gap-2.5 text-xs sm:text-sm text-slate-700">
-                      <CheckCircle2 className="w-4 h-4 text-[#047857] shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-[var(--saas-primary)] shrink-0" />
                       <span>{item}</span>
                     </div>
                   ))}
@@ -77,7 +78,7 @@ export const SaasPricingPage: React.FC = () => {
               <div className="pt-2">
                 <Link
                   to="/saas/register"
-                  className="w-full h-12 rounded-xl bg-[#047857] hover:bg-[#035436] text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-xs transition-colors"
+                  className="w-full h-12 rounded-xl bg-[var(--saas-primary)] hover:bg-[var(--saas-primary-hover)] text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-xs transition-colors"
                 >
                   <span>Proceed to Registration — ₹4,999.00</span>
                   <ArrowRight className="w-4 h-4" />
@@ -88,7 +89,7 @@ export const SaasPricingPage: React.FC = () => {
             {/* Tax Breakdown Reference (5 cols) */}
             <div className="lg:col-span-5 bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#047857] flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[var(--saas-primary)] flex items-center justify-center shrink-0">
                   <FileText className="w-5 h-5" />
                 </div>
                 <div>
@@ -109,7 +110,7 @@ export const SaasPricingPage: React.FC = () => {
                 </div>
                 <div className="flex justify-between pb-2 border-b border-slate-200">
                   <span className="text-slate-600">GST (18% Total):</span>
-                  <span className="font-semibold text-[#047857]">₹762.56</span>
+                  <span className="font-semibold text-[var(--saas-primary)]">₹762.56</span>
                 </div>
 
                 <div className="pt-1 space-y-1 text-xs text-slate-500">
@@ -130,12 +131,12 @@ export const SaasPricingPage: React.FC = () => {
 
                 <div className="pt-3 border-t border-slate-200 flex justify-between font-bold text-sm sm:text-base text-slate-900">
                   <span>Total Amount Paid:</span>
-                  <span className="text-[#047857]">₹4,999.00</span>
+                  <span className="text-[var(--saas-primary)]">₹4,999.00</span>
                 </div>
               </div>
 
               <div className="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200 text-xs text-slate-700 flex items-start gap-2.5">
-                <ShieldCheck className="w-4 h-4 text-[#047857] shrink-0 mt-0.5" />
+                <ShieldCheck className="w-4 h-4 text-[var(--saas-primary)] shrink-0 mt-0.5" />
                 <span>GST Tax Invoices with B2B GSTIN input credit reference issued upon payment confirmation.</span>
               </div>
             </div>

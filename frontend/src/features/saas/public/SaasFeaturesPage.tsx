@@ -1,4 +1,5 @@
 import React from "react";
+import "../saas.css";
 import { Link } from "react-router-dom";
 import {
   Tractor,
@@ -95,13 +96,13 @@ export const SaasFeaturesPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-[var(--saas-bg)] text-slate-900 flex flex-col font-sans">
       <SaasHeader />
 
       {/* Hero Section */}
       <section className="py-16 sm:py-20 bg-white border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[#047857] text-xs font-bold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[var(--saas-primary)] text-xs font-bold uppercase tracking-wider">
             <Tractor className="w-3.5 h-3.5" />
             <span>Comprehensive Feature Suite</span>
           </div>
@@ -127,7 +128,7 @@ export const SaasFeaturesPage: React.FC = () => {
                 >
                   <div>
                     <div className="flex items-center justify-between mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#047857] flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[var(--saas-primary)] flex items-center justify-center">
                         <IconComponent className="w-5 h-5" />
                       </div>
                       <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
@@ -138,7 +139,7 @@ export const SaasFeaturesPage: React.FC = () => {
                     <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{mod.desc}</p>
                   </div>
 
-                  <div className="pt-5 mt-5 border-t border-slate-100 flex items-center gap-2 text-xs font-semibold text-[#047857]">
+                  <div className="pt-5 mt-5 border-t border-slate-100 flex items-center gap-2 text-xs font-semibold text-[var(--saas-primary)]">
                     <CheckCircle2 className="w-4 h-4" />
                     <span>Included in ₹4,999/yr License</span>
                   </div>
@@ -157,7 +158,7 @@ export const SaasFeaturesPage: React.FC = () => {
           <div className="pt-2">
             <Link
               to="/saas/register"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-[#047857] hover:bg-[#035436] text-white font-semibold text-sm shadow-xs transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-[var(--saas-primary)] hover:bg-[var(--saas-primary-hover)] text-white font-semibold text-sm shadow-xs transition-colors"
             >
               <span>Register Now — ₹4,999/yr incl GST</span>
               <ArrowRight className="w-4 h-4" />

@@ -2,7 +2,34 @@
 @import "tailwindcss/utilities" layer(utilities);
 
 /* Encapsulated Public Commercial SaaS Marketing Styles */
+:root {
+  --saas-primary: #047857;
+  --saas-primary-hover: #065f46;
+  --saas-primary-tint: #ecfdf5;
+  --saas-primary-tint-border: #a7f3d0;
+  --saas-ink: #0f172a;
+  --saas-bg: #f8fafc;
+}
+
 .saas-container {
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: #0f172a;
+}
+
+@keyframes saasFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes saasFadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.saas-animate-float {
+  animation: saasFloat 6s ease-in-out infinite;
+}
+
+.saas-animate-in {
+  animation: saasFadeUp 0.5s ease-out both;
 }

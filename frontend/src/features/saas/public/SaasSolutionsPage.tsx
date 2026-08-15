@@ -1,4 +1,5 @@
 import React from "react";
+import "../saas.css";
 import { Link } from "react-router-dom";
 import { Building2, CheckCircle2, ArrowRight } from "lucide-react";
 import { SaasHeader } from "../components/SaasHeader";
@@ -69,13 +70,13 @@ export const SaasSolutionsPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-[var(--saas-bg)] text-slate-900 flex flex-col font-sans">
       <SaasHeader />
 
       {/* Hero Section */}
       <section className="py-16 sm:py-20 bg-white border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[#047857] text-xs font-bold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[var(--saas-primary)] text-xs font-bold uppercase tracking-wider">
             <Building2 className="w-3.5 h-3.5" />
             <span>Agricultural Use Cases</span>
           </div>
@@ -99,12 +100,12 @@ export const SaasSolutionsPage: React.FC = () => {
               >
                 <div>
                   <h3 className="text-xl font-bold text-slate-900 mb-1">{sol.title}</h3>
-                  <p className="text-[#047857] text-xs font-semibold mb-5">{sol.subtitle}</p>
+                  <p className="text-[var(--saas-primary)] text-xs font-semibold mb-5">{sol.subtitle}</p>
 
                   <ul className="space-y-3 mb-6">
                     {sol.benefits.map((b, bIdx) => (
                       <li key={bIdx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700">
-                        <CheckCircle2 className="w-4 h-4 text-[#047857] shrink-0 mt-0.5" />
+                        <CheckCircle2 className="w-4 h-4 text-[var(--saas-primary)] shrink-0 mt-0.5" />
                         <span>{b}</span>
                       </li>
                     ))}
@@ -114,7 +115,7 @@ export const SaasSolutionsPage: React.FC = () => {
                 <div className="pt-4 border-t border-slate-100">
                   <Link
                     to="/saas/register"
-                    className="inline-flex items-center gap-2 text-[#047857] hover:text-[#035436] text-xs sm:text-sm font-semibold"
+                    className="inline-flex items-center gap-2 text-[var(--saas-primary)] hover:text-[var(--saas-primary-hover)] text-xs sm:text-sm font-semibold"
                   >
                     <span>Deploy ShabooAgri for this solution</span>
                     <ArrowRight className="w-4 h-4" />

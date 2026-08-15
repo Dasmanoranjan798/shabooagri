@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import "../saas.css";
 import { Link, useNavigate } from "react-router-dom";
 import { Tractor, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useSaasAuth } from "../../../context/SaasAuthContext";
@@ -64,16 +65,16 @@ export const SaasRegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-between font-sans">
+    <div className="min-h-screen bg-[var(--saas-bg)] flex flex-col justify-between font-sans">
       
       {/* Top minimal brand header */}
       <header className="py-6 px-4 sm:px-8 max-w-7xl mx-auto w-full flex items-center justify-between">
         <Link to="/saas" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#15803d] flex items-center justify-center text-white shadow-xs">
+          <div className="w-8 h-8 rounded-lg bg-[var(--saas-primary)] flex items-center justify-center text-white shadow-xs">
             <Tractor className="w-4.5 h-4.5" />
           </div>
           <span className="text-xl font-extrabold text-slate-900 tracking-tight">
-            Shaboo<span className="text-[#15803d]">Agri</span>
+            Shaboo<span className="text-[var(--saas-primary)]">Agri</span>
           </span>
         </Link>
       </header>
@@ -116,7 +117,7 @@ export const SaasRegisterPage: React.FC = () => {
                   value={formData.businessName}
                   onChange={handleChange}
                   placeholder="e.g. Kisan Agro Services"
-                  className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                  className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[var(--saas-primary)] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                   required
                 />
               </div>
@@ -132,7 +133,7 @@ export const SaasRegisterPage: React.FC = () => {
                     value={formData.businessEmail}
                     onChange={handleChange}
                     placeholder="name@company.com"
-                    className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                    className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[var(--saas-primary)] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                     required
                   />
                 </div>
@@ -147,7 +148,7 @@ export const SaasRegisterPage: React.FC = () => {
                     value={formData.phone}
                     onChange={handleChange}
                     placeholder="9876543210"
-                    className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                    className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[var(--saas-primary)] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                     required
                   />
                 </div>
@@ -164,7 +165,7 @@ export const SaasRegisterPage: React.FC = () => {
                     value={formData.gstin}
                     onChange={handleChange}
                     placeholder="21AAAAA0000A1Z5"
-                    className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all uppercase"
+                    className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[var(--saas-primary)] focus:ring-2 focus:ring-emerald-500/20 transition-all uppercase"
                   />
                 </div>
 
@@ -176,7 +177,7 @@ export const SaasRegisterPage: React.FC = () => {
                     name="businessType"
                     value={formData.businessType}
                     onChange={handleChange}
-                    className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                    className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-[var(--saas-primary)] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                   >
                     <option value="Tractor Owner">Tractor Owner</option>
                     <option value="Custom Hiring Centre">Custom Hiring Centre</option>
@@ -204,7 +205,7 @@ export const SaasRegisterPage: React.FC = () => {
                     value={formData.password}
                     onChange={handleChange}
                     placeholder="Minimum 8 characters"
-                    className="w-full pl-3.5 pr-10 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                    className="w-full pl-3.5 pr-10 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[var(--saas-primary)] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                     required
                   />
                   <button
@@ -227,7 +228,7 @@ export const SaasRegisterPage: React.FC = () => {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   placeholder="Re-enter password"
-                  className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                  className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[var(--saas-primary)] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                   required
                 />
               </div>
@@ -237,15 +238,15 @@ export const SaasRegisterPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full h-11 px-4 rounded-lg bg-[#15803d] hover:bg-[#166534] text-white font-bold text-sm shadow-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+                className="w-full h-11 px-4 rounded-lg bg-[var(--saas-primary)] hover:bg-[var(--saas-primary-hover)] text-white font-bold text-sm shadow-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
               >
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>CREATING ACCOUNT...</span>
+                    <span>Creating account&hellip;</span>
                   </>
                 ) : (
-                  <span>CREATE BUSINESS ACCOUNT</span>
+                  <span>Create business account</span>
                 )}
               </button>
             </div>
@@ -253,7 +254,7 @@ export const SaasRegisterPage: React.FC = () => {
 
           <div className="pt-4 border-t border-slate-100 text-center text-xs text-slate-600 space-y-1">
             <p>Already have an account?</p>
-            <Link to="/saas/login" className="font-bold text-[#15803d] hover:underline block">
+            <Link to="/saas/login" className="font-bold text-[var(--saas-primary)] hover:underline block">
               Sign In
             </Link>
           </div>
