@@ -39,7 +39,9 @@ export class SaasPaymentController {
 
   async handleWebhook(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await gatewayService.handleWebhook(req.body);
+      const signature = req.header("x-razorpay-signature");
+      const rawBody = req.rawBody || Buffer.from(JSON.stringify(req.body || {}));
+      const result = await gatewayService.handleWebhook(rawBody, signature);
       res.status(200).json({ success: true, data: result });
     } catch (err) {
       next(err);

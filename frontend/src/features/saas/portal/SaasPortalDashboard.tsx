@@ -14,6 +14,7 @@ import {
 import { SaasPortalLayout } from "../components/SaasPortalLayout";
 import { useSaasAuth } from "../../../context/SaasAuthContext";
 import { getSaasMyLicenses, getSaasMyPayments, getSsoLaunchToken, createSaasPaymentOrder, verifySaasPayment } from "../../../lib/saasApi";
+import { loadRazorpayCheckout, openRazorpayCheckout } from "../../../lib/razorpay";
 import type { SaasLicense, SaasPayment } from "../../../types/saas";
 
 export const SaasPortalDashboard: React.FC = () => {
@@ -75,22 +76,51 @@ export const SaasPortalDashboard: React.FC = () => {
     setPaying(true);
     setPaymentMsg(null);
     try {
-      // Step 1: Create Order
-      const order = await createSaasPaymentOrder();
-      
-      // Step 2: Server-side Verify Payment & Provision Tenant
-      const verifyRes = await verifySaasPayment({
-        paymentId: order.paymentId,
-        gatewayPaymentId: `pay_sandbox_${Date.now()}`,
-      });
+      await loadRazorpayCheckout();
 
-      if (verifyRes.success) {
-        setPaymentMsg(`Payment verified! Subscription Active. Software URL: ${verifyRes.softwareUrl}`);
-        await loadPortalData();
-      }
+      // Step 1: Create a real Razorpay order (no money moves yet)
+      const order = await createSaasPaymentOrder();
+
+      // Step 2: Open Razorpay's own checkout UI. Card/UPI/etc. entry happens
+      // entirely inside Razorpay's iframe — this app never sees payment details.
+      openRazorpayCheckout({
+        key: order.key,
+        amount: Math.round(order.amount * 100),
+        currency: order.currency,
+        order_id: order.gatewayOrderId,
+        name: "ShabooAgri",
+        description: "Annual Business OS Subscription",
+        prefill: {
+          name: profile?.contactPerson || profile?.businessName,
+          email: saasUser?.email,
+          contact: profile?.phone,
+        },
+        theme: { color: "#047857" },
+        handler: async (response) => {
+          try {
+            // Step 3: Server verifies the Razorpay signature before activating anything.
+            const verifyRes = await verifySaasPayment({
+              paymentId: order.paymentId,
+              gatewayPaymentId: response.razorpay_payment_id,
+              gatewaySignature: response.razorpay_signature,
+            });
+
+            if (verifyRes.success) {
+              setPaymentMsg(`Payment verified! Subscription active. Software URL: ${verifyRes.softwareUrl}`);
+              await loadPortalData();
+            }
+          } catch (err: any) {
+            alert(`Payment verification failed: ${err.message || "Please contact support with your payment reference."}`);
+          } finally {
+            setPaying(false);
+          }
+        },
+        modal: {
+          ondismiss: () => setPaying(false),
+        },
+      });
     } catch (err: any) {
-      alert(`Payment error: ${err.message || "Payment verification failed"}`);
-    } finally {
+      alert(`Payment error: ${err.message || "Could not start checkout"}`);
       setPaying(false);
     }
   };

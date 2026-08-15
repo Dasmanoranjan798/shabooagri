@@ -168,8 +168,8 @@ export async function createSaasPaymentOrder(input?: { isInterState?: boolean; n
 
 export async function verifySaasPayment(input: {
   paymentId: string;
-  gatewayPaymentId?: string;
-  gatewaySignature?: string;
+  gatewayPaymentId: string;
+  gatewaySignature: string;
 }) {
   return fetchSaasApi<{
     success: boolean;

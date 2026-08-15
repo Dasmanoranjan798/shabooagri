@@ -37,7 +37,16 @@ app.use(
     credentials: true,
   }),
 );
-app.use(express.json());
+// `verify` stashes the raw bytes alongside the parsed body so webhook
+// handlers (Razorpay) can validate the signature against the exact bytes
+// Razorpay signed, before trusting anything in req.body.
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      (req as express.Request).rawBody = Buffer.from(buf);
+    },
+  }),
+);
 
 app.get("/health", async (_req, res) => {
   try {

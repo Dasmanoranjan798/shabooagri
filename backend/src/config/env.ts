@@ -18,6 +18,11 @@ const envSchema = z.object({
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM: z.string().optional().default("support@shabooagri.com"),
   APP_URL: z.string().optional().default("http://localhost:5173"),
+  RAZORPAY_KEY_ID: z.string().min(1),
+  RAZORPAY_KEY_SECRET: z.string().min(1),
+  // Only needed once a webhook is registered in the Razorpay Dashboard; the
+  // synchronous checkout-verification flow works without it.
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
