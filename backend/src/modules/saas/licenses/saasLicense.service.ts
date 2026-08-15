@@ -83,6 +83,35 @@ export class SaasLicenseService {
     return license;
   }
 
+  // Nothing else in the system ever transitions a license out of
+  // LICENSE_ACTIVE on its own — without this, a lapsed subscription keeps
+  // full tenant access forever and the admin dashboard's expiring/expired
+  // counters permanently read zero. Called on a timer from server.ts.
+  // Also gives EXPIRING_SOON a real path in, not just a status admins could
+  // set by hand but nothing ever produced.
+  async sweepExpiredLicenses() {
+    const now = new Date();
+    const soonThreshold = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const expired = await prisma.license.updateMany({
+      where: {
+        status: { in: ["LICENSE_ACTIVE", "EXPIRING_SOON"] },
+        expiryDate: { lt: now },
+      },
+      data: { status: "EXPIRED" },
+    });
+
+    const expiringSoon = await prisma.license.updateMany({
+      where: {
+        status: "LICENSE_ACTIVE",
+        expiryDate: { gte: now, lte: soonThreshold },
+      },
+      data: { status: "EXPIRING_SOON" },
+    });
+
+    return { expiredCount: expired.count, expiringSoonCount: expiringSoon.count };
+  }
+
   async updateLicenseStatus(adminSaasUserId: string, licenseId: string, input: UpdateLicenseStatusInput) {
     const existing = await prisma.license.findUnique({
       where: { id: licenseId },

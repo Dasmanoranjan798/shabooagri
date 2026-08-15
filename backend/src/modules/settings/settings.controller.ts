@@ -5,7 +5,7 @@ import { updateCompanyProfileSchema, updateTerminologySchema } from "./settings.
 
 export async function getCompanyProfile(req: Request, res: Response) {
   const user = requireUser(req);
-  const profile = await settingsService.getCompanyProfile(user.companyId);
+  const profile = await settingsService.getCompanyProfile(user.companyId, user);
   res.json(profile);
 }
 

@@ -37,6 +37,6 @@ export async function remove(req: Request, res: Response) {
 
 export async function getCompensationSummary(req: Request, res: Response) {
   const user = requireUser(req);
-  const summary = await driverService.getCompensationSummary(user.companyId, req.params.id);
+  const summary = await driverService.getCompensationSummary(user.companyId, req.params.id, user);
   res.status(200).json(summary);
 }

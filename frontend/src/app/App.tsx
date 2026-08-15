@@ -389,7 +389,7 @@ export function App() {
             <Route
               path="/bookings"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute permission="operations.view">
                   <AppLayout>
                     <BookingsPage />
                   </AppLayout>
@@ -400,7 +400,7 @@ export function App() {
             <Route
               path="/jobs"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute permission="operations.view">
                   <AppLayout>
                     <JobsPage />
                   </AppLayout>
@@ -455,7 +455,7 @@ export function App() {
             <Route
               path="/payments"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute permission="operations.view">
                   <AppLayout>
                     <PaymentsPage />
                   </AppLayout>
@@ -510,7 +510,7 @@ export function App() {
             <Route
               path="/settings"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute permission="operations.view">
                   <AppLayout>
                     <SettingsPage />
                   </AppLayout>

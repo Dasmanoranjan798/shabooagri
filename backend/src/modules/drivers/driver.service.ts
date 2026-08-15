@@ -2,6 +2,8 @@ import * as employeeService from "../employees/employee.service";
 import * as driverCompensationService from "./driverCompensation.service";
 import { AppError } from "../../shared/errors/AppError";
 import * as driverRepository from "./driver.repository";
+import { resolveCallerScope } from "../../shared/access/callerScope";
+import type { AuthenticatedUser } from "../auth/auth.types";
 import type { CreateDriverInput, UpdateDriverInput } from "./driver.validators";
 
 export function list(companyId: string) {
@@ -53,6 +55,13 @@ export async function remove(companyId: string, id: string) {
   }
 }
 
-export function getCompensationSummary(companyId: string, id: string) {
+export async function getCompensationSummary(companyId: string, id: string, user: AuthenticatedUser) {
+  const scope = await resolveCallerScope(companyId, user);
+  const isVisible = scope.kind === "company" || (scope.kind === "driver" && scope.driverId === id);
+  if (!isVisible) {
+    // 404, not 403 — a Driver should not learn that another driver's
+    // compensation record exists at all.
+    throw new AppError(404, "Driver not found");
+  }
   return driverCompensationService.getDriverCompensationSummary(companyId, id);
 }

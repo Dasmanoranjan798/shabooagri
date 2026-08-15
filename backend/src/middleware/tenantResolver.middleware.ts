@@ -30,36 +30,14 @@ export async function tenantResolverMiddleware(req: Request, res: Response, next
     }
 
     if (slug) {
-      let company = await prisma.company.findUnique({
+      // Exact slug match only — a fuzzy startsWith/contains fallback here
+      // would let a mistyped or partially-matching subdomain resolve to a
+      // different tenant's company, leaking that tenant's context into the
+      // request. If a slug doesn't match exactly, the tenant doesn't exist.
+      const company = await prisma.company.findUnique({
         where: { slug },
         include: { saasLicenses: true },
       });
-
-      // Resilient fallback for common typo variations (e.g. 'greenfild' or 'greenfield' -> 'greenfields')
-      if (!company && (slug === "greenfild" || slug === "greenfield")) {
-        company = await prisma.company.findFirst({
-          where: {
-            OR: [
-              { slug: "greenfields" },
-              { slug: "greenfieldscustomhiring" },
-            ],
-          },
-          include: { saasLicenses: true },
-        });
-      }
-
-      // Secondary fallback: prefix or name match
-      if (!company) {
-        company = await prisma.company.findFirst({
-          where: {
-            OR: [
-              { slug: { startsWith: slug } },
-              { name: { contains: slug, mode: "insensitive" } },
-            ],
-          },
-          include: { saasLicenses: true },
-        });
-      }
 
       if (!company) {
         return res.status(404).json({
@@ -72,6 +50,25 @@ export async function tenantResolverMiddleware(req: Request, res: Response, next
         return res.status(403).json({
           error: "Tenant Suspended",
           message: "This operational company environment is currently suspended.",
+        });
+      }
+
+      // Companies provisioned through the SaaS platform carry one or more
+      // licenses; a company with no license at all (e.g. an internally
+      // managed tenant) is left alone. Where licenses do exist, at least one
+      // must still be valid — checked live against expiryDate rather than
+      // relying solely on the periodic sweep job to have already flipped
+      // its status, so an expired subscription can't ride on a stale status.
+      const now = new Date();
+      const hasValidLicense = company.saasLicenses.some(
+        (license) =>
+          (license.status === "LICENSE_ACTIVE" || license.status === "EXPIRING_SOON") &&
+          (!license.expiryDate || license.expiryDate > now),
+      );
+      if (company.saasLicenses.length > 0 && !hasValidLicense) {
+        return res.status(402).json({
+          error: "License Expired",
+          message: "This account's software subscription has expired. Please renew to continue.",
         });
       }
 

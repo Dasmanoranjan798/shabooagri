@@ -13,7 +13,13 @@ export class SaasProvisioningService {
       throw new AppError(404, "SaaS User not found for provisioning");
     }
 
-    const activeLicense = saasUser.licenses.find((l) => l.status === "LICENSE_ACTIVE") || saasUser.licenses[0];
+    const activeLicense = saasUser.licenses.find((l) => l.status === "LICENSE_ACTIVE");
+    if (!activeLicense) {
+      throw new AppError(
+        402,
+        "No active paid license found for this account. Complete payment to activate your software access.",
+      );
+    }
 
     // If company is already bound to license, reuse existing company
     if (activeLicense && activeLicense.companyId) {
