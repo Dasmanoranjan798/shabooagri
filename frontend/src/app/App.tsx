@@ -6,6 +6,7 @@ import { DriverLayout } from "../layouts/DriverLayout";
 import { FarmerPortalLayout } from "../layouts/FarmerPortalLayout";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { ProtectedSaasRoute } from "./ProtectedSaasRoute";
+import { ProtectedSaasAdminRoute } from "./ProtectedSaasAdminRoute";
 
 // Operational Surface Pages
 import { LoginPage } from "../features/auth/LoginPage";
@@ -267,113 +268,113 @@ export function App() {
             <Route
               path="/admin"
               element={
-                <ProtectedSaasRoute>
+                <ProtectedSaasAdminRoute>
                   <SaasAdminDashboardPage />
-                </ProtectedSaasRoute>
+                </ProtectedSaasAdminRoute>
               }
             />
             <Route
               path="/saas/admin"
               element={
-                <ProtectedSaasRoute>
+                <ProtectedSaasAdminRoute>
                   <SaasAdminDashboardPage />
-                </ProtectedSaasRoute>
+                </ProtectedSaasAdminRoute>
               }
             />
             <Route
               path="/admin/customers"
               element={
-                <ProtectedSaasRoute>
+                <ProtectedSaasAdminRoute>
                   <SaasAdminCustomersPage />
-                </ProtectedSaasRoute>
+                </ProtectedSaasAdminRoute>
               }
             />
             <Route
               path="/saas/admin/customers"
               element={
-                <ProtectedSaasRoute>
+                <ProtectedSaasAdminRoute>
                   <SaasAdminCustomersPage />
-                </ProtectedSaasRoute>
+                </ProtectedSaasAdminRoute>
               }
             />
             <Route
               path="/admin/licenses"
               element={
-                <ProtectedSaasRoute>
+                <ProtectedSaasAdminRoute>
                   <SaasAdminLicensesPage />
-                </ProtectedSaasRoute>
+                </ProtectedSaasAdminRoute>
               }
             />
             <Route
               path="/saas/admin/licenses"
               element={
-                <ProtectedSaasRoute>
+                <ProtectedSaasAdminRoute>
                   <SaasAdminLicensesPage />
-                </ProtectedSaasRoute>
+                </ProtectedSaasAdminRoute>
               }
             />
             <Route
               path="/admin/payments"
               element={
-                <ProtectedSaasRoute>
+                <ProtectedSaasAdminRoute>
                   <SaasAdminPaymentsPage />
-                </ProtectedSaasRoute>
+                </ProtectedSaasAdminRoute>
               }
             />
             <Route
               path="/saas/admin/payments"
               element={
-                <ProtectedSaasRoute>
+                <ProtectedSaasAdminRoute>
                   <SaasAdminPaymentsPage />
-                </ProtectedSaasRoute>
+                </ProtectedSaasAdminRoute>
               }
             />
             <Route
               path="/admin/leads"
               element={
-                <ProtectedSaasRoute>
+                <ProtectedSaasAdminRoute>
                   <SaasAdminLeadsPage />
-                </ProtectedSaasRoute>
+                </ProtectedSaasAdminRoute>
               }
             />
             <Route
               path="/saas/admin/leads"
               element={
-                <ProtectedSaasRoute>
+                <ProtectedSaasAdminRoute>
                   <SaasAdminLeadsPage />
-                </ProtectedSaasRoute>
+                </ProtectedSaasAdminRoute>
               }
             />
             <Route
               path="/admin/enquiries"
               element={
-                <ProtectedSaasRoute>
+                <ProtectedSaasAdminRoute>
                   <SaasAdminEnquiriesPage />
-                </ProtectedSaasRoute>
+                </ProtectedSaasAdminRoute>
               }
             />
             <Route
               path="/saas/admin/enquiries"
               element={
-                <ProtectedSaasRoute>
+                <ProtectedSaasAdminRoute>
                   <SaasAdminEnquiriesPage />
-                </ProtectedSaasRoute>
+                </ProtectedSaasAdminRoute>
               }
             />
             <Route
               path="/admin/feedback"
               element={
-                <ProtectedSaasRoute>
+                <ProtectedSaasAdminRoute>
                   <SaasAdminFeedbackPage />
-                </ProtectedSaasRoute>
+                </ProtectedSaasAdminRoute>
               }
             />
             <Route
               path="/saas/admin/feedback"
               element={
-                <ProtectedSaasRoute>
+                <ProtectedSaasAdminRoute>
                   <SaasAdminFeedbackPage />
-                </ProtectedSaasRoute>
+                </ProtectedSaasAdminRoute>
               }
             />
 
