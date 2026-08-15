@@ -604,7 +604,15 @@ export const JobExecutionModal: React.FC<JobExecutionModalProps> = ({
        <Button type="button" variant="secondary" onClick={() => setShowCompleteModal(false)}>
          Cancel
        </Button>
-       <Button type="submit" variant="success" isLoading={isSubmitting}>
+       <Button
+         type="submit"
+         variant="success"
+         isLoading={isSubmitting}
+         disabled={
+           (!!company?.requireJobPhoto && photos.length === 0) ||
+           (!!company?.requireJobFuelLog && fuelEntries.length === 0)
+         }
+       >
          Confirm & Complete Job
        </Button>
      </div>
