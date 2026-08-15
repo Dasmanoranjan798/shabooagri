@@ -19,5 +19,11 @@ export const saasLoginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+export const saasChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+});
+
 export type SaasRegisterInput = z.infer<typeof saasRegisterSchema>;
 export type SaasLoginInput = z.infer<typeof saasLoginSchema>;
+export type SaasChangePasswordInput = z.infer<typeof saasChangePasswordSchema>;

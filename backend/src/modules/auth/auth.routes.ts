@@ -26,3 +26,5 @@ authRouter.post("/password-reset/request", resetRateLimiter, asyncHandler(authCo
 authRouter.post("/password-reset/verify-token", asyncHandler(authController.verifyPasswordResetToken));
 authRouter.post("/password-reset/confirm", asyncHandler(authController.confirmPasswordReset));
 
+authRouter.post("/change-password", authMiddleware, asyncHandler(authController.changePassword));
+

@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { SaasAuthService } from "./saasAuth.service";
-import { saasLoginSchema, saasRegisterSchema } from "./saasAuth.validation";
+import { saasChangePasswordSchema, saasLoginSchema, saasRegisterSchema } from "./saasAuth.validation";
 import { SaasSsoService } from "./saasSso.service";
 
 const saasAuthService = new SaasAuthService();
@@ -32,6 +32,17 @@ export class SaasAuthController {
       const saasUserId = req.saasUser!.id;
       const user = await saasAuthService.getMe(saasUserId);
       res.status(200).json({ success: true, data: user });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async changePassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const saasUserId = req.saasUser!.id;
+      const validatedInput = saasChangePasswordSchema.parse(req.body);
+      const result = await saasAuthService.changePassword(saasUserId, validatedInput);
+      res.status(200).json({ success: true, data: result });
     } catch (err) {
       next(err);
     }

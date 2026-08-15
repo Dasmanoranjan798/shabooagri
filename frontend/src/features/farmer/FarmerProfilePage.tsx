@@ -1,6 +1,7 @@
 import React from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { ChangePasswordCard } from "../../components/ChangePasswordCard";
 
 export const FarmerProfilePage: React.FC = () => {
  const { user, logout } = useAuth();
@@ -35,6 +36,10 @@ export const FarmerProfilePage: React.FC = () => {
  <div className="sa-portal-detail-value">{item.value}</div>
  </div>
  ))}
+ </div>
+
+ <div style={{ marginTop: "20px" }}>
+ <ChangePasswordCard />
  </div>
 
  <button

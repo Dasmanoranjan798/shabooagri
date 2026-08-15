@@ -9,6 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 import { setCustomTerms } from "../../lib/terminology";
 import { setGlobalCompanyBranding, setGlobalCurrency } from "../../lib/theme";
 import { RoleManagementCard } from "./RoleManagementCard";
+import { ChangePasswordCard } from "../../components/ChangePasswordCard";
 import {
   Settings,
   Building2,
@@ -19,7 +20,8 @@ import {
   Lock,
   CheckCircle2,
   XCircle,
-  CreditCard
+  CreditCard,
+  KeyRound
 } from "lucide-react";
 
 const TERM_KEYS = ["customer", "driver", "machine", "booking", "invoice", "village"] as const;
@@ -34,7 +36,7 @@ const TERM_LABELS: Record<TermKey, string> = {
   village: "Village",
 };
 
-type SettingsTab = "business" | "invoicing" | "operations" | "terminology" | "roles";
+type SettingsTab = "business" | "invoicing" | "operations" | "terminology" | "roles" | "account";
 
 export const SettingsPage: React.FC = () => {
   const { hasPermission } = useAuth();
@@ -300,6 +302,7 @@ export const SettingsPage: React.FC = () => {
     { id: "operations", label: "Equipment & Operational Rules", icon: <Tractor size={16} /> },
     { id: "terminology", label: "Business Terminology", icon: <Tag size={16} /> },
     { id: "roles", label: "Users, Roles & Permissions", icon: <ShieldCheck size={16} /> },
+    { id: "account", label: "My Account & Security", icon: <KeyRound size={16} /> },
   ];
 
   return (
@@ -1025,6 +1028,9 @@ export const SettingsPage: React.FC = () => {
         {activeTab === "roles" && (
           <RoleManagementCard canManage={canManage} />
         )}
+
+        {/* TAB 6: MY ACCOUNT & SECURITY */}
+        {activeTab === "account" && <ChangePasswordCard />}
       </div>
     </div>
   );

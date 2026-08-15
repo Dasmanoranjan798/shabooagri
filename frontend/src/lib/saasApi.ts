@@ -112,6 +112,13 @@ export async function getSaasMe(): Promise<SaasUser> {
   return fetchSaasApi<SaasUser>("/saas/auth/me");
 }
 
+export async function changeSaasPassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+  return fetchSaasApi<{ message: string }>("/saas/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+
 export async function getSaasCustomerProfile(): Promise<SaasCustomerProfile> {
   return fetchSaasApi<SaasCustomerProfile>("/saas/customers/profile");
 }

@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { AppError } from "../../shared/errors/AppError";
 import * as authService from "./auth.service";
 import {
+  changePasswordSchema,
   confirmPasswordResetSchema,
   logoutSchema,
   otpRequestSchema,
@@ -82,6 +83,15 @@ export async function verifyPasswordResetToken(req: Request, res: Response) {
 export async function confirmPasswordReset(req: Request, res: Response) {
   const input = confirmPasswordResetSchema.parse(req.body);
   const result = await authService.confirmPasswordReset(input, req.tenantCompany);
+  res.status(200).json(result);
+}
+
+export async function changePassword(req: Request, res: Response) {
+  if (!req.user) {
+    throw new AppError(401, "Not authenticated");
+  }
+  const input = changePasswordSchema.parse(req.body);
+  const result = await authService.changePassword(req.user.id, input);
   res.status(200).json(result);
 }
 

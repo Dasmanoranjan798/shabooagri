@@ -9,6 +9,7 @@ import * as rbacService from "../rbac/rbac.service";
 import { sendPasswordResetEmail } from "../../shared/services/mail.service";
 import type { AccessTokenPayload, AuthenticatedUser, RefreshTokenPayload } from "./auth.types";
 import type {
+  ChangePasswordInput,
   ConfirmPasswordResetInput,
   LogoutInput,
   OtpRequestInput,
@@ -400,5 +401,36 @@ export async function confirmPasswordReset(input: ConfirmPasswordResetInput, ten
     message: "Password has been successfully reset. You may now log in with your new password.",
     tenantSlug: targetCompany.slug || null,
   };
+}
+
+// Self-service change, for a user who is already logged in — distinct from
+// the request/verify/confirm email-token flow above, and doesn't depend on
+// SMTP being configured at all.
+export async function changePassword(userId: string, input: ChangePasswordInput) {
+  const user = await authRepository.findUserById(userId);
+  if (!user) {
+    throw new AppError(404, "User not found");
+  }
+
+  if (user.passwordHash) {
+    if (!input.currentPassword) {
+      throw new AppError(400, "Current password is required");
+    }
+    const matches = await bcrypt.compare(input.currentPassword, user.passwordHash);
+    if (!matches) {
+      throw new AppError(401, "Current password is incorrect");
+    }
+  }
+  // else: user has never set a password (PIN/OTP-only login) — this call is
+  // setting one for the first time, nothing to verify against.
+
+  const newPasswordHash = await bcrypt.hash(input.newPassword, BCRYPT_ROUNDS);
+  await authRepository.updateUserPassword(userId, newPasswordHash);
+
+  // Force re-login on other devices/sessions; the caller's own current
+  // access token stays valid until it naturally expires.
+  await authRepository.revokeAllUserRefreshTokens(userId);
+
+  return { message: "Password changed successfully." };
 }
 

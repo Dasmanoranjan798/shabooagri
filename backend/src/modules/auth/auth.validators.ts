@@ -62,6 +62,13 @@ export const confirmPasswordResetSchema = z.object({
   newPassword: z.string().min(8, "Password must be at least 8 characters long"),
 });
 
+export const changePasswordSchema = z.object({
+  // Optional: a user who only ever logged in via PIN/OTP may not have a
+  // password set yet — see auth.service.changePassword for the check.
+  currentPassword: z.string().min(1).optional(),
+  newPassword: z.string().min(8, "Password must be at least 8 characters long"),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type OtpRequestInput = z.infer<typeof otpRequestSchema>;
 export type OtpVerifyInput = z.infer<typeof otpVerifySchema>;
@@ -72,4 +79,5 @@ export type LogoutInput = z.infer<typeof logoutSchema>;
 export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetSchema>;
 export type VerifyPasswordResetTokenInput = z.infer<typeof verifyPasswordResetTokenSchema>;
 export type ConfirmPasswordResetInput = z.infer<typeof confirmPasswordResetSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 

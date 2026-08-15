@@ -3,7 +3,7 @@ import { prisma } from "../../../db/prisma";
 import { AppError } from "../../../shared/errors/AppError";
 import { generateSaasTokens } from "../middleware/saasAuth.middleware";
 import { generateUniqueLicenseNumber } from "../utils/licenseNumber.util";
-import type { SaasLoginInput, SaasRegisterInput } from "./saasAuth.validation";
+import type { SaasChangePasswordInput, SaasLoginInput, SaasRegisterInput } from "./saasAuth.validation";
 
 export class SaasAuthService {
   async register(input: SaasRegisterInput) {
@@ -151,5 +151,37 @@ export class SaasAuthService {
     }
 
     return saasUser;
+  }
+
+  async changePassword(saasUserId: string, input: SaasChangePasswordInput) {
+    const saasUser = await prisma.saasUser.findUnique({ where: { id: saasUserId } });
+
+    if (!saasUser) {
+      throw new AppError(404, "SaaS user not found");
+    }
+
+    const isPasswordValid = await bcrypt.compare(input.currentPassword, saasUser.passwordHash);
+    if (!isPasswordValid) {
+      throw new AppError(401, "Current password is incorrect");
+    }
+
+    const newPasswordHash = await bcrypt.hash(input.newPassword, 10);
+
+    await prisma.saasUser.update({
+      where: { id: saasUserId },
+      data: { passwordHash: newPasswordHash },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        saasUserId: saasUser.id,
+        entityType: "SaasUser",
+        entityId: saasUser.id,
+        action: "SAAS_USER_PASSWORD_CHANGED",
+        changes: {},
+      },
+    });
+
+    return { message: "Password changed successfully." };
   }
 }

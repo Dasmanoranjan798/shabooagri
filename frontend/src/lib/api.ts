@@ -205,6 +205,18 @@ export const api = {
     return res.json();
   },
 
+  async changePassword(currentPassword: string | undefined, newPassword: string): Promise<{ message: string }> {
+    const res = await fetchWithAuth("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to change password" }));
+      throw new ApiError(res.status, err.message || "Failed to change password");
+    }
+    return res.json();
+  },
+
   // Dashboard
   async getDashboardSummary(): Promise<DashboardSummaryResponse> {
     const res = await fetchWithAuth("/dashboard/summary");

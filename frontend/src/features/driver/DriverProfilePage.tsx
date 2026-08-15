@@ -2,6 +2,7 @@ import React from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
+import { ChangePasswordCard } from "../../components/ChangePasswordCard";
 
 export const DriverProfilePage: React.FC = () => {
  const { user, logout } = useAuth();
@@ -75,6 +76,10 @@ export const DriverProfilePage: React.FC = () => {
  </div>
  </div>
  )}
+
+ <div style={{ marginTop: "20px" }}>
+ <ChangePasswordCard />
+ </div>
 
  <button
  className="sa-driver-action-btn sa-driver-action-btn--pause"
