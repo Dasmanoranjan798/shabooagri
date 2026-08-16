@@ -211,6 +211,17 @@ export async function updateDetails(companyId: string, id: string, user: Authent
   if (!job) throw new AppError(404, "Job not found");
   await assertCanWriteJob(companyId, job, user);
 
+  // The invoice amount is calculated once from actualHours/completedAcres at
+  // completion time (see paymentService.createInvoiceForCompletedJob) and never
+  // recalculated. Letting those fields change afterward would silently desync
+  // the job from its already-generated invoice.
+  if (job.status === "COMPLETED" && (input.completedAcres !== undefined || input.actualHours !== undefined)) {
+    throw new AppError(
+      400,
+      "Cannot change worked hours or acres on a completed job — its invoice has already been generated from these values",
+    );
+  }
+
   return jobRepository.updateScopedWithRelations(companyId, id, input);
 }
 
