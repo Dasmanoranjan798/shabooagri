@@ -3,32 +3,41 @@ import * as authService from "../src/modules/auth/auth.service";
 import * as invoiceRepository from "../src/modules/payments/invoice.repository";
 import * as paymentService from "../src/modules/payments/payment.service";
 
+import bcrypt from "bcryptjs";
+
 async function runTests() {
   console.log("Starting Payments & Invoices module end-to-end tests...\n");
 
-  const company = await prisma.company.findUnique({ where: { slug: "pilot" } });
-  if (!company) throw new Error("Pilot company missing. Run seed first.");
-  const companyId = company.id;
-
   const testSuffix = Date.now().toString();
 
-  // 1. Setup Users for roles
-  const existingOwner = await prisma.user.findFirst({
-    where: { companyId, role: { systemKey: "owner" } },
+  const company = await prisma.company.create({
+    data: {
+      name: `Payment Test Company ${testSuffix}`,
+      slug: `paytest-${testSuffix}`,
+    },
+  });
+  const companyId = company.id;
+
+  await prisma.pricingMethod.createMany({
+    data: [
+      { companyId, key: "per_hour", label: "Per Hour", unit: "hour", isActive: true },
+      { companyId, key: "per_minute", label: "Per Minute", unit: "minute", isActive: true },
+      { companyId, key: "per_acre", label: "Per Acre", unit: "acre", isActive: true },
+      { companyId, key: "per_job", label: "Per Job / Fixed", unit: "job", isActive: true },
+    ],
   });
 
-  let ownerAuth: { id: string; companyId: string; roleId: string };
-  if (existingOwner) {
-    ownerAuth = { id: existingOwner.id, companyId: existingOwner.companyId, roleId: existingOwner.roleId };
-  } else {
-    const ownerRes = await authService.register({
+  const ownerRole = await prisma.role.findFirstOrThrow({ where: { systemKey: "owner" } });
+  const ownerUser = await prisma.user.create({
+    data: {
+      companyId,
+      roleId: ownerRole.id,
       fullName: "Test Owner",
       email: `owner_${testSuffix}@example.com`,
-      password: "Password123!",
-      roleKey: "owner",
-    });
-    ownerAuth = { id: ownerRes.user.id, companyId, roleId: ownerRes.user.roleId };
-  }
+      passwordHash: await bcrypt.hash("Password123!", 10),
+    },
+  });
+  const ownerAuth = { id: ownerUser.id, companyId, roleId: ownerUser.roleId, isOwner: true };
 
   const managerUser = await authService.register(
     {
@@ -417,7 +426,9 @@ async function runTests() {
   await prisma.customer.deleteMany({ where: { companyId } });
   await prisma.village.deleteMany({ where: { companyId } });
   await prisma.machineType.deleteMany({ where: { companyId } });
-  await prisma.user.deleteMany({ where: { id: { in: userIds } } });
+  await prisma.pricingMethod.deleteMany({ where: { companyId } });
+  await prisma.user.deleteMany({ where: { companyId } });
+  await prisma.company.delete({ where: { id: companyId } });
 
   console.log(" Cleanup finished successfully!");
   console.log("\n ALL PAYMENTS & INVOICES TESTS PASSED SUCCESSFULLY!\n");

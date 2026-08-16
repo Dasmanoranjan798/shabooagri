@@ -14,11 +14,34 @@ async function runPricingTests() {
   console.log("STARTING FOUR PRICING METHODS END-TO-END TEST");
   console.log("==================================================");
 
-  const company = await authRepository.findSingleTenantCompany();
+  const testSuffix = Date.now().toString();
 
-  // Load Owner User
-  const ownerUser = await prisma.user.findFirstOrThrow({
-    where: { companyId: company.id, role: { systemKey: "owner" } },
+  const company = await prisma.company.create({
+    data: {
+      name: `Pricing Test Company ${testSuffix}`,
+      slug: `pricetest-${testSuffix}`,
+    },
+  });
+
+  await prisma.pricingMethod.createMany({
+    data: [
+      { companyId: company.id, key: "per_hour", label: "Per Hour", unit: "hour", isActive: true },
+      { companyId: company.id, key: "per_minute", label: "Per Minute", unit: "minute", isActive: true },
+      { companyId: company.id, key: "per_acre", label: "Per Acre", unit: "acre", isActive: true },
+      { companyId: company.id, key: "per_job", label: "Per Job / Fixed", unit: "job", isActive: true },
+    ],
+  });
+
+  const ownerRole = await prisma.role.findFirstOrThrow({ where: { systemKey: "owner" } });
+
+  const ownerUser = await prisma.user.create({
+    data: {
+      companyId: company.id,
+      roleId: ownerRole.id,
+      fullName: "Pricing Test Owner",
+      email: `owner_${testSuffix}@example.com`,
+      passwordHash: "dummy",
+    },
     include: { role: true },
   });
 
@@ -31,7 +54,6 @@ async function runPricingTests() {
   };
 
   // Create test master data
-  const testSuffix = Date.now().toString();
   const village = await prisma.village.create({
     data: { companyId: company.id, name: `Pricing Village ${testSuffix}` },
   });
@@ -158,6 +180,22 @@ async function runPricingTests() {
     throw new Error(`Expected Per Job invoice amount 5000, got ${job4.invoice?.totalAmount}`);
   }
   console.log(" Per Job / Fixed Rate pricing method verified: ₹" + job4.invoice.totalAmount);
+
+  // Cleanup test company data
+  await prisma.payment.deleteMany({ where: { companyId: company.id } });
+  await prisma.invoice.deleteMany({ where: { companyId: company.id } });
+  await prisma.jobStatusLog.deleteMany({ where: { companyId: company.id } });
+  await prisma.job.deleteMany({ where: { companyId: company.id } });
+  await prisma.booking.deleteMany({ where: { companyId: company.id } });
+  await prisma.machine.deleteMany({ where: { companyId: company.id } });
+  await prisma.driver.deleteMany({ where: { companyId: company.id } });
+  await prisma.employee.deleteMany({ where: { companyId: company.id } });
+  await prisma.customer.deleteMany({ where: { companyId: company.id } });
+  await prisma.village.deleteMany({ where: { companyId: company.id } });
+  await prisma.machineType.deleteMany({ where: { companyId: company.id } });
+  await prisma.pricingMethod.deleteMany({ where: { companyId: company.id } });
+  await prisma.user.deleteMany({ where: { companyId: company.id } });
+  await prisma.company.delete({ where: { id: company.id } });
 
   console.log("\n==================================================");
   console.log(" ALL FOUR PRICING METHODS VERIFIED SUCCESSFULLY!");
