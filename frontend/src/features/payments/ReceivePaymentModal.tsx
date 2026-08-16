@@ -52,7 +52,7 @@ export const ReceivePaymentModal: React.FC<ReceivePaymentModalProps> = ({
  }
 
  if (parsedAmount > invoice.balanceAmount) {
- setError(`Payment amount cannot exceed remaining balance of ₹${invoice.balanceAmount.toLocaleString("en-IN")}`);
+ setError(`Payment amount cannot exceed remaining balance of ₹${Number(invoice.balanceAmount).toLocaleString("en-IN")}`);
  return;
  }
 
@@ -105,13 +105,13 @@ export const ReceivePaymentModal: React.FC<ReceivePaymentModalProps> = ({
  <div className="sa-detail-grid" style={{ background: "#f8fafc", padding: "1rem", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
  <div className="sa-detail-item">
  <span className="sa-detail-label">Total Invoice Amount</span>
- <span className="sa-detail-val">₹{invoice.totalAmount.toLocaleString("en-IN")}</span>
+ <span className="sa-detail-val">₹{Number(invoice.totalAmount).toLocaleString("en-IN")}</span>
  </div>
 
  <div className="sa-detail-item">
  <span className="sa-detail-label">Already Paid</span>
  <span className="sa-detail-val" style={{ color: "#16a34a" }}>
- ₹{invoice.paidAmount.toLocaleString("en-IN")}
+ ₹{Number(invoice.paidAmount).toLocaleString("en-IN")}
  </span>
  </div>
 
@@ -120,7 +120,7 @@ export const ReceivePaymentModal: React.FC<ReceivePaymentModalProps> = ({
  Outstanding Balance Due
  </span>
  <span className="sa-detail-val" style={{ fontSize: "1.25rem", fontWeight: 700, color: "#dc2626" }}>
- ₹{invoice.balanceAmount.toLocaleString("en-IN")}
+ ₹{Number(invoice.balanceAmount).toLocaleString("en-IN")}
  </span>
  </div>
  </div>
@@ -131,7 +131,7 @@ export const ReceivePaymentModal: React.FC<ReceivePaymentModalProps> = ({
  label="Amount Received (₹) *"
  type="number"
  min="1"
- max={invoice.balanceAmount}
+ max={Number(invoice.balanceAmount)}
  step="1"
  value={amount}
  onChange={(e) => setAmount(e.target.value)}

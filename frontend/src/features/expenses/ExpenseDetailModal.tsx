@@ -37,7 +37,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
  <div className="sa-modal-booking-title">
  <span>{categoryName}</span>
  <Badge variant="danger">
- ₹{expense.amount.toLocaleString("en-IN")}
+ ₹{Number(expense.amount).toLocaleString("en-IN")}
  </Badge>
  </div>
  }
@@ -64,7 +64,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
  <div className="sa-detail-item">
  <span className="sa-detail-label"> Expense Amount</span>
  <span className="sa-detail-val" style={{ fontSize: "1.2rem", fontWeight: 700, color: "#dc2626" }}>
- ₹{expense.amount.toLocaleString("en-IN")}
+ ₹{Number(expense.amount).toLocaleString("en-IN")}
  </span>
  </div>
 

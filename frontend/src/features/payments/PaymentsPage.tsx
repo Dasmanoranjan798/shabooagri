@@ -75,9 +75,9 @@ export const PaymentsPage: React.FC = () => {
  };
 
  // Authoritative financial totals
- const totalReceivables = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
- const totalCollected = invoices.reduce((sum, inv) => sum + inv.paidAmount, 0);
- const totalBalanceDue = invoices.reduce((sum, inv) => sum + inv.balanceAmount, 0);
+ const totalReceivables = invoices.reduce((sum, inv) => sum + Number(inv.totalAmount), 0);
+ const totalCollected = invoices.reduce((sum, inv) => sum + Number(inv.paidAmount), 0);
+ const totalBalanceDue = invoices.reduce((sum, inv) => sum + Number(inv.balanceAmount), 0);
 
  // Filter invoices by status tab & search query
  const filteredInvoices = invoices.filter((inv) => {
@@ -276,10 +276,10 @@ export const PaymentsPage: React.FC = () => {
  <div className="sa-cell-title">{inv.customer?.name || "Customer"}</div>
  <div className="sa-cell-sub">{inv.customer?.village?.name || "Village"}</div>
  </td>
- <td>₹{inv.totalAmount.toLocaleString("en-IN")}</td>
- <td className="sa-text-success">₹{inv.paidAmount.toLocaleString("en-IN")}</td>
+ <td>₹{Number(inv.totalAmount).toLocaleString("en-IN")}</td>
+ <td className="sa-text-success">₹{Number(inv.paidAmount).toLocaleString("en-IN")}</td>
  <td className={inv.balanceAmount > 0 ? "sa-amount-bold sa-text-danger" : "sa-text-muted"}>
- ₹{inv.balanceAmount.toLocaleString("en-IN")}
+ ₹{Number(inv.balanceAmount).toLocaleString("en-IN")}
  </td>
  <td>
  <Badge variant={getStatusBadgeVariant(inv.status)} size="sm">
@@ -341,7 +341,7 @@ export const PaymentsPage: React.FC = () => {
 
  <div className="sa-bcard-row">
  <span className="sa-bcard-label"> Total:</span>
- <span className="sa-bcard-val">₹{inv.totalAmount.toLocaleString("en-IN")}</span>
+ <span className="sa-bcard-val">₹{Number(inv.totalAmount).toLocaleString("en-IN")}</span>
  </div>
 
  <div className="sa-bcard-row">
@@ -350,7 +350,7 @@ export const PaymentsPage: React.FC = () => {
  className="sa-bcard-val sa-amount-bold"
  style={{ color: inv.balanceAmount > 0 ? "#dc2626" : "#16a34a" }}
  >
- ₹{inv.balanceAmount.toLocaleString("en-IN")}
+ ₹{Number(inv.balanceAmount).toLocaleString("en-IN")}
  </span>
  </div>
  </div>
@@ -363,7 +363,7 @@ export const PaymentsPage: React.FC = () => {
  style={{ width: "100%" }}
  onClick={(e) => handleOpenReceivePayment(inv, e)}
  >
- Receive Payment (₹{inv.balanceAmount.toLocaleString("en-IN")})
+ Receive Payment (₹{Number(inv.balanceAmount).toLocaleString("en-IN")})
  </Button>
  </div>
  )}
