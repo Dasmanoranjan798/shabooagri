@@ -205,27 +205,72 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerId) {
-      setError(`Please select a ${customerTerm}`);
-      return;
+    setIsSubmitting(true);
+    setError(null);
+
+    let activeVillageId = villageId;
+    let activeCustomerId = customerId;
+
+    // Auto-create new village if inline creation is active
+    if (isCreatingVillage && newVillageName.trim()) {
+      try {
+        const createdV = await api.createVillage({ name: newVillageName.trim() });
+        setVillages((prev) => [...prev, createdV]);
+        activeVillageId = createdV.id;
+        setVillageId(createdV.id);
+        setNewVillageName("");
+        setIsCreatingVillage(false);
+      } catch (vErr: any) {
+        setError(vErr.message || `Failed to create new ${villageTerm.toLowerCase()}`);
+        setIsSubmitting(false);
+        return;
+      }
     }
-    if (!villageId) {
-      setError(`Please select a ${villageTerm}`);
-      return;
-    }
-    if (!pricingMethodId) {
-      setError("Please select a pricing method");
+
+    if (!activeVillageId) {
+      setError(`Please select or add a ${villageTerm}`);
+      setIsSubmitting(false);
       return;
     }
 
-    setIsSubmitting(true);
-    setError(null);
+    // Auto-create new farmer if inline creation is active
+    if (isCreatingFarmer && newFarmerName.trim()) {
+      try {
+        const createdC = await api.createCustomer({
+          name: newFarmerName.trim(),
+          phone: newFarmerPhone.trim() || undefined,
+          villageId: activeVillageId,
+        });
+        setCustomers((prev) => [...prev, createdC]);
+        activeCustomerId = createdC.id;
+        setCustomerId(createdC.id);
+        setNewFarmerName("");
+        setNewFarmerPhone("");
+        setIsCreatingFarmer(false);
+      } catch (cErr: any) {
+        setError(cErr.message || `Failed to create new ${customerTerm.toLowerCase()}`);
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    if (!activeCustomerId) {
+      setError(`Please select or add a ${customerTerm}`);
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!pricingMethodId) {
+      setError("Please select a pricing method");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       if (bookingToEdit) {
         await api.updateBookingDetails(bookingToEdit.id, {
-          customerId,
-          villageId,
+          customerId: activeCustomerId,
+          villageId: activeVillageId,
           scheduledDate,
           scheduledTime: scheduledTime ? `${scheduledTime}:00` : undefined,
           pricingMethodId,
@@ -244,8 +289,8 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
         }
       } else {
         const payload: CreateBookingPayload = {
-          customerId,
-          villageId,
+          customerId: activeCustomerId,
+          villageId: activeVillageId,
           machineId: machineId || undefined,
           driverId: driverId || undefined,
           scheduledDate,
