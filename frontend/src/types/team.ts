@@ -49,7 +49,7 @@ export interface CreateInvitePayload {
 export interface CreateInviteResponse {
   invite: StaffInvite;
   inviteLink: string;
-  deliveryMethod: "email" | "email_failed" | "manual_link";
+  deliveryMethod: "email" | "email_failed" | "sms" | "manual_link";
 }
 
 export interface InviteVerifyResult {

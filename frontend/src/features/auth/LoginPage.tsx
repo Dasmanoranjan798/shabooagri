@@ -209,6 +209,9 @@ export const LoginPage: React.FC = () => {
             <>
               {otpSent ? (
                 <>
+                  <div className="sa-alert sa-alert-success" style={{ fontSize: "0.82rem", marginBottom: "10px" }}>
+                    {identifier.includes("@") ? `OTP code emailed to ${identifier}` : `SMS OTP code sent to +91 ${identifier}`}
+                  </div>
                   {devOtp && (
                     <div className="sa-alert sa-alert-info" style={{ fontSize: "0.8rem" }}>
                       Dev Mode OTP: <strong>{devOtp}</strong>

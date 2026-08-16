@@ -101,11 +101,15 @@ export const InviteStaffModal: React.FC<InviteStaffModalProps> = ({ isOpen, onCl
               <CheckCircle2 size={16} />
               <span>Invite emailed to {email}. They can click the link to set their password and get started.</span>
             </div>
+          ) : result.deliveryMethod === "sms" ? (
+            <div className="sa-alert sa-alert-success" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <CheckCircle2 size={16} />
+              <span>SMS invite sent to {phone}. They can click the link to set their password and get started.</span>
+            </div>
           ) : (
             <div className="sa-alert sa-alert-info">
               <p style={{ marginBottom: "8px" }}>
-                SMS delivery isn't connected yet — copy this link and share it with them directly (WhatsApp, SMS,
-                etc.).
+                Invite link generated — copy or share it directly with them (WhatsApp, SMS, etc.):
               </p>
               <div
                 style={{
@@ -124,7 +128,22 @@ export const InviteStaffModal: React.FC<InviteStaffModalProps> = ({ isOpen, onCl
               </div>
             </div>
           )}
-          <Button type="button" variant="secondary" onClick={onClose} style={{ width: "100%" }}>
+
+          {phone && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                const msg = encodeURIComponent(`Hi ${fullName}, you have been invited to join ShabooAgri. Click here to activate your account: ${result.inviteLink}`);
+                window.open(`https://api.whatsapp.com/send?phone=91${phone.replace(/\D/g, "")}&text=${msg}`, "_blank");
+              }}
+              style={{ width: "100%" }}
+            >
+              Share via WhatsApp
+            </Button>
+          )}
+
+          <Button type="button" variant="primary" onClick={onClose} style={{ width: "100%" }}>
             Done
           </Button>
         </div>
