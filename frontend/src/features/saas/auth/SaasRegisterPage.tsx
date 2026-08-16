@@ -10,6 +10,7 @@ export const SaasRegisterPage: React.FC = () => {
 
   const [formData, setFormData] = useState({
     businessName: "",
+    contactPerson: "",
     businessEmail: "",
     phone: "",
     gstin: "",
@@ -30,7 +31,12 @@ export const SaasRegisterPage: React.FC = () => {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!formData.businessName.trim() || !formData.businessEmail.trim() || !formData.phone.trim()) {
+    if (
+      !formData.businessName.trim() ||
+      !formData.contactPerson.trim() ||
+      !formData.businessEmail.trim() ||
+      !formData.phone.trim()
+    ) {
       setErrorMsg("Please fill out all required business fields.");
       return;
     }
@@ -49,7 +55,7 @@ export const SaasRegisterPage: React.FC = () => {
     try {
       await registerSaas({
         businessName: formData.businessName.trim(),
-        contactPerson: formData.businessName.trim(),
+        contactPerson: formData.contactPerson.trim(),
         email: formData.businessEmail.trim(),
         phone: formData.phone.trim(),
         gstin: formData.gstin.trim(),
@@ -117,6 +123,21 @@ export const SaasRegisterPage: React.FC = () => {
                   value={formData.businessName}
                   onChange={handleChange}
                   placeholder="e.g. Kisan Agro Services"
+                  className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[var(--saas-primary)] focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Contact Person *
+                </label>
+                <input
+                  type="text"
+                  name="contactPerson"
+                  value={formData.contactPerson}
+                  onChange={handleChange}
+                  placeholder="e.g. Ramesh Kumar"
                   className="w-full px-3.5 h-10 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[var(--saas-primary)] focus:ring-2 focus:ring-emerald-500/20 transition-all"
                   required
                 />
