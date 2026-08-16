@@ -43,7 +43,7 @@ export const FarmerProfilePage: React.FC = () => {
  </div>
 
  <button
- className="sa-driver-action-btn sa-driver-action-btn--pause"
+ className="sa-portal-action-btn sa-portal-action-btn--signout"
  onClick={handleLogout}
  style={{ marginTop: "24px" }}
  >

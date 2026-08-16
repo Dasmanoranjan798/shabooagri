@@ -288,3 +288,45 @@
   font-weight: 600;
   margin-top: 2px;
 }
+
+.sa-portal-empty-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.sa-portal-filter-count {
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.sa-portal-filter-btn:not(.is-active) .sa-portal-filter-count {
+  background-color: var(--color-surface-secondary, rgba(0, 0, 0, 0.06));
+  color: var(--color-text-muted);
+}
+
+.sa-portal-action-btn {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+  cursor: pointer;
+}
+
+.sa-portal-action-btn--signout {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-danger, #dc2626);
+}

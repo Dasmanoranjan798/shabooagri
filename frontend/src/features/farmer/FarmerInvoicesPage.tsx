@@ -100,7 +100,7 @@ export const FarmerInvoicesPage: React.FC = () => {
  >
  {opt.label}
  {opt.value !== "ALL" && (
- <span className="sa-driver-filter-count">
+ <span className="sa-portal-filter-count">
  {invoices.filter((inv) => inv.status === opt.value).length}
  </span>
  )}
@@ -113,7 +113,7 @@ export const FarmerInvoicesPage: React.FC = () => {
  ) : error ? (
  <div className="sa-error-state"><p> {error}</p><button className="sa-btn sa-btn-secondary" onClick={load}>Retry</button></div>
  ) : sorted.length === 0 ? (
- <div className="sa-driver-empty-card">
+ <div className="sa-portal-empty-card">
  <div style={{ fontSize: "2.5rem", marginBottom: "8px" }}></div>
  <div style={{ fontWeight: 600 }}>No invoices found</div>
  </div>
