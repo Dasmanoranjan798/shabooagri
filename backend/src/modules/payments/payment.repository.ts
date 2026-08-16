@@ -1,5 +1,6 @@
 import type { InvoiceStatus, PaymentMethod, Prisma } from "@prisma/client";
 import { prisma } from "../../db/prisma";
+import { AppError } from "../../shared/errors/AppError";
 import { invoiceIncludeRelations } from "./invoice.repository";
 
 export const paymentIncludeRelations = {
@@ -62,22 +63,45 @@ export interface RecordPaymentData {
   notes?: string;
 }
 
-export interface UpdateInvoicePaymentState {
-  paidAmount: number;
-  balanceAmount: number;
-  status: InvoiceStatus;
-}
-
-// Transactional write: writes the new Payment row AND updates Invoice paidAmount,
-// balanceAmount, and status in the exact same database transaction — ensuring
-// data consistency without DB triggers (consistent with decision #4).
-export async function recordPaymentTx(
-  companyId: string,
-  invoiceId: string,
-  paymentData: RecordPaymentData,
-  invoiceUpdate: UpdateInvoicePaymentState,
-) {
+// Transactional write: locks the invoice row (SELECT ... FOR UPDATE), then
+// validates and recomputes paidAmount/balanceAmount/status from that locked
+// read — not from a value the caller read before the transaction started.
+// Two concurrent payments against the same invoice can no longer both read
+// the same stale balance and both pass validation; the second one blocks on
+// the row lock until the first commits, then re-validates against the
+// now-updated balance and is correctly rejected if it would overpay.
+export async function recordPaymentTx(companyId: string, invoiceId: string, paymentData: RecordPaymentData) {
   return prisma.$transaction(async (tx) => {
+    const locked = await tx.$queryRaw<
+      Array<{ id: string; total_amount: string; paid_amount: string; balance_amount: string; status: InvoiceStatus }>
+    >`
+      SELECT id, total_amount::text, paid_amount::text, balance_amount::text, status
+      FROM invoices
+      WHERE id = ${invoiceId}::uuid AND company_id = ${companyId}::uuid
+      FOR UPDATE
+    `;
+    const invoiceRow = locked[0];
+    if (!invoiceRow) {
+      throw new AppError(404, "Invoice not found");
+    }
+    if (invoiceRow.status === "PAID") {
+      throw new AppError(400, "Invoice is already fully paid");
+    }
+
+    const balanceAmount = Number(invoiceRow.balance_amount);
+    if (balanceAmount <= 0) {
+      throw new AppError(400, "Invoice balance is zero");
+    }
+    if (paymentData.amount > balanceAmount) {
+      throw new AppError(400, `Payment amount (${paymentData.amount}) exceeds remaining balance (${balanceAmount})`);
+    }
+
+    const currentPaid = Number(invoiceRow.paid_amount);
+    const totalAmount = Number(invoiceRow.total_amount);
+    const newPaidAmount = Math.round((currentPaid + paymentData.amount) * 100) / 100;
+    const newBalanceAmount = Math.max(0, Math.round((totalAmount - newPaidAmount) * 100) / 100);
+    const newStatus: InvoiceStatus = newBalanceAmount === 0 ? "PAID" : "PARTIALLY_PAID";
+
     const payment = await tx.payment.create({
       data: {
         companyId,
@@ -94,9 +118,9 @@ export async function recordPaymentTx(
     const updatedInvoice = await tx.invoice.update({
       where: { id: invoiceId },
       data: {
-        paidAmount: invoiceUpdate.paidAmount,
-        balanceAmount: invoiceUpdate.balanceAmount,
-        status: invoiceUpdate.status,
+        paidAmount: newPaidAmount,
+        balanceAmount: newBalanceAmount,
+        status: newStatus,
       },
       include: invoiceIncludeRelations,
     });

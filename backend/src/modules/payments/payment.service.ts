@@ -157,49 +157,21 @@ export async function receivePayment(
   user: AuthenticatedUser,
   input: ReceivePaymentInput,
 ) {
+  // Fast-fail check for an obviously wrong ID; the balance/status validation
+  // that actually matters happens inside recordPaymentTx's row-locked
+  // transaction, not here, so a concurrent payment can't race past it.
   const invoice = await invoiceRepository.findByIdScoped(companyId, invoiceId);
   if (!invoice) {
     throw new AppError(404, "Invoice not found");
   }
 
-  if (invoice.status === "PAID") {
-    throw new AppError(400, "Invoice is already fully paid");
-  }
-
-  const balanceAmount = Number(invoice.balanceAmount);
-  if (balanceAmount <= 0) {
-    throw new AppError(400, "Invoice balance is zero");
-  }
-
-  if (input.amount > balanceAmount) {
-    throw new AppError(
-      400,
-      `Payment amount (${input.amount}) exceeds remaining balance (${balanceAmount})`,
-    );
-  }
-
-  const currentPaid = Number(invoice.paidAmount);
-  const totalAmount = Number(invoice.totalAmount);
-  const newPaidAmount = Math.round((currentPaid + input.amount) * 100) / 100;
-  const newBalanceAmount = Math.max(0, Math.round((totalAmount - newPaidAmount) * 100) / 100);
-  const newStatus = newBalanceAmount === 0 ? "PAID" : "PARTIALLY_PAID";
-
-  return paymentRepository.recordPaymentTx(
-    companyId,
-    invoiceId,
-    {
-      amount: input.amount,
-      paymentMethod: input.paymentMethod,
-      referenceNumber: input.referenceNumber,
-      receivedBy: user.id,
-      notes: input.notes,
-    },
-    {
-      paidAmount: newPaidAmount,
-      balanceAmount: newBalanceAmount,
-      status: newStatus,
-    },
-  );
+  return paymentRepository.recordPaymentTx(companyId, invoiceId, {
+    amount: input.amount,
+    paymentMethod: input.paymentMethod,
+    referenceNumber: input.referenceNumber,
+    receivedBy: user.id,
+    notes: input.notes,
+  });
 }
 
 export async function listPayments(companyId: string, user: AuthenticatedUser, invoiceId?: string) {
