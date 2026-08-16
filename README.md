@@ -29,10 +29,12 @@ Node.js / Express / TypeScript / PostgreSQL (Prisma) / React (Vite, TypeScript).
 
 ## Status
 
-**Fully implemented and verified end-to-end (100% complete & pilot-ready).**
+**Functionally complete and live in production for a real pilot company — not yet fully hardened for onboarding paying customers at scale.**
 
-- **Backend**: Express/TypeScript/Prisma API with 20 modular business capabilities (Authentication, RBAC, Master Data, Bookings, Jobs, Payments & Invoicing, Fuel, Expenses, Maintenance, Settings, Dashboard Analytics, SaaS Control Plane, Provisioning, and Security). Passed 100% of integration test suites.
-- **Frontend**: React (Vite/TypeScript) single-page application with responsive layouts (`OwnerManagerLayout`, `DriverLayout`, `FarmerPortalLayout`, `SaasLayout`), UI design system, operational workflows, driver portal, farmer portal, and SaaS public/admin surfaces. Compiles cleanly (`tsc -b`), builds for production (`vite build`), and passes linting (`oxlint`).
+"Compiles cleanly, passes lint, 100% test suite pass rate" (the old claim here) turned out not to mean "correct." A full hand audit on Aug 15–16, 2026 found 47 real defects across severity tiers — see [`SHABOOAGRI_CODEBASE_AUDIT.md`](SHABOOAGRI_CODEBASE_AUDIT.md)'s August 16 reconciliation notice for what was actually wrong and why automated checks missed it. All 12 Critical and all 14 High-severity findings are fixed and deployed as of Aug 16, 2026 (see `git log` on `master` for the commit-by-commit detail — every fix commit documents the defect and how it was verified live with disposable test data). **14 Medium and 7 Low findings remain open** — none block the current pilot, but worth closing before a wider rollout.
+
+- **Backend**: Express/TypeScript/Prisma API with 20 modular business capabilities (Authentication, RBAC, Master Data, Bookings, Jobs, Payments & Invoicing, Fuel, Expenses, Maintenance, Settings, Dashboard Analytics, SaaS Control Plane, Provisioning, Staff Invites, and Security).
+- **Frontend**: React (Vite/TypeScript) single-page application with responsive layouts (`OwnerManagerLayout`, `DriverLayout`, `FarmerPortalLayout`, `SaasLayout`), UI design system, operational workflows, driver portal, farmer portal, and SaaS public/admin surfaces. Compiles cleanly (`tsc -b`), builds for production (`vite build`).
 
 ## Local setup
 
