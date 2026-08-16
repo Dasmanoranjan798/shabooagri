@@ -71,6 +71,7 @@ Per the user's explicit directive ("PDF and Excel ONLY, no CSV"), built a dedica
 - **Equipment Maintenance Alerts Engine**: Built real-time maintenance calculation engine (`getMaintenanceAlerts`) tracking worked engine hours and elapsed days vs schedule intervals. Integrated `GET /maintenance/alerts` API and rendered warning alert cards on `MaintenancePage.tsx`.
 - **UI/UX Refinements**: Refactored KPI card grids into fluid responsive columns (`repeat(auto-fit, minmax(200px, 1fr))`), removed cliché linear-gradient backgrounds and colored border-left accents in favor of clean brand surface tints, and verified responsive layouts across mobile, tablet, and desktop breakpoints.
 - **Inline Village Creation (`CustomerFormModal.tsx` & `BookingFormModal.tsx`)**: Added `createVillage` method to `api.ts` and built an inline **"+ Quick Create Village"** toggle and input inside the Farmer and Booking creation forms so users can create a new village instantly without breaking flow.
+- **Farmer Portal Navigation Route Fix (`FarmerHomePage.tsx`)**: Corrected `/portal/bookings` and `/portal/invoices` links to `/farmer/bookings` and `/farmer/invoices`. Farmers clicking Bookings/Invoices on their home screen now stay inside their portal without being bounced to the SaaS marketing site.
 
 ---
 

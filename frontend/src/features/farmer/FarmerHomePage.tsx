@@ -103,7 +103,7 @@ export const FarmerHomePage: React.FC = () => {
  <>
  <div className="sa-portal-section-header">
  <span className="sa-portal-section-title">Recent {bookingTerm}</span>
- <Link to="/portal/bookings" className="sa-portal-see-all">See all →</Link>
+ <Link to="/farmer/bookings" className="sa-portal-see-all">See all →</Link>
  </div>
  <div className="sa-portal-booking-list">
  {recentBookings.map((b) => (
@@ -127,13 +127,13 @@ export const FarmerHomePage: React.FC = () => {
 
  {/* Quick links */}
  <div className="sa-portal-quick-links">
- <Link to="/portal/bookings" className="sa-portal-quick-link">
+ <Link to="/farmer/bookings" className="sa-portal-quick-link">
  <span className="sa-portal-quick-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
  <Calendar size={20} />
  </span>
  <span>{bookingTerm}</span>
  </Link>
- <Link to="/portal/invoices" className="sa-portal-quick-link">
+ <Link to="/farmer/invoices" className="sa-portal-quick-link">
  <span className="sa-portal-quick-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
  <FileText size={20} />
  </span>
