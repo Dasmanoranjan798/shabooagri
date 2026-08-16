@@ -315,9 +315,10 @@ model Employee {
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
 
-  company Company @relation(fields: [companyId], references: [id])
-  user    User?   @relation(fields: [userId], references: [id])
+  company Company       @relation(fields: [companyId], references: [id])
+  user    User?         @relation(fields: [userId], references: [id])
   driver  Driver?
+  invites StaffInvite[]
 
   @@map("employees")
 }
@@ -733,6 +734,10 @@ model StaffInvite {
   email           String?
   phone           String?
   villageId       String?      @map("village_id") @db.Uuid
+  // Set when this invite grants login access to an employee record that
+  // already exists (e.g. invited from the Employees page) rather than
+  // creating a brand-new Employee on accept — see staffInvite.service.ts.
+  employeeId      String?      @map("employee_id") @db.Uuid
   tokenHash       String       @map("token_hash")
   status          InviteStatus @default(PENDING)
   invitedByUserId String       @map("invited_by_user_id") @db.Uuid
@@ -740,10 +745,11 @@ model StaffInvite {
   acceptedAt      DateTime?    @map("accepted_at")
   createdAt       DateTime     @default(now()) @map("created_at")
 
-  company   Company  @relation(fields: [companyId], references: [id])
-  role      Role     @relation(fields: [roleId], references: [id])
-  invitedBy User     @relation(fields: [invitedByUserId], references: [id])
-  village   Village? @relation(fields: [villageId], references: [id])
+  company   Company   @relation(fields: [companyId], references: [id])
+  role      Role      @relation(fields: [roleId], references: [id])
+  invitedBy User      @relation(fields: [invitedByUserId], references: [id])
+  village   Village?  @relation(fields: [villageId], references: [id])
+  employee  Employee? @relation(fields: [employeeId], references: [id])
 
   @@map("staff_invites")
 }

@@ -51,6 +51,16 @@ export async function createInvite(
     }
   }
 
+  if (input.employeeId) {
+    const employee = await prisma.employee.findFirst({ where: { id: input.employeeId, companyId } });
+    if (!employee) {
+      throw new AppError(400, "Unknown employee");
+    }
+    if (employee.userId) {
+      throw new AppError(409, "This employee already has a login account");
+    }
+  }
+
   const contact = input.email?.trim().toLowerCase() || input.phone?.trim();
   const existingUser = contact ? await authRepository.findUserByIdentifier(companyId, contact) : null;
   if (existingUser) {
@@ -76,6 +86,7 @@ export async function createInvite(
     email: input.email?.trim().toLowerCase(),
     phone: input.phone?.trim(),
     villageId: input.villageId,
+    employeeId: input.employeeId,
     tokenHash,
     invitedByUserId,
     expiresAt,
@@ -159,7 +170,23 @@ export async function acceptInvite(input: AcceptInviteInput) {
       },
     });
 
-    if (role.systemKey === "driver") {
+    if (invite.employeeId) {
+      // Grants login access to an Employee record that already exists
+      // (invited from the Employees page) instead of creating a new one.
+      await tx.employee.update({ where: { id: invite.employeeId }, data: { userId: newUser.id } });
+      if (role.systemKey === "driver") {
+        const existingDriver = await tx.driver.findUnique({ where: { employeeId: invite.employeeId } });
+        if (!existingDriver) {
+          await tx.driver.create({
+            data: {
+              companyId: invite.companyId,
+              employeeId: invite.employeeId,
+              availabilityStatus: "AVAILABLE",
+            },
+          });
+        }
+      }
+    } else if (role.systemKey === "driver") {
       const employee = await tx.employee.create({
         data: {
           companyId: invite.companyId,

@@ -7,6 +7,10 @@ export const createInviteSchema = z
     email: z.string().email("Invalid email address").optional(),
     phone: z.string().min(6, "Invalid phone number").optional(),
     villageId: z.string().uuid("Invalid village").optional(),
+    // Set when inviting someone who already has an Employee HR record
+    // (e.g. from the Employees page) — accept links to it instead of
+    // creating a new Employee.
+    employeeId: z.string().uuid("Invalid employee").optional(),
   })
   .refine((data) => data.email || data.phone, {
     message: "At least one of email or phone is required",

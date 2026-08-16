@@ -42,6 +42,7 @@ export interface CreateInvitePayload {
   email?: string;
   phone?: string;
   villageId?: string;
+  employeeId?: string;
 }
 
 export interface CreateInviteResponse {
