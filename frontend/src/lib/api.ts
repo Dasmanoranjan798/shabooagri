@@ -370,7 +370,10 @@ export const api = {
   // Master Data Option Lookups
   async listCustomers(): Promise<Customer[]> {
     const res = await fetchWithAuth("/customers");
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load customers" }));
+      throw new ApiError(res.status, err.message || "Failed to load customers");
+    }
     return res.json();
   },
 
@@ -419,13 +422,19 @@ export const api = {
 
   async listVillages(): Promise<VillageOption[]> {
     const res = await fetchWithAuth("/villages");
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load villages" }));
+      throw new ApiError(res.status, err.message || "Failed to load villages");
+    }
     return res.json();
   },
 
   async listMachines(): Promise<Machine[]> {
     const res = await fetchWithAuth("/machines");
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load machines" }));
+      throw new ApiError(res.status, err.message || "Failed to load machines");
+    }
     return res.json();
   },
 
@@ -474,13 +483,19 @@ export const api = {
 
   async listMachineTypes(): Promise<MachineType[]> {
     const res = await fetchWithAuth("/machine-types");
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load machine types" }));
+      throw new ApiError(res.status, err.message || "Failed to load machine types");
+    }
     return res.json();
   },
 
   async listDrivers(): Promise<Driver[]> {
     const res = await fetchWithAuth("/drivers");
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load drivers" }));
+      throw new ApiError(res.status, err.message || "Failed to load drivers");
+    }
     return res.json();
   },
 
@@ -529,7 +544,10 @@ export const api = {
 
   async listEmployees(): Promise<Employee[]> {
     const res = await fetchWithAuth("/employees");
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load employees" }));
+      throw new ApiError(res.status, err.message || "Failed to load employees");
+    }
     return res.json();
   },
 
@@ -578,7 +596,10 @@ export const api = {
 
   async listPricingMethods(): Promise<PricingMethodOption[]> {
     const res = await fetchWithAuth("/pricing-methods");
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load pricing methods" }));
+      throw new ApiError(res.status, err.message || "Failed to load pricing methods");
+    }
     return res.json();
   },
 
@@ -770,14 +791,20 @@ export const api = {
   async listPayments(invoiceId?: string): Promise<PaymentRecord[]> {
     const url = invoiceId ? `/payments?invoiceId=${encodeURIComponent(invoiceId)}` : "/payments";
     const res = await fetchWithAuth(url);
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load payments" }));
+      throw new ApiError(res.status, err.message || "Failed to load payments");
+    }
     return res.json();
   },
 
   // Expenses
   async listExpenseCategories(): Promise<ExpenseCategory[]> {
     const res = await fetchWithAuth("/expenses/categories");
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load expense categories" }));
+      throw new ApiError(res.status, err.message || "Failed to load expense categories");
+    }
     return res.json();
   },
 
@@ -847,7 +874,10 @@ export const api = {
     if (filter.to) params.set("to", filter.to);
     const qs = params.toString() ? `?${params.toString()}` : "";
     const res = await fetchWithAuth(`/fuel/entries${qs}`);
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load fuel entries" }));
+      throw new ApiError(res.status, err.message || "Failed to load fuel entries");
+    }
     return res.json();
   },
 
@@ -855,7 +885,10 @@ export const api = {
   async listMaintenanceSchedules(machineId?: string): Promise<MaintenanceSchedule[]> {
     const qs = machineId ? `?machineId=${encodeURIComponent(machineId)}` : "";
     const res = await fetchWithAuth(`/maintenance/schedules${qs}`);
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load maintenance schedules" }));
+      throw new ApiError(res.status, err.message || "Failed to load maintenance schedules");
+    }
     return res.json();
   },
 
@@ -880,7 +913,10 @@ export const api = {
   async listMaintenanceRecords(machineId?: string): Promise<MaintenanceRecord[]> {
     const qs = machineId ? `?machineId=${encodeURIComponent(machineId)}` : "";
     const res = await fetchWithAuth(`/maintenance/records${qs}`);
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load maintenance records" }));
+      throw new ApiError(res.status, err.message || "Failed to load maintenance records");
+    }
     return res.json();
   },
 
@@ -931,13 +967,19 @@ export const api = {
   // RBAC & Custom Roles
   async listRoles(): Promise<Role[]> {
     const res = await fetchWithAuth("/rbac/roles");
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load roles" }));
+      throw new ApiError(res.status, err.message || "Failed to load roles");
+    }
     return res.json();
   },
 
   async listPermissions(): Promise<Permission[]> {
     const res = await fetchWithAuth("/rbac/permissions");
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load permissions" }));
+      throw new ApiError(res.status, err.message || "Failed to load permissions");
+    }
     return res.json();
   },
 

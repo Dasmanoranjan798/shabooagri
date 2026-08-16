@@ -70,7 +70,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
  api.listRoles().then((roles) => {
  const farmerRole = roles.find((r) => r.systemKey === "farmer");
  if (farmerRole) setFarmerRoleId(farmerRole.id);
- });
+ }).catch(() => {});
  }, [isOpen, customerToEdit]);
 
   const [isGstApplicable, setIsGstApplicable] = useState<boolean>(false);

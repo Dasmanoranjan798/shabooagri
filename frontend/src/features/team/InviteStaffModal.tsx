@@ -39,8 +39,8 @@ export const InviteStaffModal: React.FC<InviteStaffModalProps> = ({ isOpen, onCl
     setError(null);
     setResult(null);
     setLinkCopied(false);
-    api.listRoles().then(setRoles);
-    api.listVillages().then(setVillages);
+    api.listRoles().then(setRoles).catch(() => setRoles([]));
+    api.listVillages().then(setVillages).catch(() => setVillages([]));
   }, [isOpen]);
 
   const selectedRole = roles.find((r) => r.id === roleId);

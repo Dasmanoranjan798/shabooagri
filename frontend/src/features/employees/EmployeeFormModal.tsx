@@ -48,7 +48,7 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
 
  useEffect(() => {
  if (isOpen) {
- api.listRoles().then(setRoles);
+ api.listRoles().then(setRoles).catch(() => setRoles([]));
  }
  }, [isOpen]);
 
