@@ -52,6 +52,31 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Quick Create Machine Type inline state
+  const [isCreatingMachineType, setIsCreatingMachineType] = useState<boolean>(false);
+  const [newMachineTypeName, setNewMachineTypeName] = useState<string>("");
+  const [isSavingMachineType, setIsSavingMachineType] = useState<boolean>(false);
+
+  const handleQuickCreateMachineType = async () => {
+    if (!newMachineTypeName.trim()) {
+      setError(`Please enter a name for the new ${machineTerm.toLowerCase()} type`);
+      return;
+    }
+    setIsSavingMachineType(true);
+    setError(null);
+    try {
+      const created = await api.createMachineType({ name: newMachineTypeName.trim() });
+      setMachineTypes((prev) => [...prev, created]);
+      setMachineTypeId(created.id);
+      setNewMachineTypeName("");
+      setIsCreatingMachineType(false);
+    } catch (err: any) {
+      setError(err.message || `Failed to create new ${machineTerm.toLowerCase()} type`);
+    } finally {
+      setIsSavingMachineType(false);
+    }
+  };
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -182,20 +207,69 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
         {/* 1. Machine Type & Registration Number */}
         <div className="sa-form-grid-2">
           <div className="sa-input-group">
-            <label className="sa-input-label">{machineTerm} Type *</label>
-            <select
-              className="sa-input"
-              value={machineTypeId}
-              onChange={(e) => setMachineTypeId(e.target.value)}
-              required
-            >
-              <option value="">-- Select Type --</option>
-              {machineTypes.map((mt) => (
-                <option key={mt.id} value={mt.id}>
-                  {mt.name} {mt.category ? `(${mt.category})` : ""}
-                </option>
-              ))}
-            </select>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+              <label className="sa-input-label">{machineTerm} Type *</label>
+              {!isCreatingMachineType && (
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingMachineType(true)}
+                  style={{
+                    fontSize: "0.78rem",
+                    fontWeight: 600,
+                    color: "var(--color-primary)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  + Add Type
+                </button>
+              )}
+            </div>
+
+            {isCreatingMachineType ? (
+              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                <Input
+                  placeholder="e.g. Combine Harvester"
+                  value={newMachineTypeName}
+                  onChange={(e) => setNewMachineTypeName(e.target.value)}
+                  style={{ flex: 1 }}
+                  autoFocus
+                />
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={handleQuickCreateMachineType}
+                  isLoading={isSavingMachineType}
+                >
+                  Save
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsCreatingMachineType(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <select
+                className="sa-input"
+                value={machineTypeId}
+                onChange={(e) => setMachineTypeId(e.target.value)}
+                required
+              >
+                <option value="">-- Select Type --</option>
+                {machineTypes.map((mt) => (
+                  <option key={mt.id} value={mt.id}>
+                    {mt.name} {mt.category ? `(${mt.category})` : ""}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <Input

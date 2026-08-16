@@ -502,6 +502,18 @@ export const api = {
     return res.json();
   },
 
+  async createMachineType(payload: { name: string }): Promise<MachineType> {
+    const res = await fetchWithAuth("/machine-types", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to create machine type" }));
+      throw new ApiError(res.status, err.message || "Failed to create machine type");
+    }
+    return res.json();
+  },
+
   async listDrivers(): Promise<Driver[]> {
     const res = await fetchWithAuth("/drivers");
     if (!res.ok) {
