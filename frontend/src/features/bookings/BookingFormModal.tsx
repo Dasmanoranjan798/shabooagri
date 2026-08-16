@@ -58,6 +58,31 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
   const [newFarmerName, setNewFarmerName] = useState("");
   const [newFarmerPhone, setNewFarmerPhone] = useState("");
 
+  // Quick Create Village inline state
+  const [isCreatingVillage, setIsCreatingVillage] = useState(false);
+  const [newVillageName, setNewVillageName] = useState("");
+  const [isSavingVillage, setIsSavingVillage] = useState(false);
+
+  const handleQuickCreateVillage = async () => {
+    if (!newVillageName.trim()) {
+      setError(`Please enter a name for the new ${villageTerm.toLowerCase()}`);
+      return;
+    }
+    setIsSavingVillage(true);
+    setError(null);
+    try {
+      const created = await api.createVillage({ name: newVillageName.trim() });
+      setVillages((prev) => [...prev, created]);
+      setVillageId(created.id);
+      setNewVillageName("");
+      setIsCreatingVillage(false);
+    } catch (err: any) {
+      setError(err.message || `Failed to create new ${villageTerm}`);
+    } finally {
+      setIsSavingVillage(false);
+    }
+  };
+
   const [isLoadingOptions, setIsLoadingOptions] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -314,20 +339,51 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
 
         {/* 2. Village */}
         <div className="sa-input-group">
-          <label className="sa-input-label">{villageTerm} *</label>
-          <select
-            className="sa-input"
-            value={villageId}
-            onChange={(e) => setVillageId(e.target.value)}
-            required
-          >
-            <option value="">-- Select {villageTerm} --</option>
-            {villages.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.name}
-              </option>
-            ))}
-          </select>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+            <label className="sa-input-label">{villageTerm} *</label>
+            <button
+              type="button"
+              className="sa-link-action"
+              onClick={() => setIsCreatingVillage(!isCreatingVillage)}
+            >
+              {isCreatingVillage ? "Cancel" : `+ Quick Create ${villageTerm}`}
+            </button>
+          </div>
+
+          {isCreatingVillage ? (
+            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+              <Input
+                placeholder={`Enter new ${villageTerm.toLowerCase()} name`}
+                value={newVillageName}
+                onChange={(e) => setNewVillageName(e.target.value)}
+                style={{ flex: 1 }}
+                autoFocus
+              />
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={handleQuickCreateVillage}
+                isLoading={isSavingVillage}
+              >
+                Save
+              </Button>
+            </div>
+          ) : (
+            <select
+              className="sa-input"
+              value={villageId}
+              onChange={(e) => setVillageId(e.target.value)}
+              required
+            >
+              <option value="">-- Select {villageTerm} --</option>
+              {villages.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* 3. Machine & 4. Driver Row */}

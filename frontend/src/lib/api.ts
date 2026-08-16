@@ -429,6 +429,18 @@ export const api = {
     return res.json();
   },
 
+  async createVillage(payload: { name: string }): Promise<VillageOption> {
+    const res = await fetchWithAuth("/villages", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to create village" }));
+      throw new ApiError(res.status, err.message || "Failed to create village");
+    }
+    return res.json();
+  },
+
   async listMachines(): Promise<Machine[]> {
     const res = await fetchWithAuth("/machines");
     if (!res.ok) {

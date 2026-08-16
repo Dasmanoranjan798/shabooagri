@@ -43,6 +43,31 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
  const [error, setError] = useState<string | null>(null);
 
+ // Inline New Village Creation state
+ const [isAddingNewVillage, setIsAddingNewVillage] = useState<boolean>(false);
+ const [newVillageName, setNewVillageName] = useState<string>("");
+ const [isCreatingVillage, setIsCreatingVillage] = useState<boolean>(false);
+
+ const handleCreateInlineVillage = async () => {
+   if (!newVillageName.trim()) {
+     setError(`Please enter a name for the new ${villageTerm.toLowerCase()}`);
+     return;
+   }
+   setIsCreatingVillage(true);
+   setError(null);
+   try {
+     const created = await api.createVillage({ name: newVillageName.trim() });
+     setVillages((prev) => [...prev, created]);
+     setVillageId(created.id);
+     setNewVillageName("");
+     setIsAddingNewVillage(false);
+   } catch (err: any) {
+     setError(err.message || `Failed to create new ${villageTerm}`);
+   } finally {
+     setIsCreatingVillage(false);
+   }
+ };
+
  // Existing customer with no portal login yet can also be invited — only
  // a customer who already has a User account is excluded.
  const canSendInvite = !customerToEdit || !customerToEdit.userId;
@@ -227,33 +252,82 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
  autoFocus
  />
 
- {/* 2. Village Selection & Phone Number */}
- <div className="sa-form-grid-2">
- <div className="sa-input-group">
- <label className="sa-input-label">{villageTerm} *</label>
- <select
- className="sa-input"
- value={villageId}
- onChange={(e) => setVillageId(e.target.value)}
- required
- >
- <option value="">-- Select {villageTerm} --</option>
- {villages.map((v) => (
- <option key={v.id} value={v.id}>
- {v.name}
- </option>
- ))}
- </select>
- </div>
+  {/* 2. Village Selection & Phone Number */}
+  <div className="sa-form-grid-2">
+    <div className="sa-input-group">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+        <label className="sa-input-label">{villageTerm} *</label>
+        {!isAddingNewVillage && (
+          <button
+            type="button"
+            onClick={() => setIsAddingNewVillage(true)}
+            style={{
+              fontSize: "0.78rem",
+              fontWeight: 600,
+              color: "var(--color-primary)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+            }}
+          >
+            + Add New {villageTerm}
+          </button>
+        )}
+      </div>
 
- <Input
- label="Mobile Phone Number"
- type="tel"
- placeholder="e.g. 9876543210"
- value={phone}
- onChange={(e) => setPhone(e.target.value)}
- />
- </div>
+      {isAddingNewVillage ? (
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+          <Input
+            placeholder={`Enter ${villageTerm.toLowerCase()} name`}
+            value={newVillageName}
+            onChange={(e) => setNewVillageName(e.target.value)}
+            style={{ flex: 1 }}
+            autoFocus
+          />
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={handleCreateInlineVillage}
+            isLoading={isCreatingVillage}
+          >
+            Save
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setIsAddingNewVillage(false)}
+          >
+            Cancel
+          </Button>
+        </div>
+      ) : (
+        <select
+          className="sa-input"
+          value={villageId}
+          onChange={(e) => setVillageId(e.target.value)}
+          required
+        >
+          <option value="">-- Select {villageTerm} --</option>
+          {villages.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.name}
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
+
+    <Input
+      label="Mobile Phone Number"
+      type="tel"
+      placeholder="e.g. 9876543210"
+      value={phone}
+      onChange={(e) => setPhone(e.target.value)}
+    />
+  </div>
 
  {/* 3. Address & Field Location */}
  <div className="sa-input-group">
