@@ -11,6 +11,7 @@ import { Spinner } from "../components/ui/Spinner";
 
 // Operational Surface Pages
 import { LoginPage } from "../features/auth/LoginPage";
+import { AcceptInvitePage } from "../features/auth/AcceptInvitePage";
 import { ResetPasswordPage } from "../features/auth/ResetPasswordPage";
 import { SsoCallbackPage } from "../features/auth/SsoCallbackPage";
 import { DashboardPage } from "../features/dashboard/DashboardPage";
@@ -26,6 +27,7 @@ import { FuelPage } from "../features/fuel/FuelPage";
 import { MaintenancePage } from "../features/maintenance/MaintenancePage";
 import { ReportsPage } from "../features/reports/ReportsPage";
 import { SettingsPage } from "../features/settings/SettingsPage";
+import { TeamPage } from "../features/team/TeamPage";
 
 // Driver surface pages
 import { DriverHomePage } from "../features/driver/DriverHomePage";
@@ -405,6 +407,7 @@ export function App() {
             {/* Operational Tenant Login & Password Reset */}
             <Route path="/login" element={<SmartLoginRoute />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/accept-invite" element={<AcceptInvitePage />} />
 
             {/* Root route with domain-aware landing */}
             <Route path="/" element={<SmartRootRoute />} />
@@ -537,6 +540,17 @@ export function App() {
                 <ProtectedRoute permission="operations.view">
                   <AppLayout>
                     <SettingsPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/team"
+              element={
+                <ProtectedRoute permission="user.manage">
+                  <AppLayout>
+                    <TeamPage />
                   </AppLayout>
                 </ProtectedRoute>
               }

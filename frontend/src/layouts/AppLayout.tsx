@@ -20,7 +20,8 @@ import {
   Menu,
   X,
   Home,
-  Truck
+  Truck,
+  UserPlus
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { getTerm } from "../lib/terminology";
@@ -57,6 +58,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
     { key: "machines", label: machineTerm, path: "/machines", icon: <Truck size={18} />, permission: "operations.view" },
     { key: "drivers", label: driverTerm, path: "/drivers", icon: <UserCheck size={18} />, permission: "operations.view" },
     { key: "employees", label: "Employees", path: "/employees", icon: <Briefcase size={18} />, permission: "operations.view" },
+    { key: "team", label: "Team", path: "/team", icon: <UserPlus size={18} />, permission: "user.manage" },
     { key: "payments", label: "Payments", path: "/payments", icon: <CreditCard size={18} />, permission: "payment.receive" },
     { key: "expenses", label: "Expenses", path: "/expenses", icon: <TrendingDown size={18} />, permission: "operations.view" },
     { key: "fuel", label: "Fuel", path: "/fuel", icon: <Fuel size={18} />, permission: "operations.view" },

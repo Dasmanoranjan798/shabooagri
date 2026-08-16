@@ -26,6 +26,7 @@ interface AuthContextType {
   login: (identifier: string, password?: string, pin?: string) => Promise<void>;
   requestOtp: (identifier: string) => Promise<{ message: string; devOtp?: string }>;
   verifyOtp: (identifier: string, code: string) => Promise<void>;
+  acceptInvite: (token: string, password: string) => Promise<void>;
   logout: () => void;
   hasPermission: (permissionKey: string) => boolean;
 }
@@ -116,6 +117,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const acceptInvite = async (token: string, password: string) => {
+    setError(null);
+    try {
+      const res = await api.acceptInvite(token, password);
+      setUser(res.user);
+      await syncCompanyBranding();
+    } catch (err: any) {
+      const message = err.message || "Failed to accept invite";
+      setError(message);
+      throw err;
+    }
+  };
+
   const logout = () => {
     api.logout();
     setUser(null);
@@ -144,6 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         requestOtp,
         verifyOtp,
+        acceptInvite,
         logout,
         hasPermission,
       }}

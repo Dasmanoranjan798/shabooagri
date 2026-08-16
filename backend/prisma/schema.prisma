@@ -93,50 +93,50 @@ enum OtpPurpose {
 // ---------- Tenancy, terminology (§9), white-label (§10) ----------
 
 model Company {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name          String
-  slug          String   @unique
-  logoUrl       String?  @map("logo_url")
-  themeColor    String?  @default("#1B7A3E") @map("theme_color")
-  accentColor   String?  @map("accent_color")
-  currency      String   @default("INR")
-  timezone      String   @default("Asia/Kolkata")
-  language      String   @default("en")
-  invoicePrefix String?  @default("INV") @map("invoice_prefix")
-  printLayout   Json?    @map("print_layout")
-  isActive      Boolean  @default(true) @map("is_active")
+  id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String
+  slug              String  @unique
+  logoUrl           String? @map("logo_url")
+  themeColor        String? @default("#1B7A3E") @map("theme_color")
+  accentColor       String? @map("accent_color")
+  currency          String  @default("INR")
+  timezone          String  @default("Asia/Kolkata")
+  language          String  @default("en")
+  invoicePrefix     String? @default("INV") @map("invoice_prefix")
+  printLayout       Json?   @map("print_layout")
+  isActive          Boolean @default(true) @map("is_active")
   // Monotonic counter backing Booking.bookingNumber (BK-000001, ...).
   // Incremented atomically ("SET x = x + 1") on every booking creation and
   // NEVER decremented or reused, even if the booking that consumed a
   // number is later hard-deleted — see bookings/README.md.
-  nextBookingNumber Int @default(1) @map("next_booking_number")
+  nextBookingNumber Int     @default(1) @map("next_booking_number")
   // Monotonic counter backing Invoice.invoiceNumber (INV-000001, ...).
   // Incremented atomically on every invoice creation — see payments/README.md.
-  nextInvoiceNumber Int @default(1) @map("next_invoice_number")
+  nextInvoiceNumber Int     @default(1) @map("next_invoice_number")
 
   // Phase B Business Identity fields
-  address         String?  @map("address")
-  city            String?  @map("city")
-  district        String?  @map("district")
-  state           String?  @map("state")
-  pincode         String?  @map("pincode")
-  country         String?  @default("India") @map("country")
-  phone           String?  @map("phone")
-  email           String?  @map("email")
-  isGstRegistered Boolean  @default(false) @map("is_gst_registered")
-  gstin           String?  @map("gstin")
-  pan             String?  @map("pan")
+  address         String? @map("address")
+  city            String? @map("city")
+  district        String? @map("district")
+  state           String? @map("state")
+  pincode         String? @map("pincode")
+  country         String? @default("India") @map("country")
+  phone           String? @map("phone")
+  email           String? @map("email")
+  isGstRegistered Boolean @default(false) @map("is_gst_registered")
+  gstin           String? @map("gstin")
+  pan             String? @map("pan")
 
   // Phase B Bank & Payment Details
-  bankName        String?  @map("bank_name")
-  accountNumber   String?  @map("account_number")
-  ifscCode        String?  @map("ifsc_code")
-  upiId           String?  @map("upi_id")
+  bankName      String? @map("bank_name")
+  accountNumber String? @map("account_number")
+  ifscCode      String? @map("ifsc_code")
+  upiId         String? @map("upi_id")
 
   // Phase B Tax defaults
-  defaultTaxRate  Decimal? @default(0) @map("default_tax_rate") @db.Decimal(5, 2)
-  taxInclusive    Boolean  @default(false) @map("tax_inclusive")
-  isCessEnabled   Boolean  @default(false) @map("is_cess_enabled")
+  defaultTaxRate Decimal? @default(0) @map("default_tax_rate") @db.Decimal(5, 2)
+  taxInclusive   Boolean  @default(false) @map("tax_inclusive")
+  isCessEnabled  Boolean  @default(false) @map("is_cess_enabled")
 
   // Phase C Equipment & Operational Rules
   serviceAlertHours  Int     @default(50) @map("service_alert_hours")
@@ -145,8 +145,8 @@ model Company {
   requireJobPhoto    Boolean @default(false) @map("require_job_photo")
   requireJobFuelLog  Boolean @default(false) @map("require_job_fuel_log")
 
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   terminologySettings  TerminologySetting[]
   roles                Role[]
@@ -175,6 +175,7 @@ model Company {
   saasFeedbacks        CustomerFeedback[]
   ssoTokens            SsoToken[]
   gstCessRules         GstCessRule[]
+  staffInvites         StaffInvite[]
 
   @@map("companies")
 }
@@ -207,6 +208,7 @@ model Role {
   company         Company          @relation(fields: [companyId], references: [id])
   users           User[]
   rolePermissions RolePermission[]
+  staffInvites    StaffInvite[]
 
   @@unique([companyId, name])
   @@map("roles")
@@ -266,6 +268,7 @@ model User {
   recordedFuelEntries JobFuelEntry[]
   recordedExpenses    Expense[]
   receivedPayments    Payment[]
+  invitesSent         StaffInvite[]
 
   @@unique([companyId, email])
   @@unique([companyId, mobileNumber])
@@ -273,19 +276,19 @@ model User {
 }
 
 model Customer {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId String   @map("company_id") @db.Uuid
-  userId    String?  @unique @map("user_id") @db.Uuid
-  name      String
-  villageId String   @map("village_id") @db.Uuid
-  phone     String?
-  address   String?
-  notes     String?
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId       String   @map("company_id") @db.Uuid
+  userId          String?  @unique @map("user_id") @db.Uuid
+  name            String
+  villageId       String   @map("village_id") @db.Uuid
+  phone           String?
+  address         String?
+  notes           String?
   // Phase B Customer GST fields (Optional)
-  isGstApplicable Boolean @default(false) @map("is_gst_applicable")
-  gstin           String? @map("gstin")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  isGstApplicable Boolean  @default(false) @map("is_gst_applicable")
+  gstin           String?  @map("gstin")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   company  Company   @relation(fields: [companyId], references: [id])
   user     User?     @relation(fields: [userId], references: [id])
@@ -343,9 +346,10 @@ model Village {
   companyId String @map("company_id") @db.Uuid
   name      String
 
-  company   Company    @relation(fields: [companyId], references: [id])
-  customers Customer[]
-  bookings  Booking[]
+  company      Company       @relation(fields: [companyId], references: [id])
+  customers    Customer[]
+  bookings     Booking[]
+  staffInvites StaffInvite[]
 
   @@unique([companyId, name])
   @@map("villages")
@@ -477,22 +481,22 @@ model BookingAttachment {
 }
 
 model Job {
-  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId              String    @map("company_id") @db.Uuid
-  bookingId              String    @unique @map("booking_id") @db.Uuid
+  id                     String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId              String           @map("company_id") @db.Uuid
+  bookingId              String           @unique @map("booking_id") @db.Uuid
   machineId              String           @map("machine_id") @db.Uuid
   driverId               String           @map("driver_id") @db.Uuid
   status                 JobStatus        @default(NOT_STARTED)
   executionMode          JobExecutionMode @default(LIVE) @map("execution_mode")
   startTime              DateTime?        @map("start_time")
-  endTime                DateTime? @map("end_time")
-  totalPausedDurationSec Int       @default(0) @map("total_paused_duration_sec")
-  actualHours            Decimal?  @map("actual_hours") @db.Decimal(6, 2)
-  completedAcres         Decimal?  @map("completed_acres") @db.Decimal(8, 2)
-  fuelUsedLitres         Decimal?  @map("fuel_used_litres") @db.Decimal(8, 2)
+  endTime                DateTime?        @map("end_time")
+  totalPausedDurationSec Int              @default(0) @map("total_paused_duration_sec")
+  actualHours            Decimal?         @map("actual_hours") @db.Decimal(6, 2)
+  completedAcres         Decimal?         @map("completed_acres") @db.Decimal(8, 2)
+  fuelUsedLitres         Decimal?         @map("fuel_used_litres") @db.Decimal(8, 2)
   notes                  String?
-  createdAt              DateTime  @default(now()) @map("created_at")
-  updatedAt              DateTime  @updatedAt @map("updated_at")
+  createdAt              DateTime         @default(now()) @map("created_at")
+  updatedAt              DateTime         @updatedAt @map("updated_at")
 
   company Company @relation(fields: [companyId], references: [id])
   booking Booking @relation(fields: [bookingId], references: [id])
@@ -713,6 +717,36 @@ model Payment {
 }
 
 // ---------- Auth support (§5) ----------
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+model StaffInvite {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId       String       @map("company_id") @db.Uuid
+  roleId          String       @map("role_id") @db.Uuid
+  fullName        String       @map("full_name")
+  email           String?
+  phone           String?
+  villageId       String?      @map("village_id") @db.Uuid
+  tokenHash       String       @map("token_hash")
+  status          InviteStatus @default(PENDING)
+  invitedByUserId String       @map("invited_by_user_id") @db.Uuid
+  expiresAt       DateTime     @map("expires_at")
+  acceptedAt      DateTime?    @map("accepted_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  company   Company  @relation(fields: [companyId], references: [id])
+  role      Role     @relation(fields: [roleId], references: [id])
+  invitedBy User     @relation(fields: [invitedByUserId], references: [id])
+  village   Village? @relation(fields: [villageId], references: [id])
+
+  @@map("staff_invites")
+}
 
 model OtpCode {
   id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -977,5 +1011,3 @@ model SsoToken {
 
   @@map("sso_tokens")
 }
-
-

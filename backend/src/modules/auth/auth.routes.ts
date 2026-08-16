@@ -3,6 +3,7 @@ import { authMiddleware, optionalAuthMiddleware } from "../../middleware/auth.mi
 import { createRateLimiter } from "../../middleware/rateLimit.middleware";
 import { asyncHandler } from "../../shared/utils/asyncHandler";
 import * as authController from "./auth.controller";
+import * as staffInviteController from "../team/staffInvite.controller";
 
 export const authRouter = Router();
 
@@ -27,4 +28,8 @@ authRouter.post("/password-reset/verify-token", asyncHandler(authController.veri
 authRouter.post("/password-reset/confirm", asyncHandler(authController.confirmPasswordReset));
 
 authRouter.post("/change-password", authMiddleware, asyncHandler(authController.changePassword));
+
+// Staff invite acceptance routes (public — invitee has no account yet)
+authRouter.post("/invite/verify-token", asyncHandler(staffInviteController.verifyToken));
+authRouter.post("/invite/accept", resetRateLimiter, asyncHandler(staffInviteController.accept));
 

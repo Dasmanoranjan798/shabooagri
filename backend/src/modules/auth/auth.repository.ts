@@ -47,7 +47,19 @@ export function findUserByGlobalEmail(email: string) {
 export function findUserById(id: string) {
   return prisma.user.findUnique({
     where: { id },
-    include: { role: true },
+    // Same depth as updateLastLogin's include below — /auth/me (and
+    // anything else routed through this) needs role.rolePermissions
+    // populated too, or AppLayout.hasPermission() silently treats every
+    // non-owner as having no permissions at all.
+    include: {
+      role: {
+        include: {
+          rolePermissions: {
+            include: { permission: true },
+          },
+        },
+      },
+    },
   });
 }
 

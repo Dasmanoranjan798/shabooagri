@@ -23,6 +23,7 @@ import { maintenanceRouter } from "./modules/maintenance/maintenance.routes";
 import { settingsRouter } from "./modules/settings/settings.routes";
 import { rbacRouter } from "./modules/rbac/rbac.routes";
 import { saasRouter } from "./modules/saas/saas.routes";
+import { teamRouter } from "./modules/team/staffInvite.routes";
 
 // Express app assembly only. Module routers are mounted here once they exist —
 // this file must never contain business logic itself.
@@ -85,6 +86,7 @@ app.use("/fuel", fuelRouter);
 app.use("/maintenance", maintenanceRouter);
 app.use("/settings", settingsRouter);
 app.use("/rbac", rbacRouter);
+app.use("/team", teamRouter);
 app.use("/dashboard", dashboardRouter);
 app.use("/saas", saasRouter);
 

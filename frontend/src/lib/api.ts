@@ -20,6 +20,7 @@ import type { FuelEntry } from "../types/fuel";
 import type { MaintenanceSchedule, MaintenanceRecord, CreateMaintenanceRecordPayload, CreateMaintenanceSchedulePayload } from "../types/maintenance";
 import type { CompanyProfile, UpdateCompanyProfilePayload, UpdateTerminologyPayload } from "../types/settings";
 import type { Role, Permission, CreateRolePayload, UpdateRolePayload } from "../types/rbac";
+import type { TeamUser, StaffInvite, CreateInvitePayload, CreateInviteResponse, InviteVerifyResult } from "../types/team";
 
 const TOKEN_KEY = "shabooagri_token";
 const REFRESH_TOKEN_KEY = "shabooagri_refresh_token";
@@ -994,6 +995,75 @@ export const api = {
       throw new ApiError(res.status, err.message);
     }
     return res.json();
+  },
+
+  // Team / Staff Invites
+  async listTeamUsers(): Promise<TeamUser[]> {
+    const res = await fetchWithAuth("/team/users");
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  async setTeamUserStatus(id: string, status: "ACTIVE" | "INACTIVE"): Promise<TeamUser> {
+    const res = await fetchWithAuth(`/team/users/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to update user status" }));
+      throw new ApiError(res.status, err.message);
+    }
+    return res.json();
+  },
+
+  async listInvites(): Promise<StaffInvite[]> {
+    const res = await fetchWithAuth("/team/invites");
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  async createInvite(payload: CreateInvitePayload): Promise<CreateInviteResponse> {
+    const res = await fetchWithAuth("/team/invites", { method: "POST", body: JSON.stringify(payload) });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to send invite" }));
+      throw new ApiError(res.status, err.message);
+    }
+    return res.json();
+  },
+
+  async revokeInvite(id: string): Promise<StaffInvite> {
+    const res = await fetchWithAuth(`/team/invites/${id}/revoke`, { method: "PATCH" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to revoke invite" }));
+      throw new ApiError(res.status, err.message);
+    }
+    return res.json();
+  },
+
+  async verifyInviteToken(token: string): Promise<InviteVerifyResult> {
+    const res = await fetchWithAuth("/auth/invite/verify-token", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Invalid or expired invite link" }));
+      throw new ApiError(res.status, err.message);
+    }
+    return res.json();
+  },
+
+  async acceptInvite(token: string, password: string): Promise<LoginResponse> {
+    const res = await fetchWithAuth("/auth/invite/accept", {
+      method: "POST",
+      body: JSON.stringify({ token, password }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to accept invite" }));
+      throw new ApiError(res.status, err.message);
+    }
+    const data: LoginResponse = await res.json();
+    setStoredTokens(data.accessToken, data.refreshToken);
+    return data;
   },
 };
 
