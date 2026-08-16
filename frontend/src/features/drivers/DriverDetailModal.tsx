@@ -30,7 +30,7 @@ export const DriverDetailModal: React.FC<DriverDetailModalProps> = ({
  if (!driver) return null;
 
  const empName = driver.employee.name;
- const designation = driver.employee.designation || "Equipment Operator";
+ const designation = driver.employee.roleTitle || "Equipment Operator";
  const phone = driver.employee.phone || "No phone listed";
 
  const licenseWarning = getDriverLicenseWarning(driver, company);

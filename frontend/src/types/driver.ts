@@ -5,8 +5,8 @@ export interface EmployeeOption {
   companyId: string;
   name: string;
   phone?: string | null;
-  designation?: string | null;
-  isActive: boolean;
+  roleTitle?: string | null;
+  employmentStatus: "ACTIVE" | "INACTIVE";
 }
 
 export interface Driver {

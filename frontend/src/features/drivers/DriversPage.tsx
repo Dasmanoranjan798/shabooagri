@@ -111,7 +111,7 @@ export const DriversPage: React.FC = () => {
 
  const q = searchQuery.toLowerCase();
  const name = (d.employee?.name || "").toLowerCase();
- const desig = (d.employee?.designation || "").toLowerCase();
+ const desig = (d.employee?.roleTitle || "").toLowerCase();
  const phone = (d.employee?.phone || "").toLowerCase();
  const license = (d.licenseNumber || "").toLowerCase();
 
@@ -231,7 +231,7 @@ export const DriversPage: React.FC = () => {
  <td className="sa-td-bold"> {d.employee.name}</td>
  <td>
  <div className="sa-cell-title">
- {d.employee.designation || "Equipment Operator"}
+ {d.employee.roleTitle || "Equipment Operator"}
  </div>
  </td>
  <td>{d.employee.phone || <span className="sa-text-muted">N/A</span>}</td>
@@ -318,7 +318,7 @@ export const DriversPage: React.FC = () => {
  <div className="sa-bcard-row">
  <span className="sa-bcard-label">Title:</span>
  <span className="sa-bcard-val">
- {d.employee.designation || "Equipment Operator"}
+ {d.employee.roleTitle || "Equipment Operator"}
  </span>
  </div>
 

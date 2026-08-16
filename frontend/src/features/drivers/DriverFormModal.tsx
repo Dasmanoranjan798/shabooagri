@@ -66,7 +66,7 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
           api.listEmployees(),
           api.listRoles().catch(() => []),
         ]);
-        setEmployees(list.filter((e) => e.isActive));
+        setEmployees(list.filter((e) => e.employmentStatus === "ACTIVE"));
         if (!driverToEdit && list.length > 0 && !employeeId) {
           setEmployeeId(list[0].id);
         }
@@ -229,7 +229,7 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
               <option value="">-- Select Employee --</option>
               {employees.map((emp) => (
                 <option key={emp.id} value={emp.id}>
-                  {emp.name} {emp.designation ? `(${emp.designation})` : ""}
+                  {emp.name} {emp.roleTitle ? `(${emp.roleTitle})` : ""}
                 </option>
               ))}
             </select>
