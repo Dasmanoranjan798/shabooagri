@@ -417,7 +417,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 size="md"
                 onClick={() => {
                   onClose();
-                  onReceivePayment(inv);
+                  onReceivePayment({ ...invoice, ...inv, customer: invoice.customer });
                 }}
               >
                 Receive Payment (₹{inv.balanceAmount.toLocaleString("en-IN")} Due)

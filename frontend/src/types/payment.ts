@@ -25,6 +25,7 @@ export interface Invoice {
   bookingId: string;
   customerId: string;
   invoiceNumber: string;
+  invoiceDate: string;
   subtotalAmount: number;
   taxAmount: number;
   discountAmount: number;
@@ -73,12 +74,12 @@ export interface ReceiptInvoice {
   invoiceDate: string;
   dueDate?: string | null;
   subtotalAmount: number;
-  taxRate: number;
+  taxRate?: number;
   taxAmount: number;
-  cgstAmount: number;
-  sgstAmount: number;
-  igstAmount: number;
-  isGstApplicable: boolean;
+  cgstAmount?: number;
+  sgstAmount?: number;
+  igstAmount?: number;
+  isGstApplicable?: boolean;
   totalAmount: number;
   paidAmount: number;
   balanceAmount: number;
