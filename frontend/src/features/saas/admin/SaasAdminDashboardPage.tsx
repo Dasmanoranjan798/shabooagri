@@ -8,6 +8,7 @@ import {
   Clock,
   CheckCircle2,
   AlertTriangle,
+  AlertCircle,
   Loader2,
 } from "lucide-react";
 import { SaasAdminLayout } from "./SaasAdminLayout";
@@ -16,23 +17,29 @@ import { getAdminDashboardMetrics } from "../../../lib/saasApi";
 export const SaasAdminDashboardPage: React.FC = () => {
   const [metrics, setMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const loadMetrics = async () => {
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const data = await getAdminDashboardMetrics();
+      setMetrics(data);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to load platform metrics.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function loadMetrics() {
-      try {
-        const data = await getAdminDashboardMetrics();
-        setMetrics(data);
-      } finally {
-        setLoading(false);
-      }
-    }
     loadMetrics();
   }, []);
 
   return (
     <SaasAdminLayout>
       <div className="space-y-8">
-        
+
         <div>
           <h1 className="text-3xl font-black text-white">Platform Owner Command Centre</h1>
           <p className="text-xs text-slate-400 mt-1">Real-time commercial metrics, revenue ledgers, and license telemetry</p>
@@ -42,6 +49,21 @@ export const SaasAdminDashboardPage: React.FC = () => {
           <div className="p-12 text-center text-slate-400 flex items-center justify-center gap-3">
             <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
             <span>Calculating platform metrics...</span>
+          </div>
+        ) : errorMsg ? (
+          <div className="p-6 rounded-2xl bg-rose-950/80 border border-rose-500/50 text-rose-300 text-sm flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="space-y-2">
+              <p>{errorMsg}</p>
+              <p className="text-rose-400/80 text-xs">These numbers failed to load — this is not the same as the platform having zero activity.</p>
+              <button
+                type="button"
+                onClick={loadMetrics}
+                className="px-3 py-1.5 rounded-lg bg-rose-900/60 border border-rose-500/40 text-rose-200 text-xs font-bold hover:bg-rose-900"
+              >
+                Retry
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

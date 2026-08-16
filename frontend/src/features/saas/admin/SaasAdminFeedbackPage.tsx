@@ -1,22 +1,27 @@
 import React, { useEffect, useState } from "react";
-import { Star, Loader2 } from "lucide-react";
+import { Star, Loader2, AlertCircle } from "lucide-react";
 import { SaasAdminLayout } from "./SaasAdminLayout";
 import { getAdminFeedback, updateAdminFeedbackStatus } from "../../../lib/saasApi";
 
 export const SaasAdminFeedbackPage: React.FC = () => {
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [selectedFeedback, setSelectedFeedback] = useState<any | null>(null);
   const [status, setStatus] = useState("SUBMITTED");
   const [adminNotes, setAdminNotes] = useState("");
   const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
 
   const loadFeedback = async () => {
     setLoading(true);
+    setErrorMsg(null);
     try {
       const data = await getAdminFeedback();
       setFeedbacks(data);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to load customer feedback.");
     } finally {
       setLoading(false);
     }
@@ -30,10 +35,13 @@ export const SaasAdminFeedbackPage: React.FC = () => {
     e.preventDefault();
     if (!selectedFeedback) return;
     setUpdating(true);
+    setUpdateError(null);
     try {
       await updateAdminFeedbackStatus(selectedFeedback.id, status, adminNotes);
       setSelectedFeedback(null);
       await loadFeedback();
+    } catch (err: any) {
+      setUpdateError(err.message || "Failed to save changes.");
     } finally {
       setUpdating(false);
     }
@@ -52,6 +60,20 @@ export const SaasAdminFeedbackPage: React.FC = () => {
           <div className="p-12 text-center text-slate-400 flex items-center justify-center gap-3">
             <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
             <span>Loading feedback...</span>
+          </div>
+        ) : errorMsg ? (
+          <div className="p-6 rounded-2xl bg-rose-950/80 border border-rose-500/50 text-rose-300 text-sm flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="space-y-2">
+              <p>{errorMsg}</p>
+              <button
+                type="button"
+                onClick={loadFeedback}
+                className="px-3 py-1.5 rounded-lg bg-rose-900/60 border border-rose-500/40 text-rose-200 text-xs font-bold hover:bg-rose-900"
+              >
+                Retry
+              </button>
+            </div>
           </div>
         ) : feedbacks.length > 0 ? (
           <div className="space-y-4">
@@ -114,6 +136,12 @@ export const SaasAdminFeedbackPage: React.FC = () => {
               <h3 className="text-lg font-bold text-white">Update Customer Feedback</h3>
 
               <form onSubmit={handleUpdate} className="space-y-4 text-xs">
+                {updateError && (
+                  <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-500/50 text-rose-300 flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>{updateError}</span>
+                  </div>
+                )}
                 <div>
                   <label className="block font-bold text-slate-300 uppercase mb-1">Status</label>
                   <select

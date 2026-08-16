@@ -6,6 +6,7 @@ import { extendAdminLicense, getAdminLicenses } from "../../../lib/saasApi";
 export const SaasAdminLicensesPage: React.FC = () => {
   const [licenses, setLicenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Extend Modal State
   const [selectedLicense, setSelectedLicense] = useState<any | null>(null);
@@ -17,9 +18,12 @@ export const SaasAdminLicensesPage: React.FC = () => {
 
   const loadLicenses = async () => {
     setLoading(true);
+    setErrorMsg(null);
     try {
       const data = await getAdminLicenses();
       setLicenses(data);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to load licenses.");
     } finally {
       setLoading(false);
     }
@@ -81,6 +85,20 @@ export const SaasAdminLicensesPage: React.FC = () => {
           <div className="p-12 text-center text-slate-400 flex items-center justify-center gap-3">
             <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
             <span>Fetching licenses...</span>
+          </div>
+        ) : errorMsg ? (
+          <div className="p-6 rounded-2xl bg-rose-950/80 border border-rose-500/50 text-rose-300 text-sm flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="space-y-2">
+              <p>{errorMsg}</p>
+              <button
+                type="button"
+                onClick={loadLicenses}
+                className="px-3 py-1.5 rounded-lg bg-rose-900/60 border border-rose-500/40 text-rose-200 text-xs font-bold hover:bg-rose-900"
+              >
+                Retry
+              </button>
+            </div>
           </div>
         ) : licenses.length > 0 ? (
           <div className="bg-slate-900/90 rounded-3xl border border-slate-800 overflow-hidden shadow-xl">
