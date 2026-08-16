@@ -249,3 +249,49 @@
 .sa-icon-action:hover {
   background-color: var(--color-border);
 }
+
+/* Print & PDF Export Stylesheet */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-size: 12pt;
+  }
+
+  .sa-sidebar,
+  .sa-header,
+  .sa-nav,
+  .sa-modal-backdrop,
+  .sa-form-actions,
+  .sa-table-actions,
+  .sa-action-btn-group,
+  .sa-no-print,
+  button,
+  .sa-btn {
+    display: none !important;
+  }
+
+  .sa-modal-container,
+  .sa-receipt-container,
+  .sa-print-area {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  .sa-table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  .sa-table th,
+  .sa-table td {
+    border: 1px solid #cccccc !important;
+    padding: 6px 8px !important;
+  }
+}

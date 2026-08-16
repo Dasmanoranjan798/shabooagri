@@ -18,10 +18,10 @@ async function assertCompanyExists(companyId: string) {
 // reading the job-completion flags this same endpoint carries.
 const FINANCIAL_FIELDS = ["bankName", "accountNumber", "ifscCode", "upiId"] as const;
 
-export async function getCompanyProfile(companyId: string, user: AuthenticatedUser) {
+export async function getCompanyProfile(companyId: string, user?: AuthenticatedUser) {
   const company = await assertCompanyExists(companyId);
 
-  const canViewFinancials = await rbacService.userHasPermission(user.roleId, "settings.manage");
+  const canViewFinancials = user?.roleId ? await rbacService.userHasPermission(user.roleId, "settings.manage") : false;
   if (canViewFinancials) {
     return company;
   }

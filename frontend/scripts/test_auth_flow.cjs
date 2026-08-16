@@ -18,7 +18,7 @@ function postJson(urlPath, data) {
       res.on('end', () => {
         try {
           resolve({ statusCode: res.statusCode, body: JSON.parse(body) });
-        } catch (e) {
+        } catch (_e) {
           resolve({ statusCode: res.statusCode, body });
         }
       });

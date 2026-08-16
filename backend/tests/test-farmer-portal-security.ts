@@ -98,7 +98,7 @@ async function runFarmerPortalSecurityTest() {
     customerId: customerB.id,
     villageId: villageA.id,
     machineId: machineA.id,
-    scheduledDate: new Date(),
+    scheduledDate: new Date(Date.now() + 86400000),
     pricingMethodId: pmA.id,
     rate: 500,
     estimatedHours: 2,

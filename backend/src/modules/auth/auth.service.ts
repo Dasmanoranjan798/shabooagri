@@ -6,7 +6,7 @@ import { env } from "../../config/env";
 import { AppError } from "../../shared/errors/AppError";
 import * as authRepository from "./auth.repository";
 import * as rbacService from "../rbac/rbac.service";
-import { sendPasswordResetEmail } from "../../shared/services/mail.service";
+import { sendOtpEmail, sendPasswordResetEmail } from "../../shared/services/mail.service";
 import type { AccessTokenPayload, AuthenticatedUser, RefreshTokenPayload } from "./auth.types";
 import type {
   ChangePasswordInput,
@@ -167,10 +167,10 @@ export async function requestOtp(input: OtpRequestInput) {
     expiresAt: addDuration(new Date(), `${OTP_EXPIRY_MINUTES}m`),
   });
 
-  // No SMS/email provider is wired up yet (OTP_SMS_PROVIDER_KEY /
-  // OTP_EMAIL_PROVIDER_KEY are placeholders — see backend/.env.example).
-  // Until one exists, the OTP is logged server-side, and echoed in the
-  // response outside production so it can actually be tested end-to-end.
+  if (input.identifier.includes("@")) {
+    await sendOtpEmail(input.identifier, code);
+  }
+
   console.log(`[dev-only] OTP for ${input.identifier}: ${code}`);
   return {
     message: "OTP sent",

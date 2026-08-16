@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Pencil, Trash2, AlertTriangle, TrendingDown, Wrench, Briefcase, Receipt } from "lucide-react";
+import { Pencil, Trash2, AlertTriangle, TrendingDown, Wrench, Briefcase, Receipt, FileSpreadsheet } from "lucide-react";
 import "./expenses.css";
 import type { Expense, ExpenseCategory } from "../../types/expense";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { getTerm } from "../../lib/terminology";
+import { exportToExcel } from "../../lib/exportUtils";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -121,21 +122,50 @@ export const ExpensesPage: React.FC = () => {
  );
  });
 
- return (
- <div className="sa-expenses-page">
- {/* Page Header */}
- <div className="sa-page-header">
- <div className="sa-page-header-text">
- <h2>Expenses & Outflow</h2>
- <p>Track business operational costs, spare parts, maintenance & machine expenditure</p>
- </div>
+  return (
+    <div className="sa-expenses-page">
+      {/* Page Header */}
+      <div className="sa-page-header">
+        <div className="sa-page-header-text">
+          <h2>Expenses & Outflow</h2>
+          <p>Track business operational costs, spare parts, maintenance & machine expenditure</p>
+        </div>
 
- {canManage && (
- <Button variant="primary" size="md" onClick={handleOpenCreate}>
- + Record Expense
- </Button>
- )}
- </div>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={() => {
+              const cols = [
+                { header: "Date", key: "date" },
+                { header: "Category", key: "category" },
+                { header: "Description", key: "description" },
+                { header: `${machineTerm}`, key: "machine" },
+                { header: "Incurred By", key: "incurredBy" },
+                { header: "Amount", key: "amount" },
+              ];
+              const dataRows = filteredExpenses.map((exp) => ({
+                date: new Date(exp.expenseDate).toLocaleDateString("en-IN"),
+                category: exp.category?.name || "Uncategorized",
+                description: exp.description || "—",
+                machine: exp.machine ? `${exp.machine.registrationNumber} (${exp.machine.brand || ""})` : "General",
+                incurredBy: exp.incurredByUser?.fullName || "Staff",
+                amount: exp.amount,
+              }));
+              exportToExcel("Expenses_Log", "Expenses", cols, dataRows);
+            }}
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+          >
+            <FileSpreadsheet size={16} /> Export Excel
+          </Button>
+
+          {canManage && (
+            <Button variant="primary" size="md" onClick={handleOpenCreate}>
+              + Record Expense
+            </Button>
+          )}
+        </div>
+      </div>
 
  {/* Financial KPI Summary Cards */}
  <div className="sa-kpi-grid" style={{ marginBottom: "1.5rem" }}>

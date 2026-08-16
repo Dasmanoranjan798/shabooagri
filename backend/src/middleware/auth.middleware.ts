@@ -23,14 +23,20 @@ function verifyAccessToken(token: string): AuthenticatedUser {
   return { id: payload.sub, companyId: payload.companyId, roleId: payload.roleId };
 }
 
-// Rejects the request unless a valid access token is present.
 export function authMiddleware(req: Request, _res: Response, next: NextFunction) {
+  let token: string | undefined;
   const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) {
-    return next(new AppError(401, "Missing bearer token"));
+  if (header?.startsWith("Bearer ")) {
+    token = header.slice("Bearer ".length);
+  } else if (typeof req.query.token === "string" && req.query.token.length > 0) {
+    token = req.query.token;
+  }
+
+  if (!token) {
+    return next(new AppError(401, "Missing access token"));
   }
   try {
-    req.user = verifyAccessToken(header.slice("Bearer ".length));
+    req.user = verifyAccessToken(token);
   } catch (err) {
     return next(err);
   }

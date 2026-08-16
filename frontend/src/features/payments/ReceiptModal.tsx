@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
+import { FileSpreadsheet, Printer, Share2 } from "lucide-react";
 import type { Invoice, ReceiptData } from "../../types/payment";
 import { api } from "../../lib/api";
 import { getTerm } from "../../lib/terminology";
+import { exportToExcel, exportToPdf, shareOnWhatsApp } from "../../lib/exportUtils";
 import { useAuth } from "../../context/AuthContext";
 import { Modal } from "../../components/ui/Modal";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
@@ -59,10 +61,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   }, [invoice, isOpen]);
 
   if (!invoice) return null;
-
-  const handlePrint = () => {
-    window.print();
-  };
 
   const handleSaveTax = async () => {
     if (!inv) return;
@@ -354,10 +352,61 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           )}
 
           {/* Action Controls */}
-          <div className="sa-form-actions" style={{ marginTop: "1.5rem" }}>
-            <Button variant="secondary" size="md" onClick={handlePrint}>
-              Print Document
-            </Button>
+          <div className="sa-form-actions" style={{ marginTop: "1.5rem", display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => exportToPdf(`Invoice_${inv.invoiceNumber}`)}
+              >
+                <Printer size={16} style={{ marginRight: "6px" }} />
+                Print / Save PDF
+              </Button>
+
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => {
+                  const cols = [
+                    { header: "Invoice Number", key: "invoiceNumber" },
+                    { header: "Customer Name", key: "customerName" },
+                    { header: "Date", key: "date" },
+                    { header: "Machine", key: "machine" },
+                    { header: "Total Amount", key: "totalAmount" },
+                    { header: "Paid Amount", key: "paidAmount" },
+                    { header: "Balance Due", key: "balanceAmount" },
+                    { header: "Status", key: "status" },
+                  ];
+                  const dataRow = [{
+                    invoiceNumber: inv.invoiceNumber,
+                    customerName: customer?.name || inv.customer?.name || "Customer",
+                    date: new Date(inv.createdAt).toLocaleDateString("en-IN"),
+                    machine: inv.booking?.machine?.registrationNumber || "N/A",
+                    totalAmount: inv.totalAmount,
+                    paidAmount: inv.paidAmount,
+                    balanceAmount: inv.balanceAmount,
+                    status: inv.status,
+                  }];
+                  exportToExcel(`Invoice_${inv.invoiceNumber}`, "Invoice Summary", cols, dataRow);
+                }}
+              >
+                <FileSpreadsheet size={16} style={{ marginRight: "6px" }} />
+                Export Excel
+              </Button>
+
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => {
+                  const customerPhone = (customer as any)?.phone || (customer as any)?.mobileNumber;
+                  const msg = `Hello ${customer?.name || "Valued Customer"},\n\nHere is your invoice summary from ${company?.name || "ShabooAgri"}:\n\nInvoice: #${inv.invoiceNumber}\nTotal Amount: ₹${inv.totalAmount.toLocaleString("en-IN")}\nAmount Paid: ₹${inv.paidAmount.toLocaleString("en-IN")}\nBalance Due: ₹${inv.balanceAmount.toLocaleString("en-IN")}\nStatus: ${inv.status.replace(/_/g, " ")}\n\nThank you for choosing ${company?.name || "ShabooAgri"}!`;
+                  shareOnWhatsApp(customerPhone, msg);
+                }}
+              >
+                <Share2 size={16} style={{ marginRight: "6px", color: "#25D366" }} />
+                Share WhatsApp
+              </Button>
+            </div>
 
             {inv.balanceAmount > 0 && (
               <Button

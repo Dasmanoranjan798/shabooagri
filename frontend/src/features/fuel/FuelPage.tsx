@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Fuel, AlertTriangle } from "lucide-react";
+import { Fuel, AlertTriangle, FileSpreadsheet } from "lucide-react";
 import "./fuel.css";
 import type { FuelEntry } from "../../types/fuel";
 import type { Machine } from "../../types/machine";
 import { api } from "../../lib/api";
+import { exportToExcel } from "../../lib/exportUtils";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -75,6 +76,31 @@ export const FuelPage: React.FC = () => {
  <h1 className="sa-page-title"> Fuel Tracking</h1>
  <p className="sa-page-subtitle">All fuel entries logged across jobs and machines</p>
  </div>
+
+ <Button
+ variant="secondary"
+ size="md"
+ onClick={() => {
+ const cols = [
+ { header: "Date & Time", key: "dateTime" },
+ { header: `${machineTerm}`, key: "machine" },
+ { header: "Fuel Added (Litres)", key: "litres" },
+ { header: "Total Cost", key: "cost" },
+ { header: "Logged By", key: "loggedBy" },
+ ];
+ const dataRows = entries.map((e) => ({
+ dateTime: `${fmt(e.recordedAt)} ${fmtTime(e.recordedAt)}`,
+ machine: e.machine ? `${e.machine.registrationNumber} (${e.machine.brand || ""})` : "N/A",
+ litres: e.litres,
+ cost: e.cost || 0,
+ loggedBy: e.recorder?.fullName || "Operator",
+ }));
+ exportToExcel("Fuel_Logs", "Fuel Entries", cols, dataRows);
+ }}
+ style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+ >
+ <FileSpreadsheet size={16} /> Export Excel
+ </Button>
  </div>
 
  {/* Filter bar */}

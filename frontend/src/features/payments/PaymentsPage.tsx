@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { AlertTriangle, CreditCard, FileText, Wallet, CheckCircle2, AlertCircle } from "lucide-react";
+import { AlertTriangle, CreditCard, FileText, Wallet, CheckCircle2, AlertCircle, FileSpreadsheet } from "lucide-react";
 import "./payments.css";
 import type { Invoice } from "../../types/payment";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { getTerm } from "../../lib/terminology";
+import { exportToExcel } from "../../lib/exportUtils";
 import { Card } from "../../components/ui/Card";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -105,6 +106,39 @@ export const PaymentsPage: React.FC = () => {
  <h2>Payments & Invoicing</h2>
  <p>Track job billing, receive collections, enforce balances & issue receipts</p>
  </div>
+
+ <Button
+ variant="secondary"
+ size="md"
+ onClick={() => {
+ const cols = [
+ { header: "Invoice Number", key: "invoiceNumber" },
+ { header: `${customerTerm} Name`, key: "customerName" },
+ { header: `${villageTerm} Location`, key: "villageName" },
+ { header: "Booking Number", key: "bookingNumber" },
+ { header: "Total Amount", key: "totalAmount" },
+ { header: "Paid Amount", key: "paidAmount" },
+ { header: "Balance Due", key: "balanceAmount" },
+ { header: "Status", key: "status" },
+ { header: "Date", key: "date" },
+ ];
+ const dataRows = filteredInvoices.map((inv) => ({
+ invoiceNumber: inv.invoiceNumber,
+ customerName: inv.customer?.name || "N/A",
+ villageName: typeof inv.customer?.village === "string" ? inv.customer.village : inv.customer?.village?.name || "N/A",
+ bookingNumber: inv.booking?.bookingNumber || "N/A",
+ totalAmount: inv.totalAmount,
+ paidAmount: inv.paidAmount,
+ balanceAmount: inv.balanceAmount,
+ status: inv.status,
+ date: new Date(inv.createdAt).toLocaleDateString("en-IN"),
+ }));
+ exportToExcel("Invoices_Ledger", "Invoices", cols, dataRows);
+ }}
+ style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+ >
+ <FileSpreadsheet size={16} /> Export Excel
+ </Button>
  </div>
 
  {/* Financial KPI Summary Cards */}

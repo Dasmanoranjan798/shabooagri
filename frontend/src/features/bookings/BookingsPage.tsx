@@ -10,13 +10,15 @@ import {
   User,
   Tractor,
   UserCheck,
-  Banknote
+  Banknote,
+  FileSpreadsheet
 } from "lucide-react";
 import type { Booking } from "../../types/booking";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { formatCurrency } from "../../lib/theme";
 import { getTerm } from "../../lib/terminology";
+import { exportToExcel } from "../../lib/exportUtils";
 import { Card } from "../../components/ui/Card";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -140,11 +142,46 @@ export const BookingsPage: React.FC = () => {
           <p>Schedule, assign equipment & track service operations</p>
         </div>
 
-        {canCreate && (
-          <Button variant="primary" size="md" onClick={handleOpenCreate} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-            <Plus size={16} /> New {getTerm("booking")}
+        <div style={{ display: "flex", gap: "8px" }}>
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={() => {
+              const cols = [
+                { header: "Booking Number", key: "bookingNumber" },
+                { header: `${customerTerm} Name`, key: "customerName" },
+                { header: `${villageTerm} Location`, key: "villageName" },
+                { header: `${machineTerm}`, key: "machine" },
+                { header: `${driverTerm}`, key: "driver" },
+                { header: "Scheduled Date", key: "scheduledDate" },
+                { header: "Pricing Method", key: "pricingMethod" },
+                { header: "Estimated Amount", key: "estimatedAmount" },
+                { header: "Status", key: "status" },
+              ];
+              const dataRows = filteredBookings.map((b) => ({
+                bookingNumber: b.bookingNumber,
+                customerName: b.customer?.name || "N/A",
+                villageName: b.village?.name || "N/A",
+                machine: b.machine ? `${b.machine.registrationNumber} (${b.machine.brand || ""})` : "Unassigned",
+                driver: b.driver ? b.driver.employee.name : "Unassigned",
+                scheduledDate: new Date(b.scheduledDate).toLocaleDateString("en-IN"),
+                pricingMethod: b.pricingMethod?.label || b.pricingMethod?.key || "N/A",
+                estimatedAmount: b.estimatedAmount,
+                status: b.status,
+              }));
+              exportToExcel("Bookings_Report", "Bookings", cols, dataRows);
+            }}
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+          >
+            <FileSpreadsheet size={16} /> Export Excel
           </Button>
-        )}
+
+          {canCreate && (
+            <Button variant="primary" size="md" onClick={handleOpenCreate} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <Plus size={16} /> New {getTerm("booking")}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filter Tabs & Search Bar */}

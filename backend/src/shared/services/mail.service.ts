@@ -96,3 +96,45 @@ export async function sendStaffInviteEmail(
     return true;
   }
 }
+
+export async function sendOtpEmail(toEmail: string, otpCode: string): Promise<boolean> {
+  if (env.SMTP_HOST && env.SMTP_USER) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: env.SMTP_HOST,
+        port: env.SMTP_PORT,
+        secure: env.SMTP_PORT === 465,
+        auth: {
+          user: env.SMTP_USER,
+          pass: env.SMTP_PASSWORD,
+        },
+      });
+
+      await transporter.sendMail({
+        from: env.SMTP_FROM,
+        to: toEmail,
+        subject: `Your ShabooAgri Verification Code: ${otpCode}`,
+        text: `Hello,\n\nYour ShabooAgri verification code is: ${otpCode}\n\nThis code is valid for 5 minutes.\n\nRegards,\nShabooAgri`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+            <h2 style="color: #1B7A3E; margin-top: 0;">Verification Code</h2>
+            <p>Hello,</p>
+            <p>Your ShabooAgri verification code is:</p>
+            <div style="font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #1B7A3E; margin: 20px 0; padding: 12px; background-color: #f4fbf6; display: inline-block; border-radius: 6px;">
+              ${otpCode}
+            </div>
+            <p style="font-size: 0.88rem; color: #666;">This code is valid for 5 minutes. Do not share this code with anyone.</p>
+          </div>
+        `,
+      });
+
+      return true;
+    } catch (err: any) {
+      console.error("[MailService] Failed to send OTP email via SMTP:", err.message);
+      return false;
+    }
+  } else {
+    console.log(`[MailService] SMTP not configured. Generated OTP safely for ${toEmail}.`);
+    return true;
+  }
+}

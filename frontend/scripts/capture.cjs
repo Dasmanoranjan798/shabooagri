@@ -1,5 +1,4 @@
 const puppeteer = require('puppeteer');
-const path = require('path');
 
 const url = process.argv[2] || 'http://localhost:5173/saas';
 const width = parseInt(process.argv[3] || '375', 10);

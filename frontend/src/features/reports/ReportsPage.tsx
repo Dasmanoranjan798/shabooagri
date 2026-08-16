@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, FileSpreadsheet, Printer } from "lucide-react";
 import "./reports.css";
 import type { DashboardSummaryResponse, IncomeSeriesResponse, FuelSeriesResponse, TimeRange } from "../../types/dashboard";
 import { api } from "../../lib/api";
+import { exportToExcel, exportToPdf } from "../../lib/exportUtils";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
@@ -131,25 +132,56 @@ export const ReportsPage: React.FC = () => {
  : [];
 
  return (
- <div className="sa-reports-page">
- <div className="sa-page-header">
- <div>
- <h1 className="sa-page-title"> Reports</h1>
- <p className="sa-page-subtitle">Financial summaries and operational metrics</p>
- </div>
+    <div className="sa-reports-page">
+      <div className="sa-page-header">
+        <div>
+          <h1 className="sa-page-title"> Reports</h1>
+          <p className="sa-page-subtitle">Financial summaries and operational metrics</p>
+        </div>
 
- <div className="sa-segmented-control" role="group" aria-label="Time range">
- {TIME_RANGE_OPTIONS.map((opt) => (
- <button
- key={opt.value}
- className={`sa-segmented-option ${timeRange === opt.value ? "sa-segmented-option--active" : ""}`}
- onClick={() => handleRangeChange(opt.value)}
- >
- {opt.label}
- </button>
- ))}
- </div>
- </div>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+          <div className="sa-segmented-control" role="group" aria-label="Time range">
+            {TIME_RANGE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                className={`sa-segmented-option ${timeRange === opt.value ? "sa-segmented-option--active" : ""}`}
+                onClick={() => handleRangeChange(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", gap: "8px" }}>
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => exportToPdf(`Reports_Summary_${timeRange}`)}
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+            >
+              <Printer size={16} /> Print / Save PDF
+            </Button>
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => {
+                const cols = [
+                  { header: "Date", key: "date" },
+                  { header: "Revenue (₹)", key: "revenue" },
+                ];
+                const dataRows = incomePoints.map((p) => ({
+                  date: p.label,
+                  revenue: p.value,
+                }));
+                exportToExcel(`Revenue_Report_${timeRange}`, "Revenue Summary", cols, dataRows);
+              }}
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+            >
+              <FileSpreadsheet size={16} /> Export Excel
+            </Button>
+          </div>
+        </div>
+      </div>
 
  {isLoading ? (
  <div className="sa-center-viewport">

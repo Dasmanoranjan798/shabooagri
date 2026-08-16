@@ -58,14 +58,13 @@ app.get("/health", async (_req, res) => {
   }
 });
 
+import { authMiddleware } from "./middleware/auth.middleware";
 import { tenantResolverMiddleware } from "./middleware/tenantResolver.middleware";
 
-// Phase 1 local-disk stub for booking attachments (see booking.upload.ts) —
-// served back out as static files rather than through an authenticated
-// route, so this is only as private as the URL is hard to guess. Fine for
-// a pilot; revisit (signed URLs / object storage) before wider rollout.
-app.use("/uploads/booking-attachments", express.static(BOOKING_ATTACHMENT_UPLOAD_ROOT));
-app.use("/uploads/job-photos", express.static(JOB_PHOTO_UPLOAD_ROOT));
+// Protected file serving for booking attachments and job photos — requires a valid
+// access token (passed via Authorization Bearer header or ?token= query parameter).
+app.use("/uploads/booking-attachments", authMiddleware, express.static(BOOKING_ATTACHMENT_UPLOAD_ROOT));
+app.use("/uploads/job-photos", authMiddleware, express.static(JOB_PHOTO_UPLOAD_ROOT));
 
 app.use(tenantResolverMiddleware);
 
