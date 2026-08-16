@@ -93,7 +93,15 @@ export const SaasAdminFeedbackPage: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-bold uppercase">
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                        fb.status === "SUBMITTED"
+                          ? "bg-rose-950 text-rose-400 border-rose-800"
+                          : fb.status === "IN_REVIEW" || fb.status === "PLANNED"
+                          ? "bg-amber-950 text-amber-400 border-amber-800"
+                          : "bg-emerald-950 text-emerald-400 border-emerald-800"
+                      }`}
+                    >
                       {fb.status}
                     </span>
                     <button

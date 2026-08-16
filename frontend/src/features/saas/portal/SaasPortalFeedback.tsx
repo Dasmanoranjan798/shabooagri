@@ -181,7 +181,15 @@ export const SaasPortalFeedback: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-400 text-[11px] font-bold uppercase">
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase ${
+                        fb.status === "SUBMITTED"
+                          ? "bg-rose-950 text-rose-400"
+                          : fb.status === "IN_REVIEW" || fb.status === "PLANNED"
+                          ? "bg-amber-950 text-amber-400"
+                          : "bg-emerald-950 text-emerald-400"
+                      }`}
+                    >
                       {fb.status}
                     </span>
                   </div>

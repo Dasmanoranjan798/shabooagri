@@ -71,7 +71,15 @@ export const SaasPortalPayments: React.FC = () => {
                       <td className="py-4 px-6 font-mono text-emerald-400">₹{Number(p.gstAmount).toFixed(2)}</td>
                       <td className="py-4 px-6 font-bold text-white font-mono">₹{Number(p.totalAmount).toFixed(2)}</td>
                       <td className="py-4 px-6">
-                        <span className="px-2.5 py-1 rounded-md bg-emerald-950 text-emerald-400 border border-emerald-800 text-xs font-bold uppercase">
+                        <span
+                          className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase border ${
+                            p.status === "SUCCESS"
+                              ? "bg-emerald-950 text-emerald-400 border-emerald-800"
+                              : p.status === "PENDING"
+                              ? "bg-amber-950 text-amber-400 border-amber-800"
+                              : "bg-rose-950 text-rose-400 border-rose-800"
+                          }`}
+                        >
                           {p.status}
                         </span>
                       </td>
