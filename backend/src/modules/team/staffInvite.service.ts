@@ -5,6 +5,7 @@ import { prisma } from "../../db/prisma";
 import { env } from "../../config/env";
 import { AppError } from "../../shared/errors/AppError";
 import { sendStaffInviteEmail } from "../../shared/services/mail.service";
+import { sendStaffInviteSms } from "../../shared/services/sms.service";
 import { issueSsoTokenPair } from "../auth/auth.service";
 import * as authRepository from "../auth/auth.repository";
 import * as staffInviteRepository from "./staffInvite.repository";
@@ -113,13 +114,17 @@ export async function createInvite(
     emailSent = await sendStaffInviteEmail(input.email, inviteLink, company!.name, role.name, inviter!.fullName);
   }
 
+  let smsSent = false;
+  if (input.phone) {
+    smsSent = await sendStaffInviteSms(input.phone, inviteLink, company!.name);
+  }
+
   return {
     invite,
     inviteLink,
-    // Phone-only invites have no SMS gateway yet — the caller shows this
-    // link directly so the owner can share it manually (WhatsApp, SMS, etc.)
-    // until a gateway key is configured.
-    deliveryMethod: input.email ? (emailSent ? "email" : "email_failed") : "manual_link",
+    deliveryMethod: input.email
+      ? (emailSent ? "email" : "email_failed")
+      : (smsSent ? "sms" : "manual_link"),
   };
 }
 

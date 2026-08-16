@@ -7,6 +7,7 @@ import { AppError } from "../../shared/errors/AppError";
 import * as authRepository from "./auth.repository";
 import * as rbacService from "../rbac/rbac.service";
 import { sendOtpEmail, sendPasswordResetEmail } from "../../shared/services/mail.service";
+import { sendOtpSms } from "../../shared/services/sms.service";
 import type { AccessTokenPayload, AuthenticatedUser, RefreshTokenPayload } from "./auth.types";
 import type {
   ChangePasswordInput,
@@ -169,6 +170,8 @@ export async function requestOtp(input: OtpRequestInput) {
 
   if (input.identifier.includes("@")) {
     await sendOtpEmail(input.identifier, code);
+  } else {
+    await sendOtpSms(input.identifier, code);
   }
 
   console.log(`[dev-only] OTP for ${input.identifier}: ${code}`);

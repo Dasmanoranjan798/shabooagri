@@ -23,6 +23,14 @@ const envSchema = z.object({
   // Only needed once a webhook is registered in the Razorpay Dashboard; the
   // synchronous checkout-verification flow works without it.
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+  // Multi-Provider SMS Gateway Configuration (Fast2SMS, MSG91, Twilio, Mock)
+  SMS_PROVIDER: z.enum(["fast2sms", "msg91", "twilio", "mock"]).optional().default("mock"),
+  SMS_API_KEY: z.string().optional(),
+  SMS_SENDER_ID: z.string().optional(),
+  SMS_TEMPLATE_ID: z.string().optional(),
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_FROM_NUMBER: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
