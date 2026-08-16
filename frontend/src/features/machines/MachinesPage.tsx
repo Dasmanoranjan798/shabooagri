@@ -84,9 +84,15 @@ export const MachinesPage: React.FC = () => {
  setIsFormModalOpen(true);
  };
 
- const handleOpenDetail = (machine: Machine) => {
+ const handleOpenDetail = async (machine: Machine) => {
  setSelectedDetailMachine(machine);
  setIsDetailModalOpen(true);
+ try {
+ const detailed = await api.getMachineById(machine.id);
+ setSelectedDetailMachine(detailed);
+ } catch (err) {
+ console.error("Failed to load machine stats:", err);
+ }
  };
 
  const handleDelete = async (id: string, e?: React.MouseEvent) => {

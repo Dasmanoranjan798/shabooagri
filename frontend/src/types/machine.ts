@@ -35,6 +35,11 @@ export interface Machine {
     id: string;
     employee?: { id: string; name: string };
   } | null;
+  stats?: {
+    todayHours: number;
+    todayIncome: number;
+    thisMonthIncome: number;
+  };
 }
 
 export interface CreateMachinePayload {

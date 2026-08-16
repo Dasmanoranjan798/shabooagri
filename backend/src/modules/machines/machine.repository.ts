@@ -5,7 +5,14 @@ import { createScopedRepository } from "../../shared/db/scopedRepository";
 // Only file in this module allowed to import the Prisma client.
 const scoped = createScopedRepository(prisma.machine);
 
-const includeRelations = { machineType: true, assignedDriver: true } satisfies Prisma.MachineInclude;
+const includeRelations = {
+  machineType: true,
+  assignedDriver: {
+    include: {
+      employee: { select: { id: true, name: true } },
+    },
+  },
+} satisfies Prisma.MachineInclude;
 
 export function findAllForCompany(companyId: string) {
   return prisma.machine.findMany({
