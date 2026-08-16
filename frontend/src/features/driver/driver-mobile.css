@@ -87,7 +87,8 @@
 }
 
 .sa-driver-job-card--today {
-  border-left: 4px solid var(--color-primary);
+  background-color: #f6fbf7;
+  border-color: #bbf7d0;
 }
 
 .sa-driver-job-card-header {

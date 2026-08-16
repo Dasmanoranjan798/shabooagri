@@ -66,9 +66,10 @@ Per the user's explicit directive ("PDF and Excel ONLY, no CSV"), built a dedica
 ## 3. Current Codebase Health
 
 - **Backend**: Compiles cleanly with `tsc -p tsconfig.json`. All 10 integration test suites pass (`npm run test`).
-- **Frontend**: Compiles cleanly with `tsc -b && vite build` and oxlint (`0 errors`).
+- **Frontend**: Compiles cleanly with `tsc -b && vite build` and oxlint (`0 errors`). Vite dev server running on `http://localhost:5173`.
 - **Multi-Provider SMS Gateway Service (`sms.service.ts`)**: Built production-grade SMS provider service supporting Fast2SMS, MSG91, Twilio, and mock fallback. Integrated with OTP login requests and staff invite onboarding links.
 - **Equipment Maintenance Alerts Engine**: Built real-time maintenance calculation engine (`getMaintenanceAlerts`) tracking worked engine hours and elapsed days vs schedule intervals. Integrated `GET /maintenance/alerts` API and rendered warning alert cards on `MaintenancePage.tsx`.
+- **UI/UX Refinements**: Refactored KPI card grids into fluid responsive columns (`repeat(auto-fit, minmax(200px, 1fr))`), removed cliché linear-gradient backgrounds and colored border-left accents in favor of clean brand surface tints, and verified responsive layouts across mobile, tablet, and desktop breakpoints.
 
 ---
 

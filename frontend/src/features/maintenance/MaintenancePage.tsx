@@ -189,7 +189,8 @@ export const MaintenancePage: React.FC = () => {
             className="sa-card"
             style={{
               padding: "14px",
-              borderLeft: `4px solid ${al.status === "OVERDUE" ? "#dc2626" : al.status === "DUE_SOON" ? "#d97706" : "#16a34a"}`,
+              backgroundColor: al.status === "OVERDUE" ? "#fef2f2" : al.status === "DUE_SOON" ? "#fffbe6" : "#f0fdf4",
+              borderColor: al.status === "OVERDUE" ? "#fca5a5" : al.status === "DUE_SOON" ? "#fde68a" : "#bbf7d0",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
