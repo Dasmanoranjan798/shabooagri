@@ -49,6 +49,15 @@ export function findAllForCompany(companyId: string, filter: InvoiceListFilter =
   });
 }
 
+// Oldest-first so a customer payment/advance settles the longest-standing
+// debt before newer invoices — standard "apply against open balance" order.
+export function findOutstandingForCustomer(companyId: string, customerId: string) {
+  return prisma.invoice.findMany({
+    where: { companyId, customerId, status: { in: ["UNPAID", "PARTIALLY_PAID"] } },
+    orderBy: { invoiceDate: "asc" },
+  });
+}
+
 export function findByIdScopedWithRelations(companyId: string, id: string) {
   return prisma.invoice.findFirst({
     where: { id, companyId },

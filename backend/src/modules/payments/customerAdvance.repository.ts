@@ -31,3 +31,13 @@ export function create(
     include: advanceIncludeRelations,
   });
 }
+
+export async function setAppliedAmount(companyId: string, id: string, appliedAmount: number) {
+  const existing = await prisma.customerAdvance.findFirst({ where: { id, companyId } });
+  if (!existing) return null;
+  return prisma.customerAdvance.update({
+    where: { id },
+    data: { appliedAmount },
+    include: advanceIncludeRelations,
+  });
+}

@@ -116,6 +116,12 @@ export async function createManualInvoice(
 // Money received from a customer with no invoice to apply it to yet (an
 // advance before a job starts, a walk-in collection). Tracked separately
 // from Payment, which always requires an invoiceId.
+// A customer who already owes money on open invoices and hands over cash
+// isn't giving a pure "advance" — that money settles the oldest debt first,
+// same as any other payment; only the leftover (if the amount exceeds what
+// they owe) is a real advance/credit. Mirrors how a manual payment against
+// a specific invoice works (recordPaymentTx), just applied automatically
+// across every open invoice this customer has, oldest first.
 export async function recordCustomerAdvance(
   companyId: string,
   user: AuthenticatedUser,
@@ -123,7 +129,7 @@ export async function recordCustomerAdvance(
 ) {
   await customerService.getById(companyId, input.customerId);
 
-  return customerAdvanceRepository.create(companyId, {
+  const advance = await customerAdvanceRepository.create(companyId, {
     customerId: input.customerId,
     amount: input.amount,
     paymentMethod: input.paymentMethod,
@@ -131,6 +137,85 @@ export async function recordCustomerAdvance(
     receivedBy: user.id,
     notes: input.notes,
   });
+
+  const appliedTotal = await applyAmountToOutstandingInvoices(
+    companyId,
+    user.id,
+    input.customerId,
+    input.amount,
+    { paymentMethod: input.paymentMethod, referenceNumber: input.referenceNumber },
+  );
+
+  if (appliedTotal === 0) {
+    return advance;
+  }
+  const updated = await customerAdvanceRepository.setAppliedAmount(companyId, advance.id, appliedTotal);
+  return updated ?? advance;
+}
+
+// Shared by recordCustomerAdvance and the one-off backfill for advances
+// recorded before this auto-apply logic existed. Returns how much of
+// `amount` actually got applied (<= amount; less if the customer had fewer
+// open invoices than the amount received).
+async function applyAmountToOutstandingInvoices(
+  companyId: string,
+  receivedByUserId: string,
+  customerId: string,
+  amount: number,
+  paymentInfo: { paymentMethod: RecordCustomerAdvanceInput["paymentMethod"]; referenceNumber?: string },
+): Promise<number> {
+  const outstandingInvoices = await invoiceRepository.findOutstandingForCustomer(companyId, customerId);
+
+  let remaining = Math.round(amount * 100) / 100;
+  let appliedTotal = 0;
+  for (const invoice of outstandingInvoices) {
+    if (remaining <= 0) break;
+    const applyAmount = Math.min(remaining, Number(invoice.balanceAmount));
+    if (applyAmount <= 0) continue;
+
+    await paymentRepository.recordPaymentTx(companyId, invoice.id, {
+      amount: applyAmount,
+      paymentMethod: paymentInfo.paymentMethod,
+      referenceNumber: paymentInfo.referenceNumber,
+      receivedBy: receivedByUserId,
+      notes: "Auto-applied from advance payment",
+    });
+
+    appliedTotal = Math.round((appliedTotal + applyAmount) * 100) / 100;
+    remaining = Math.round((remaining - applyAmount) * 100) / 100;
+  }
+  return appliedTotal;
+}
+
+// One-off backfill for advances recorded before auto-apply existed, whose
+// unapplied balance should now settle against any open invoices the
+// customer has. Safe to call repeatedly — advances that are already fully
+// applied, or whose customer has no open invoices, are no-ops. Attributes
+// each auto-applied payment to the advance's original receiver, not
+// whoever runs the backfill.
+export async function backfillUnappliedAdvances(companyId: string) {
+  const advances = await customerAdvanceRepository.findAllForCompany(companyId);
+  const results: Array<{ advanceId: string; appliedNow: number }> = [];
+
+  for (const advance of advances) {
+    const unapplied = Math.round((Number(advance.amount) - Number(advance.appliedAmount)) * 100) / 100;
+    if (unapplied <= 0) continue;
+
+    const appliedNow = await applyAmountToOutstandingInvoices(
+      companyId,
+      advance.receivedBy,
+      advance.customerId,
+      unapplied,
+      { paymentMethod: advance.paymentMethod, referenceNumber: advance.referenceNumber ?? undefined },
+    );
+
+    if (appliedNow > 0) {
+      const newAppliedAmount = Math.round((Number(advance.appliedAmount) + appliedNow) * 100) / 100;
+      await customerAdvanceRepository.setAppliedAmount(companyId, advance.id, newAppliedAmount);
+      results.push({ advanceId: advance.id, appliedNow });
+    }
+  }
+  return results;
 }
 
 export async function listCustomerAdvances(companyId: string, user: AuthenticatedUser) {
