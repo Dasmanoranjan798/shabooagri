@@ -17,7 +17,7 @@ import type { Employee, CreateEmployeePayload, UpdateEmployeePayload } from "../
 import type { Invoice, PaymentRecord, ReceivePaymentPayload, ReceiptData } from "../types/payment";
 import type { Expense, ExpenseCategory, CreateExpensePayload, UpdateExpensePayload } from "../types/expense";
 import type { FuelEntry } from "../types/fuel";
-import type { MaintenanceSchedule, MaintenanceRecord, CreateMaintenanceRecordPayload, CreateMaintenanceSchedulePayload } from "../types/maintenance";
+import type { MaintenanceSchedule, MaintenanceRecord, CreateMaintenanceRecordPayload, CreateMaintenanceSchedulePayload, MaintenanceAlert } from "../types/maintenance";
 import type { CompanyProfile, UpdateCompanyProfilePayload, UpdateTerminologyPayload } from "../types/settings";
 import type { Role, Permission, CreateRolePayload, UpdateRolePayload } from "../types/rbac";
 import type { TeamUser, StaffInvite, CreateInvitePayload, CreateInviteResponse, InviteVerifyResult } from "../types/team";
@@ -935,6 +935,15 @@ export const api = {
       const err = await res.json().catch(() => ({ message: "Failed to delete record" }));
       throw new ApiError(res.status, err.message);
     }
+  },
+
+  async listMaintenanceAlerts(): Promise<MaintenanceAlert[]> {
+    const res = await fetchWithAuth("/maintenance/alerts");
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load maintenance alerts" }));
+      throw new ApiError(res.status, err.message || "Failed to load maintenance alerts");
+    }
+    return res.json();
   },
 
   // Settings

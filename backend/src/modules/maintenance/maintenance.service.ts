@@ -82,3 +82,75 @@ export async function deleteRecord(companyId: string, id: string) {
   await getRecordById(companyId, id);
   return maintenanceRepo.deleteRecordScoped(companyId, id);
 }
+
+// ---- Maintenance Alerts ----
+
+export interface MaintenanceAlert {
+  id: string;
+  machineId: string;
+  machineRegistration: string;
+  machineBrandModel: string;
+  description: string;
+  intervalHours: number | null;
+  intervalDays: number | null;
+  currentWorkedHours: number;
+  hoursSinceLastService: number;
+  daysSinceLastService: number;
+  lastServiceDate: Date | null;
+  status: "OVERDUE" | "DUE_SOON" | "HEALTHY";
+  reason: string;
+}
+
+export async function getMaintenanceAlerts(companyId: string): Promise<MaintenanceAlert[]> {
+  const schedules = await maintenanceRepo.findActiveSchedulesWithRecordsAndJobs(companyId);
+  const now = new Date();
+
+  return schedules.map((sch) => {
+    const totalHours = sch.machine.jobs.reduce((sum, j) => sum + (j.workedHours ? Number(j.workedHours) : 0), 0);
+    const lastRecord = sch.records[0] || null;
+    const lastDate = lastRecord ? new Date(lastRecord.serviceDate) : new Date(sch.machine.createdAt);
+    const lastHours = lastRecord?.hourMeterAtService ? Number(lastRecord.hourMeterAtService) : 0;
+
+    const hoursSince = Math.max(0, totalHours - lastHours);
+    const daysSince = Math.max(0, Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)));
+
+    let status: "OVERDUE" | "DUE_SOON" | "HEALTHY" = "HEALTHY";
+    let reason = "Service up-to-date";
+
+    const isHoursOverdue = sch.intervalHours ? hoursSince >= sch.intervalHours : false;
+    const isDaysOverdue = sch.intervalDays ? daysSince >= sch.intervalDays : false;
+
+    const isHoursDueSoon = sch.intervalHours ? hoursSince >= sch.intervalHours * 0.85 : false;
+    const isDaysDueSoon = sch.intervalDays ? daysSince >= Math.max(0, sch.intervalDays - 7) : false;
+
+    if (isHoursOverdue || isDaysOverdue) {
+      status = "OVERDUE";
+      const reasonsArr: string[] = [];
+      if (isHoursOverdue) reasonsArr.push(`${hoursSince.toFixed(1)} hrs worked vs ${sch.intervalHours} hrs limit`);
+      if (isDaysOverdue) reasonsArr.push(`${daysSince} days elapsed vs ${sch.intervalDays} days limit`);
+      reason = `Overdue: ${reasonsArr.join("; ")}`;
+    } else if (isHoursDueSoon || isDaysDueSoon) {
+      status = "DUE_SOON";
+      const reasonsArr: string[] = [];
+      if (isHoursDueSoon) reasonsArr.push(`${hoursSince.toFixed(1)} / ${sch.intervalHours} hrs worked`);
+      if (isDaysDueSoon) reasonsArr.push(`${daysSince} / ${sch.intervalDays} days elapsed`);
+      reason = `Due Soon: ${reasonsArr.join("; ")}`;
+    }
+
+    return {
+      id: sch.id,
+      machineId: sch.machineId,
+      machineRegistration: sch.machine.registrationNumber,
+      machineBrandModel: `${sch.machine.brand || ""} ${sch.machine.model || ""}`.trim(),
+      description: sch.description || "Routine Maintenance",
+      intervalHours: sch.intervalHours,
+      intervalDays: sch.intervalDays,
+      currentWorkedHours: totalHours,
+      hoursSinceLastService: hoursSince,
+      daysSinceLastService: daysSince,
+      lastServiceDate: lastRecord ? lastRecord.serviceDate : null,
+      status,
+      reason,
+    };
+  });
+}

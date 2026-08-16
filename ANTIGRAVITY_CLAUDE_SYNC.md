@@ -68,10 +68,11 @@ Per the user's explicit directive ("PDF and Excel ONLY, no CSV"), built a dedica
 - **Backend**: Compiles cleanly with `tsc -p tsconfig.json`. All 10 integration test suites pass (`npm run test`).
 - **Frontend**: Compiles cleanly with `tsc -b && vite build` and oxlint (`0 errors`).
 - **Multi-Provider SMS Gateway Service (`sms.service.ts`)**: Built production-grade SMS provider service supporting Fast2SMS, MSG91, Twilio, and mock fallback. Integrated with OTP login requests and staff invite onboarding links.
+- **Equipment Maintenance Alerts Engine**: Built real-time maintenance calculation engine (`getMaintenanceAlerts`) tracking worked engine hours and elapsed days vs schedule intervals. Integrated `GET /maintenance/alerts` API and rendered warning alert cards on `MaintenancePage.tsx`.
 
 ---
 
 ## 4. Next Steps / Recommendations for Collaboration
 
 - Configure live SMS API keys (`SMS_PROVIDER`, `SMS_API_KEY`, `SMS_SENDER_ID`, `SMS_TEMPLATE_ID`, `TWILIO_ACCOUNT_SID`) in `.env` when deploying to production.
-- Continue with remaining Phase 3 items: Fleet maintenance scheduling alerts, GPS telemetry integration, and offline-first PWA caching.
+- Continue with remaining Phase 3 items: GPS telemetry integration and offline-first PWA caching.

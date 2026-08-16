@@ -51,3 +51,19 @@ export interface CreateMaintenanceSchedulePayload {
   intervalDays?: number;
   description?: string;
 }
+
+export interface MaintenanceAlert {
+  id: string;
+  machineId: string;
+  machineRegistration: string;
+  machineBrandModel: string;
+  description: string;
+  intervalHours: number | null;
+  intervalDays: number | null;
+  currentWorkedHours: number;
+  hoursSinceLastService: number;
+  daysSinceLastService: number;
+  lastServiceDate: string | null;
+  status: "OVERDUE" | "DUE_SOON" | "HEALTHY";
+  reason: string;
+}

@@ -21,3 +21,6 @@ maintenanceRouter.get("/records/:id", requirePermission("operations.view"), asyn
 maintenanceRouter.post("/records", requirePermission("maintenance.manage"), asyncHandler(maintenanceController.createRecord));
 maintenanceRouter.patch("/records/:id", requirePermission("maintenance.manage"), asyncHandler(maintenanceController.updateRecord));
 maintenanceRouter.delete("/records/:id", requirePermission("maintenance.manage"), asyncHandler(maintenanceController.removeRecord));
+
+// Maintenance Service Alerts
+maintenanceRouter.get("/alerts", requirePermission("operations.view"), asyncHandler(maintenanceController.listAlerts));

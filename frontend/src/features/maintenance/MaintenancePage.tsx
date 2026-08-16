@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import "./maintenance.css";
-import type { MaintenanceRecord, CreateMaintenanceRecordPayload } from "../../types/maintenance";
+import type { MaintenanceRecord, CreateMaintenanceRecordPayload, MaintenanceAlert } from "../../types/maintenance";
 import type { Machine } from "../../types/machine";
-import { Wrench, AlertTriangle } from "lucide-react";
+import { Wrench, AlertTriangle, ShieldAlert } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { Card } from "../../components/ui/Card";
+import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import { Modal } from "../../components/ui/Modal";
@@ -31,6 +32,7 @@ export const MaintenancePage: React.FC = () => {
 
  const [records, setRecords] = useState<MaintenanceRecord[]>([]);
  const [machines, setMachines] = useState<Machine[]>([]);
+ const [alerts, setAlerts] = useState<MaintenanceAlert[]>([]);
  const [isLoading, setIsLoading] = useState(true);
  const [error, setError] = useState<string | null>(null);
  const [filterMachineId, setFilterMachineId] = useState<string>("");
@@ -61,12 +63,14 @@ export const MaintenancePage: React.FC = () => {
  setIsLoading(true);
  setError(null);
  try {
- const [recList, machineList] = await Promise.all([
+ const [recList, machineList, alertList] = await Promise.all([
  api.listMaintenanceRecords(filterMachineId || undefined),
  api.listMachines(),
+ api.listMaintenanceAlerts(),
  ]);
  setRecords(recList);
  setMachines(machineList);
+ setAlerts(alertList);
  } catch (err: any) {
  setError(err.message || "Failed to load maintenance data");
  } finally {
@@ -171,6 +175,40 @@ export const MaintenancePage: React.FC = () => {
  </div>
  </div>
  </Card>
+
+  {/* Alerts Section */}
+  {alerts.length > 0 && !filterMachineId && (
+    <div style={{ marginBottom: "20px" }}>
+      <h3 style={{ fontSize: "1.1rem", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+        <ShieldAlert size={20} color="var(--color-primary)" /> Equipment Maintenance Alerts
+      </h3>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "12px" }}>
+        {alerts.map((al) => (
+          <div
+            key={al.id}
+            className="sa-card"
+            style={{
+              padding: "14px",
+              borderLeft: `4px solid ${al.status === "OVERDUE" ? "#dc2626" : al.status === "DUE_SOON" ? "#d97706" : "#16a34a"}`,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+              <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>{al.machineRegistration}</span>
+              <Badge variant={al.status === "OVERDUE" ? "danger" : al.status === "DUE_SOON" ? "warning" : "success"}>
+                {al.status === "OVERDUE" ? "OVERDUE" : al.status === "DUE_SOON" ? "SERVICE DUE SOON" : "UP-TO-DATE"}
+              </Badge>
+            </div>
+            <p style={{ fontSize: "0.82rem", color: "var(--color-text-muted)", margin: "0 0 6px" }}>
+              {al.description} ({al.machineBrandModel})
+            </p>
+            <div style={{ fontSize: "0.8rem", fontWeight: 500, color: al.status === "OVERDUE" ? "#dc2626" : al.status === "DUE_SOON" ? "#b45309" : "#15803d" }}>
+              {al.reason}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
 
  {/* Content */}
  {isLoading ? (

@@ -77,3 +77,11 @@ export async function removeRecord(req: Request, res: Response) {
   await maintenanceService.deleteRecord(user.companyId, req.params.id);
   res.status(204).send();
 }
+
+// ---- Alert controller ----
+
+export async function listAlerts(req: Request, res: Response) {
+  const user = requireUser(req);
+  const alerts = await maintenanceService.getMaintenanceAlerts(user.companyId);
+  res.json(alerts);
+}
