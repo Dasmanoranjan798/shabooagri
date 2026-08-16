@@ -80,6 +80,18 @@ async function fetchSaasApi<T>(path: string, options: RequestInit = {}): Promise
 
   if (!response.ok) {
     const errorMsg = json?.error || json?.message || `Request failed with status ${response.status}`;
+
+    // No refresh-token exchange exists on the SaaS side (the access token
+    // is a self-contained 1-day JWT with nothing to refresh it), so a 401
+    // on an already-authenticated request means the session is dead and
+    // every subsequent action would otherwise fail silently the same way.
+    // Force a clean re-login instead of leaving the user stuck.
+    const isAuthEndpoint = path === "/saas/auth/login" || path === "/saas/auth/register";
+    if (response.status === 401 && token && !isAuthEndpoint) {
+      clearStoredSaasTokens();
+      window.location.href = "/saas/login?sessionExpired=1";
+    }
+
     throw new SaasApiError(response.status, errorMsg);
   }
 

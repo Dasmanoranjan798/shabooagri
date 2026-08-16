@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import "../saas.css";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Tractor, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { useSaasAuth } from "../../../context/SaasAuthContext";
 
@@ -13,6 +13,8 @@ export const SaasLoginPage: React.FC = () => {
 
   const { loginSaas } = useSaasAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sessionExpired = searchParams.get("sessionExpired") === "1";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +64,13 @@ export const SaasLoginPage: React.FC = () => {
               Access your ShabooAgri Business OS.
             </p>
           </div>
+
+          {sessionExpired && !errorMsg && (
+            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+              <span>Your session expired. Please sign in again.</span>
+            </div>
+          )}
 
           {errorMsg && (
             <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-start gap-2">
