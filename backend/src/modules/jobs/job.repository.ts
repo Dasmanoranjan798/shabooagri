@@ -97,8 +97,9 @@ export async function updateScopedWithRelations(
   companyId: string,
   id: string,
   data: Prisma.JobUncheckedUpdateInput,
+  tx: Prisma.TransactionClient | typeof prisma = prisma,
 ) {
-  const existing = await prisma.job.findFirst({ where: { id, companyId } });
+  const existing = await tx.job.findFirst({ where: { id, companyId } });
   if (!existing) return null;
-  return prisma.job.update({ where: { id }, data, include: includeRelations });
+  return tx.job.update({ where: { id }, data, include: includeRelations });
 }

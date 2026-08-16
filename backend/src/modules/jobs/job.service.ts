@@ -164,20 +164,31 @@ export async function complete(companyId: string, id: string, user: Authenticate
   // WORKING/PAUSED, both unreachable without start() having run first.
   const actualHours = input.actualHours ?? computeActualHours(job.startTime!, endTime, totalPausedDurationSec);
 
-  const updated = await jobRepository.updateScopedWithRelations(companyId, id, {
-    status: "COMPLETED",
-    endTime,
-    totalPausedDurationSec,
-    actualHours,
-    ...(input.completedAcres !== undefined ? { completedAcres: input.completedAcres } : {}),
-    ...(input.notes !== undefined ? { notes: input.notes } : {}),
+  // Job update, booking update, status-log write, and invoice creation must
+  // all succeed together — without this, a failure partway through (e.g.
+  // invoice creation) could leave the job COMPLETED with no invoice ever
+  // generated and no retry path (silent revenue loss).
+  return prisma.$transaction(async (tx) => {
+    const updated = await jobRepository.updateScopedWithRelations(
+      companyId,
+      id,
+      {
+        status: "COMPLETED",
+        endTime,
+        totalPausedDurationSec,
+        actualHours,
+        ...(input.completedAcres !== undefined ? { completedAcres: input.completedAcres } : {}),
+        ...(input.notes !== undefined ? { notes: input.notes } : {}),
+      },
+      tx,
+    );
+    await bookingRepository.updateScopedWithRelations(companyId, job.bookingId, { status: "COMPLETED" }, tx);
+    await jobStatusLogRepository.create(companyId, id, "COMPLETED", user.id, input.notes, tx);
+    if (updated) {
+      await paymentService.createInvoiceForCompletedJob(companyId, updated, tx);
+    }
+    return updated;
   });
-  await bookingRepository.updateScopedWithRelations(companyId, job.bookingId, { status: "COMPLETED" });
-  await jobStatusLogRepository.create(companyId, id, "COMPLETED", user.id, input.notes);
-  if (updated) {
-    await paymentService.createInvoiceForCompletedJob(companyId, updated);
-  }
-  return updated;
 }
 
 export async function completeForBooking(companyId: string, bookingId: string) {
@@ -193,17 +204,26 @@ export async function completeForBooking(companyId: string, bookingId: string) {
   const startTime = existingJob.startTime ?? endTime;
   const actualHours = computeActualHours(startTime, endTime, totalPausedDurationSec);
 
-  const updated = await jobRepository.updateScopedWithRelations(companyId, existingJob.id, {
-    status: "COMPLETED",
-    startTime,
-    endTime,
-    totalPausedDurationSec,
-    actualHours,
-  });
+  // Same reasoning as complete() above: job update and invoice creation
+  // must succeed together, not as two independent sequential writes.
+  await prisma.$transaction(async (tx) => {
+    const updated = await jobRepository.updateScopedWithRelations(
+      companyId,
+      existingJob.id,
+      {
+        status: "COMPLETED",
+        startTime,
+        endTime,
+        totalPausedDurationSec,
+        actualHours,
+      },
+      tx,
+    );
 
-  if (updated) {
-    await paymentService.createInvoiceForCompletedJob(companyId, updated);
-  }
+    if (updated) {
+      await paymentService.createInvoiceForCompletedJob(companyId, updated, tx);
+    }
+  });
 }
 
 export async function updateDetails(companyId: string, id: string, user: AuthenticatedUser, input: UpdateJobInput) {

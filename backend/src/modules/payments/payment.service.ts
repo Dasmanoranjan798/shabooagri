@@ -1,4 +1,4 @@
-import type { Booking, Job, PricingMethod } from "@prisma/client";
+import type { Booking, Job, Prisma, PricingMethod } from "@prisma/client";
 import type { AuthenticatedUser } from "../auth/auth.types";
 import { resolveCallerScope } from "../../shared/access/callerScope";
 import { prisma } from "../../db/prisma";
@@ -29,8 +29,12 @@ function resolveJobWorkedQuantity(
 // the Job's ACTUAL values (actualHours / completedAcres) matched to the
 // booking's pricing_method.unit — not estimated values.
 // Idempotent: if an invoice already exists for this booking, returns it.
-export async function createInvoiceForCompletedJob(companyId: string, job: JobWithRelations) {
-  const existing = await invoiceRepository.findByBookingIdScoped(companyId, job.bookingId);
+export async function createInvoiceForCompletedJob(
+  companyId: string,
+  job: JobWithRelations,
+  tx: Prisma.TransactionClient | typeof prisma = prisma,
+) {
+  const existing = await invoiceRepository.findByBookingIdScoped(companyId, job.bookingId, tx);
   if (existing) {
     return existing;
   }
@@ -58,21 +62,25 @@ export async function createInvoiceForCompletedJob(companyId: string, job: JobWi
   const isGstApplicable = false;
   const totalAmount = calculatedAmount;
 
-  return invoiceRepository.create(companyId, {
-    bookingId: job.bookingId,
-    customerId: job.booking.customerId,
-    subtotalAmount,
-    taxRate,
-    taxAmount,
-    cgstAmount,
-    sgstAmount,
-    igstAmount,
-    isGstApplicable,
-    totalAmount,
-    paidAmount: 0,
-    balanceAmount: totalAmount,
-    status: "UNPAID",
-  });
+  return invoiceRepository.create(
+    companyId,
+    {
+      bookingId: job.bookingId,
+      customerId: job.booking.customerId,
+      subtotalAmount,
+      taxRate,
+      taxAmount,
+      cgstAmount,
+      sgstAmount,
+      igstAmount,
+      isGstApplicable,
+      totalAmount,
+      paidAmount: 0,
+      balanceAmount: totalAmount,
+      status: "UNPAID",
+    },
+    tx,
+  );
 }
 
 export async function updateInvoiceTax(

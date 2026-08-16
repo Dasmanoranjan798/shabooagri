@@ -60,8 +60,12 @@ export function findByIdScoped(companyId: string, id: string) {
   return scoped.findByIdScoped(companyId, id);
 }
 
-export function findByBookingIdScoped(companyId: string, bookingId: string) {
-  return prisma.invoice.findFirst({
+export function findByBookingIdScoped(
+  companyId: string,
+  bookingId: string,
+  tx: Prisma.TransactionClient | typeof prisma = prisma,
+) {
+  return tx.invoice.findFirst({
     where: { companyId, bookingId },
     include: invoiceIncludeRelations,
   });
@@ -89,9 +93,10 @@ export async function claimNextInvoiceNumber(companyId: string): Promise<string>
 export async function create(
   companyId: string,
   data: Omit<Prisma.InvoiceUncheckedCreateInput, "companyId" | "invoiceNumber">,
+  tx: Prisma.TransactionClient | typeof prisma = prisma,
 ) {
   const invoiceNumber = await claimNextInvoiceNumber(companyId);
-  return prisma.invoice.create({
+  return tx.invoice.create({
     data: { ...data, companyId, invoiceNumber },
     include: invoiceIncludeRelations,
   });

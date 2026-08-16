@@ -85,10 +85,11 @@ export async function updateScopedWithRelations(
   companyId: string,
   id: string,
   data: Prisma.BookingUncheckedUpdateInput,
+  tx: Prisma.TransactionClient | typeof prisma = prisma,
 ) {
-  const existing = await prisma.booking.findFirst({ where: { id, companyId } });
+  const existing = await tx.booking.findFirst({ where: { id, companyId } });
   if (!existing) return null;
-  return prisma.booking.update({ where: { id }, data, include: includeRelations });
+  return tx.booking.update({ where: { id }, data, include: includeRelations });
 }
 
 export function deleteScoped(companyId: string, id: string) {

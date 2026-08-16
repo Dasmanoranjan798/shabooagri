@@ -1,4 +1,4 @@
-import type { JobStatus } from "@prisma/client";
+import type { JobStatus, Prisma } from "@prisma/client";
 import { prisma } from "../../db/prisma";
 
 // The append-only source of truth for a job's status history. job.status
@@ -6,8 +6,15 @@ import { prisma } from "../../db/prisma";
 // table is what job.service.ts's pause/resume timing math actually reads
 // from (when did the most recent pause start, so resume/complete can
 // compute how long it lasted).
-export function create(companyId: string, jobId: string, status: JobStatus, changedBy: string, note?: string) {
-  return prisma.jobStatusLog.create({ data: { companyId, jobId, status, changedBy, note } });
+export function create(
+  companyId: string,
+  jobId: string,
+  status: JobStatus,
+  changedBy: string,
+  note?: string,
+  tx: Prisma.TransactionClient | typeof prisma = prisma,
+) {
+  return tx.jobStatusLog.create({ data: { companyId, jobId, status, changedBy, note } });
 }
 
 export function findMostRecentByStatus(companyId: string, jobId: string, status: JobStatus) {
