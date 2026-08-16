@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./dashboard.css";
-import { AlertTriangle, RotateCcw, Wrench, ShieldAlert, BadgeAlert } from "lucide-react";
+import { AlertTriangle, RotateCcw, Wrench, ShieldAlert, BadgeAlert, X } from "lucide-react";
 import type {
   DashboardSummaryResponse,
   FuelSeriesResponse,
@@ -14,6 +14,9 @@ import { getMachineServiceWarning, getMachineInsuranceWarning, getDriverLicenseW
 import { DesktopDashboard } from "./DesktopDashboard";
 import { MobileDashboard } from "./MobileDashboard";
 
+const OPS_WARNING_DISMISS_KEY = "shabooagri_ops_warning_dismissed_until";
+const OPS_WARNING_DISMISS_MS = 24 * 60 * 60 * 1000;
+
 export const DashboardPage: React.FC = () => {
   const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
   const [incomeData, setIncomeData] = useState<IncomeSeriesResponse | null>(null);
@@ -24,6 +27,16 @@ export const DashboardPage: React.FC = () => {
     insuranceCount: number;
     licenseCount: number;
   }>({ serviceCount: 0, insuranceCount: 0, licenseCount: 0 });
+
+  const [isOpsWarningDismissed, setIsOpsWarningDismissed] = useState<boolean>(() => {
+    const dismissedUntil = Number(localStorage.getItem(OPS_WARNING_DISMISS_KEY) || 0);
+    return Date.now() < dismissedUntil;
+  });
+
+  const handleDismissOpsWarning = () => {
+    localStorage.setItem(OPS_WARNING_DISMISS_KEY, String(Date.now() + OPS_WARNING_DISMISS_MS));
+    setIsOpsWarningDismissed(true);
+  };
 
   const [incomeRange, setIncomeRange] = useState<TimeRange>("30d");
   const [fuelRange, setFuelRange] = useState<TimeRange>("30d");
@@ -143,10 +156,19 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="sa-dashboard-page">
-      {(opsWarnings.serviceCount > 0 || opsWarnings.insuranceCount > 0 || opsWarnings.licenseCount > 0) && (
+      {!isOpsWarningDismissed && (opsWarnings.serviceCount > 0 || opsWarnings.insuranceCount > 0 || opsWarnings.licenseCount > 0) && (
         <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-warning-border, #ffe58f)", borderRadius: "10px", padding: "14px 18px", marginBottom: "18px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-          <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#d97706", display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-            <AlertTriangle size={18} /> Operational Fleet & Staff Warning Alerts
+          <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#d97706", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "8px" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <AlertTriangle size={18} /> Operational Fleet & Staff Warning Alerts
+            </span>
+            <button
+              onClick={handleDismissOpsWarning}
+              title="Hide for 24 hours"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#d97706", display: "inline-flex", alignItems: "center", padding: "2px" }}
+            >
+              <X size={16} />
+            </button>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", fontSize: "0.85rem", color: "var(--color-text-main)" }}>
             {opsWarnings.serviceCount > 0 && (
