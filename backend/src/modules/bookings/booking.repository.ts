@@ -50,6 +50,46 @@ export function findByIdScoped(companyId: string, id: string) {
   return scoped.findByIdScoped(companyId, id);
 }
 
+// scheduledDate has no reliable duration column to compare against (many
+// pricing methods have no estimatedHours at all), so "conflict" here means
+// "already committed to another active booking on the same day" — the
+// coarsest granularity the schema actually supports, but still catches the
+// costly case: the same machine or driver double-booked for the same day.
+// CANCELLED/COMPLETED bookings don't hold the resource, so they're excluded.
+export function findConflictingBookingForMachine(
+  companyId: string,
+  machineId: string,
+  scheduledDate: Date,
+  excludeBookingId?: string,
+) {
+  return prisma.booking.findFirst({
+    where: {
+      companyId,
+      machineId,
+      scheduledDate,
+      status: { notIn: ["CANCELLED", "COMPLETED"] },
+      ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
+    },
+  });
+}
+
+export function findConflictingBookingForDriver(
+  companyId: string,
+  driverId: string,
+  scheduledDate: Date,
+  excludeBookingId?: string,
+) {
+  return prisma.booking.findFirst({
+    where: {
+      companyId,
+      driverId,
+      scheduledDate,
+      status: { notIn: ["CANCELLED", "COMPLETED"] },
+      ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
+    },
+  });
+}
+
 // Sequential per company (BK-000001, BK-000002, ...) and strictly
 // monotonic: companies.next_booking_number is only ever incremented, never
 // read-and-recomputed from the bookings table, so a hard-deleted booking's

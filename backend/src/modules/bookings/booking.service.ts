@@ -102,6 +102,45 @@ async function assertDriverExists(companyId: string, driverId: string) {
   await driverService.getById(companyId, driverId);
 }
 
+// H-01: no schedule-overlap check existed anywhere in booking/assignment —
+// two bookings could get the same machine and driver on the same day with
+// no warning. scheduledDate has no reliable duration to compare against
+// (see booking.repository.ts), so this checks same-day conflicts against
+// any other still-active booking.
+async function assertNoScheduleConflict(
+  companyId: string,
+  params: { machineId?: string | null; driverId?: string | null; scheduledDate: Date; excludeBookingId?: string },
+) {
+  if (params.machineId) {
+    const conflict = await bookingRepository.findConflictingBookingForMachine(
+      companyId,
+      params.machineId,
+      params.scheduledDate,
+      params.excludeBookingId,
+    );
+    if (conflict) {
+      throw new AppError(
+        409,
+        `This machine is already assigned to booking ${conflict.bookingNumber} on this date`,
+      );
+    }
+  }
+  if (params.driverId) {
+    const conflict = await bookingRepository.findConflictingBookingForDriver(
+      companyId,
+      params.driverId,
+      params.scheduledDate,
+      params.excludeBookingId,
+    );
+    if (conflict) {
+      throw new AppError(
+        409,
+        `This driver is already assigned to booking ${conflict.bookingNumber} on this date`,
+      );
+    }
+  }
+}
+
 export async function create(companyId: string, creatorId: string, input: CreateBookingInput) {
   // §7 step 1: the creating Manager is the booking's manager by default;
   // an explicit managerId lets an Owner create a booking on a Manager's
@@ -116,6 +155,14 @@ export async function create(companyId: string, creatorId: string, input: Create
     input.machineId ? assertMachineExists(companyId, input.machineId) : Promise.resolve(),
     input.driverId ? assertDriverExists(companyId, input.driverId) : Promise.resolve(),
   ]);
+
+  if (input.machineId || input.driverId) {
+    await assertNoScheduleConflict(companyId, {
+      machineId: input.machineId,
+      driverId: input.driverId,
+      scheduledDate: input.scheduledDate,
+    });
+  }
 
   const booking = await bookingRepository.create(companyId, {
     customerId: input.customerId,
@@ -144,6 +191,23 @@ export async function updateDetails(companyId: string, id: string, input: Update
     input.pricingMethodId ? pricingMethodService.getById(companyId, input.pricingMethodId) : Promise.resolve(),
     input.managerId ? authService.getUserForCompany(companyId, input.managerId) : Promise.resolve(),
   ]);
+
+  // Rescheduling a booking that already has a machine/driver assigned can
+  // create a new same-day conflict at the new date — re-check against the
+  // booking's own current assignment (machineId/driverId can't be changed
+  // through this endpoint — see updateBookingSchema).
+  if (input.scheduledDate) {
+    const existing = await bookingRepository.findByIdScoped(companyId, id);
+    if (!existing) {
+      throw new AppError(404, "Booking not found");
+    }
+    await assertNoScheduleConflict(companyId, {
+      machineId: existing.machineId,
+      driverId: existing.driverId,
+      scheduledDate: input.scheduledDate,
+      excludeBookingId: id,
+    });
+  }
 
   const updated = await bookingRepository.updateScopedWithRelations(companyId, id, input);
   if (!updated) {
@@ -189,6 +253,15 @@ export async function updateStatus(companyId: string, id: string, nextStatus: Bo
 export async function assignMachine(companyId: string, id: string, machineId: string | null) {
   if (machineId) {
     await assertMachineExists(companyId, machineId);
+    const booking = await bookingRepository.findByIdScoped(companyId, id);
+    if (!booking) {
+      throw new AppError(404, "Booking not found");
+    }
+    await assertNoScheduleConflict(companyId, {
+      machineId,
+      scheduledDate: booking.scheduledDate,
+      excludeBookingId: id,
+    });
   }
   const updated = await bookingRepository.updateScopedWithRelations(companyId, id, { machineId });
   if (!updated) {
@@ -200,6 +273,15 @@ export async function assignMachine(companyId: string, id: string, machineId: st
 export async function assignDriver(companyId: string, id: string, driverId: string | null) {
   if (driverId) {
     await assertDriverExists(companyId, driverId);
+    const booking = await bookingRepository.findByIdScoped(companyId, id);
+    if (!booking) {
+      throw new AppError(404, "Booking not found");
+    }
+    await assertNoScheduleConflict(companyId, {
+      driverId,
+      scheduledDate: booking.scheduledDate,
+      excludeBookingId: id,
+    });
   }
   const updated = await bookingRepository.updateScopedWithRelations(companyId, id, { driverId });
   if (!updated) {
