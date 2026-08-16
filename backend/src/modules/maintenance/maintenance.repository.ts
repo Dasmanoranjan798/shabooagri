@@ -117,7 +117,7 @@ export function findActiveSchedulesWithRecordsAndJobs(companyId: string) {
           createdAt: true,
           jobs: {
             where: { status: "COMPLETED" },
-            select: { workedHours: true },
+            select: { actualHours: true },
           },
         },
       },
