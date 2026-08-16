@@ -72,7 +72,7 @@ Per the user's explicit directive ("PDF and Excel ONLY, no CSV"), built a dedica
 - **UI/UX Refinements**: Refactored KPI card grids into fluid responsive columns (`repeat(auto-fit, minmax(200px, 1fr))`), removed cliché linear-gradient backgrounds and colored border-left accents in favor of clean brand surface tints, and verified responsive layouts across mobile, tablet, and desktop breakpoints.
 - **Inline Village Creation (`CustomerFormModal.tsx` & `BookingFormModal.tsx`)**: Added `createVillage` method to `api.ts` and built an inline **"+ Quick Create Village"** toggle and input inside the Farmer and Booking creation forms so users can create a new village instantly without breaking flow.
 - **Farmer Portal Navigation Route Fix (`FarmerHomePage.tsx`)**: Corrected `/portal/bookings` and `/portal/invoices` links to `/farmer/bookings` and `/farmer/invoices`. Farmers clicking Bookings/Invoices on their home screen now stay inside their portal without being bounced to the SaaS marketing site.
-- **All-in-One Quick Create Driver & Employee Onboarding (`DriverFormModal.tsx`)**: Added `+ Quick Create New Employee` mode directly inside the Driver modal, complete with Full Name, Gmail / Email, Mobile Phone, Designation, Compensation Structure (Hourly/Monthly/Yearly), Pay Rates, Joining Date, License Number/Expiry Date, Availability Status, and Driver App Invite Dispatch.
+- **All-in-One Standard Add Driver Form (`DriverFormModal.tsx`)**: Refactored the Driver modal so clicking "Add Driver" immediately opens the full driver creation form (Full Name, Gmail/Email, Mobile Phone, Designation, Compensation Type & Rates, License Number, Expiry Date, Availability Status, and App Invite) with zero intermediate buttons or nested inner boxes.
 
 ---
 

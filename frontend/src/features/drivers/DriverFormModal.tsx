@@ -30,9 +30,9 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
   // Selection state
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [employeeId, setEmployeeId] = useState<string>("");
-  const [isCreatingNewEmployee, setIsCreatingNewEmployee] = useState<boolean>(false);
+  const [isCreatingNewEmployee, setIsCreatingNewEmployee] = useState<boolean>(true);
 
-  // New Employee inline fields
+  // Driver / Employee Form fields
   const [name, setName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
@@ -43,12 +43,12 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
   const [yearlySalary, setYearlySalary] = useState<string>("300000");
   const [joinedDate, setJoinedDate] = useState<string>(new Date().toISOString().slice(0, 10));
 
-  // Driver Profile fields
+  // Driver Compliance & Status fields
   const [licenseNumber, setLicenseNumber] = useState<string>("");
   const [licenseExpiryDate, setLicenseExpiryDate] = useState<string>("");
   const [availabilityStatus, setAvailabilityStatus] = useState<AvailabilityStatus>("AVAILABLE");
 
-  // Send App Invite state
+  // App Invite state
   const [sendInvite, setSendInvite] = useState<boolean>(false);
   const [driverRoleId, setDriverRoleId] = useState<string>("");
 
@@ -106,7 +106,7 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
       setLicenseExpiryDate("");
       setAvailabilityStatus("AVAILABLE");
       setSendInvite(false);
-      setIsCreatingNewEmployee(false);
+      setIsCreatingNewEmployee(true);
     }
     setError(null);
   }, [driverToEdit, isOpen]);
@@ -118,7 +118,7 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
 
     try {
       if (driverToEdit) {
-        // Updating existing driver profile
+        // Edit existing driver
         await api.updateDriver(driverToEdit.id, {
           licenseNumber: licenseNumber.trim() || undefined,
           licenseExpiryDate: licenseExpiryDate || undefined,
@@ -127,10 +127,9 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
       } else {
         let targetEmployeeId = employeeId;
 
-        // Mode B: Quick Create New Employee first if selected
         if (isCreatingNewEmployee) {
           if (!name.trim()) {
-            setError(`Please enter the ${driverTerm.toLowerCase()}'s full name`);
+            setError(`Please enter ${driverTerm.toLowerCase()} full name`);
             setIsSubmitting(false);
             return;
           }
@@ -148,12 +147,12 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
 
           targetEmployeeId = newEmployee.id;
         } else if (!targetEmployeeId) {
-          setError("Please select an employee or create a new one");
+          setError("Please select an employee or create a new driver profile");
           setIsSubmitting(false);
           return;
         }
 
-        // Create Driver profile
+        // Create Driver Profile
         const payload: CreateDriverPayload = {
           employeeId: targetEmployeeId,
           licenseNumber: licenseNumber.trim() || undefined,
@@ -193,32 +192,34 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={driverToEdit ? `Edit ${driverTerm} Profile` : `Create New ${driverTerm} Profile`}
-      maxWidth="580px"
+      title={driverToEdit ? `Edit ${driverTerm} Profile` : `Add New ${driverTerm}`}
+      maxWidth="620px"
     >
       <form onSubmit={handleSubmit} className="sa-booking-form">
         {error && <div className="sa-alert sa-alert-danger">{error}</div>}
-        {isLoadingEmployees && <div className="sa-alert sa-alert-info">Loading employee directory...</div>}
+        {isLoadingEmployees && <div className="sa-alert sa-alert-info">Loading staff records...</div>}
 
-        {/* 1. Employee Assignment / Quick Create Switcher */}
+        {/* Mode Selector Link (Only on Creation) */}
         {!driverToEdit && (
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-            <label className="sa-input-label" style={{ margin: 0 }}>
-              {isCreatingNewEmployee ? "New Driver / Employee Information *" : "Select Employee *"}
-            </label>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", borderBottom: "1px solid var(--color-border-light)", paddingBottom: "8px" }}>
+            <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--color-text)" }}>
+              {isCreatingNewEmployee ? `${driverTerm} Information` : "Select Existing Staff Member"}
+            </span>
             <button
               type="button"
               className="sa-link-action"
               onClick={() => setIsCreatingNewEmployee(!isCreatingNewEmployee)}
-              style={{ fontSize: "0.82rem", fontWeight: 600 }}
+              style={{ fontSize: "0.8rem", fontWeight: 600 }}
             >
-              {isCreatingNewEmployee ? "← Select Existing Employee" : "+ Quick Create New Employee"}
+              {isCreatingNewEmployee ? "Link to existing employee record instead →" : "← Create new driver profile"}
             </button>
           </div>
         )}
 
+        {/* Mode A: Select Existing Employee */}
         {!driverToEdit && !isCreatingNewEmployee && (
-          <div className="sa-input-group">
+          <div className="sa-input-group" style={{ marginBottom: "16px" }}>
+            <label className="sa-input-label">Select Employee *</label>
             <select
               className="sa-input"
               value={employeeId}
@@ -235,14 +236,15 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
           </div>
         )}
 
-        {/* Quick Create New Employee Form Fields */}
-        {!driverToEdit && isCreatingNewEmployee && (
-          <div style={{ background: "var(--color-bg)", padding: "12px", borderRadius: "8px", border: "1px solid var(--color-border)", marginBottom: "16px" }}>
+        {/* Mode B: Direct All-in-One New Driver Fields */}
+        {(!driverToEdit && isCreatingNewEmployee) && (
+          <>
+            {/* Name & Mobile */}
             <div className="sa-form-grid-2">
               <Input
-                label="Full Name *"
+                label={`${driverTerm} Full Name *`}
                 type="text"
-                placeholder="e.g. Vijay Singh"
+                placeholder="e.g. Ramesh Singh"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -257,11 +259,12 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
               />
             </div>
 
+            {/* Email & Designation */}
             <div className="sa-form-grid-2">
               <Input
                 label="Gmail / Email Address"
                 type="email"
-                placeholder="e.g. vijay.singh@gmail.com"
+                placeholder="e.g. ramesh.singh@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -274,18 +277,18 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
               />
             </div>
 
-            {/* Compensation Model */}
+            {/* Compensation & Pay Rate */}
             <div className="sa-form-grid-2">
               <div className="sa-input-group">
-                <label className="sa-input-label">Compensation Type</label>
+                <label className="sa-input-label">Compensation Model</label>
                 <select
                   className="sa-input"
                   value={compensationType}
                   onChange={(e) => setCompensationType(e.target.value as CompensationType)}
                 >
-                  <option value="HOURLY">Hourly (₹/hr worked)</option>
+                  <option value="HOURLY">Hourly Pay (₹/hr worked)</option>
                   <option value="MONTHLY">Monthly Salary (Fixed ₹/month)</option>
-                  <option value="YEARLY">Yearly Contract (Fixed ₹/year)</option>
+                  <option value="YEARLY">Yearly Salary (Fixed ₹/year)</option>
                 </select>
               </div>
 
@@ -317,20 +320,13 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
                 />
               )}
             </div>
-
-            <Input
-              label="Joining Date"
-              type="date"
-              value={joinedDate}
-              onChange={(e) => setJoinedDate(e.target.value)}
-            />
-          </div>
+          </>
         )}
 
-        {/* 2. License Number & Expiry Date */}
+        {/* Driving License & Expiry */}
         <div className="sa-form-grid-2">
           <Input
-            label="License Number"
+            label="Driving License Number"
             type="text"
             placeholder="e.g. DL-98342-2022"
             value={licenseNumber}
@@ -345,7 +341,7 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
           />
         </div>
 
-        {/* 3. Availability Status & Gmail Invite Option */}
+        {/* Status, Joining Date & Invite */}
         <div className="sa-form-grid-2">
           <div className="sa-input-group">
             <label className="sa-input-label">Availability Status</label>
@@ -360,19 +356,28 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
             </select>
           </div>
 
-          {!driverToEdit && (
-            <div className="sa-input-group" style={{ justifyContent: "center", display: "flex", flexDirection: "column" }}>
-              <label style={{ fontSize: "0.85rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", marginTop: "16px" }}>
-                <input
-                  type="checkbox"
-                  checked={sendInvite}
-                  onChange={(e) => setSendInvite(e.target.checked)}
-                />
-                Send Driver App Login Invite (Gmail/SMS)
-              </label>
-            </div>
-          )}
+          {!driverToEdit && isCreatingNewEmployee ? (
+            <Input
+              label="Joining Date"
+              type="date"
+              value={joinedDate}
+              onChange={(e) => setJoinedDate(e.target.value)}
+            />
+          ) : null}
         </div>
+
+        {!driverToEdit && (
+          <div style={{ marginTop: "8px", padding: "10px", background: "var(--color-bg)", borderRadius: "6px", border: "1px solid var(--color-border-light)" }}>
+            <label style={{ fontSize: "0.85rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={sendInvite}
+                onChange={(e) => setSendInvite(e.target.checked)}
+              />
+              Send Driver App Login Invite via Gmail / Email / SMS
+            </label>
+          </div>
+        )}
 
         {/* Form Actions */}
         <div className="sa-form-actions" style={{ marginTop: "16px" }}>
@@ -380,7 +385,7 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
             Cancel
           </Button>
           <Button type="submit" variant="primary" isLoading={isSubmitting}>
-            {driverToEdit ? "Save Profile" : "Create Driver Profile"}
+            {driverToEdit ? "Save Profile" : `Create ${driverTerm}`}
           </Button>
         </div>
       </form>
