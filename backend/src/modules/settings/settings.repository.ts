@@ -55,12 +55,6 @@ export async function updateCompanyProfile(
   id: string,
   data: {
     name?: string;
-    logoUrl?: string | null;
-    themeColor?: string | null;
-    accentColor?: string | null;
-    currency?: string;
-    timezone?: string;
-    language?: string;
     invoicePrefix?: string | null;
     address?: string | null;
     city?: string | null;
@@ -87,18 +81,4 @@ export async function updateCompanyProfile(
   },
 ) {
   return prisma.company.update({ where: { id }, data });
-}
-
-// Upsert a single terminology setting. Called once per term key being updated.
-export async function upsertTerminologySetting(
-  companyId: string,
-  termKey: string,
-  displayLabelSingular: string,
-  displayLabelPlural: string,
-) {
-  return prisma.terminologySetting.upsert({
-    where: { companyId_termKey: { companyId, termKey } },
-    create: { companyId, termKey, displayLabelSingular, displayLabelPlural },
-    update: { displayLabelSingular, displayLabelPlural },
-  });
 }

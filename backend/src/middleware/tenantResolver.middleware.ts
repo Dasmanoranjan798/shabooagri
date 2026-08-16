@@ -1,6 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
 import { prisma } from "../db/prisma";
-import { isReservedSlug } from "../modules/saas/utils/slug.util";
 
 declare global {
   namespace Express {
@@ -10,6 +9,16 @@ declare global {
   }
 }
 
+// Slugs that can never be a real tenant subdomain (reserved for infra/hosting).
+const RESERVED_SLUGS = new Set(["www", "api", "app", "admin"]);
+
+// Phase 1 is single-tenant (see §2/§9 of the spec): this only does
+// best-effort company resolution by subdomain slug, for forward
+// multi-tenant compatibility. It never blocks a request on billing/license
+// state — that was a Shaboo-side commercial concern that doesn't belong in
+// the core operational request path. When no subdomain slug is present,
+// req.tenantCompany stays unset and callers (e.g. auth.service) fall back
+// to the single-tenant company lookup.
 export async function tenantResolverMiddleware(req: Request, res: Response, next: NextFunction) {
   try {
     const host = req.headers.host || "";
@@ -23,7 +32,7 @@ export async function tenantResolverMiddleware(req: Request, res: Response, next
       const parts = host.split(".");
       if (parts.length >= 3 || (host.includes(".localhost") && parts.length >= 2)) {
         const candidate = parts[0].toLowerCase().trim();
-        if (!isReservedSlug(candidate)) {
+        if (!RESERVED_SLUGS.has(candidate)) {
           slug = candidate;
         }
       }
@@ -34,10 +43,7 @@ export async function tenantResolverMiddleware(req: Request, res: Response, next
       // would let a mistyped or partially-matching subdomain resolve to a
       // different tenant's company, leaking that tenant's context into the
       // request. If a slug doesn't match exactly, the tenant doesn't exist.
-      const company = await prisma.company.findUnique({
-        where: { slug },
-        include: { saasLicenses: true },
-      });
+      const company = await prisma.company.findUnique({ where: { slug } });
 
       if (!company) {
         return res.status(404).json({
@@ -50,25 +56,6 @@ export async function tenantResolverMiddleware(req: Request, res: Response, next
         return res.status(403).json({
           error: "Tenant Suspended",
           message: "This operational company environment is currently suspended.",
-        });
-      }
-
-      // Companies provisioned through the SaaS platform carry one or more
-      // licenses; a company with no license at all (e.g. an internally
-      // managed tenant) is left alone. Where licenses do exist, at least one
-      // must still be valid — checked live against expiryDate rather than
-      // relying solely on the periodic sweep job to have already flipped
-      // its status, so an expired subscription can't ride on a stale status.
-      const now = new Date();
-      const hasValidLicense = company.saasLicenses.some(
-        (license) =>
-          (license.status === "LICENSE_ACTIVE" || license.status === "EXPIRING_SOON") &&
-          (!license.expiryDate || license.expiryDate > now),
-      );
-      if (company.saasLicenses.length > 0 && !hasValidLicense) {
-        return res.status(402).json({
-          error: "License Expired",
-          message: "This account's software subscription has expired. Please renew to continue.",
         });
       }
 

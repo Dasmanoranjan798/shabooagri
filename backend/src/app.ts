@@ -22,7 +22,6 @@ import { fuelRouter } from "./modules/fuel/fuel.routes";
 import { maintenanceRouter } from "./modules/maintenance/maintenance.routes";
 import { settingsRouter } from "./modules/settings/settings.routes";
 import { rbacRouter } from "./modules/rbac/rbac.routes";
-import { saasRouter } from "./modules/saas/saas.routes";
 import { teamRouter } from "./modules/team/staffInvite.routes";
 
 // Express app assembly only. Module routers are mounted here once they exist —
@@ -38,16 +37,7 @@ app.use(
     credentials: true,
   }),
 );
-// `verify` stashes the raw bytes alongside the parsed body so webhook
-// handlers (Razorpay) can validate the signature against the exact bytes
-// Razorpay signed, before trusting anything in req.body.
-app.use(
-  express.json({
-    verify: (req, _res, buf) => {
-      (req as express.Request).rawBody = Buffer.from(buf);
-    },
-  }),
-);
+app.use(express.json());
 
 app.get("/health", async (_req, res) => {
   try {
@@ -87,7 +77,6 @@ app.use("/settings", settingsRouter);
 app.use("/rbac", rbacRouter);
 app.use("/team", teamRouter);
 app.use("/dashboard", dashboardRouter);
-app.use("/saas", saasRouter);
 
 // Must be registered after all routes.
 app.use(errorMiddleware);

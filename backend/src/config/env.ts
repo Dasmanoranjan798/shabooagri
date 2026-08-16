@@ -18,11 +18,6 @@ const envSchema = z.object({
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM: z.string().optional().default("support@shabooagri.com"),
   APP_URL: z.string().optional().default("http://localhost:5173"),
-  RAZORPAY_KEY_ID: z.string().min(1),
-  RAZORPAY_KEY_SECRET: z.string().min(1),
-  // Only needed once a webhook is registered in the Razorpay Dashboard; the
-  // synchronous checkout-verification flow works without it.
-  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
   // Multi-Provider SMS Gateway Configuration (Fast2SMS, MSG91, Twilio, Mock)
   SMS_PROVIDER: z.enum(["fast2sms", "msg91", "twilio", "mock"]).optional().default("mock"),
   SMS_API_KEY: z.string().optional(),

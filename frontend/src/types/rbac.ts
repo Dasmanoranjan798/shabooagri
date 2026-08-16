@@ -21,13 +21,3 @@ export interface Role {
     users: number;
   };
 }
-
-export interface CreateRolePayload {
-  name: string;
-  permissionKeys: string[];
-}
-
-export interface UpdateRolePayload {
-  name?: string;
-  permissionKeys?: string[];
-}

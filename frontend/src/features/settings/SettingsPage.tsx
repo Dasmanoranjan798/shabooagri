@@ -8,15 +8,12 @@ import { Spinner } from "../../components/ui/Spinner";
 import { useAuth } from "../../context/AuthContext";
 import { setCustomTerms } from "../../lib/terminology";
 import { setGlobalCompanyBranding, setGlobalCurrency } from "../../lib/theme";
-import { RoleManagementCard } from "./RoleManagementCard";
 import { ChangePasswordCard } from "../../components/ChangePasswordCard";
 import {
   Settings,
   Building2,
   FileText,
   Tractor,
-  Tag,
-  ShieldCheck,
   Lock,
   CheckCircle2,
   XCircle,
@@ -28,16 +25,7 @@ import {
 const TERM_KEYS = ["customer", "driver", "machine", "booking", "invoice", "village"] as const;
 type TermKey = (typeof TERM_KEYS)[number];
 
-const TERM_LABELS: Record<TermKey, string> = {
-  customer: "Customer",
-  driver: "Driver",
-  machine: "Machine",
-  booking: "Booking",
-  invoice: "Invoice",
-  village: "Village",
-};
-
-type SettingsTab = "business" | "invoicing" | "operations" | "terminology" | "roles" | "account";
+type SettingsTab = "business" | "invoicing" | "operations" | "account";
 
 export const SettingsPage: React.FC = () => {
   const { hasPermission } = useAuth();
@@ -51,13 +39,7 @@ export const SettingsPage: React.FC = () => {
   // Profile form
   const [profileForm, setProfileForm] = useState({
     name: "",
-    currency: "INR",
-    timezone: "Asia/Kolkata",
-    language: "en",
     invoicePrefix: "INV",
-    themeColor: "#1B7A3E",
-    accentColor: "#2ECC71",
-    logoUrl: "",
     address: "",
     city: "",
     district: "",
@@ -95,19 +77,6 @@ export const SettingsPage: React.FC = () => {
   const [opsSaved, setOpsSaved] = useState(false);
   const [opsError, setOpsError] = useState<string | null>(null);
 
-  // Terminology form — map of termKey → { singular, plural }
-  const [termForm, setTermForm] = useState<Record<TermKey, { singular: string; plural: string }>>({
-    customer: { singular: "Customer", plural: "Customers" },
-    driver: { singular: "Driver", plural: "Drivers" },
-    machine: { singular: "Machine", plural: "Machines" },
-    booking: { singular: "Booking", plural: "Bookings" },
-    invoice: { singular: "Invoice", plural: "Invoices" },
-    village: { singular: "Village", plural: "Villages" },
-  });
-  const [termSaving, setTermSaving] = useState(false);
-  const [termSaved, setTermSaved] = useState(false);
-  const [termError, setTermError] = useState<string | null>(null);
-
   const loadProfile = async () => {
     setIsLoading(true);
     setError(null);
@@ -116,13 +85,7 @@ export const SettingsPage: React.FC = () => {
       setProfile(p);
       setProfileForm({
         name: p.name,
-        currency: p.currency,
-        timezone: p.timezone,
-        language: p.language,
         invoicePrefix: p.invoicePrefix ?? "INV",
-        themeColor: p.themeColor ?? "#1B7A3E",
-        accentColor: p.accentColor ?? "#2ECC71",
-        logoUrl: p.logoUrl ?? "",
         address: p.address ?? "",
         city: p.city ?? "",
         district: p.district ?? "",
@@ -149,8 +112,17 @@ export const SettingsPage: React.FC = () => {
       setGlobalCurrency(p.currency);
       setGlobalCompanyBranding(p.name, p.logoUrl);
 
-      // Populate terminology from saved settings
-      const termMap = { ...termForm };
+      // Terminology resolution layer (§9) — read-only in Phase 1, populated
+      // from whatever the schema currently holds (defaults until Phase 2
+      // ships the config UI to edit these).
+      const termMap: Record<TermKey, { singular: string; plural: string }> = {
+        customer: { singular: "Customer", plural: "Customers" },
+        driver: { singular: "Driver", plural: "Drivers" },
+        machine: { singular: "Machine", plural: "Machines" },
+        booking: { singular: "Booking", plural: "Bookings" },
+        invoice: { singular: "Invoice", plural: "Invoices" },
+        village: { singular: "Village", plural: "Villages" },
+      };
       for (const ts of p.terminologySettings) {
         if (TERM_KEYS.includes(ts.termKey as TermKey)) {
           termMap[ts.termKey as TermKey] = {
@@ -159,7 +131,6 @@ export const SettingsPage: React.FC = () => {
           };
         }
       }
-      setTermForm(termMap);
       setCustomTerms(termMap);
     } catch (err: any) {
       setError(err.message || "Failed to load settings");
@@ -180,12 +151,6 @@ export const SettingsPage: React.FC = () => {
     try {
       await api.updateCompanyProfile({
         name: profileForm.name,
-        currency: profileForm.currency,
-        timezone: profileForm.timezone,
-        language: profileForm.language,
-        themeColor: profileForm.themeColor || null,
-        accentColor: profileForm.accentColor || null,
-        logoUrl: profileForm.logoUrl.trim() || null,
         address: profileForm.address.trim() || null,
         city: profileForm.city.trim() || null,
         district: profileForm.district.trim() || null,
@@ -198,14 +163,7 @@ export const SettingsPage: React.FC = () => {
         gstin: profileForm.gstin.trim() || null,
         pan: profileForm.pan.trim() || null,
       });
-      if (profileForm.themeColor) {
-        document.documentElement.style.setProperty("--color-primary", profileForm.themeColor);
-      }
-      if (profileForm.accentColor) {
-        document.documentElement.style.setProperty("--color-accent", profileForm.accentColor);
-      }
-      setGlobalCurrency(profileForm.currency);
-      setGlobalCompanyBranding(profileForm.name, profileForm.logoUrl.trim() || null);
+      setGlobalCompanyBranding(profileForm.name, profile?.logoUrl ?? null);
       setProfileSaved(true);
       setTimeout(() => setProfileSaved(false), 3000);
       await loadProfile();
@@ -264,29 +222,6 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
-  const handleTermSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setTermSaving(true);
-    setTermError(null);
-    setTermSaved(false);
-    try {
-      await api.updateTerminology({
-        terms: TERM_KEYS.map((key) => ({
-          termKey: key,
-          displayLabelSingular: termForm[key].singular,
-          displayLabelPlural: termForm[key].plural,
-        })),
-      });
-      setCustomTerms(termForm);
-      setTermSaved(true);
-      setTimeout(() => setTermSaved(false), 3000);
-    } catch (err: any) {
-      setTermError(err.message || "Failed to save terminology");
-    } finally {
-      setTermSaving(false);
-    }
-  };
-
   if (isLoading) return (
     <div className="sa-center-viewport">
       <Spinner size="lg" label="Loading settings..." />
@@ -308,11 +243,9 @@ export const SettingsPage: React.FC = () => {
   );
 
   const tabList = [
-    { id: "business", label: "Business Profile & Branding", icon: <Building2 size={16} /> },
+    { id: "business", label: "Business Profile", icon: <Building2 size={16} /> },
     { id: "invoicing", label: "Invoicing & Payments", icon: <FileText size={16} /> },
     { id: "operations", label: "Equipment & Operational Rules", icon: <Tractor size={16} /> },
-    { id: "terminology", label: "Business Terminology", icon: <Tag size={16} /> },
-    { id: "roles", label: "Users, Roles & Permissions", icon: <ShieldCheck size={16} /> },
     { id: "account", label: "My Account & Security", icon: <KeyRound size={16} /> },
   ];
 
@@ -323,11 +256,11 @@ export const SettingsPage: React.FC = () => {
           <h1 className="sa-page-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <Settings size={24} /> Settings Control Center
           </h1>
-          <p className="sa-page-subtitle">Central configuration for business profile, branding, invoicing, bank details, tax settings and permissions</p>
+          <p className="sa-page-subtitle">Central configuration for business profile, invoicing, bank details and tax settings</p>
         </div>
       </div>
 
-      {/* 5-Tab Navigation Control Bar */}
+      {/* Tab Navigation Control Bar */}
       <div
         style={{
           display: "flex",
@@ -370,10 +303,10 @@ export const SettingsPage: React.FC = () => {
 
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
 
-        {/* TAB 1: BUSINESS PROFILE & BRANDING */}
+        {/* TAB 1: BUSINESS PROFILE */}
         {activeTab === "business" && (
           <>
-            <Card title="Business Profile & Identity" subtitle="Configure business identity, location, tax numbers and visual branding">
+            <Card title="Business Profile & Identity" subtitle="Configure business identity, location and tax numbers">
               {!canManage && (
                 <div className="sa-info-banner" style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
                   <Lock size={14} /> Read-only — only the Owner can edit company profile settings.
@@ -540,154 +473,25 @@ export const SettingsPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Logo & Visual Branding */}
-                <div className="sa-form-group">
-                  <label className="sa-form-label">Company Logo Image URL</label>
-                  <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                    {profileForm.logoUrl ? (
-                      <img
-                        src={profileForm.logoUrl}
-                        alt="Logo Preview"
-                        style={{
-                          width: "44px",
-                          height: "44px",
-                          objectFit: "contain",
-                          borderRadius: "6px",
-                          border: "1px solid var(--color-border)",
-                          background: "#fff",
-                          padding: "2px",
-                        }}
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          width: "44px",
-                          height: "44px",
-                          borderRadius: "6px",
-                          border: "1px dashed var(--color-border)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "var(--color-text-muted)",
-                        }}
-                      >
-                        <Tractor size={20} />
-                      </div>
-                    )}
-                    <input
-                      type="text"
-                      className="sa-input"
-                      placeholder="https://example.com/logo.png"
-                      value={profileForm.logoUrl}
-                      onChange={(e) => setProfileForm((f) => ({ ...f, logoUrl: e.target.value }))}
-                      disabled={!canManage}
-                      style={{ flex: 1 }}
-                    />
-                    {profileForm.logoUrl && canManage && (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setProfileForm((f) => ({ ...f, logoUrl: "" }))}
-                      >
-                        Clear
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Timezone, Language & Currency */}
+                {/* Currency, Timezone & Language — read-only in Phase 1;
+                    editable white-label config UI ships in Phase 2 (§10). */}
                 <div className="sa-form-row">
                   <div className="sa-form-group" style={{ flex: 1 }}>
                     <label className="sa-form-label">Currency</label>
-                    <select
-                      className="sa-select"
-                      value={profileForm.currency}
-                      onChange={(e) => setProfileForm((f) => ({ ...f, currency: e.target.value }))}
-                      disabled={!canManage}
-                    >
-                      <option value="INR">INR — Indian Rupee (₹)</option>
-                      <option value="USD">USD — US Dollar ($)</option>
-                      <option value="EUR">EUR — Euro (€)</option>
-                      <option value="GBP">GBP — British Pound (£)</option>
-                    </select>
+                    <div className="sa-input" style={{ background: "var(--color-surface-secondary)", color: "var(--color-text-muted)" }}>
+                      {profile?.currency ?? "INR"}
+                    </div>
                   </div>
                   <div className="sa-form-group" style={{ flex: 1 }}>
                     <label className="sa-form-label">Timezone</label>
-                    <select
-                      className="sa-select"
-                      value={profileForm.timezone}
-                      onChange={(e) => setProfileForm((f) => ({ ...f, timezone: e.target.value }))}
-                      disabled={!canManage}
-                    >
-                      <option value="Asia/Kolkata">Asia/Kolkata (IST +5:30)</option>
-                      <option value="UTC">UTC</option>
-                      <option value="Asia/Dubai">Asia/Dubai (GST +4)</option>
-                    </select>
+                    <div className="sa-input" style={{ background: "var(--color-surface-secondary)", color: "var(--color-text-muted)" }}>
+                      {profile?.timezone ?? "Asia/Kolkata"}
+                    </div>
                   </div>
                   <div className="sa-form-group" style={{ flex: 1 }}>
                     <label className="sa-form-label">Language</label>
-                    <select
-                      className="sa-select"
-                      value={profileForm.language}
-                      onChange={(e) => setProfileForm((f) => ({ ...f, language: e.target.value }))}
-                      disabled={!canManage}
-                    >
-                      <option value="en">English</option>
-                      <option value="hi">हिन्दी (Hindi)</option>
-                      <option value="te">తెలుగు (Telugu)</option>
-                      <option value="ta">தமிழ் (Tamil)</option>
-                      <option value="kn">ಕನ್ನಡ (Kannada)</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Colors Configuration */}
-                <div className="sa-form-row">
-                  <div className="sa-form-group" style={{ flex: 1 }}>
-                    <label className="sa-form-label">Primary Theme Color</label>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <input
-                        type="color"
-                        value={profileForm.themeColor}
-                        onChange={(e) => setProfileForm((f) => ({ ...f, themeColor: e.target.value }))}
-                        disabled={!canManage}
-                        style={{ width: "48px", height: "40px", border: "1px solid var(--color-border)", borderRadius: "6px", cursor: canManage ? "pointer" : "not-allowed" }}
-                      />
-                      <input
-                        type="text"
-                        className="sa-input"
-                        value={profileForm.themeColor}
-                        onChange={(e) => setProfileForm((f) => ({ ...f, themeColor: e.target.value }))}
-                        disabled={!canManage}
-                        placeholder="#1B7A3E"
-                        style={{ flex: 1 }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="sa-form-group" style={{ flex: 1 }}>
-                    <label className="sa-form-label">Accent Color</label>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <input
-                        type="color"
-                        value={profileForm.accentColor}
-                        onChange={(e) => setProfileForm((f) => ({ ...f, accentColor: e.target.value }))}
-                        disabled={!canManage}
-                        style={{ width: "48px", height: "40px", border: "1px solid var(--color-border)", borderRadius: "6px", cursor: canManage ? "pointer" : "not-allowed" }}
-                      />
-                      <input
-                        type="text"
-                        className="sa-input"
-                        value={profileForm.accentColor}
-                        onChange={(e) => setProfileForm((f) => ({ ...f, accentColor: e.target.value }))}
-                        disabled={!canManage}
-                        placeholder="#2ECC71"
-                        style={{ flex: 1 }}
-                      />
+                    <div className="sa-input" style={{ background: "var(--color-surface-secondary)", color: "var(--color-text-muted)" }}>
+                      {profile?.language ?? "en"}
                     </div>
                   </div>
                 </div>
@@ -974,77 +778,9 @@ export const SettingsPage: React.FC = () => {
           </Card>
         )}
 
-        {/* TAB 4: BUSINESS TERMINOLOGY */}
-        {activeTab === "terminology" && (
-          <Card title="Business Terminology" subtitle="Customise how the app labels your business entities (§9)">
-            {!canManage && (
-              <div className="sa-info-banner" style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
-                <Lock size={14} /> Read-only — only the Owner can edit terminology.
-              </div>
-            )}
-            <form onSubmit={handleTermSave} className="sa-form">
-              {termError && <div className="sa-form-error">{termError}</div>}
-              {termSaved && <div className="sa-form-success">Terminology saved successfully.</div>}
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(320px,1fr))", gap: "16px" }}>
-                {TERM_KEYS.map((key) => (
-                  <div key={key} style={{ border: "1px solid var(--color-border)", borderRadius: "8px", padding: "12px" }}>
-                    <div style={{ fontWeight: 600, marginBottom: "10px", color: "var(--color-primary)" }}>
-                      {TERM_LABELS[key]}
-                    </div>
-                    <div className="sa-form-row" style={{ gap: "8px" }}>
-                      <div className="sa-form-group" style={{ flex: 1, marginBottom: 0 }}>
-                        <label className="sa-form-label" style={{ fontSize: "11px" }}>Singular</label>
-                        <input
-                          type="text"
-                          className="sa-input"
-                          value={termForm[key].singular}
-                          onChange={(e) =>
-                            setTermForm((f) => ({ ...f, [key]: { ...f[key], singular: e.target.value } }))
-                          }
-                          disabled={!canManage}
-                          placeholder={TERM_LABELS[key]}
-                        />
-                      </div>
-                      <div className="sa-form-group" style={{ flex: 1, marginBottom: 0 }}>
-                        <label className="sa-form-label" style={{ fontSize: "11px" }}>Plural</label>
-                        <input
-                          type="text"
-                          className="sa-input"
-                          value={termForm[key].plural}
-                          onChange={(e) =>
-                            setTermForm((f) => ({ ...f, [key]: { ...f[key], plural: e.target.value } }))
-                          }
-                          disabled={!canManage}
-                          placeholder={`${TERM_LABELS[key]}s`}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {canManage && (
-                <div className="sa-form-actions">
-                  <Button variant="primary" type="submit" disabled={termSaving}>
-                    {termSaving ? "Saving…" : "Save Terminology"}
-                  </Button>
-                </div>
-              )}
-            </form>
-          </Card>
-        )}
-
-        {/* TAB 5: USERS, ROLES & PERMISSIONS */}
-        {activeTab === "roles" && (
-          <RoleManagementCard canManage={canManage} />
-        )}
-
-        {/* TAB 6: MY ACCOUNT & SECURITY */}
+        {/* TAB 4: MY ACCOUNT & SECURITY */}
         {activeTab === "account" && <ChangePasswordCard />}
       </div>
     </div>
   );
 };
-
-

@@ -8,7 +8,6 @@ import * as jobService from "../src/modules/jobs/job.service";
 import * as paymentService from "../src/modules/payments/payment.service";
 import * as maintenanceService from "../src/modules/maintenance/maintenance.service";
 import * as rbacService from "../src/modules/rbac/rbac.service";
-import * as settingsService from "../src/modules/settings/settings.service";
 
 async function seedCompany(name: string, slug: string, prefix: string) {
   const company = await prisma.company.create({
@@ -324,130 +323,11 @@ async function runSecurityAuditTests() {
 
   console.log(" ALL MULTI-TENANT ISOLATION TESTS PASSED!\n");
 
-  // ==================================================
-  // TEST 2: RBAC & CUSTOM ROLES LIFECYCLE
-  // ==================================================
-  console.log("[TEST 2] Testing Custom Roles Creation, Editing, Assignment & Protection...");
-
-  const customRole = await rbacService.createRole(companyA.id, "Alpha Dispatcher", ["booking.create", "booking.edit"]);
-  console.log(`   Custom role created: ${customRole.name} (${customRole.id})`);
-
-  const updatedRole = await rbacService.updateRole(companyA.id, customRole.id, "Alpha Chief Dispatcher", [
-    "booking.create",
-    "driver.manage",
-  ]);
-  const permKeys = updatedRole.rolePermissions.map((rp) => rp.permission.key);
-  if (!permKeys.includes("driver.manage") || permKeys.includes("booking.edit")) {
-    throw new Error("FAIL: Role permissions update failed!");
-  }
-  console.log("   Custom role permission modification: PASSED");
-
-  try {
-    await rbacService.deleteRole(companyA.id, ownerRoleA.id);
-    throw new Error("FAIL: System role deletion was not prevented!");
-  } catch (err: any) {
-    if (err.message.includes("system role")) console.log("   System role deletion protection: PASSED");
-    else throw err;
-  }
-
-  try {
-    await rbacService.updateRole(companyA.id, ownerRoleA.id, "Super Owner");
-    throw new Error("FAIL: System role rename was not prevented!");
-  } catch (err: any) {
-    if (err.message.includes("system roles")) console.log("   System role rename protection: PASSED");
-    else throw err;
-  }
-
-  const assignedUser = await rbacService.assignUserRole(companyA.id, managerUserA.id, customRole.id);
-  if (assignedUser.roleId !== customRole.id) {
-    throw new Error("FAIL: User role assignment failed!");
-  }
-  console.log("   User role assignment in Company A: PASSED");
-
-  try {
-    await rbacService.assignUserRole(companyA.id, managerUserA.id, ownerRoleB.id);
-    throw new Error("FAIL: Cross-company role assignment succeeded!");
-  } catch (err: any) {
-    if (err.statusCode === 404) console.log("   Cross-company role assignment prevention: PASSED (404)");
-    else throw err;
-  }
-
-  try {
-    await rbacService.assignUserRole(companyA.id, managerUserB.id, customRole.id);
-    throw new Error("FAIL: Assigning Company A role to Company B user succeeded!");
-  } catch (err: any) {
-    if (err.statusCode === 404) console.log("   Assigning Company A role to Company B user prevention: PASSED (404)");
-    else throw err;
-  }
-
-  try {
-    await rbacService.deleteRole(companyA.id, customRole.id);
-    throw new Error("FAIL: Deletion of role in use by active user was allowed!");
-  } catch (err: any) {
-    if (err.message.includes("active user")) console.log("   Custom role deletion in-use protection: PASSED");
-    else throw err;
-  }
-
-  await rbacService.assignUserRole(companyA.id, managerUserA.id, managerRoleA.id);
-
-  await rbacService.deleteRole(companyA.id, customRole.id);
-  console.log("   Deletion of unassigned Custom Role: PASSED");
-
-  console.log(" ALL RBAC & CUSTOM ROLES TESTS PASSED!\n");
-
-  // ==================================================
-  // TEST 3: TERMINOLOGY & WHITE-LABEL BRANDING
-  // ==================================================
-  console.log("[TEST 3] Testing Company Terminology & White-label Branding Persistence...");
-
-  await settingsService.updateCompanyProfile(companyA.id, {
-    name: "Alpha Custom Branding",
-    themeColor: "#1B7A3E",
-    accentColor: "#2ECC71",
-    invoicePrefix: "ALPHA-CUSTOM-",
-  });
-
-  await settingsService.updateTerminology(companyA.id, {
-    terms: [
-      { termKey: "customer", displayLabelSingular: "Client", displayLabelPlural: "Clients" },
-      { termKey: "driver", displayLabelSingular: "Pilot", displayLabelPlural: "Pilots" },
-    ],
-  });
-
-  await settingsService.updateCompanyProfile(companyB.id, {
-    name: "Beta Custom Branding",
-    themeColor: "#0000FF",
-    accentColor: "#FFFF00",
-    invoicePrefix: "BETA-CUSTOM-",
-  });
-
-  await settingsService.updateTerminology(companyB.id, {
-    terms: [
-      { termKey: "customer", displayLabelSingular: "Grower", displayLabelPlural: "Growers" },
-      { termKey: "driver", displayLabelSingular: "Operator", displayLabelPlural: "Operators" },
-    ],
-  });
-
-  const profileA = await settingsService.getCompanyProfile(companyA.id);
-  const profileB = await settingsService.getCompanyProfile(companyB.id);
-
-  if (profileA.name !== "Alpha Custom Branding" || profileA.themeColor !== "#1B7A3E") {
-    throw new Error("FAIL: Alpha company branding mismatched!");
-  }
-  if (profileB.name !== "Beta Custom Branding" || profileB.themeColor !== "#0000FF") {
-    throw new Error("FAIL: Beta company branding mismatched!");
-  }
-
-  const alphaTermCustomer = profileA.terminologySettings.find((t) => t.termKey === "customer");
-  const betaTermCustomer = profileB.terminologySettings.find((t) => t.termKey === "customer");
-
-  if (alphaTermCustomer?.displayLabelSingular !== "Client" || betaTermCustomer?.displayLabelSingular !== "Grower") {
-    throw new Error("FAIL: Terminology isolation failed!");
-  }
-
-  console.log("   Company Alpha Branding & Terminology: Verified (Client / Pilots)");
-  console.log("   Company Beta Branding & Terminology: Verified (Grower / Operators)");
-  console.log(" ALL TERMINOLOGY & BRANDING TESTS PASSED!\n");
+  // Custom role CRUD and terminology/white-label write-path tests removed —
+  // that functionality is Phase 2 scope (§2, §6, §9, §10) and was pulled
+  // out of Phase 1 during the saas/business cleanup. RBAC read-scoping
+  // (TEST 1 above) and the read-only terminology/profile layer remain
+  // covered.
 
   // ==================================================
   // CLEANUP SYNTHETIC TEST DATA

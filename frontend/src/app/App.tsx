@@ -1,19 +1,15 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "../context/AuthContext";
-import { SaasAuthProvider } from "../context/SaasAuthContext";
 import { AppLayout } from "../layouts/AppLayout";
 import { DriverLayout } from "../layouts/DriverLayout";
 import { FarmerPortalLayout } from "../layouts/FarmerPortalLayout";
 import { ProtectedRoute } from "./ProtectedRoute";
-import { ProtectedSaasRoute } from "./ProtectedSaasRoute";
-import { ProtectedSaasAdminRoute } from "./ProtectedSaasAdminRoute";
 import { Spinner } from "../components/ui/Spinner";
 
 // Operational Surface Pages
 import { LoginPage } from "../features/auth/LoginPage";
 import { AcceptInvitePage } from "../features/auth/AcceptInvitePage";
 import { ResetPasswordPage } from "../features/auth/ResetPasswordPage";
-import { SsoCallbackPage } from "../features/auth/SsoCallbackPage";
 import { DashboardPage } from "../features/dashboard/DashboardPage";
 import { BookingsPage } from "../features/bookings/BookingsPage";
 import { JobsPage } from "../features/jobs/JobsPage";
@@ -41,41 +37,9 @@ import { FarmerBookingsPage } from "../features/farmer/FarmerBookingsPage";
 import { FarmerInvoicesPage } from "../features/farmer/FarmerInvoicesPage";
 import { FarmerProfilePage } from "../features/farmer/FarmerProfilePage";
 
-// Commercial SaaS Public Marketing Pages (§12)
-import { SaasHomePage } from "../features/saas/public/SaasHomePage";
-import { SaasFeaturesPage } from "../features/saas/public/SaasFeaturesPage";
-import { SaasSolutionsPage } from "../features/saas/public/SaasSolutionsPage";
-import { SaasPricingPage } from "../features/saas/public/SaasPricingPage";
-import { SaasAboutPage } from "../features/saas/public/SaasAboutPage";
-import { SaasContactPage } from "../features/saas/public/SaasContactPage";
-import { SaasFaqPage } from "../features/saas/public/SaasFaqPage";
-
-// Commercial SaaS Auth Pages
-import { SaasLoginPage } from "../features/saas/auth/SaasLoginPage";
-import { SaasRegisterPage } from "../features/saas/auth/SaasRegisterPage";
-import { SaasResetPasswordPage } from "../features/saas/auth/SaasResetPasswordPage";
-
-// Commercial SaaS Customer Portal Pages
-import { SaasPortalDashboard } from "../features/saas/portal/SaasPortalDashboard";
-import { SaasPortalLicense } from "../features/saas/portal/SaasPortalLicense";
-import { SaasPortalPayments } from "../features/saas/portal/SaasPortalPayments";
-import { SaasPortalProfile } from "../features/saas/portal/SaasPortalProfile";
-import { SaasPortalAccount } from "../features/saas/portal/SaasPortalAccount";
-import { SaasPortalSoftwareAccess } from "../features/saas/portal/SaasPortalSoftwareAccess";
-import { SaasPortalSupport } from "../features/saas/portal/SaasPortalSupport";
-import { SaasPortalFeedback } from "../features/saas/portal/SaasPortalFeedback";
-
-// Platform Admin Control Plane Pages (§11 Admin)
-import { SaasAdminDashboardPage } from "../features/saas/admin/SaasAdminDashboardPage";
-import { SaasAdminCustomersPage } from "../features/saas/admin/SaasAdminCustomersPage";
-import { SaasAdminLicensesPage } from "../features/saas/admin/SaasAdminLicensesPage";
-import { SaasAdminPaymentsPage } from "../features/saas/admin/SaasAdminPaymentsPage";
-import { SaasAdminLeadsPage } from "../features/saas/admin/SaasAdminLeadsPage";
-import { SaasAdminEnquiriesPage } from "../features/saas/admin/SaasAdminEnquiriesPage";
-import { SaasAdminFeedbackPage } from "../features/saas/admin/SaasAdminFeedbackPage";
-
-import { isTenantSubdomain } from "../lib/saasApi";
-
+// Phase 1 is single-product, single-tenant: the app root always goes
+// straight to the operational login/dashboard. There is no separate
+// marketing/commercial surface to branch into.
 function RootRoute() {
   const { roleKey } = useAuth();
   if (roleKey === "driver") {
@@ -94,18 +58,6 @@ function RootRoute() {
 function SmartRootRoute() {
   const { isAuthenticated, isLoading } = useAuth();
 
-  if (isTenantSubdomain()) {
-    return (
-      <ProtectedRoute>
-        <RootRoute />
-      </ProtectedRoute>
-    );
-  }
-
-  // Bare shabooagri.com: an anonymous visitor sees the marketing site, but
-  // a user already logged into the Business OS here (the single-tenant
-  // deployment isn't subdomain-scoped) must land on their dashboard, not
-  // get bounced back to a homepage they weren't trying to visit.
   if (isLoading) {
     return (
       <div className="sa-center-viewport">
@@ -120,541 +72,259 @@ function SmartRootRoute() {
       </ProtectedRoute>
     );
   }
-  return <SaasHomePage />;
-}
-
-function SmartLoginRoute() {
-  if (!isTenantSubdomain()) {
-    return <SaasLoginPage />;
-  }
-  return <LoginPage />;
+  return <Navigate to="/login" replace />;
 }
 
 export function App() {
   return (
     <BrowserRouter>
-      <SaasAuthProvider>
-        <AuthProvider>
-          <Routes>
-            {/* Commercial SaaS Public Marketing Website */}
-            <Route path="/saas" element={<SaasHomePage />} />
-            <Route path="/features" element={<SaasFeaturesPage />} />
-            <Route path="/saas/features" element={<SaasFeaturesPage />} />
-            <Route path="/solutions" element={<SaasSolutionsPage />} />
-            <Route path="/saas/solutions" element={<SaasSolutionsPage />} />
-            <Route path="/pricing" element={<SaasPricingPage />} />
-            <Route path="/saas/pricing" element={<SaasPricingPage />} />
-            <Route path="/about" element={<SaasAboutPage />} />
-            <Route path="/saas/about" element={<SaasAboutPage />} />
-            <Route path="/contact" element={<SaasContactPage />} />
-            <Route path="/saas/contact" element={<SaasContactPage />} />
-            <Route path="/faq" element={<SaasFaqPage />} />
-            <Route path="/saas/faq" element={<SaasFaqPage />} />
+      <AuthProvider>
+        <Routes>
+          {/* Operational Login & Password Reset */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/accept-invite" element={<AcceptInvitePage />} />
 
-            {/* Commercial SaaS Auth & Aliases */}
-            <Route path="/register" element={<SaasRegisterPage />} />
-            <Route path="/saas/register" element={<SaasRegisterPage />} />
-            <Route path="/saas/login" element={<SaasLoginPage />} />
-            <Route path="/saas/reset-password" element={<SaasResetPasswordPage />} />
+          {/* Root route */}
+          <Route path="/" element={<SmartRootRoute />} />
 
-            {/* Single Sign-On Callback Route */}
-            <Route path="/sso-callback" element={<SsoCallbackPage />} />
+          {/* Owner & Manager Operations Routes */}
+          <Route
+            path="/bookings"
+            element={
+              <ProtectedRoute permission="operations.view">
+                <AppLayout>
+                  <BookingsPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            {/* Commercial SaaS Customer Portal & Root Aliases */}
-            <Route
-              path="/portal"
-              element={
-                <ProtectedSaasRoute>
-                  <SaasPortalDashboard />
-                </ProtectedSaasRoute>
-              }
-            />
-            <Route
-              path="/saas/portal"
-              element={
-                <ProtectedSaasRoute>
-                  <SaasPortalDashboard />
-                </ProtectedSaasRoute>
-              }
-            />
-            <Route
-              path="/portal/license"
-              element={
-                <ProtectedSaasRoute>
-                  <SaasPortalLicense />
-                </ProtectedSaasRoute>
-              }
-            />
-            <Route
-              path="/saas/portal/license"
-              element={
-                <ProtectedSaasRoute>
-                  <SaasPortalLicense />
-                </ProtectedSaasRoute>
-              }
-            />
-            <Route
-              path="/portal/payments"
-              element={
-                <ProtectedSaasRoute>
-                  <SaasPortalPayments />
-                </ProtectedSaasRoute>
-              }
-            />
-            <Route
-              path="/saas/portal/payments"
-              element={
-                <ProtectedSaasRoute>
-                  <SaasPortalPayments />
-                </ProtectedSaasRoute>
-              }
-            />
-            <Route
-              path="/portal/profile"
-              element={
-                <ProtectedSaasRoute>
-                  <SaasPortalProfile />
-                </ProtectedSaasRoute>
-              }
-            />
-            <Route
-              path="/saas/portal/profile"
-              element={
-                <ProtectedSaasRoute>
-                  <SaasPortalProfile />
-                </ProtectedSaasRoute>
-              }
-            />
-            <Route
-              path="/portal/account"
-              element={
-                <ProtectedSaasRoute>
-                  <SaasPortalAccount />
-                </ProtectedSaasRoute>
-              }
-            />
-            <Route
-              path="/saas/portal/account"
-              element={
-                <ProtectedSaasRoute>
-                  <SaasPortalAccount />
-                </ProtectedSaasRoute>
-              }
-            />
-            <Route
-              path="/portal/software"
-              element={
-                <ProtectedSaasRoute>
-                  <SaasPortalSoftwareAccess />
-                </ProtectedSaasRoute>
-              }
-            />
-            <Route
-              path="/saas/portal/software"
-              element={
-                <ProtectedSaasRoute>
-                  <SaasPortalSoftwareAccess />
-                </ProtectedSaasRoute>
-              }
-            />
-            <Route
-              path="/portal/support"
-              element={
-                <ProtectedSaasRoute>
-                  <SaasPortalSupport />
-                </ProtectedSaasRoute>
-              }
-            />
-            <Route
-              path="/saas/portal/support"
-              element={
-                <ProtectedSaasRoute>
-                  <SaasPortalSupport />
-                </ProtectedSaasRoute>
-              }
-            />
-            <Route
-              path="/portal/feedback"
-              element={
-                <ProtectedSaasRoute>
-                  <SaasPortalFeedback />
-                </ProtectedSaasRoute>
-              }
-            />
-            <Route
-              path="/saas/portal/feedback"
-              element={
-                <ProtectedSaasRoute>
-                  <SaasPortalFeedback />
-                </ProtectedSaasRoute>
-              }
-            />
+          <Route
+            path="/jobs"
+            element={
+              <ProtectedRoute permission="operations.view">
+                <AppLayout>
+                  <JobsPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            {/* Platform Admin Control Plane Routes & Aliases */}
-            <Route
-              path="/admin"
-              element={
-                <ProtectedSaasAdminRoute>
-                  <SaasAdminDashboardPage />
-                </ProtectedSaasAdminRoute>
-              }
-            />
-            <Route
-              path="/saas/admin"
-              element={
-                <ProtectedSaasAdminRoute>
-                  <SaasAdminDashboardPage />
-                </ProtectedSaasAdminRoute>
-              }
-            />
-            <Route
-              path="/admin/customers"
-              element={
-                <ProtectedSaasAdminRoute>
-                  <SaasAdminCustomersPage />
-                </ProtectedSaasAdminRoute>
-              }
-            />
-            <Route
-              path="/saas/admin/customers"
-              element={
-                <ProtectedSaasAdminRoute>
-                  <SaasAdminCustomersPage />
-                </ProtectedSaasAdminRoute>
-              }
-            />
-            <Route
-              path="/admin/licenses"
-              element={
-                <ProtectedSaasAdminRoute>
-                  <SaasAdminLicensesPage />
-                </ProtectedSaasAdminRoute>
-              }
-            />
-            <Route
-              path="/saas/admin/licenses"
-              element={
-                <ProtectedSaasAdminRoute>
-                  <SaasAdminLicensesPage />
-                </ProtectedSaasAdminRoute>
-              }
-            />
-            <Route
-              path="/admin/payments"
-              element={
-                <ProtectedSaasAdminRoute>
-                  <SaasAdminPaymentsPage />
-                </ProtectedSaasAdminRoute>
-              }
-            />
-            <Route
-              path="/saas/admin/payments"
-              element={
-                <ProtectedSaasAdminRoute>
-                  <SaasAdminPaymentsPage />
-                </ProtectedSaasAdminRoute>
-              }
-            />
-            <Route
-              path="/admin/leads"
-              element={
-                <ProtectedSaasAdminRoute>
-                  <SaasAdminLeadsPage />
-                </ProtectedSaasAdminRoute>
-              }
-            />
-            <Route
-              path="/saas/admin/leads"
-              element={
-                <ProtectedSaasAdminRoute>
-                  <SaasAdminLeadsPage />
-                </ProtectedSaasAdminRoute>
-              }
-            />
-            <Route
-              path="/admin/enquiries"
-              element={
-                <ProtectedSaasAdminRoute>
-                  <SaasAdminEnquiriesPage />
-                </ProtectedSaasAdminRoute>
-              }
-            />
-            <Route
-              path="/saas/admin/enquiries"
-              element={
-                <ProtectedSaasAdminRoute>
-                  <SaasAdminEnquiriesPage />
-                </ProtectedSaasAdminRoute>
-              }
-            />
-            <Route
-              path="/admin/feedback"
-              element={
-                <ProtectedSaasAdminRoute>
-                  <SaasAdminFeedbackPage />
-                </ProtectedSaasAdminRoute>
-              }
-            />
-            <Route
-              path="/saas/admin/feedback"
-              element={
-                <ProtectedSaasAdminRoute>
-                  <SaasAdminFeedbackPage />
-                </ProtectedSaasAdminRoute>
-              }
-            />
+          <Route
+            path="/customers"
+            element={
+              <ProtectedRoute permission="operations.view">
+                <AppLayout>
+                  <CustomersPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            {/* Operational Tenant Login & Password Reset */}
-            <Route path="/login" element={<SmartLoginRoute />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/accept-invite" element={<AcceptInvitePage />} />
+          <Route
+            path="/machines"
+            element={
+              <ProtectedRoute permission="operations.view">
+                <AppLayout>
+                  <MachinesPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            {/* Root route with domain-aware landing */}
-            <Route path="/" element={<SmartRootRoute />} />
+          <Route
+            path="/drivers"
+            element={
+              <ProtectedRoute permission="operations.view">
+                <AppLayout>
+                  <DriversPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            {/* Owner & Manager Operations Routes */}
-            <Route
-              path="/bookings"
-              element={
-                <ProtectedRoute permission="operations.view">
-                  <AppLayout>
-                    <BookingsPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/employees"
+            element={
+              <ProtectedRoute permission="operations.view">
+                <AppLayout>
+                  <EmployeesPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/jobs"
-              element={
-                <ProtectedRoute permission="operations.view">
-                  <AppLayout>
-                    <JobsPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/payments"
+            element={
+              <ProtectedRoute permission="operations.view">
+                <AppLayout>
+                  <PaymentsPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/customers"
-              element={
-                <ProtectedRoute permission="operations.view">
-                  <AppLayout>
-                    <CustomersPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/expenses"
+            element={
+              <ProtectedRoute permission="operations.view">
+                <AppLayout>
+                  <ExpensesPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/machines"
-              element={
-                <ProtectedRoute permission="operations.view">
-                  <AppLayout>
-                    <MachinesPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/fuel"
+            element={
+              <ProtectedRoute permission="operations.view">
+                <AppLayout>
+                  <FuelPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/drivers"
-              element={
-                <ProtectedRoute permission="operations.view">
-                  <AppLayout>
-                    <DriversPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/maintenance"
+            element={
+              <ProtectedRoute permission="operations.view">
+                <AppLayout>
+                  <MaintenancePage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/employees"
-              element={
-                <ProtectedRoute permission="operations.view">
-                  <AppLayout>
-                    <EmployeesPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute permission="report.generate">
+                <AppLayout>
+                  <ReportsPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/payments"
-              element={
-                <ProtectedRoute permission="operations.view">
-                  <AppLayout>
-                    <PaymentsPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute permission="operations.view">
+                <AppLayout>
+                  <SettingsPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/expenses"
-              element={
-                <ProtectedRoute permission="operations.view">
-                  <AppLayout>
-                    <ExpensesPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/team"
+            element={
+              <ProtectedRoute permission="user.manage">
+                <AppLayout>
+                  <TeamPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/fuel"
-              element={
-                <ProtectedRoute permission="operations.view">
-                  <AppLayout>
-                    <FuelPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
+          {/* Driver Mobile Surface Routes (§11.9) */}
+          <Route
+            path="/driver"
+            element={
+              <ProtectedRoute>
+                <DriverLayout>
+                  <DriverHomePage />
+                </DriverLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/maintenance"
-              element={
-                <ProtectedRoute permission="operations.view">
-                  <AppLayout>
-                    <MaintenancePage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/driver/jobs"
+            element={
+              <ProtectedRoute>
+                <DriverLayout>
+                  <DriverJobsPage />
+                </DriverLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/reports"
-              element={
-                <ProtectedRoute permission="report.generate">
-                  <AppLayout>
-                    <ReportsPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/driver/jobs/:id"
+            element={
+              <ProtectedRoute>
+                <DriverLayout>
+                  <DriverJobDetailPage />
+                </DriverLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute permission="operations.view">
-                  <AppLayout>
-                    <SettingsPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/driver/profile"
+            element={
+              <ProtectedRoute>
+                <DriverLayout>
+                  <DriverProfilePage />
+                </DriverLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/team"
-              element={
-                <ProtectedRoute permission="user.manage">
-                  <AppLayout>
-                    <TeamPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
+          {/* Farmer / Customer Portal Surface Routes (§11.10) */}
+          <Route
+            path="/farmer"
+            element={
+              <ProtectedRoute>
+                <FarmerPortalLayout>
+                  <FarmerHomePage />
+                </FarmerPortalLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            {/* Driver Mobile Surface Routes (§11.9) */}
-            <Route
-              path="/driver"
-              element={
-                <ProtectedRoute>
-                  <DriverLayout>
-                    <DriverHomePage />
-                  </DriverLayout>
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/farmer/bookings"
+            element={
+              <ProtectedRoute>
+                <FarmerPortalLayout>
+                  <FarmerBookingsPage />
+                </FarmerPortalLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/driver/jobs"
-              element={
-                <ProtectedRoute>
-                  <DriverLayout>
-                    <DriverJobsPage />
-                  </DriverLayout>
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/farmer/invoices"
+            element={
+              <ProtectedRoute>
+                <FarmerPortalLayout>
+                  <FarmerInvoicesPage />
+                </FarmerPortalLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/driver/jobs/:id"
-              element={
-                <ProtectedRoute>
-                  <DriverLayout>
-                    <DriverJobDetailPage />
-                  </DriverLayout>
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/farmer/profile"
+            element={
+              <ProtectedRoute>
+                <FarmerPortalLayout>
+                  <FarmerProfilePage />
+                </FarmerPortalLayout>
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/driver/profile"
-              element={
-                <ProtectedRoute>
-                  <DriverLayout>
-                    <DriverProfilePage />
-                  </DriverLayout>
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Farmer / Customer Portal Surface Routes (§11.10) — deliberately
-                under /farmer, not /portal: /portal is already claimed by the
-                SaaS commercial billing portal above, and a duplicate path
-                previously made this entire surface unreachable (the earlier
-                declaration always won), silently sending every Farmer into
-                the wrong app. */}
-            <Route
-              path="/farmer"
-              element={
-                <ProtectedRoute>
-                  <FarmerPortalLayout>
-                    <FarmerHomePage />
-                  </FarmerPortalLayout>
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/farmer/bookings"
-              element={
-                <ProtectedRoute>
-                  <FarmerPortalLayout>
-                    <FarmerBookingsPage />
-                  </FarmerPortalLayout>
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/farmer/invoices"
-              element={
-                <ProtectedRoute>
-                  <FarmerPortalLayout>
-                    <FarmerInvoicesPage />
-                  </FarmerPortalLayout>
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/farmer/profile"
-              element={
-                <ProtectedRoute>
-                  <FarmerPortalLayout>
-                    <FarmerProfilePage />
-                  </FarmerPortalLayout>
-                </ProtectedRoute>
-              }
-            />
-
-            <Route path="*" element={<Navigate to="/saas" replace />} />
-          </Routes>
-        </AuthProvider>
-      </SaasAuthProvider>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

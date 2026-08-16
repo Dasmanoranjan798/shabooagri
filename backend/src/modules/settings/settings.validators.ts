@@ -5,22 +5,13 @@ const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 const pinRegex = /^[1-9][0-9]{5}$/;
 const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 
+// Logo/theme-color/accent-color and currency/timezone/language are
+// white-label fields — Phase 1 leaves them schema-driven with sensible
+// defaults but not editable via this endpoint (§10: schema now, UI in
+// Phase 2). Only fields a Phase 1 CHC actually needs to configure day one
+// (identity, tax numbers, bank/UPI details, alert thresholds) are writable.
 export const updateCompanyProfileSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
-  logoUrl: z.string().trim().max(1000).optional().nullable(),
-  themeColor: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/, "themeColor must be a hex color e.g. #1B7A3E")
-    .optional()
-    .nullable(),
-  accentColor: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/, "accentColor must be a hex color e.g. #2ECC71")
-    .optional()
-    .nullable(),
-  currency: z.string().length(3, "currency must be a 3-letter ISO code").optional(),
-  timezone: z.string().min(1).max(80).optional(),
-  language: z.string().min(2).max(10).optional(),
   invoicePrefix: z.string().trim().max(10).optional().nullable(),
 
   // Phase B Business Identity fields
@@ -92,15 +83,4 @@ export const updateCompanyProfileSchema = z.object({
   requireJobFuelLog: z.boolean().optional(),
 });
 
-const terminologyEntrySchema = z.object({
-  termKey: z.enum(["customer", "driver", "machine", "booking", "invoice", "village"]),
-  displayLabelSingular: z.string().trim().min(1).max(100),
-  displayLabelPlural: z.string().trim().min(1).max(100),
-});
-
-export const updateTerminologySchema = z.object({
-  terms: z.array(terminologyEntrySchema).min(1).max(20),
-});
-
 export type UpdateCompanyProfileInput = z.infer<typeof updateCompanyProfileSchema>;
-export type UpdateTerminologyInput = z.infer<typeof updateTerminologySchema>;

@@ -2,7 +2,7 @@ import { AppError } from "../../shared/errors/AppError";
 import * as rbacService from "../rbac/rbac.service";
 import * as settingsRepo from "./settings.repository";
 import type { AuthenticatedUser } from "../auth/auth.types";
-import type { UpdateCompanyProfileInput, UpdateTerminologyInput } from "./settings.validators";
+import type { UpdateCompanyProfileInput } from "./settings.validators";
 
 async function assertCompanyExists(companyId: string) {
   const company = await settingsRepo.findCompanyById(companyId);
@@ -36,20 +36,4 @@ export async function getCompanyProfile(companyId: string, user?: AuthenticatedU
 export async function updateCompanyProfile(companyId: string, input: UpdateCompanyProfileInput) {
   await assertCompanyExists(companyId);
   return settingsRepo.updateCompanyProfile(companyId, input);
-}
-
-// Updates multiple terminology labels in one call. Each term key is upserted
-// independently — partial updates are fine (only pass the keys you want to change).
-export async function updateTerminology(companyId: string, input: UpdateTerminologyInput) {
-  const results = await Promise.all(
-    input.terms.map((t) =>
-      settingsRepo.upsertTerminologySetting(
-        companyId,
-        t.termKey,
-        t.displayLabelSingular,
-        t.displayLabelPlural,
-      ),
-    ),
-  );
-  return results;
 }

@@ -26,8 +26,8 @@ import type {
 import type { Expense, ExpenseCategory, CreateExpensePayload, UpdateExpensePayload } from "../types/expense";
 import type { FuelEntry } from "../types/fuel";
 import type { MaintenanceSchedule, MaintenanceRecord, CreateMaintenanceRecordPayload, CreateMaintenanceSchedulePayload, MaintenanceAlert } from "../types/maintenance";
-import type { CompanyProfile, UpdateCompanyProfilePayload, UpdateTerminologyPayload } from "../types/settings";
-import type { Role, Permission, CreateRolePayload, UpdateRolePayload } from "../types/rbac";
+import type { CompanyProfile, UpdateCompanyProfilePayload } from "../types/settings";
+import type { Role, Permission } from "../types/rbac";
 import type { TeamUser, StaffInvite, CreateInvitePayload, CreateInviteResponse, InviteVerifyResult } from "../types/team";
 
 const TOKEN_KEY = "shabooagri_token";
@@ -1030,15 +1030,7 @@ export const api = {
     return res.json();
   },
 
-  async updateTerminology(payload: UpdateTerminologyPayload): Promise<void> {
-    const res = await fetchWithAuth("/settings/terminology", { method: "PATCH", body: JSON.stringify(payload) });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: "Failed to update terminology" }));
-      throw new ApiError(res.status, err.error || err.message);
-    }
-  },
-
-  // RBAC & Custom Roles
+  // RBAC (read-only in Phase 1 — §6)
   async listRoles(): Promise<Role[]> {
     const res = await fetchWithAuth("/rbac/roles");
     if (!res.ok) {
@@ -1053,44 +1045,6 @@ export const api = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to load permissions" }));
       throw new ApiError(res.status, (err.error || err.message) || "Failed to load permissions");
-    }
-    return res.json();
-  },
-
-  async createRole(payload: CreateRolePayload): Promise<Role> {
-    const res = await fetchWithAuth("/rbac/roles", { method: "POST", body: JSON.stringify(payload) });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: "Failed to create role" }));
-      throw new ApiError(res.status, err.error || err.message);
-    }
-    return res.json();
-  },
-
-  async updateRole(id: string, payload: UpdateRolePayload): Promise<Role> {
-    const res = await fetchWithAuth(`/rbac/roles/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: "Failed to update role" }));
-      throw new ApiError(res.status, err.error || err.message);
-    }
-    return res.json();
-  },
-
-  async deleteRole(id: string): Promise<void> {
-    const res = await fetchWithAuth(`/rbac/roles/${id}`, { method: "DELETE" });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: "Failed to delete role" }));
-      throw new ApiError(res.status, err.error || err.message);
-    }
-  },
-
-  async assignUserRole(userId: string, roleId: string): Promise<User> {
-    const res = await fetchWithAuth("/rbac/users/assign-role", {
-      method: "POST",
-      body: JSON.stringify({ userId, roleId }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: "Failed to assign role" }));
-      throw new ApiError(res.status, err.error || err.message);
     }
     return res.json();
   },

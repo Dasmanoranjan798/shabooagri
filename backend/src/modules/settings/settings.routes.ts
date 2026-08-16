@@ -12,9 +12,5 @@ settingsRouter.use(authMiddleware);
 settingsRouter.get("/profile", asyncHandler(settingsController.getCompanyProfile));
 settingsRouter.patch("/profile", requirePermission("settings.manage"), asyncHandler(settingsController.updateCompanyProfile));
 
-// Terminology labels (§9)
-settingsRouter.patch(
-  "/terminology",
-  requirePermission("settings.manage"),
-  asyncHandler(settingsController.updateTerminology),
-);
+// Terminology labels are read-only in Phase 1 (via /settings/profile) — the
+// admin UI + write endpoint to edit them ships in Phase 2 (§9).

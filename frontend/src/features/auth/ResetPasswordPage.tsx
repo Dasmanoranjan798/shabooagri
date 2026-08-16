@@ -92,7 +92,7 @@ export const ResetPasswordPage: React.FC = () => {
       
       {/* Top minimal brand header */}
       <header className="py-6 px-4 sm:px-8 max-w-7xl mx-auto w-full flex items-center justify-between">
-        <Link to="/saas" className="flex items-center gap-2">
+        <Link to="/login" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-[#15803d] flex items-center justify-center text-white shadow-xs">
             <Tractor className="w-4.5 h-4.5" />
           </div>
@@ -132,7 +132,7 @@ export const ResetPasswordPage: React.FC = () => {
                     <p>{successMsg}</p>
                   </div>
                   <Link
-                    to="/saas/login"
+                    to="/login"
                     className="block w-full py-2.5 rounded-lg border border-slate-300 text-slate-800 font-semibold text-xs hover:bg-slate-50 transition-colors"
                   >
                     Back to Sign In
@@ -175,7 +175,7 @@ export const ResetPasswordPage: React.FC = () => {
               )}
 
               <div className="pt-4 border-t border-slate-100 text-center text-xs">
-                <Link to="/saas/login" className="font-semibold text-slate-600 hover:text-slate-900 transition-colors">
+                <Link to="/login" className="font-semibold text-slate-600 hover:text-slate-900 transition-colors">
                   Back to Sign In
                 </Link>
               </div>
@@ -206,7 +206,7 @@ export const ResetPasswordPage: React.FC = () => {
                     <p>{successMsg}</p>
                   </div>
                   <Link
-                    to="/saas/login"
+                    to="/login"
                     className="block w-full py-2.5 rounded-lg bg-[#15803d] hover:bg-[#166534] text-white font-bold text-xs text-center shadow-xs transition-colors"
                   >
                     PROCEED TO SIGN IN
@@ -292,7 +292,7 @@ export const ResetPasswordPage: React.FC = () => {
               )}
 
               <div className="pt-4 border-t border-slate-100 text-center text-xs">
-                <Link to="/saas/login" className="font-semibold text-slate-600 hover:text-slate-900 transition-colors">
+                <Link to="/login" className="font-semibold text-slate-600 hover:text-slate-900 transition-colors">
                   Back to Sign In
                 </Link>
               </div>

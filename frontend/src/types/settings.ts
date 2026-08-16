@@ -46,12 +46,6 @@ export interface TerminologySetting {
 
 export interface UpdateCompanyProfilePayload {
   name?: string;
-  logoUrl?: string | null;
-  themeColor?: string | null;
-  accentColor?: string | null;
-  currency?: string;
-  timezone?: string;
-  language?: string;
   invoicePrefix?: string | null;
   address?: string | null;
   city?: string | null;
@@ -75,8 +69,4 @@ export interface UpdateCompanyProfilePayload {
   licenseAlertDays?: number;
   requireJobPhoto?: boolean;
   requireJobFuelLog?: boolean;
-}
-
-export interface UpdateTerminologyPayload {
-  terms: { termKey: string; displayLabelSingular: string; displayLabelPlural: string }[];
 }

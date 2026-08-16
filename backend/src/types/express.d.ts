@@ -4,8 +4,6 @@ declare global {
   namespace Express {
     interface Request {
       user?: AuthenticatedUser;
-      /** Raw JSON body bytes, captured for webhook signature verification (e.g. Razorpay). */
-      rawBody?: Buffer;
     }
   }
 }
