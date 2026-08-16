@@ -12,6 +12,16 @@ paymentRouter.use(authMiddleware);
 
 // Scoped read routes — company-wide for Owner/Manager, customer-scoped for Farmer
 invoiceRouter.get("/", asyncHandler(paymentController.listInvoices));
+
+// Manual invoice creation — for cases the completed-job pipeline doesn't
+// cover (custom charges, backlog entries). Same permission as receiving a
+// payment since both are financial write actions on this page.
+invoiceRouter.post(
+  "/",
+  requirePermission("payment.receive"),
+  asyncHandler(paymentController.createManualInvoice),
+);
+
 invoiceRouter.get("/:id", asyncHandler(paymentController.getInvoiceById));
 invoiceRouter.get("/:id/receipt", asyncHandler(paymentController.getReceipt));
 
@@ -30,4 +40,14 @@ invoiceRouter.patch(
 
 // Scoped payment history routes
 paymentRouter.get("/", asyncHandler(paymentController.listPayments));
+
+// Customer advances (money received with no invoice yet) — registered
+// before the "/:id" route below so "/advances" doesn't get swallowed as an id.
+paymentRouter.get("/advances", asyncHandler(paymentController.listCustomerAdvances));
+paymentRouter.post(
+  "/advances",
+  requirePermission("payment.receive"),
+  asyncHandler(paymentController.recordCustomerAdvance),
+);
+
 paymentRouter.get("/:id", asyncHandler(paymentController.getPaymentById));

@@ -22,7 +22,7 @@ export interface PaymentRecord {
 export interface Invoice {
   id: string;
   companyId: string;
-  bookingId: string;
+  bookingId: string | null;
   customerId: string;
   invoiceNumber: string;
   invoiceDate: string;
@@ -40,6 +40,7 @@ export interface Invoice {
   igstAmount?: number;
   dueDate?: string | null;
   notes?: string | null;
+  description?: string | null;
   createdAt: string;
   updatedAt: string;
   customer?: {
@@ -62,6 +63,44 @@ export interface Invoice {
 }
 
 export interface ReceivePaymentPayload {
+  amount: number;
+  paymentMethod: PaymentMethod;
+  referenceNumber?: string;
+  notes?: string;
+}
+
+export interface CreateManualInvoicePayload {
+  customerId: string;
+  totalAmount: number;
+  description: string;
+  dueDate?: string;
+}
+
+export interface CustomerAdvance {
+  id: string;
+  companyId: string;
+  customerId: string;
+  amount: number;
+  appliedAmount: number;
+  paymentMethod: PaymentMethod;
+  referenceNumber?: string | null;
+  receivedAt: string;
+  notes?: string | null;
+  createdAt: string;
+  customer?: {
+    id: string;
+    name: string;
+    phone?: string | null;
+    village?: { id: string; name: string } | null;
+  } | null;
+  receiver?: {
+    id: string;
+    fullName: string;
+  } | null;
+}
+
+export interface RecordCustomerAdvancePayload {
+  customerId: string;
   amount: number;
   paymentMethod: PaymentMethod;
   referenceNumber?: string;
@@ -120,6 +159,7 @@ export interface ReceiptData {
     upiId?: string | null;
   };
   invoice: ReceiptInvoice;
+  description?: string | null;
   customer?: {
     id: string;
     name: string;
@@ -130,7 +170,7 @@ export interface ReceiptData {
     gstin?: string | null;
   };
   service: {
-    bookingNumber: string;
+    bookingNumber: string | null;
     scheduledDate: string;
     location?: string | null;
     machine: { registrationNumber: string; brand?: string | null; model?: string | null } | null;

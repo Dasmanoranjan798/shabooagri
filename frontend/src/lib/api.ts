@@ -14,7 +14,15 @@ import type { Machine, MachineType, CreateMachinePayload, UpdateMachinePayload }
 import type { Driver, CreateDriverPayload, UpdateDriverPayload } from "../types/driver";
 import type { Customer, CreateCustomerPayload, UpdateCustomerPayload } from "../types/customer";
 import type { Employee, CreateEmployeePayload, UpdateEmployeePayload } from "../types/employee";
-import type { Invoice, PaymentRecord, ReceivePaymentPayload, ReceiptData } from "../types/payment";
+import type {
+  CreateManualInvoicePayload,
+  CustomerAdvance,
+  Invoice,
+  PaymentRecord,
+  ReceivePaymentPayload,
+  ReceiptData,
+  RecordCustomerAdvancePayload,
+} from "../types/payment";
 import type { Expense, ExpenseCategory, CreateExpensePayload, UpdateExpensePayload } from "../types/expense";
 import type { FuelEntry } from "../types/fuel";
 import type { MaintenanceSchedule, MaintenanceRecord, CreateMaintenanceRecordPayload, CreateMaintenanceSchedulePayload, MaintenanceAlert } from "../types/maintenance";
@@ -808,6 +816,39 @@ export const api = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to update tax configuration" }));
       throw new ApiError(res.status, err.message || "Failed to update tax configuration");
+    }
+    return res.json();
+  },
+
+  async createManualInvoice(payload: CreateManualInvoicePayload): Promise<Invoice> {
+    const res = await fetchWithAuth("/invoices", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to create invoice" }));
+      throw new ApiError(res.status, err.message || "Failed to create invoice");
+    }
+    return res.json();
+  },
+
+  async recordCustomerAdvance(payload: RecordCustomerAdvancePayload): Promise<CustomerAdvance> {
+    const res = await fetchWithAuth("/payments/advances", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to record advance payment" }));
+      throw new ApiError(res.status, err.message || "Failed to record advance payment");
+    }
+    return res.json();
+  },
+
+  async listCustomerAdvances(): Promise<CustomerAdvance[]> {
+    const res = await fetchWithAuth("/payments/advances");
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load advances" }));
+      throw new ApiError(res.status, err.message || "Failed to load advances");
     }
     return res.json();
   },

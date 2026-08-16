@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { AlertTriangle, CreditCard, FileText, Wallet, CheckCircle2, AlertCircle, FileSpreadsheet } from "lucide-react";
+import { AlertTriangle, CreditCard, FileText, Wallet, CheckCircle2, AlertCircle, FileSpreadsheet, Plus, PiggyBank } from "lucide-react";
 import "./payments.css";
-import type { Invoice } from "../../types/payment";
+import type { CustomerAdvance, Invoice } from "../../types/payment";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { getTerm } from "../../lib/terminology";
@@ -12,6 +12,8 @@ import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import { ReceivePaymentModal } from "./ReceivePaymentModal";
 import { ReceiptModal } from "./ReceiptModal";
+import { NewInvoiceModal } from "./NewInvoiceModal";
+import { RecordAdvanceModal } from "./RecordAdvanceModal";
 
 const PAYMENT_STATUS_FILTERS: Array<{ label: string; value: string }> = [
  { label: "All", value: "ALL" },
@@ -26,6 +28,7 @@ export const PaymentsPage: React.FC = () => {
  const villageTerm = getTerm("village");
 
  const [invoices, setInvoices] = useState<Invoice[]>([]);
+ const [advances, setAdvances] = useState<CustomerAdvance[]>([]);
  const [activeFilter, setActiveFilter] = useState<string>("ALL");
  const [searchQuery, setSearchQuery] = useState<string>("");
 
@@ -38,14 +41,21 @@ export const PaymentsPage: React.FC = () => {
  const [selectedInvoiceForReceipt, setSelectedInvoiceForReceipt] = useState<Invoice | null>(null);
  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState<boolean>(false);
 
+ const [isNewInvoiceModalOpen, setIsNewInvoiceModalOpen] = useState<boolean>(false);
+ const [isRecordAdvanceModalOpen, setIsRecordAdvanceModalOpen] = useState<boolean>(false);
+
  const canReceive = roleKey === "owner" || hasPermission("payment.receive");
 
  const loadInvoices = async () => {
  setIsLoading(true);
  setError(null);
  try {
- const list = await api.listInvoices();
+ const [list, advanceList] = await Promise.all([
+ api.listInvoices(),
+ api.listCustomerAdvances().catch(() => []),
+ ]);
  setInvoices(list);
+ setAdvances(advanceList);
 
  // Refresh receipt modal if open
  if (selectedInvoiceForReceipt) {
@@ -78,6 +88,10 @@ export const PaymentsPage: React.FC = () => {
  const totalReceivables = invoices.reduce((sum, inv) => sum + Number(inv.totalAmount), 0);
  const totalCollected = invoices.reduce((sum, inv) => sum + Number(inv.paidAmount), 0);
  const totalBalanceDue = invoices.reduce((sum, inv) => sum + Number(inv.balanceAmount), 0);
+ const totalAdvanceBalance = advances.reduce(
+ (sum, a) => sum + (Number(a.amount) - Number(a.appliedAmount)),
+ 0
+ );
 
  // Filter invoices by status tab & search query
  const filteredInvoices = invoices.filter((inv) => {
@@ -106,6 +120,29 @@ export const PaymentsPage: React.FC = () => {
  <h2>Payments & Invoicing</h2>
  <p>Track job billing, receive collections, enforce balances & issue receipts</p>
  </div>
+
+ <div style={{ display: "flex", gap: "8px" }}>
+ {canReceive && (
+ <Button
+ variant="secondary"
+ size="md"
+ onClick={() => setIsRecordAdvanceModalOpen(true)}
+ style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+ >
+ <PiggyBank size={16} /> Record Advance
+ </Button>
+ )}
+
+ {canReceive && (
+ <Button
+ variant="primary"
+ size="md"
+ onClick={() => setIsNewInvoiceModalOpen(true)}
+ style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+ >
+ <Plus size={16} /> New Invoice
+ </Button>
+ )}
 
  <Button
  variant="secondary"
@@ -139,6 +176,7 @@ export const PaymentsPage: React.FC = () => {
  >
  <FileSpreadsheet size={16} /> Export Excel
  </Button>
+ </div>
  </div>
 
  {/* Financial KPI Summary Cards */}
@@ -178,6 +216,14 @@ export const PaymentsPage: React.FC = () => {
  <span className="sa-kpi-value" style={{ color: totalBalanceDue > 0 ? "#dc2626" : "#16a34a" }}>
  ₹{totalBalanceDue.toLocaleString("en-IN")}
  </span>
+ </div>
+ </Card>
+
+ <Card className="sa-kpi-card">
+ <div className="sa-kpi-icon"><PiggyBank size={24} color="var(--color-primary)" /></div>
+ <div className="sa-kpi-content">
+ <span className="sa-kpi-label">Advance Balance</span>
+ <span className="sa-kpi-value">₹{totalAdvanceBalance.toLocaleString("en-IN")}</span>
  </div>
  </Card>
  </div>
@@ -242,7 +288,7 @@ export const PaymentsPage: React.FC = () => {
  <p>
  {searchQuery || activeFilter !== "ALL"
  ? "No billing records match the selected filter criteria."
- : "No invoices generated yet. Invoices are automatically created when jobs are completed."}
+ : "No invoices yet. Invoices are created automatically when jobs are completed, or you can create one manually."}
  </p>
  </div>
  </Card>
@@ -374,6 +420,53 @@ export const PaymentsPage: React.FC = () => {
  </>
  )}
 
+ {/* Customer Advances — money received with no invoice to apply it to yet */}
+ {advances.length > 0 && (
+ <div style={{ marginTop: "1.5rem" }}>
+ <Card>
+ <div style={{ padding: "1rem 1.25rem 0.5rem" }}>
+ <h3 style={{ margin: 0, fontSize: "1rem", display: "flex", alignItems: "center", gap: "6px" }}>
+ <PiggyBank size={18} /> Customer Advances
+ </h3>
+ <p className="sa-text-muted" style={{ fontSize: "0.82rem", margin: "4px 0 0" }}>
+ Money on file that isn't tied to an invoice yet.
+ </p>
+ </div>
+ <div className="sa-table-responsive">
+ <table className="sa-table">
+ <thead>
+ <tr>
+ <th>{customerTerm}</th>
+ <th>Amount</th>
+ <th>Balance</th>
+ <th>Method</th>
+ <th>Date</th>
+ <th>Notes</th>
+ </tr>
+ </thead>
+ <tbody>
+ {advances.map((a) => (
+ <tr key={a.id}>
+ <td>
+ <div className="sa-cell-title">{a.customer?.name || "Customer"}</div>
+ <div className="sa-cell-sub">{a.customer?.village?.name || ""}</div>
+ </td>
+ <td>₹{Number(a.amount).toLocaleString("en-IN")}</td>
+ <td className={Number(a.amount) - Number(a.appliedAmount) > 0 ? "sa-text-success" : "sa-text-muted"}>
+ ₹{(Number(a.amount) - Number(a.appliedAmount)).toLocaleString("en-IN")}
+ </td>
+ <td>{a.paymentMethod.replace(/_/g, " ")}</td>
+ <td>{new Date(a.receivedAt).toLocaleDateString("en-IN")}</td>
+ <td className="sa-text-muted">{a.notes || a.referenceNumber || "—"}</td>
+ </tr>
+ ))}
+ </tbody>
+ </table>
+ </div>
+ </Card>
+ </div>
+ )}
+
  {/* Receive Payment Modal */}
  <ReceivePaymentModal
  isOpen={isPaymentModalOpen}
@@ -389,6 +482,20 @@ export const PaymentsPage: React.FC = () => {
  invoice={selectedInvoiceForReceipt}
  onReceivePayment={(inv) => handleOpenReceivePayment(inv)}
  onInvoiceUpdated={loadInvoices}
+ />
+
+ {/* New Invoice Modal */}
+ <NewInvoiceModal
+ isOpen={isNewInvoiceModalOpen}
+ onClose={() => setIsNewInvoiceModalOpen(false)}
+ onSuccess={loadInvoices}
+ />
+
+ {/* Record Advance Payment Modal */}
+ <RecordAdvanceModal
+ isOpen={isRecordAdvanceModalOpen}
+ onClose={() => setIsRecordAdvanceModalOpen(false)}
+ onSuccess={loadInvoices}
  />
  </div>
  );

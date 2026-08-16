@@ -1,12 +1,37 @@
 import type { Request, Response } from "express";
 import { requireUser } from "../../shared/utils/requireUser";
 import * as paymentService from "./payment.service";
-import { receivePaymentSchema, updateInvoiceTaxSchema } from "./payment.validators";
+import {
+  createManualInvoiceSchema,
+  receivePaymentSchema,
+  recordCustomerAdvanceSchema,
+  updateInvoiceTaxSchema,
+} from "./payment.validators";
 
 export async function listInvoices(req: Request, res: Response) {
   const user = requireUser(req);
   const invoices = await paymentService.listInvoices(user.companyId, user);
   res.json(invoices);
+}
+
+export async function createManualInvoice(req: Request, res: Response) {
+  const user = requireUser(req);
+  const input = createManualInvoiceSchema.parse(req.body);
+  const invoice = await paymentService.createManualInvoice(user.companyId, input);
+  res.status(201).json(invoice);
+}
+
+export async function recordCustomerAdvance(req: Request, res: Response) {
+  const user = requireUser(req);
+  const input = recordCustomerAdvanceSchema.parse(req.body);
+  const advance = await paymentService.recordCustomerAdvance(user.companyId, user, input);
+  res.status(201).json(advance);
+}
+
+export async function listCustomerAdvances(req: Request, res: Response) {
+  const user = requireUser(req);
+  const advances = await paymentService.listCustomerAdvances(user.companyId, user);
+  res.json(advances);
 }
 
 export async function getInvoiceById(req: Request, res: Response) {

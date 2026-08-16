@@ -175,19 +175,28 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               </div>
             )}
 
-            <div className="sa-detail-item">
-              <span className="sa-detail-label">{machineTerm}</span>
-              <span className="sa-detail-val">
-                {service?.machine?.registrationNumber || "N/A"} ({service?.machine?.brand || ""})
-              </span>
-            </div>
+            {service?.bookingNumber ? (
+              <>
+                <div className="sa-detail-item">
+                  <span className="sa-detail-label">{machineTerm}</span>
+                  <span className="sa-detail-val">
+                    {service?.machine?.registrationNumber || "N/A"} ({service?.machine?.brand || ""})
+                  </span>
+                </div>
 
-            <div className="sa-detail-item">
-              <span className="sa-detail-label">Assigned {driverTerm}</span>
-              <span className="sa-detail-val">
-                {service?.driver?.name || "N/A"}
-              </span>
-            </div>
+                <div className="sa-detail-item">
+                  <span className="sa-detail-label">Assigned {driverTerm}</span>
+                  <span className="sa-detail-val">
+                    {service?.driver?.name || "N/A"}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="sa-detail-item">
+                <span className="sa-detail-label">Description</span>
+                <span className="sa-detail-val">{receiptData?.description || "Manual invoice entry"}</span>
+              </div>
+            )}
           </div>
 
           {/* Optional Invoice GST Controls & Financial Breakdown Table */}

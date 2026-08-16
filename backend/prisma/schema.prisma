@@ -170,6 +170,7 @@ model Company {
   expenses             Expense[]
   invoices             Invoice[]
   payments             Payment[]
+  customerAdvances     CustomerAdvance[]
   auditLogs            AuditLog[]
   saasLicenses         License[]
   saasFeedbacks        CustomerFeedback[]
@@ -268,6 +269,7 @@ model User {
   recordedFuelEntries JobFuelEntry[]
   recordedExpenses    Expense[]
   receivedPayments    Payment[]
+  receivedAdvances    CustomerAdvance[]
   invitesSent         StaffInvite[]
 
   @@unique([companyId, email])
@@ -290,11 +292,12 @@ model Customer {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  company  Company       @relation(fields: [companyId], references: [id])
-  user     User?         @relation(fields: [userId], references: [id])
-  village  Village       @relation(fields: [villageId], references: [id])
+  company  Company           @relation(fields: [companyId], references: [id])
+  user     User?             @relation(fields: [userId], references: [id])
+  village  Village           @relation(fields: [villageId], references: [id])
   bookings Booking[]
   invoices Invoice[]
+  advances CustomerAdvance[]
   invites  StaffInvite[]
 
   @@map("customers")
@@ -665,8 +668,14 @@ model Invoice {
   id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId           String        @map("company_id") @db.Uuid
   invoiceNumber       String        @map("invoice_number")
-  bookingId           String        @unique @map("booking_id") @db.Uuid
+  // Nullable: manually-created invoices (not generated from a completed
+  // job) have no booking to attach to. @unique still holds since Postgres
+  // allows multiple NULLs in a unique column.
+  bookingId           String?       @unique @map("booking_id") @db.Uuid
   customerId          String        @map("customer_id") @db.Uuid
+  // Free-text reason/description, only meaningful when bookingId is null
+  // (a job-generated invoice's description is the job/booking itself).
+  description         String?       @map("description")
   totalAmount         Decimal       @map("total_amount") @db.Decimal(10, 2)
   paidAmount          Decimal       @default(0) @map("paid_amount") @db.Decimal(10, 2)
   balanceAmount       Decimal       @default(0) @map("balance_amount") @db.Decimal(10, 2)
@@ -689,7 +698,7 @@ model Invoice {
   updatedAt           DateTime      @updatedAt @map("updated_at")
 
   company  Company   @relation(fields: [companyId], references: [id])
-  booking  Booking   @relation(fields: [bookingId], references: [id])
+  booking  Booking?  @relation(fields: [bookingId], references: [id])
   customer Customer  @relation(fields: [customerId], references: [id])
   payments Payment[]
 
@@ -716,6 +725,31 @@ model Payment {
 
   @@index([invoiceId])
   @@map("payments")
+}
+
+// Money received from a customer with no invoice to apply it to yet (an
+// advance before a job starts, a walk-in collection). appliedAmount tracks
+// how much of it has since been manually applied to invoice(s); the
+// remainder (amount - appliedAmount) is the customer's live credit balance.
+model CustomerAdvance {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId       String        @map("company_id") @db.Uuid
+  customerId      String        @map("customer_id") @db.Uuid
+  amount          Decimal       @db.Decimal(10, 2)
+  appliedAmount   Decimal       @default(0) @map("applied_amount") @db.Decimal(10, 2)
+  paymentMethod   PaymentMethod @map("payment_method")
+  referenceNumber String?       @map("reference_number")
+  receivedBy      String        @map("received_by") @db.Uuid
+  receivedAt      DateTime      @default(now()) @map("received_at")
+  notes           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  company  Company  @relation(fields: [companyId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+  receiver User     @relation(fields: [receivedBy], references: [id])
+
+  @@index([customerId])
+  @@map("customer_advances")
 }
 
 // ---------- Auth support (§5) ----------

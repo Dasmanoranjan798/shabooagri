@@ -4,9 +4,15 @@ import { resolveCallerScope } from "../../shared/access/callerScope";
 import { prisma } from "../../db/prisma";
 import { AppError } from "../../shared/errors/AppError";
 import { calculateAmount, type PricingUnit } from "../../shared/pricing/pricing-calculator";
+import * as customerService from "../customers/customer.service";
 import * as invoiceRepository from "./invoice.repository";
 import * as paymentRepository from "./payment.repository";
-import type { ReceivePaymentInput } from "./payment.validators";
+import * as customerAdvanceRepository from "./customerAdvance.repository";
+import type {
+  CreateManualInvoiceInput,
+  ReceivePaymentInput,
+  RecordCustomerAdvanceInput,
+} from "./payment.validators";
 
 type JobWithRelations = Job & {
   booking: Booking & {
@@ -81,6 +87,61 @@ export async function createInvoiceForCompletedJob(
     },
     tx,
   );
+}
+
+// A manual invoice has no booking to derive an amount/rate from — the
+// Owner/Manager enters the total directly. Used for cases the completed-job
+// pipeline doesn't cover (custom charges, backlog entries pre-dating the
+// system).
+export async function createManualInvoice(
+  companyId: string,
+  input: CreateManualInvoiceInput,
+) {
+  await customerService.getById(companyId, input.customerId);
+
+  const totalAmount = Math.round(input.totalAmount * 100) / 100;
+
+  return invoiceRepository.create(companyId, {
+    customerId: input.customerId,
+    description: input.description.trim(),
+    subtotalAmount: totalAmount,
+    totalAmount,
+    paidAmount: 0,
+    balanceAmount: totalAmount,
+    status: "UNPAID",
+    dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
+  });
+}
+
+// Money received from a customer with no invoice to apply it to yet (an
+// advance before a job starts, a walk-in collection). Tracked separately
+// from Payment, which always requires an invoiceId.
+export async function recordCustomerAdvance(
+  companyId: string,
+  user: AuthenticatedUser,
+  input: RecordCustomerAdvanceInput,
+) {
+  await customerService.getById(companyId, input.customerId);
+
+  return customerAdvanceRepository.create(companyId, {
+    customerId: input.customerId,
+    amount: input.amount,
+    paymentMethod: input.paymentMethod,
+    referenceNumber: input.referenceNumber,
+    receivedBy: user.id,
+    notes: input.notes,
+  });
+}
+
+export async function listCustomerAdvances(companyId: string, user: AuthenticatedUser) {
+  const scope = await resolveCallerScope(companyId, user);
+  if (scope.kind === "company") {
+    return customerAdvanceRepository.findAllForCompany(companyId);
+  }
+  if (scope.kind === "customer") {
+    return customerAdvanceRepository.findAllForCompany(companyId, { customerId: scope.customerId });
+  }
+  return [];
 }
 
 export async function updateInvoiceTax(
@@ -221,9 +282,9 @@ export async function getReceipt(companyId: string, invoiceId: string, user: Aut
     throw new AppError(404, "Company not found");
   }
 
-  const job = await prisma.job.findUnique({
-    where: { bookingId: invoice.bookingId },
-  });
+  const job = invoice.bookingId
+    ? await prisma.job.findUnique({ where: { bookingId: invoice.bookingId } })
+    : null;
 
   return {
     receiptNumber: `REC-${invoice.invoiceNumber}`,
@@ -278,28 +339,42 @@ export async function getReceipt(companyId: string, invoiceId: string, user: Aut
       isGstApplicable: invoice.customer.isGstApplicable,
       gstin: invoice.customer.gstin,
     },
-    service: {
-      bookingNumber: invoice.booking.bookingNumber,
-      scheduledDate: invoice.booking.scheduledDate,
-      location: invoice.booking.location,
-      machine: invoice.booking.machine
-        ? {
-            registrationNumber: invoice.booking.machine.registrationNumber,
-            brand: invoice.booking.machine.brand,
-            model: invoice.booking.machine.model,
-          }
-        : null,
-      driver: invoice.booking.driver?.employee
-        ? {
-            name: invoice.booking.driver.employee.name,
-          }
-        : null,
-      pricingMethod: invoice.booking.pricingMethod.label,
-      rate: Number(invoice.booking.rate),
-      actualHours: job?.actualHours ? Number(job.actualHours) : null,
-      completedAcres: job?.completedAcres ? Number(job.completedAcres) : null,
-      fuelUsedLitres: job?.fuelUsedLitres ? Number(job.fuelUsedLitres) : null,
-    },
+    service: invoice.booking
+      ? {
+          bookingNumber: invoice.booking.bookingNumber,
+          scheduledDate: invoice.booking.scheduledDate,
+          location: invoice.booking.location,
+          machine: invoice.booking.machine
+            ? {
+                registrationNumber: invoice.booking.machine.registrationNumber,
+                brand: invoice.booking.machine.brand,
+                model: invoice.booking.machine.model,
+              }
+            : null,
+          driver: invoice.booking.driver?.employee
+            ? {
+                name: invoice.booking.driver.employee.name,
+              }
+            : null,
+          pricingMethod: invoice.booking.pricingMethod.label,
+          rate: Number(invoice.booking.rate),
+          actualHours: job?.actualHours ? Number(job.actualHours) : null,
+          completedAcres: job?.completedAcres ? Number(job.completedAcres) : null,
+          fuelUsedLitres: job?.fuelUsedLitres ? Number(job.fuelUsedLitres) : null,
+        }
+      : {
+          bookingNumber: null,
+          scheduledDate: invoice.invoiceDate,
+          location: null,
+          machine: null,
+          driver: null,
+          pricingMethod: "Manual Invoice",
+          rate: Number(invoice.totalAmount),
+          actualHours: null,
+          completedAcres: null,
+          fuelUsedLitres: null,
+        },
+    description: invoice.description,
     payments: invoice.payments.map((p) => ({
       id: p.id,
       amount: Number(p.amount),
