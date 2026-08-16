@@ -32,7 +32,7 @@ export const ExpensesPage: React.FC = () => {
 
  const [deletingId, setDeletingId] = useState<string | null>(null);
 
- const canManage = roleKey === "owner" || hasPermission("operations.view");
+ const canManage = roleKey === "owner" || hasPermission("expense.manage");
 
  const loadData = async () => {
  setIsLoading(true);

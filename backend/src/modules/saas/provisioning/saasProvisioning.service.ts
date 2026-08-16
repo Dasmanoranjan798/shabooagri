@@ -104,6 +104,7 @@ export class SaasProvisioningService {
             "employee.manage",
             "driver.manage",
             "customer.manage",
+            "expense.manage",
             "operations.view",
           ],
         },

@@ -27,6 +27,7 @@ const PERMISSIONS = [
   { key: "employee.manage", description: "Create/edit/delete employee records" },
   { key: "driver.manage", description: "Create/edit/delete driver profiles (not booking assignment)" },
   { key: "customer.manage", description: "Create/edit/delete customer records" },
+  { key: "expense.manage", description: "Create/edit/delete expense records" },
   {
     key: "operations.view",
     description: "Browse company-wide operational lists (villages, machines, employees, drivers, customers)",
@@ -64,6 +65,7 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     "employee.manage",
     "driver.manage",
     "customer.manage",
+    "expense.manage",
     "operations.view",
   ],
   driver: ["job.update_status"],
