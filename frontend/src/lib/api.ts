@@ -114,7 +114,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Registration failed" }));
-      throw new ApiError(res.status, err.message || "Failed to create user account");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to create user account");
     }
     return res.json();
   },
@@ -130,7 +130,7 @@ export const api = {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Login failed" }));
-      throw new ApiError(res.status, err.message || "Invalid credentials");
+      throw new ApiError(res.status, (err.error || err.message) || "Invalid credentials");
     }
 
     const data: LoginResponse = await res.json();
@@ -145,7 +145,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to request OTP" }));
-      throw new ApiError(res.status, err.message || "Failed to request OTP");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to request OTP");
     }
     return res.json();
   },
@@ -157,7 +157,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Invalid OTP code" }));
-      throw new ApiError(res.status, err.message || "Invalid OTP code");
+      throw new ApiError(res.status, (err.error || err.message) || "Invalid OTP code");
     }
     const data: LoginResponse = await res.json();
     setStoredTokens(data.accessToken, data.refreshToken);
@@ -168,7 +168,7 @@ export const api = {
     const res = await fetchWithAuth("/auth/me");
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Unauthorized" }));
-      throw new ApiError(res.status, err.message || "Session expired");
+      throw new ApiError(res.status, (err.error || err.message) || "Session expired");
     }
     const data = await res.json();
     return data;
@@ -185,7 +185,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to request password reset" }));
-      throw new ApiError(res.status, err.message || "Failed to request password reset");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to request password reset");
     }
     return res.json();
   },
@@ -197,7 +197,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Invalid or expired reset token" }));
-      throw new ApiError(res.status, err.message || "Invalid or expired reset token");
+      throw new ApiError(res.status, (err.error || err.message) || "Invalid or expired reset token");
     }
     return res.json();
   },
@@ -209,7 +209,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Password reset failed" }));
-      throw new ApiError(res.status, err.message || "Password reset failed");
+      throw new ApiError(res.status, (err.error || err.message) || "Password reset failed");
     }
     return res.json();
   },
@@ -221,7 +221,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to change password" }));
-      throw new ApiError(res.status, err.message || "Failed to change password");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to change password");
     }
     return res.json();
   },
@@ -231,7 +231,7 @@ export const api = {
     const res = await fetchWithAuth("/dashboard/summary");
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to fetch summary" }));
-      throw new ApiError(res.status, err.message || "Failed to load dashboard summary");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load dashboard summary");
     }
     return res.json();
   },
@@ -240,7 +240,7 @@ export const api = {
     const res = await fetchWithAuth(`/dashboard/income?range=${range}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to fetch income series" }));
-      throw new ApiError(res.status, err.message || "Failed to load income data");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load income data");
     }
     return res.json();
   },
@@ -249,7 +249,7 @@ export const api = {
     const res = await fetchWithAuth(`/dashboard/fuel?range=${range}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to fetch fuel series" }));
-      throw new ApiError(res.status, err.message || "Failed to load fuel data");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load fuel data");
     }
     return res.json();
   },
@@ -259,7 +259,7 @@ export const api = {
     const res = await fetchWithAuth("/bookings");
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to fetch bookings" }));
-      throw new ApiError(res.status, err.message || "Failed to load bookings");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load bookings");
     }
     return res.json();
   },
@@ -268,7 +268,7 @@ export const api = {
     const res = await fetchWithAuth(`/bookings/${id}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Booking not found" }));
-      throw new ApiError(res.status, err.message || "Booking not found");
+      throw new ApiError(res.status, (err.error || err.message) || "Booking not found");
     }
     return res.json();
   },
@@ -280,7 +280,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to create booking" }));
-      throw new ApiError(res.status, err.message || "Failed to create booking");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to create booking");
     }
     return res.json();
   },
@@ -292,7 +292,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to update booking" }));
-      throw new ApiError(res.status, err.message || "Failed to update booking");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to update booking");
     }
     return res.json();
   },
@@ -304,7 +304,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Invalid status transition" }));
-      throw new ApiError(res.status, err.message || "Failed to update status");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to update status");
     }
     return res.json();
   },
@@ -316,7 +316,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to assign machine" }));
-      throw new ApiError(res.status, err.message || "Failed to assign machine");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to assign machine");
     }
     return res.json();
   },
@@ -328,7 +328,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to assign driver" }));
-      throw new ApiError(res.status, err.message || "Failed to assign driver");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to assign driver");
     }
     return res.json();
   },
@@ -339,7 +339,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to delete booking" }));
-      throw new ApiError(res.status, err.message || "Failed to delete booking");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to delete booking");
     }
   },
 
@@ -347,7 +347,7 @@ export const api = {
     const res = await fetchWithAuth(`/bookings/${id}/attachments`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to fetch attachments" }));
-      throw new ApiError(res.status, err.message || "Failed to load attachments");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load attachments");
     }
     return res.json();
   },
@@ -370,7 +370,7 @@ export const api = {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Attachment upload failed" }));
-      throw new ApiError(res.status, err.message || "Failed to upload attachment");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to upload attachment");
     }
     return res.json();
   },
@@ -380,7 +380,7 @@ export const api = {
     const res = await fetchWithAuth("/customers");
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to load customers" }));
-      throw new ApiError(res.status, err.message || "Failed to load customers");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load customers");
     }
     return res.json();
   },
@@ -389,7 +389,7 @@ export const api = {
     const res = await fetchWithAuth(`/customers/${id}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Customer not found" }));
-      throw new ApiError(res.status, err.message || "Customer not found");
+      throw new ApiError(res.status, (err.error || err.message) || "Customer not found");
     }
     return res.json();
   },
@@ -401,7 +401,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to create customer" }));
-      throw new ApiError(res.status, err.message || "Failed to create customer");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to create customer");
     }
     return res.json();
   },
@@ -413,7 +413,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to update customer" }));
-      throw new ApiError(res.status, err.message || "Failed to update customer");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to update customer");
     }
     return res.json();
   },
@@ -424,7 +424,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to delete customer" }));
-      throw new ApiError(res.status, err.message || "Failed to delete customer");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to delete customer");
     }
   },
 
@@ -432,7 +432,7 @@ export const api = {
     const res = await fetchWithAuth("/villages");
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to load villages" }));
-      throw new ApiError(res.status, err.message || "Failed to load villages");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load villages");
     }
     return res.json();
   },
@@ -444,7 +444,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to create village" }));
-      throw new ApiError(res.status, err.message || "Failed to create village");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to create village");
     }
     return res.json();
   },
@@ -453,7 +453,7 @@ export const api = {
     const res = await fetchWithAuth("/machines");
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to load machines" }));
-      throw new ApiError(res.status, err.message || "Failed to load machines");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load machines");
     }
     return res.json();
   },
@@ -462,7 +462,7 @@ export const api = {
     const res = await fetchWithAuth(`/machines/${id}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Machine not found" }));
-      throw new ApiError(res.status, err.message || "Machine not found");
+      throw new ApiError(res.status, (err.error || err.message) || "Machine not found");
     }
     return res.json();
   },
@@ -474,7 +474,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to create machine" }));
-      throw new ApiError(res.status, err.message || "Failed to create machine");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to create machine");
     }
     return res.json();
   },
@@ -486,7 +486,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to update machine" }));
-      throw new ApiError(res.status, err.message || "Failed to update machine");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to update machine");
     }
     return res.json();
   },
@@ -497,7 +497,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to delete machine" }));
-      throw new ApiError(res.status, err.message || "Failed to delete machine");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to delete machine");
     }
   },
 
@@ -505,7 +505,7 @@ export const api = {
     const res = await fetchWithAuth("/machine-types");
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to load machine types" }));
-      throw new ApiError(res.status, err.message || "Failed to load machine types");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load machine types");
     }
     return res.json();
   },
@@ -517,7 +517,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to create machine type" }));
-      throw new ApiError(res.status, err.message || "Failed to create machine type");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to create machine type");
     }
     return res.json();
   },
@@ -526,7 +526,7 @@ export const api = {
     const res = await fetchWithAuth("/drivers");
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to load drivers" }));
-      throw new ApiError(res.status, err.message || "Failed to load drivers");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load drivers");
     }
     return res.json();
   },
@@ -535,7 +535,7 @@ export const api = {
     const res = await fetchWithAuth(`/drivers/${id}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Driver not found" }));
-      throw new ApiError(res.status, err.message || "Driver not found");
+      throw new ApiError(res.status, (err.error || err.message) || "Driver not found");
     }
     return res.json();
   },
@@ -547,7 +547,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to create driver profile" }));
-      throw new ApiError(res.status, err.message || "Failed to create driver profile");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to create driver profile");
     }
     return res.json();
   },
@@ -559,7 +559,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to update driver" }));
-      throw new ApiError(res.status, err.message || "Failed to update driver");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to update driver");
     }
     return res.json();
   },
@@ -570,7 +570,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to delete driver" }));
-      throw new ApiError(res.status, err.message || "Failed to delete driver");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to delete driver");
     }
   },
 
@@ -578,7 +578,7 @@ export const api = {
     const res = await fetchWithAuth("/employees");
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to load employees" }));
-      throw new ApiError(res.status, err.message || "Failed to load employees");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load employees");
     }
     return res.json();
   },
@@ -587,7 +587,7 @@ export const api = {
     const res = await fetchWithAuth(`/employees/${id}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Employee not found" }));
-      throw new ApiError(res.status, err.message || "Employee not found");
+      throw new ApiError(res.status, (err.error || err.message) || "Employee not found");
     }
     return res.json();
   },
@@ -599,7 +599,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to create employee record" }));
-      throw new ApiError(res.status, err.message || "Failed to create employee record");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to create employee record");
     }
     return res.json();
   },
@@ -611,7 +611,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to update employee" }));
-      throw new ApiError(res.status, err.message || "Failed to update employee");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to update employee");
     }
     return res.json();
   },
@@ -622,7 +622,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to delete employee" }));
-      throw new ApiError(res.status, err.message || "Failed to delete employee");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to delete employee");
     }
   },
 
@@ -630,7 +630,7 @@ export const api = {
     const res = await fetchWithAuth("/pricing-methods");
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to load pricing methods" }));
-      throw new ApiError(res.status, err.message || "Failed to load pricing methods");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load pricing methods");
     }
     return res.json();
   },
@@ -640,7 +640,7 @@ export const api = {
     const res = await fetchWithAuth("/jobs");
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to fetch jobs" }));
-      throw new ApiError(res.status, err.message || "Failed to load jobs");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load jobs");
     }
     return res.json();
   },
@@ -649,7 +649,7 @@ export const api = {
     const res = await fetchWithAuth(`/jobs/${id}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Job not found" }));
-      throw new ApiError(res.status, err.message || "Job not found");
+      throw new ApiError(res.status, (err.error || err.message) || "Job not found");
     }
     return res.json();
   },
@@ -661,7 +661,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to update job details" }));
-      throw new ApiError(res.status, err.message || "Failed to update job");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to update job");
     }
     return res.json();
   },
@@ -673,7 +673,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to start job" }));
-      throw new ApiError(res.status, err.message || "Failed to start job");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to start job");
     }
     return res.json();
   },
@@ -685,7 +685,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to pause job" }));
-      throw new ApiError(res.status, err.message || "Failed to pause job");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to pause job");
     }
     return res.json();
   },
@@ -697,7 +697,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to resume job" }));
-      throw new ApiError(res.status, err.message || "Failed to resume job");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to resume job");
     }
     return res.json();
   },
@@ -709,7 +709,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to complete job" }));
-      throw new ApiError(res.status, err.message || "Failed to complete job");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to complete job");
     }
     return res.json();
   },
@@ -718,7 +718,7 @@ export const api = {
     const res = await fetchWithAuth(`/jobs/${id}/fuel-entries`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to fetch fuel entries" }));
-      throw new ApiError(res.status, err.message || "Failed to load fuel entries");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load fuel entries");
     }
     return res.json();
   },
@@ -730,7 +730,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to add fuel entry" }));
-      throw new ApiError(res.status, err.message || "Failed to add fuel entry");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to add fuel entry");
     }
     return res.json();
   },
@@ -739,7 +739,7 @@ export const api = {
     const res = await fetchWithAuth(`/jobs/${id}/photos`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to fetch job photos" }));
-      throw new ApiError(res.status, err.message || "Failed to load job photos");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load job photos");
     }
     return res.json();
   },
@@ -763,7 +763,7 @@ export const api = {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Photo upload failed" }));
-      throw new ApiError(res.status, err.message || "Failed to upload photo");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to upload photo");
     }
     return res.json();
   },
@@ -773,7 +773,7 @@ export const api = {
     const res = await fetchWithAuth("/invoices");
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to fetch invoices" }));
-      throw new ApiError(res.status, err.message || "Failed to load invoices");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load invoices");
     }
     return res.json();
   },
@@ -782,7 +782,7 @@ export const api = {
     const res = await fetchWithAuth(`/invoices/${id}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Invoice not found" }));
-      throw new ApiError(res.status, err.message || "Invoice not found");
+      throw new ApiError(res.status, (err.error || err.message) || "Invoice not found");
     }
     return res.json();
   },
@@ -794,7 +794,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to record payment" }));
-      throw new ApiError(res.status, err.message || "Failed to record payment");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to record payment");
     }
     return res.json();
   },
@@ -803,7 +803,7 @@ export const api = {
     const res = await fetchWithAuth(`/invoices/${invoiceId}/receipt`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Receipt not found" }));
-      throw new ApiError(res.status, err.message || "Failed to load receipt");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load receipt");
     }
     return res.json();
   },
@@ -815,7 +815,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to update tax configuration" }));
-      throw new ApiError(res.status, err.message || "Failed to update tax configuration");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to update tax configuration");
     }
     return res.json();
   },
@@ -827,7 +827,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to create invoice" }));
-      throw new ApiError(res.status, err.message || "Failed to create invoice");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to create invoice");
     }
     return res.json();
   },
@@ -839,7 +839,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to record advance payment" }));
-      throw new ApiError(res.status, err.message || "Failed to record advance payment");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to record advance payment");
     }
     return res.json();
   },
@@ -848,7 +848,7 @@ export const api = {
     const res = await fetchWithAuth("/payments/advances");
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to load advances" }));
-      throw new ApiError(res.status, err.message || "Failed to load advances");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load advances");
     }
     return res.json();
   },
@@ -858,7 +858,7 @@ export const api = {
     const res = await fetchWithAuth(url);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to load payments" }));
-      throw new ApiError(res.status, err.message || "Failed to load payments");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load payments");
     }
     return res.json();
   },
@@ -868,7 +868,7 @@ export const api = {
     const res = await fetchWithAuth("/expenses/categories");
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to load expense categories" }));
-      throw new ApiError(res.status, err.message || "Failed to load expense categories");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load expense categories");
     }
     return res.json();
   },
@@ -882,7 +882,7 @@ export const api = {
     const res = await fetchWithAuth(`/expenses${queryString}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to fetch expenses" }));
-      throw new ApiError(res.status, err.message || "Failed to load expenses");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load expenses");
     }
     return res.json();
   },
@@ -891,7 +891,7 @@ export const api = {
     const res = await fetchWithAuth(`/expenses/${id}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Expense record not found" }));
-      throw new ApiError(res.status, err.message || "Expense record not found");
+      throw new ApiError(res.status, (err.error || err.message) || "Expense record not found");
     }
     return res.json();
   },
@@ -903,7 +903,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to record expense" }));
-      throw new ApiError(res.status, err.message || "Failed to record expense");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to record expense");
     }
     return res.json();
   },
@@ -915,7 +915,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to update expense" }));
-      throw new ApiError(res.status, err.message || "Failed to update expense");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to update expense");
     }
     return res.json();
   },
@@ -926,7 +926,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to delete expense" }));
-      throw new ApiError(res.status, err.message || "Failed to delete expense");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to delete expense");
     }
   },
 
@@ -941,7 +941,7 @@ export const api = {
     const res = await fetchWithAuth(`/fuel/entries${qs}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to load fuel entries" }));
-      throw new ApiError(res.status, err.message || "Failed to load fuel entries");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load fuel entries");
     }
     return res.json();
   },
@@ -952,7 +952,7 @@ export const api = {
     const res = await fetchWithAuth(`/maintenance/schedules${qs}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to load maintenance schedules" }));
-      throw new ApiError(res.status, err.message || "Failed to load maintenance schedules");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load maintenance schedules");
     }
     return res.json();
   },
@@ -961,7 +961,7 @@ export const api = {
     const res = await fetchWithAuth("/maintenance/schedules", { method: "POST", body: JSON.stringify(payload) });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to create schedule" }));
-      throw new ApiError(res.status, err.message);
+      throw new ApiError(res.status, err.error || err.message);
     }
     return res.json();
   },
@@ -970,7 +970,7 @@ export const api = {
     const res = await fetchWithAuth(`/maintenance/schedules/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to delete schedule" }));
-      throw new ApiError(res.status, err.message);
+      throw new ApiError(res.status, err.error || err.message);
     }
   },
 
@@ -980,7 +980,7 @@ export const api = {
     const res = await fetchWithAuth(`/maintenance/records${qs}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to load maintenance records" }));
-      throw new ApiError(res.status, err.message || "Failed to load maintenance records");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load maintenance records");
     }
     return res.json();
   },
@@ -989,7 +989,7 @@ export const api = {
     const res = await fetchWithAuth("/maintenance/records", { method: "POST", body: JSON.stringify(payload) });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to log service record" }));
-      throw new ApiError(res.status, err.message);
+      throw new ApiError(res.status, err.error || err.message);
     }
     return res.json();
   },
@@ -998,7 +998,7 @@ export const api = {
     const res = await fetchWithAuth(`/maintenance/records/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to delete record" }));
-      throw new ApiError(res.status, err.message);
+      throw new ApiError(res.status, err.error || err.message);
     }
   },
 
@@ -1006,7 +1006,7 @@ export const api = {
     const res = await fetchWithAuth("/maintenance/alerts");
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to load maintenance alerts" }));
-      throw new ApiError(res.status, err.message || "Failed to load maintenance alerts");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load maintenance alerts");
     }
     return res.json();
   },
@@ -1016,7 +1016,7 @@ export const api = {
     const res = await fetchWithAuth("/settings/profile");
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to load company profile" }));
-      throw new ApiError(res.status, err.message);
+      throw new ApiError(res.status, err.error || err.message);
     }
     return res.json();
   },
@@ -1025,7 +1025,7 @@ export const api = {
     const res = await fetchWithAuth("/settings/profile", { method: "PATCH", body: JSON.stringify(payload) });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to update company profile" }));
-      throw new ApiError(res.status, err.message);
+      throw new ApiError(res.status, err.error || err.message);
     }
     return res.json();
   },
@@ -1034,7 +1034,7 @@ export const api = {
     const res = await fetchWithAuth("/settings/terminology", { method: "PATCH", body: JSON.stringify(payload) });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to update terminology" }));
-      throw new ApiError(res.status, err.message);
+      throw new ApiError(res.status, err.error || err.message);
     }
   },
 
@@ -1043,7 +1043,7 @@ export const api = {
     const res = await fetchWithAuth("/rbac/roles");
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to load roles" }));
-      throw new ApiError(res.status, err.message || "Failed to load roles");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load roles");
     }
     return res.json();
   },
@@ -1052,7 +1052,7 @@ export const api = {
     const res = await fetchWithAuth("/rbac/permissions");
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to load permissions" }));
-      throw new ApiError(res.status, err.message || "Failed to load permissions");
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load permissions");
     }
     return res.json();
   },
@@ -1061,7 +1061,7 @@ export const api = {
     const res = await fetchWithAuth("/rbac/roles", { method: "POST", body: JSON.stringify(payload) });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to create role" }));
-      throw new ApiError(res.status, err.message);
+      throw new ApiError(res.status, err.error || err.message);
     }
     return res.json();
   },
@@ -1070,7 +1070,7 @@ export const api = {
     const res = await fetchWithAuth(`/rbac/roles/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to update role" }));
-      throw new ApiError(res.status, err.message);
+      throw new ApiError(res.status, err.error || err.message);
     }
     return res.json();
   },
@@ -1079,7 +1079,7 @@ export const api = {
     const res = await fetchWithAuth(`/rbac/roles/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to delete role" }));
-      throw new ApiError(res.status, err.message);
+      throw new ApiError(res.status, err.error || err.message);
     }
   },
 
@@ -1090,7 +1090,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to assign role" }));
-      throw new ApiError(res.status, err.message);
+      throw new ApiError(res.status, err.error || err.message);
     }
     return res.json();
   },
@@ -1099,7 +1099,7 @@ export const api = {
     const res = await fetchWithAuth("/jobs/manual", { method: "POST", body: JSON.stringify(payload) });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to create manual job" }));
-      throw new ApiError(res.status, err.message);
+      throw new ApiError(res.status, err.error || err.message);
     }
     return res.json();
   },
@@ -1108,7 +1108,7 @@ export const api = {
     const res = await fetchWithAuth(`/drivers/${driverId}/compensation`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to fetch driver compensation" }));
-      throw new ApiError(res.status, err.message);
+      throw new ApiError(res.status, err.error || err.message);
     }
     return res.json();
   },
@@ -1127,7 +1127,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to update user status" }));
-      throw new ApiError(res.status, err.message);
+      throw new ApiError(res.status, err.error || err.message);
     }
     return res.json();
   },
@@ -1142,7 +1142,7 @@ export const api = {
     const res = await fetchWithAuth("/team/invites", { method: "POST", body: JSON.stringify(payload) });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to send invite" }));
-      throw new ApiError(res.status, err.message);
+      throw new ApiError(res.status, err.error || err.message);
     }
     return res.json();
   },
@@ -1151,7 +1151,7 @@ export const api = {
     const res = await fetchWithAuth(`/team/invites/${id}/revoke`, { method: "PATCH" });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to revoke invite" }));
-      throw new ApiError(res.status, err.message);
+      throw new ApiError(res.status, err.error || err.message);
     }
     return res.json();
   },
@@ -1163,7 +1163,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Invalid or expired invite link" }));
-      throw new ApiError(res.status, err.message);
+      throw new ApiError(res.status, err.error || err.message);
     }
     return res.json();
   },
@@ -1175,7 +1175,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to accept invite" }));
-      throw new ApiError(res.status, err.message);
+      throw new ApiError(res.status, err.error || err.message);
     }
     const data: LoginResponse = await res.json();
     setStoredTokens(data.accessToken, data.refreshToken);

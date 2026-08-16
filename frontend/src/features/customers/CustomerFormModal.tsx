@@ -182,7 +182,15 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
         ? await api.updateCustomer(customerToEdit.id, payload)
         : await api.createCustomer(payload);
 
-      if (sendInvite && farmerRoleId) {
+      if (sendInvite) {
+        if (!farmerRoleId) {
+          onSuccess();
+          setError(
+            `${customerTerm} record saved, but the portal invite could not be sent (couldn't find the Farmer role). Please try again or check Settings > Roles.`
+          );
+          return;
+        }
+
         try {
           const invite = await api.createInvite({
             fullName: name.trim(),
@@ -195,7 +203,11 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
           onSuccess();
           return;
         } catch (inviteErr: any) {
-          console.warn("Farmer invite creation failed:", inviteErr);
+          onSuccess();
+          setError(
+            `${customerTerm} record saved, but the portal invite failed: ${inviteErr.message || "Unknown error"}`
+          );
+          return;
         }
       }
 
