@@ -287,6 +287,7 @@ export const CustomersPage: React.FC = () => {
  customer={selectedDetailCustomer}
  onEdit={(c) => handleOpenEdit(c)}
  onDelete={(id) => handleDelete(id)}
+ canManage={canManage}
  />
  </div>
  );

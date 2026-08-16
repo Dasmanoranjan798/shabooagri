@@ -12,6 +12,7 @@ interface CustomerDetailModalProps {
  onClose: () => void;
  onEdit: (customer: Customer) => void;
  onDelete: (id: string) => void;
+ canManage: boolean;
 }
 
 export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
@@ -20,6 +21,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
  onClose,
  onEdit,
  onDelete,
+ canManage,
 }) => {
  const navigate = useNavigate();
  const customerTerm = getTerm("customer");
@@ -103,6 +105,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
  {/* Action Controls */}
  <div className="sa-form-actions" style={{ marginTop: "1.5rem" }}>
+ {canManage && (
  <Button
  variant="danger"
  size="md"
@@ -110,7 +113,9 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
  >
  Delete
  </Button>
+ )}
 
+ {canManage && (
  <Button
  variant="secondary"
  size="md"
@@ -118,6 +123,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
  >
  Edit Profile
  </Button>
+ )}
 
  <Button
  variant="primary"
