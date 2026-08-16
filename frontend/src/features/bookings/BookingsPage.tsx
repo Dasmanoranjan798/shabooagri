@@ -126,10 +126,10 @@ export const BookingsPage: React.FC = () => {
     const q = searchQuery.toLowerCase();
     return (
       b.bookingNumber.toLowerCase().includes(q) ||
-      b.customer.name.toLowerCase().includes(q) ||
-      b.village.name.toLowerCase().includes(q) ||
+      (b.customer?.name || "").toLowerCase().includes(q) ||
+      (b.village?.name || "").toLowerCase().includes(q) ||
       (b.machine && b.machine.registrationNumber.toLowerCase().includes(q)) ||
-      (b.driver && b.driver.employee.name.toLowerCase().includes(q))
+      (b.driver && b.driver.employee?.name.toLowerCase().includes(q))
     );
   });
 
@@ -163,7 +163,7 @@ export const BookingsPage: React.FC = () => {
                 customerName: b.customer?.name || "N/A",
                 villageName: b.village?.name || "N/A",
                 machine: b.machine ? `${b.machine.registrationNumber} (${b.machine.brand || ""})` : "Unassigned",
-                driver: b.driver ? b.driver.employee.name : "Unassigned",
+                driver: b.driver ? b.driver.employee?.name || "Unassigned" : "Unassigned",
                 scheduledDate: new Date(b.scheduledDate).toLocaleDateString("en-IN"),
                 pricingMethod: b.pricingMethod?.label || b.pricingMethod?.key || "N/A",
                 estimatedAmount: b.estimatedAmount,
@@ -277,8 +277,8 @@ export const BookingsPage: React.FC = () => {
                       <tr key={b.id} onClick={() => handleOpenDetail(b)} className="sa-clickable-row">
                         <td className="sa-td-bold">{b.bookingNumber}</td>
                         <td>
-                          <div className="sa-cell-title">{b.customer.name}</div>
-                          <div className="sa-cell-sub">{b.village.name}</div>
+                          <div className="sa-cell-title">{b.customer?.name || "N/A"}</div>
+                          <div className="sa-cell-sub">{b.village?.name || "N/A"}</div>
                         </td>
                         <td>
                           <div className="sa-cell-title">{b.scheduledDate.slice(0, 10)}</div>
@@ -297,7 +297,7 @@ export const BookingsPage: React.FC = () => {
                           )}
                         </td>
                         <td>
-                          {b.driver ? b.driver.employee.name : <span className="sa-text-muted">Unassigned</span>}
+                          {b.driver?.employee?.name || <span className="sa-text-muted">Unassigned</span>}
                         </td>
                         <td>
                           <Badge variant={getStatusBadgeVariant(b.status)} size="sm">
@@ -364,7 +364,7 @@ export const BookingsPage: React.FC = () => {
                       <span className="sa-bcard-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
                         <User size={14} /> {customerTerm}:
                       </span>
-                      <span className="sa-bcard-val">{b.customer.name} ({b.village.name})</span>
+                      <span className="sa-bcard-val">{b.customer?.name || "N/A"} ({b.village?.name || "N/A"})</span>
                     </div>
 
                     <div className="sa-bcard-row">
@@ -381,7 +381,7 @@ export const BookingsPage: React.FC = () => {
                         <UserCheck size={14} /> {driverTerm}:
                       </span>
                       <span className="sa-bcard-val">
-                        {b.driver ? b.driver.employee.name : "Unassigned"}
+                        {b.driver?.employee?.name || "Unassigned"}
                       </span>
                     </div>
 

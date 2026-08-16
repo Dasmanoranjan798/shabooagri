@@ -9,7 +9,11 @@ const includeRelations = {
   customer: true,
   village: true,
   machine: true,
-  driver: true,
+  driver: {
+    include: {
+      employee: { select: { id: true, name: true } },
+    },
+  },
   // Never `manager: true` — that's the raw User row, passwordHash/pinHash
   // included. Select only the fields safe to hand back over the API.
   manager: {
