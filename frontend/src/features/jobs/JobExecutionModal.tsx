@@ -431,7 +431,7 @@ export const JobExecutionModal: React.FC<JobExecutionModalProps> = ({
  <span> {fe.litres} Litres</span>
  {fe.cost && <span className="sa-text-muted">{formatCurrency(fe.cost)}</span>}
  <span className="sa-fuel-time">
- {new Date(fe.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+ {new Date(fe.recordedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
  </span>
  </div>
  ))}

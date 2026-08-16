@@ -6,8 +6,8 @@ export interface JobFuelEntry {
   jobId: string;
   litres: number;
   cost: number | null;
-  loggedBy: string;
-  createdAt: string;
+  recordedBy: string;
+  recordedAt: string;
 }
 
 export interface JobPhoto {

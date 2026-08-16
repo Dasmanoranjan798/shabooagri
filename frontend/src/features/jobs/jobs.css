@@ -46,6 +46,19 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: 1rem;
+  color: var(--color-text);
+}
+
+.sa-finfo-label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.sa-finfo-val {
+  display: block;
+  font-weight: 600;
+  color: var(--color-text);
 }
 
 .sa-field-machine {

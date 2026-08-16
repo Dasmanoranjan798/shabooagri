@@ -67,7 +67,38 @@ export interface ReceivePaymentPayload {
   notes?: string;
 }
 
+export interface ReceiptInvoice {
+  id: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate?: string | null;
+  subtotalAmount: number;
+  taxRate: number;
+  taxAmount: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+  isGstApplicable: boolean;
+  totalAmount: number;
+  paidAmount: number;
+  balanceAmount: number;
+  status: InvoiceStatus;
+}
+
+export interface ReceiptPayment {
+  id: string;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  referenceNumber?: string | null;
+  receivedAt: string;
+  receivedBy: string;
+  notes?: string | null;
+}
+
 export interface ReceiptData {
+  receiptNumber: string;
+  title: string;
+  generatedAt: string;
   company: {
     id: string;
     name: string;
@@ -87,7 +118,7 @@ export interface ReceiptData {
     ifscCode?: string | null;
     upiId?: string | null;
   };
-  invoice: Invoice;
+  invoice: ReceiptInvoice;
   customer?: {
     id: string;
     name: string;
@@ -97,4 +128,17 @@ export interface ReceiptData {
     isGstApplicable?: boolean;
     gstin?: string | null;
   };
+  service: {
+    bookingNumber: string;
+    scheduledDate: string;
+    location?: string | null;
+    machine: { registrationNumber: string; brand?: string | null; model?: string | null } | null;
+    driver: { name: string } | null;
+    pricingMethod: string;
+    rate: number;
+    actualHours: number | null;
+    completedAcres: number | null;
+    fuelUsedLitres: number | null;
+  };
+  payments: ReceiptPayment[];
 }

@@ -85,7 +85,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
   const inv = receiptData?.invoice || invoice;
   const company = receiptData?.company;
-  const customer = receiptData?.customer || inv.customer;
+  const customer = receiptData?.customer || invoice.customer;
+  const service = receiptData?.service;
+  const invoiceDate = receiptData?.invoice.invoiceDate || invoice.createdAt;
+  const payments = receiptData?.payments || [];
 
   // Build full company address line
   const addressParts = [
@@ -144,7 +147,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             <div style={{ textAlign: "right", flexShrink: 0 }}>
               <div className="sa-receipt-inv-num" style={{ fontSize: "1.1rem", fontWeight: 700 }}>INVOICE #{inv.invoiceNumber}</div>
               <div className="sa-receipt-date" style={{ fontSize: "0.82rem", color: "var(--color-text-muted)" }}>
-                Date: {new Date(inv.createdAt).toLocaleDateString("en-IN")}
+                Date: {new Date(invoiceDate).toLocaleDateString("en-IN")}
               </div>
             </div>
           </div>
@@ -155,13 +158,13 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           <div className="sa-detail-grid" style={{ marginBottom: "1rem" }}>
             <div className="sa-detail-item">
               <span className="sa-detail-label">{customerTerm} Name</span>
-              <span className="sa-detail-val">{customer?.name || inv.customer?.name || "Customer"}</span>
+              <span className="sa-detail-val">{customer?.name || "Customer"}</span>
             </div>
 
             <div className="sa-detail-item">
               <span className="sa-detail-label">Village / Location</span>
               <span className="sa-detail-val">
-                {typeof customer?.village === "string" ? customer.village : inv.customer?.village?.name || "N/A"}
+                {typeof customer?.village === "string" ? customer.village : "N/A"}
               </span>
             </div>
 
@@ -175,14 +178,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             <div className="sa-detail-item">
               <span className="sa-detail-label">{machineTerm}</span>
               <span className="sa-detail-val">
-                {inv.booking?.machine?.registrationNumber || "N/A"} ({inv.booking?.machine?.brand || ""})
+                {service?.machine?.registrationNumber || "N/A"} ({service?.machine?.brand || ""})
               </span>
             </div>
 
             <div className="sa-detail-item">
               <span className="sa-detail-label">Assigned {driverTerm}</span>
               <span className="sa-detail-val">
-                {inv.booking?.driver?.employee?.name || "N/A"}
+                {service?.driver?.name || "N/A"}
               </span>
             </div>
           </div>
@@ -253,7 +256,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 {inv.isGstApplicable ? (
                   <>
                     <tr>
-                      <td>Taxable Service Value ({inv.booking?.pricingMethod?.name || "Equipment Rental"})</td>
+                      <td>Taxable Service Value ({service?.pricingMethod || "Equipment Rental"})</td>
                       <td style={{ textAlign: "right" }}>₹{(inv.subtotalAmount ?? inv.totalAmount).toLocaleString("en-IN")}</td>
                     </tr>
                     {Boolean(inv.cgstAmount) && (
@@ -277,7 +280,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   </>
                 ) : (
                   <tr>
-                    <td>Service Charge ({inv.booking?.pricingMethod?.name || "Standard Equipment Rental"})</td>
+                    <td>Service Charge ({service?.pricingMethod || "Standard Equipment Rental"})</td>
                     <td style={{ textAlign: "right" }}>₹{inv.totalAmount.toLocaleString("en-IN")}</td>
                   </tr>
                 )}
@@ -317,7 +320,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           )}
 
           {/* Payment History Table */}
-          {inv.payments && inv.payments.length > 0 && (
+          {payments.length > 0 && (
             <div className="sa-notes-section" style={{ marginTop: "1rem" }}>
               <h4 style={{ margin: "0 0 8px 0", fontSize: "0.95rem" }}>Payment Collections History</h4>
               <table className="sa-table">
@@ -331,16 +334,16 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {inv.payments.map((p) => (
+                  {payments.map((p) => (
                     <tr key={p.id}>
-                      <td>{new Date(p.createdAt).toLocaleDateString("en-IN")}</td>
+                      <td>{new Date(p.receivedAt).toLocaleDateString("en-IN")}</td>
                       <td>
                         <Badge variant="neutral" size="sm">
                           {p.paymentMethod}
                         </Badge>
                       </td>
                       <td>{p.referenceNumber || "—"}</td>
-                      <td>{p.receiver?.fullName || "Staff"}</td>
+                      <td>{p.receivedBy || "Staff"}</td>
                       <td style={{ textAlign: "right", fontWeight: 600 }}>
                         ₹{p.amount.toLocaleString("en-IN")}
                       </td>
@@ -379,9 +382,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   ];
                   const dataRow = [{
                     invoiceNumber: inv.invoiceNumber,
-                    customerName: customer?.name || inv.customer?.name || "Customer",
-                    date: new Date(inv.createdAt).toLocaleDateString("en-IN"),
-                    machine: inv.booking?.machine?.registrationNumber || "N/A",
+                    customerName: customer?.name || "Customer",
+                    date: new Date(invoiceDate).toLocaleDateString("en-IN"),
+                    machine: service?.machine?.registrationNumber || "N/A",
                     totalAmount: inv.totalAmount,
                     paidAmount: inv.paidAmount,
                     balanceAmount: inv.balanceAmount,
