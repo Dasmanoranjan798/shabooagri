@@ -21,7 +21,8 @@ import {
   CheckCircle2,
   XCircle,
   CreditCard,
-  KeyRound
+  KeyRound,
+  AlertTriangle
 } from "lucide-react";
 
 const TERM_KEYS = ["customer", "driver", "machine", "booking", "invoice", "village"] as const;
@@ -286,12 +287,22 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
-  if (isLoading) return <div className="sa-loading-state"><Spinner /><span>Loading settings…</span></div>;
+  if (isLoading) return (
+    <div className="sa-center-viewport">
+      <Spinner size="lg" label="Loading settings..." />
+    </div>
+  );
   if (error) return (
-    <div className="sa-page">
-      <div className="sa-error-state">
-        <p>{error}</p>
-        <button className="sa-btn sa-btn-secondary" onClick={loadProfile}>Retry</button>
+    <div className="sa-settings-page">
+      <div className="sa-error-container">
+        <div className="sa-error-card">
+          <span className="sa-error-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+            <AlertTriangle size={32} color="var(--color-error, #D32F2F)" />
+          </span>
+          <h3>Error Loading Settings</h3>
+          <p>{error}</p>
+          <Button variant="primary" onClick={loadProfile}>Retry</Button>
+        </div>
       </div>
     </div>
   );
@@ -306,7 +317,7 @@ export const SettingsPage: React.FC = () => {
   ];
 
   return (
-    <div className="sa-page">
+    <div className="sa-settings-page">
       <div className="sa-page-header">
         <div>
           <h1 className="sa-page-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>

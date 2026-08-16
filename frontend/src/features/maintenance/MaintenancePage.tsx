@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./maintenance.css";
 import type { MaintenanceRecord, CreateMaintenanceRecordPayload } from "../../types/maintenance";
 import type { Machine } from "../../types/machine";
-import { Wrench } from "lucide-react";
+import { Wrench, AlertTriangle } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { Card } from "../../components/ui/Card";
@@ -134,7 +134,7 @@ export const MaintenancePage: React.FC = () => {
  };
 
  return (
- <div className="sa-page">
+ <div className="sa-maintenance-page">
  <div className="sa-page-header">
  <div>
  <h1 className="sa-page-title"> Maintenance</h1>
@@ -174,24 +174,36 @@ export const MaintenancePage: React.FC = () => {
 
  {/* Content */}
  {isLoading ? (
- <div className="sa-loading-state"><Spinner /><span>Loading maintenance records…</span></div>
+ <div className="sa-center-viewport">
+ <Spinner size="lg" label="Loading maintenance records..." />
+ </div>
  ) : error ? (
- <div className="sa-error-state">
- <p> {error}</p>
- <button className="sa-btn sa-btn-secondary" onClick={loadData}>Retry</button>
+ <div className="sa-error-container">
+ <div className="sa-error-card">
+ <span className="sa-error-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <AlertTriangle size={32} color="var(--color-error, #D32F2F)" />
+ </span>
+ <h3>Error Loading Maintenance Records</h3>
+ <p>{error}</p>
+ <Button variant="primary" onClick={loadData}>Retry</Button>
+ </div>
  </div>
  ) : records.length === 0 ? (
+ <Card>
  <div className="sa-empty-state">
  <div className="sa-empty-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
  <Wrench size={32} color="var(--color-text-muted)" />
  </div>
  <h3 className="sa-empty-title">No Service Records</h3>
  <p className="sa-empty-desc">Log completed maintenance and service work to build a service history.</p>
- <button className="sa-btn sa-btn-primary" onClick={openForm}>Log First Service</button>
+ {canManage && (
+ <Button variant="primary" onClick={openForm}>Log First Service</Button>
+ )}
  </div>
+ </Card>
  ) : (
  <Card title={`${records.length} Service Records`}>
- <div className="sa-table-wrapper">
+ <div className="sa-table-responsive">
  <table className="sa-table">
  <thead>
  <tr>

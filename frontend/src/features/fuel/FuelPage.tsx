@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Fuel } from "lucide-react";
+import { Fuel, AlertTriangle } from "lucide-react";
 import "./fuel.css";
 import type { FuelEntry } from "../../types/fuel";
 import type { Machine } from "../../types/machine";
 import { api } from "../../lib/api";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import { getTerm } from "../../lib/terminology";
 
@@ -68,7 +69,7 @@ export const FuelPage: React.FC = () => {
  const totalCost = useMemo(() => entries.reduce((acc, e) => acc + (e.cost ? Number(e.cost) : 0), 0), [entries]);
 
  return (
- <div className="sa-page">
+ <div className="sa-fuel-page">
  <div className="sa-page-header">
  <div>
  <h1 className="sa-page-title"> Fuel Tracking</h1>
@@ -153,13 +154,22 @@ export const FuelPage: React.FC = () => {
 
  {/* Table */}
  {isLoading ? (
- <div className="sa-loading-state"><Spinner /><span>Loading fuel entries…</span></div>
+ <div className="sa-center-viewport">
+ <Spinner size="lg" label="Loading fuel entries..." />
+ </div>
  ) : error ? (
- <div className="sa-error-state">
- <p> {error}</p>
- <button className="sa-btn sa-btn-secondary" onClick={loadData}>Retry</button>
+ <div className="sa-error-container">
+ <div className="sa-error-card">
+ <span className="sa-error-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <AlertTriangle size={32} color="var(--color-error, #D32F2F)" />
+ </span>
+ <h3>Error Loading Fuel Entries</h3>
+ <p>{error}</p>
+ <Button variant="primary" onClick={loadData}>Retry</Button>
+ </div>
  </div>
  ) : entries.length === 0 ? (
+ <Card>
  <div className="sa-empty-state">
  <div className="sa-empty-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
  <Fuel size={32} color="var(--color-text-muted)" />
@@ -167,9 +177,10 @@ export const FuelPage: React.FC = () => {
  <h3 className="sa-empty-title">No Fuel Entries Found</h3>
  <p className="sa-empty-desc">Fuel entries are logged during job execution. Use the Jobs screen to add fuel records.</p>
  </div>
+ </Card>
  ) : (
  <Card title={`${entries.length} Entries`}>
- <div className="sa-table-wrapper">
+ <div className="sa-table-responsive">
  <table className="sa-table">
  <thead>
  <tr>

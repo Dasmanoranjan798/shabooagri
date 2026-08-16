@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { AlertTriangle } from "lucide-react";
 import type { Permission, Role } from "../../types/rbac";
 import type { Employee } from "../../types/employee";
 import { api } from "../../lib/api";
@@ -156,8 +157,23 @@ export const RoleManagementCard: React.FC<RoleManagementCardProps> = ({ canManag
     return acc;
   }, {});
 
-  if (isLoading) return <div className="sa-loading-state"><Spinner /><span>Loading RBAC configuration…</span></div>;
-  if (error) return <div className="sa-form-error">{error}</div>;
+  if (isLoading) return (
+    <div className="sa-center-viewport">
+      <Spinner size="lg" label="Loading RBAC configuration..." />
+    </div>
+  );
+  if (error) return (
+    <div className="sa-error-container">
+      <div className="sa-error-card">
+        <span className="sa-error-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+          <AlertTriangle size={32} color="var(--color-error, #D32F2F)" />
+        </span>
+        <h3>Error Loading Roles & Permissions</h3>
+        <p>{error}</p>
+        <Button variant="primary" onClick={loadData}>Retry</Button>
+      </div>
+    </div>
+  );
 
   return (
     <Card

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
+import { AlertTriangle } from "lucide-react";
 import "./reports.css";
 import type { DashboardSummaryResponse, IncomeSeriesResponse, FuelSeriesResponse, TimeRange } from "../../types/dashboard";
 import { api } from "../../lib/api";
 import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
 
 function fmtCurrency(val: number) {
@@ -129,7 +131,7 @@ export const ReportsPage: React.FC = () => {
  : [];
 
  return (
- <div className="sa-page">
+ <div className="sa-reports-page">
  <div className="sa-page-header">
  <div>
  <h1 className="sa-page-title"> Reports</h1>
@@ -150,11 +152,19 @@ export const ReportsPage: React.FC = () => {
  </div>
 
  {isLoading ? (
- <div className="sa-loading-state"><Spinner /><span>Generating report…</span></div>
+ <div className="sa-center-viewport">
+ <Spinner size="lg" label="Generating report..." />
+ </div>
  ) : error ? (
- <div className="sa-error-state">
- <p> {error}</p>
- <button className="sa-btn sa-btn-secondary" onClick={() => loadData(timeRange)}>Retry</button>
+ <div className="sa-error-container">
+ <div className="sa-error-card">
+ <span className="sa-error-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <AlertTriangle size={32} color="var(--color-error, #D32F2F)" />
+ </span>
+ <h3>Error Loading Report</h3>
+ <p>{error}</p>
+ <Button variant="primary" onClick={() => loadData(timeRange)}>Retry</Button>
+ </div>
  </div>
  ) : (
  <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -200,7 +210,7 @@ export const ReportsPage: React.FC = () => {
  {/* Pending payments table */}
  {summary?.pendingPayments && summary.pendingPayments.length > 0 && (
  <Card title={`Pending Payments (${summary.pendingPayments.length})`}>
- <div className="sa-table-wrapper">
+ <div className="sa-table-responsive">
  <table className="sa-table">
  <thead>
  <tr>

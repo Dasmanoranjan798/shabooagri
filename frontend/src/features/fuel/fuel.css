@@ -1,4 +1,10 @@
 /* Fuel Module Styles */
+.sa-fuel-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
 .sa-fuel-logs-section {
   display: flex;
   flex-direction: column;
