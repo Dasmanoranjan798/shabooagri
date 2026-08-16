@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./app-layout.css";
 import {
@@ -21,12 +21,25 @@ import {
   X,
   Home,
   Truck,
-  UserPlus
+  UserPlus,
+  ShieldAlert,
+  BadgeAlert,
+  Receipt,
+  CalendarClock,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { getTerm } from "../lib/terminology";
 import { defaultTheme, getCompanyLogoUrl, getCompanyName } from "../lib/theme";
 import { Badge } from "../components/ui/Badge";
+import { useNotifications, type NotificationItem } from "../lib/useNotifications";
+
+const NOTIFICATION_ICONS: Record<NotificationItem["category"], React.ReactNode> = {
+  service: <Wrench size={15} />,
+  insurance: <ShieldAlert size={15} />,
+  license: <BadgeAlert size={15} />,
+  invoice: <Receipt size={15} />,
+  booking: <CalendarClock size={15} />,
+};
 
 interface NavItem {
   key: string;
@@ -41,6 +54,20 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const { items: notifications } = useNotifications();
+
+  useEffect(() => {
+    if (!isNotifOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setIsNotifOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isNotifOpen]);
 
   const customerTerm = getTerm("customer", true);
   const driverTerm = getTerm("driver", true);
@@ -178,10 +205,48 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
               <span>{currentDateStr}</span>
             </div>
 
-            <button className="sa-icon-btn" title="Notifications">
-              <Bell size={18} />
-              <span className="sa-badge-count">3</span>
-            </button>
+            <div className="sa-notif-wrapper" ref={notifRef}>
+              <button
+                className="sa-icon-btn"
+                title="Notifications"
+                onClick={() => setIsNotifOpen((open) => !open)}
+              >
+                <Bell size={18} />
+                {notifications.length > 0 && (
+                  <span className="sa-badge-count">{notifications.length > 9 ? "9+" : notifications.length}</span>
+                )}
+              </button>
+
+              {isNotifOpen && (
+                <div className="sa-notif-dropdown">
+                  <div className="sa-notif-dropdown-header">
+                    Notifications {notifications.length > 0 && `(${notifications.length})`}
+                  </div>
+                  <div className="sa-notif-dropdown-list">
+                    {notifications.length === 0 ? (
+                      <div className="sa-notif-empty">You're all caught up — no alerts right now.</div>
+                    ) : (
+                      notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          className={`sa-notif-item ${n.isOverdue ? "is-overdue" : ""}`}
+                          onClick={() => {
+                            setIsNotifOpen(false);
+                            navigate(n.path);
+                          }}
+                        >
+                          <span className="sa-notif-item-icon">{NOTIFICATION_ICONS[n.category]}</span>
+                          <div className="sa-notif-item-text">
+                            <div className="sa-notif-item-title">{n.title}</div>
+                            <div className="sa-notif-item-subtitle">{n.subtitle}</div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="sa-profile-chip" onClick={handleLogout} title="Click to logout">
               <span className="sa-chip-avatar">{user?.fullName.slice(0, 1).toUpperCase()}</span>
