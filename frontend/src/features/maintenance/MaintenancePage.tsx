@@ -3,6 +3,7 @@ import "./maintenance.css";
 import type { MaintenanceRecord, CreateMaintenanceRecordPayload } from "../../types/maintenance";
 import type { Machine } from "../../types/machine";
 import { api } from "../../lib/api";
+import { useAuth } from "../../context/AuthContext";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
@@ -24,6 +25,8 @@ function fmtCurrency(val?: number | null) {
 
 export const MaintenancePage: React.FC = () => {
  const machineTerm = getTerm("machine");
+ const { roleKey, hasPermission } = useAuth();
+ const canManage = roleKey === "owner" || hasPermission("maintenance.manage");
 
  const [records, setRecords] = useState<MaintenanceRecord[]>([]);
  const [machines, setMachines] = useState<Machine[]>([]);
@@ -136,9 +139,11 @@ export const MaintenancePage: React.FC = () => {
  <h1 className="sa-page-title"> Maintenance</h1>
  <p className="sa-page-subtitle">Service history and upcoming maintenance schedules</p>
  </div>
+ {canManage && (
  <Button id="btn-log-service" onClick={openForm} variant="primary">
  + Log Service
  </Button>
+ )}
  </div>
 
  {/* Filter */}
@@ -213,6 +218,7 @@ export const MaintenancePage: React.FC = () => {
  <td>{fmtCurrency(r.cost)}</td>
  <td>{r.performedBy ?? "—"}</td>
  <td>
+ {canManage && (
  <button
  className="sa-btn sa-btn-danger sa-btn-sm"
  onClick={() => handleDelete(r.id)}
@@ -220,6 +226,7 @@ export const MaintenancePage: React.FC = () => {
  >
  {deletingId === r.id ? "…" : "Delete"}
  </button>
+ )}
  </td>
  </tr>
  ))}
