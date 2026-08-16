@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Banknote,
   TrendingUp,
@@ -13,6 +14,7 @@ import type {
   IncomeSeriesResponse,
   TimeRange,
 } from "../../types/dashboard";
+import { useAuth } from "../../context/AuthContext";
 import { formatCurrency } from "../../lib/theme";
 import { getTerm } from "../../lib/terminology";
 import { Card } from "../../components/ui/Card";
@@ -46,6 +48,9 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
   isLoadingIncome,
   isLoadingFuel,
 }) => {
+  const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const canViewOperations = hasPermission("operations.view");
   const kpis = summary.kpis;
   const driverTerm = getTerm("driver", true);
   const machineTerm = getTerm("machine", true);
@@ -115,7 +120,15 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
           <Card
             title="Today's Jobs"
             subtitle="Scheduled equipment operations for today"
-            action={<span className="sa-link-action">View All Jobs →</span>}
+            action={
+              canViewOperations ? (
+                <button type="button" className="sa-link-action" onClick={() => navigate("/jobs")}>
+                  View All Jobs →
+                </button>
+              ) : (
+                <span className="sa-link-action">View All Jobs →</span>
+              )
+            }
           >
             <TodaysJobsTable jobs={summary.todaysJobs} />
           </Card>
@@ -157,7 +170,15 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
           <Card
             title="Pending Payments"
             subtitle="Invoices awaiting collection"
-            action={<span className="sa-link-action">View All Invoices →</span>}
+            action={
+              canViewOperations ? (
+                <button type="button" className="sa-link-action" onClick={() => navigate("/payments")}>
+                  View All Invoices →
+                </button>
+              ) : (
+                <span className="sa-link-action">View All Invoices →</span>
+              )
+            }
           >
             <PendingPaymentsList payments={summary.pendingPayments} />
           </Card>

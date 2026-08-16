@@ -222,6 +222,8 @@
 .sa-action-btn-group { display: flex; align-items: center; gap: 0.5rem; }
 .sa-action-btn { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.82rem; font-weight: 600; padding: 0.4rem 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--color-border); background-color: var(--color-surface); cursor: pointer; transition: var(--transition); }
 .sa-action-btn:hover { background-color: var(--color-bg); }
+.sa-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.sa-action-btn:disabled:hover { background-color: var(--color-surface); }
 
 .sa-segmented-control { display: flex; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 2px; }
 .sa-segmented-option { padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 600; border-radius: var(--radius-sm); color: var(--color-text-muted); border: none; background: none; cursor: pointer; }

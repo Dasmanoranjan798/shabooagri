@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Banknote,
   CheckCircle2,
@@ -22,8 +23,9 @@ interface MobileDashboardProps {
 }
 
 export const MobileDashboard: React.FC<MobileDashboardProps> = ({ summary }) => {
-  const { user } = useAuth();
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const { user, hasPermission } = useAuth();
+  const navigate = useNavigate();
+  const canViewOperations = hasPermission("operations.view");
 
   const kpis = summary.kpis;
   const customerTerm = getTerm("customer");
@@ -36,16 +38,8 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({ summary }) => 
     month: "short",
   });
 
-  const showQuickActionToast = (actionName: string) => {
-    setToastMessage(`${actionName} - Action screen available in module rollout`);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
   return (
     <div className="sa-mobile-dashboard">
-      {/* Toast notification */}
-      {toastMessage && <div className="sa-toast">{toastMessage}</div>}
-
       {/* Greeting Banner */}
       <div className="sa-mobile-greeting">
         <div className="sa-greeting-text">
@@ -88,7 +82,8 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({ summary }) => 
       <div className="sa-quick-actions">
         <button
           className="sa-action-btn"
-          onClick={() => showQuickActionToast(`New ${bookingTerm}`)}
+          disabled={!canViewOperations}
+          onClick={() => navigate("/bookings")}
         >
           <span className="sa-action-icon" style={{ display: "inline-flex", alignItems: "center" }}><Plus size={18} /></span>
           <span className="sa-action-label">New {bookingTerm}</span>
@@ -96,7 +91,8 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({ summary }) => 
 
         <button
           className="sa-action-btn"
-          onClick={() => showQuickActionToast("Collect Payment")}
+          disabled={!canViewOperations}
+          onClick={() => navigate("/payments")}
         >
           <span className="sa-action-icon" style={{ display: "inline-flex", alignItems: "center" }}><CreditCard size={18} /></span>
           <span className="sa-action-label">Collect Payment</span>
@@ -104,7 +100,8 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({ summary }) => 
 
         <button
           className="sa-action-btn"
-          onClick={() => showQuickActionToast(`New ${customerTerm}`)}
+          disabled={!canViewOperations}
+          onClick={() => navigate("/customers")}
         >
           <span className="sa-action-icon" style={{ display: "inline-flex", alignItems: "center" }}><User size={18} /></span>
           <span className="sa-action-label">New {customerTerm}</span>
@@ -112,7 +109,8 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({ summary }) => 
 
         <button
           className="sa-action-btn"
-          onClick={() => showQuickActionToast("New Expense")}
+          disabled={!canViewOperations}
+          onClick={() => navigate("/expenses")}
         >
           <span className="sa-action-icon" style={{ display: "inline-flex", alignItems: "center" }}><FileText size={18} /></span>
           <span className="sa-action-label">New Expense</span>
@@ -123,7 +121,15 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({ summary }) => 
       <Card
         title="Today's Jobs"
         subtitle={`${summary.todaysJobs.length} active assignments`}
-        action={<span className="sa-link-action">See All →</span>}
+        action={
+          canViewOperations ? (
+            <button type="button" className="sa-link-action" onClick={() => navigate("/jobs")}>
+              See All →
+            </button>
+          ) : (
+            <span className="sa-link-action">See All →</span>
+          )
+        }
       >
         <TodaysJobsTable jobs={summary.todaysJobs} isMobile={true} />
       </Card>
