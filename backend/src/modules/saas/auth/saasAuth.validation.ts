@@ -24,6 +24,24 @@ export const saasChangePasswordSchema = z.object({
   newPassword: z.string().min(8, "Password must be at least 8 characters"),
 });
 
+export const saasForgotPasswordSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});
+
+export const saasVerifyResetTokenSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  token: z.string().min(1, "Reset token is required"),
+});
+
+export const saasResetPasswordSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  token: z.string().min(1, "Reset token is required"),
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+});
+
 export type SaasRegisterInput = z.infer<typeof saasRegisterSchema>;
 export type SaasLoginInput = z.infer<typeof saasLoginSchema>;
 export type SaasChangePasswordInput = z.infer<typeof saasChangePasswordSchema>;
+export type SaasForgotPasswordInput = z.infer<typeof saasForgotPasswordSchema>;
+export type SaasVerifyResetTokenInput = z.infer<typeof saasVerifyResetTokenSchema>;
+export type SaasResetPasswordInput = z.infer<typeof saasResetPasswordSchema>;

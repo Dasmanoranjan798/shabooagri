@@ -1,9 +1,21 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { prisma } from "../../../db/prisma";
+import { env } from "../../../config/env";
 import { AppError } from "../../../shared/errors/AppError";
+import { sendPasswordResetEmail } from "../../../shared/services/mail.service";
 import { generateSaasTokens } from "../middleware/saasAuth.middleware";
 import { generateUniqueLicenseNumber } from "../utils/licenseNumber.util";
-import type { SaasChangePasswordInput, SaasLoginInput, SaasRegisterInput } from "./saasAuth.validation";
+import type {
+  SaasChangePasswordInput,
+  SaasForgotPasswordInput,
+  SaasLoginInput,
+  SaasRegisterInput,
+  SaasResetPasswordInput,
+  SaasVerifyResetTokenInput,
+} from "./saasAuth.validation";
+
+const SAAS_PASSWORD_RESET_EXPIRY_MINUTES = 15;
 
 export class SaasAuthService {
   async register(input: SaasRegisterInput) {
@@ -183,5 +195,88 @@ export class SaasAuthService {
     });
 
     return { message: "Password changed successfully." };
+  }
+
+  async requestPasswordReset(input: SaasForgotPasswordInput) {
+    const normalizedEmail = input.email.trim().toLowerCase();
+    const saasUser = await prisma.saasUser.findUnique({ where: { email: normalizedEmail } });
+
+    if (saasUser && saasUser.status === "ACTIVE") {
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+      const expiresAt = new Date(Date.now() + SAAS_PASSWORD_RESET_EXPIRY_MINUTES * 60 * 1000);
+
+      await prisma.otpCode.create({
+        data: {
+          identifier: normalizedEmail,
+          codeHash: tokenHash,
+          purpose: "SAAS_RESET",
+          expiresAt,
+        },
+      });
+
+      const resetLink = `${env.APP_URL}/saas/reset-password?token=${rawToken}&email=${encodeURIComponent(normalizedEmail)}`;
+      await sendPasswordResetEmail(normalizedEmail, resetLink);
+    }
+
+    // Always return a generic response so this endpoint can't be used to enumerate registered emails.
+    return {
+      message: "If an account with that email exists, a password reset link has been sent.",
+    };
+  }
+
+  async verifyPasswordResetToken(input: SaasVerifyResetTokenInput) {
+    const normalizedEmail = input.email.trim().toLowerCase();
+    const tokenHash = crypto.createHash("sha256").update(input.token).digest("hex");
+    const activeOtp = await prisma.otpCode.findFirst({
+      where: { identifier: normalizedEmail, purpose: "SAAS_RESET", consumedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!activeOtp || activeOtp.codeHash !== tokenHash) {
+      throw new AppError(400, "Invalid or expired password reset token");
+    }
+
+    return { valid: true };
+  }
+
+  async confirmPasswordReset(input: SaasResetPasswordInput) {
+    const normalizedEmail = input.email.trim().toLowerCase();
+    const tokenHash = crypto.createHash("sha256").update(input.token).digest("hex");
+    const activeOtp = await prisma.otpCode.findFirst({
+      where: { identifier: normalizedEmail, purpose: "SAAS_RESET", consumedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!activeOtp || activeOtp.codeHash !== tokenHash) {
+      throw new AppError(400, "Invalid or expired password reset token");
+    }
+
+    const saasUser = await prisma.saasUser.findUnique({ where: { email: normalizedEmail } });
+    if (!saasUser) {
+      throw new AppError(400, "Invalid or expired password reset token");
+    }
+
+    const newPasswordHash = await bcrypt.hash(input.newPassword, 10);
+    await prisma.saasUser.update({
+      where: { id: saasUser.id },
+      data: { passwordHash: newPasswordHash },
+    });
+    await prisma.otpCode.update({
+      where: { id: activeOtp.id },
+      data: { consumedAt: new Date() },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        saasUserId: saasUser.id,
+        entityType: "SaasUser",
+        entityId: saasUser.id,
+        action: "SAAS_USER_PASSWORD_RESET",
+        changes: {},
+      },
+    });
+
+    return { message: "Your password has been successfully reset." };
   }
 }

@@ -93,7 +93,7 @@ export const SaasLoginPage: React.FC = () => {
                   PASSWORD
                 </label>
                 <Link
-                  to="/reset-password"
+                  to="/saas/reset-password"
                   className="text-xs font-semibold text-[var(--saas-primary)] hover:underline"
                 >
                   Forgot password?

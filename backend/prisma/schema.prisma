@@ -87,6 +87,7 @@ enum OtpPurpose {
   LOGIN
   VERIFY
   RESET
+  SAAS_RESET
 }
 
 // ---------- Tenancy, terminology (§9), white-label (§10) ----------

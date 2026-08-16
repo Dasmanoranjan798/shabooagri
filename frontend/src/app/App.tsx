@@ -51,6 +51,7 @@ import { SaasFaqPage } from "../features/saas/public/SaasFaqPage";
 // Commercial SaaS Auth Pages
 import { SaasLoginPage } from "../features/saas/auth/SaasLoginPage";
 import { SaasRegisterPage } from "../features/saas/auth/SaasRegisterPage";
+import { SaasResetPasswordPage } from "../features/saas/auth/SaasResetPasswordPage";
 
 // Commercial SaaS Customer Portal Pages
 import { SaasPortalDashboard } from "../features/saas/portal/SaasPortalDashboard";
@@ -152,6 +153,7 @@ export function App() {
             <Route path="/register" element={<SaasRegisterPage />} />
             <Route path="/saas/register" element={<SaasRegisterPage />} />
             <Route path="/saas/login" element={<SaasLoginPage />} />
+            <Route path="/saas/reset-password" element={<SaasResetPasswordPage />} />
 
             {/* Single Sign-On Callback Route */}
             <Route path="/sso-callback" element={<SsoCallbackPage />} />

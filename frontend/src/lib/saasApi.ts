@@ -119,6 +119,31 @@ export async function changeSaasPassword(currentPassword: string, newPassword: s
   });
 }
 
+export async function requestSaasPasswordReset(email: string): Promise<{ message: string }> {
+  return fetchSaasApi<{ message: string }>("/saas/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function verifySaasPasswordResetToken(email: string, token: string): Promise<{ valid: boolean }> {
+  return fetchSaasApi<{ valid: boolean }>("/saas/auth/verify-reset-token", {
+    method: "POST",
+    body: JSON.stringify({ email, token }),
+  });
+}
+
+export async function confirmSaasPasswordReset(
+  email: string,
+  token: string,
+  newPassword: string,
+): Promise<{ message: string }> {
+  return fetchSaasApi<{ message: string }>("/saas/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ email, token, newPassword }),
+  });
+}
+
 export async function getSaasCustomerProfile(): Promise<SaasCustomerProfile> {
   return fetchSaasApi<SaasCustomerProfile>("/saas/customers/profile");
 }
