@@ -73,30 +73,30 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
  const canSendInvite = !customerToEdit || !customerToEdit.userId;
 
  useEffect(() => {
- if (!isOpen) return;
+    if (!isOpen) return;
 
- async function loadVillages() {
- setIsLoadingVillages(true);
- try {
- const list = await api.listVillages();
- setVillages(list);
- if (!customerToEdit && list.length > 0 && !villageId) {
- setVillageId(list[0].id);
- }
- } catch (err: any) {
- console.error("Failed to load villages:", err);
- } finally {
- setIsLoadingVillages(false);
- }
- }
+    async function loadVillages() {
+      setIsLoadingVillages(true);
+      try {
+        const list = await api.listVillages();
+        setVillages(list);
+        if (!customerToEdit && list.length > 0) {
+          setVillageId((current) => current || list[0].id);
+        }
+      } catch (err: any) {
+        console.error("Failed to load villages:", err);
+      } finally {
+        setIsLoadingVillages(false);
+      }
+    }
 
- loadVillages();
+    loadVillages();
 
- api.listRoles().then((roles) => {
- const farmerRole = roles.find((r) => r.systemKey === "farmer");
- if (farmerRole) setFarmerRoleId(farmerRole.id);
- }).catch(() => {});
- }, [isOpen, customerToEdit]);
+    api.listRoles().then((roles) => {
+      const farmerRole = roles.find((r) => r.systemKey === "farmer");
+      if (farmerRole) setFarmerRoleId(farmerRole.id);
+    }).catch(() => {});
+  }, [isOpen, customerToEdit]);
 
   const [isGstApplicable, setIsGstApplicable] = useState<boolean>(false);
   const [gstin, setGstin] = useState<string>("");
@@ -112,12 +112,13 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
       setGstin(customerToEdit.gstin || "");
     } else {
       setName("");
-      setVillageId("");
       setPhone("");
       setAddress("");
       setNotes("");
       setIsGstApplicable(false);
       setGstin("");
+      setIsAddingNewVillage(false);
+      setNewVillageName("");
     }
     setSendInvite(false);
     setEmail("");
@@ -132,23 +133,44 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
       setError(`Please enter ${customerTerm} name`);
       return;
     }
-    if (!villageId) {
-      setError(`Please select a ${villageTerm}`);
-      return;
-    }
-    if (sendInvite && !email.trim() && !phone.trim()) {
-      setError(`Email or Mobile Number is required to send a ${customerTerm.toLowerCase()} portal invite`);
-      return;
-    }
 
     setIsSubmitting(true);
     setError(null);
 
-    try {
+    let activeVillageId = villageId;
 
+    // Auto-create new village if inline village creation is active with a village name typed
+    if (isAddingNewVillage && newVillageName.trim()) {
+      try {
+        const created = await api.createVillage({ name: newVillageName.trim() });
+        setVillages((prev) => [...prev, created]);
+        activeVillageId = created.id;
+        setVillageId(created.id);
+        setNewVillageName("");
+        setIsAddingNewVillage(false);
+      } catch (vErr: any) {
+        setError(vErr.message || `Failed to create new ${villageTerm.toLowerCase()}`);
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    if (!activeVillageId) {
+      setError(`Please select or add a ${villageTerm}`);
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (sendInvite && !email.trim() && !phone.trim()) {
+      setError(`Email or Mobile Number is required to send a ${customerTerm.toLowerCase()} portal invite`);
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
       const payload: CreateCustomerPayload = {
         name: name.trim(),
-        villageId,
+        villageId: activeVillageId,
         phone: phone.trim() || undefined,
         address: address.trim() || undefined,
         notes: notes.trim() || undefined,
@@ -156,31 +178,35 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
         gstin: gstin.trim() || undefined,
       };
 
- const savedCustomer = customerToEdit
- ? await api.updateCustomer(customerToEdit.id, payload)
- : await api.createCustomer(payload);
+      const savedCustomer = customerToEdit
+        ? await api.updateCustomer(customerToEdit.id, payload)
+        : await api.createCustomer(payload);
 
- if (sendInvite && farmerRoleId) {
- const invite = await api.createInvite({
- fullName: name.trim(),
- roleId: farmerRoleId,
- email: email.trim() || undefined,
- phone: phone.trim() || undefined,
- customerId: savedCustomer.id,
- });
- setInviteResult(invite);
- onSuccess();
- return;
- }
+      if (sendInvite && farmerRoleId) {
+        try {
+          const invite = await api.createInvite({
+            fullName: name.trim(),
+            roleId: farmerRoleId,
+            email: email.trim() || undefined,
+            phone: phone.trim() || undefined,
+            customerId: savedCustomer.id,
+          });
+          setInviteResult(invite);
+          onSuccess();
+          return;
+        } catch (inviteErr: any) {
+          console.warn("Farmer invite creation failed:", inviteErr);
+        }
+      }
 
- onSuccess();
- onClose();
- } catch (err: any) {
- setError(err.message || `Failed to save ${customerTerm.toLowerCase()} record`);
- } finally {
- setIsSubmitting(false);
- }
- };
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      setError(err.message || `Failed to save ${customerTerm.toLowerCase()} record`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
  const handleCopyLink = async () => {
  if (!inviteResult) return;
