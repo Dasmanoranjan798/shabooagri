@@ -11,6 +11,10 @@ export const createInviteSchema = z
     // (e.g. from the Employees page) — accept links to it instead of
     // creating a new Employee.
     employeeId: z.string().uuid("Invalid employee").optional(),
+    // Set when inviting someone who already has a Customer record (e.g.
+    // from the Customers page) — accept links to it instead of creating
+    // a new Customer, so villageId isn't required in that case.
+    customerId: z.string().uuid("Invalid customer").optional(),
   })
   .refine((data) => data.email || data.phone, {
     message: "At least one of email or phone is required",

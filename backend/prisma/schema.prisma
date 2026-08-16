@@ -290,11 +290,12 @@ model Customer {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  company  Company   @relation(fields: [companyId], references: [id])
-  user     User?     @relation(fields: [userId], references: [id])
-  village  Village   @relation(fields: [villageId], references: [id])
+  company  Company       @relation(fields: [companyId], references: [id])
+  user     User?         @relation(fields: [userId], references: [id])
+  village  Village       @relation(fields: [villageId], references: [id])
   bookings Booking[]
   invoices Invoice[]
+  invites  StaffInvite[]
 
   @@map("customers")
 }
@@ -738,6 +739,10 @@ model StaffInvite {
   // already exists (e.g. invited from the Employees page) rather than
   // creating a brand-new Employee on accept — see staffInvite.service.ts.
   employeeId      String?      @map("employee_id") @db.Uuid
+  // Set when this invite grants portal access to a customer/farmer record
+  // that already exists (e.g. invited from the Customers page) rather than
+  // creating a brand-new Customer on accept — see staffInvite.service.ts.
+  customerId      String?      @map("customer_id") @db.Uuid
   tokenHash       String       @map("token_hash")
   status          InviteStatus @default(PENDING)
   invitedByUserId String       @map("invited_by_user_id") @db.Uuid
@@ -750,6 +755,7 @@ model StaffInvite {
   invitedBy User      @relation(fields: [invitedByUserId], references: [id])
   village   Village?  @relation(fields: [villageId], references: [id])
   employee  Employee? @relation(fields: [employeeId], references: [id])
+  customer  Customer? @relation(fields: [customerId], references: [id])
 
   @@map("staff_invites")
 }

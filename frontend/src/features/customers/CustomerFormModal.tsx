@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { Copy, CheckCircle2 } from "lucide-react";
 import type { CreateCustomerPayload, Customer } from "../../types/customer";
 import type { VillageOption } from "../../types/booking";
+import type { CreateInviteResponse } from "../../types/team";
 import { api } from "../../lib/api";
 import { getTerm } from "../../lib/terminology";
 import { Modal } from "../../components/ui/Modal";
@@ -30,14 +32,20 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
  const [address, setAddress] = useState<string>("");
  const [notes, setNotes] = useState<string>("");
 
- // Grant Farmer Portal Login Access state
- const [grantLogin, setGrantLogin] = useState<boolean>(false);
+ // Send Farmer Portal Invite state
+ const [sendInvite, setSendInvite] = useState<boolean>(false);
  const [email, setEmail] = useState<string>("");
- const [password, setPassword] = useState<string>("Password123!");
+ const [farmerRoleId, setFarmerRoleId] = useState<string>("");
+ const [inviteResult, setInviteResult] = useState<CreateInviteResponse | null>(null);
+ const [linkCopied, setLinkCopied] = useState<boolean>(false);
 
  const [isLoadingVillages, setIsLoadingVillages] = useState<boolean>(false);
  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
  const [error, setError] = useState<string | null>(null);
+
+ // Existing customer with no portal login yet can also be invited — only
+ // a customer who already has a User account is excluded.
+ const canSendInvite = !customerToEdit || !customerToEdit.userId;
 
  useEffect(() => {
  if (!isOpen) return;
@@ -58,6 +66,11 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
  }
 
  loadVillages();
+
+ api.listRoles().then((roles) => {
+ const farmerRole = roles.find((r) => r.systemKey === "farmer");
+ if (farmerRole) setFarmerRoleId(farmerRole.id);
+ });
  }, [isOpen, customerToEdit]);
 
   const [isGstApplicable, setIsGstApplicable] = useState<boolean>(false);
@@ -80,10 +93,12 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
       setNotes("");
       setIsGstApplicable(false);
       setGstin("");
-      setGrantLogin(false);
-      setEmail("");
-      setPassword("Password123!");
     }
+    setSendInvite(false);
+    setEmail("");
+    setInviteResult(null);
+    setLinkCopied(false);
+    setError(null);
   }, [customerToEdit, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,28 +111,15 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
       setError(`Please select a ${villageTerm}`);
       return;
     }
+    if (sendInvite && !email.trim() && !phone.trim()) {
+      setError(`Email or Mobile Number is required to send a ${customerTerm.toLowerCase()} portal invite`);
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
 
     try {
-      let createdUserId: string | undefined = undefined;
-
-      if (!customerToEdit && grantLogin) {
-        if (!email.trim() && !phone.trim()) {
-          setError(`Email or Mobile Number is required to create a ${customerTerm} portal account`);
-          setIsSubmitting(false);
-          return;
-        }
-        const userRes = await api.register({
-          fullName: name.trim(),
-          email: email.trim() || undefined,
-          mobileNumber: phone.trim() || undefined,
-          password: password || "Password123!",
-          roleKey: "farmer",
-        });
-        createdUserId = userRes.user.id;
-      }
 
       const payload: CreateCustomerPayload = {
         name: name.trim(),
@@ -125,15 +127,25 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
         phone: phone.trim() || undefined,
         address: address.trim() || undefined,
         notes: notes.trim() || undefined,
-        userId: createdUserId,
         isGstApplicable,
         gstin: gstin.trim() || undefined,
       };
 
- if (customerToEdit) {
- await api.updateCustomer(customerToEdit.id, payload);
- } else {
- await api.createCustomer(payload);
+ const savedCustomer = customerToEdit
+ ? await api.updateCustomer(customerToEdit.id, payload)
+ : await api.createCustomer(payload);
+
+ if (sendInvite && farmerRoleId) {
+ const invite = await api.createInvite({
+ fullName: name.trim(),
+ roleId: farmerRoleId,
+ email: email.trim() || undefined,
+ phone: phone.trim() || undefined,
+ customerId: savedCustomer.id,
+ });
+ setInviteResult(invite);
+ onSuccess();
+ return;
  }
 
  onSuccess();
@@ -145,13 +157,61 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
  }
  };
 
+ const handleCopyLink = async () => {
+ if (!inviteResult) return;
+ await navigator.clipboard.writeText(inviteResult.inviteLink);
+ setLinkCopied(true);
+ setTimeout(() => setLinkCopied(false), 2000);
+ };
+
  return (
  <Modal
  isOpen={isOpen}
  onClose={onClose}
- title={customerToEdit ? `Edit ${customerTerm} ${customerToEdit.name}` : `Register New ${customerTerm}`}
+ title={
+ inviteResult
+ ? "Invite Sent"
+ : customerToEdit
+ ? `Edit ${customerTerm} ${customerToEdit.name}`
+ : `Register New ${customerTerm}`
+ }
  maxWidth="550px"
  >
+ {inviteResult ? (
+ <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+ {inviteResult.deliveryMethod === "email" ? (
+ <div className="sa-alert sa-alert-success" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+ <CheckCircle2 size={16} />
+ <span>Invite emailed to {email}. They can click the link to set their password and get started.</span>
+ </div>
+ ) : (
+ <div className="sa-alert sa-alert-info">
+ <p style={{ marginBottom: "8px" }}>
+ SMS delivery isn't connected yet — copy this link and share it with them directly (WhatsApp, SMS,
+ etc.).
+ </p>
+ <div
+ style={{
+ display: "flex",
+ gap: "8px",
+ alignItems: "center",
+ background: "var(--color-surface-alt, #f1f5f9)",
+ borderRadius: "8px",
+ padding: "8px 10px",
+ }}
+ >
+ <span style={{ fontSize: "0.78rem", wordBreak: "break-all", flex: 1 }}>{inviteResult.inviteLink}</span>
+ <button type="button" className="sa-icon-action" onClick={handleCopyLink} title="Copy link">
+ {linkCopied ? <CheckCircle2 size={15} /> : <Copy size={15} />}
+ </button>
+ </div>
+ </div>
+ )}
+ <Button type="button" variant="secondary" onClick={onClose} style={{ width: "100%" }}>
+ Done
+ </Button>
+ </div>
+ ) : (
  <form onSubmit={handleSubmit} className="sa-booking-form">
  {error && <div className="sa-alert sa-alert-danger">{error}</div>}
  {isLoadingVillages && <div className="sa-alert sa-alert-info">Loading {villageTerm.toLowerCase()} directory...</div>}
@@ -241,21 +301,24 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
  />
  </div>
 
- {/* 6. Optional Farmer Portal Login Account */}
- {!customerToEdit && (
+ {/* 6. Optional Farmer Portal Invite */}
+ {canSendInvite && (
  <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: "12px", marginTop: "12px" }}>
  <label style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.9rem" }}>
  <input
  type="checkbox"
- checked={grantLogin}
- onChange={(e) => setGrantLogin(e.target.checked)}
+ checked={sendInvite}
+ onChange={(e) => setSendInvite(e.target.checked)}
  />
- Grant {customerTerm} Portal Login Account
+ Send {customerTerm} Portal Invite
  </label>
 
- {grantLogin && (
+ {sendInvite && (
  <div style={{ background: "var(--color-bg-secondary)", padding: "10px", borderRadius: "6px", marginTop: "8px" }}>
- <div className="sa-form-grid-2">
+ <p style={{ fontSize: "0.8rem", color: "var(--color-text-secondary, #64748b)", marginBottom: "10px" }}>
+ They'll get an invite to set their own password — email if provided below, otherwise you'll get a
+ link to share with them directly (their phone number above is used if no email is given).
+ </p>
  <Input
  label="Email Address (Optional)"
  type="email"
@@ -263,14 +326,6 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
  value={email}
  onChange={(e) => setEmail(e.target.value)}
  />
- <Input
- label="Initial Password"
- type="text"
- value={password}
- onChange={(e) => setPassword(e.target.value)}
- placeholder="Password123!"
- />
- </div>
  </div>
  )}
  </div>
@@ -286,6 +341,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
  </Button>
  </div>
  </form>
+ )}
  </Modal>
  );
 };

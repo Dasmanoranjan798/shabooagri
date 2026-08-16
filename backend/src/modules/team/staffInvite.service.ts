@@ -41,7 +41,7 @@ export async function createInvite(
     throw new AppError(400, "Unknown role");
   }
 
-  if (role.systemKey === "farmer" && !input.villageId) {
+  if (role.systemKey === "farmer" && !input.villageId && !input.customerId) {
     throw new AppError(400, "Village is required when inviting a farmer");
   }
   if (input.villageId) {
@@ -58,6 +58,16 @@ export async function createInvite(
     }
     if (employee.userId) {
       throw new AppError(409, "This employee already has a login account");
+    }
+  }
+
+  if (input.customerId) {
+    const customer = await prisma.customer.findFirst({ where: { id: input.customerId, companyId } });
+    if (!customer) {
+      throw new AppError(400, "Unknown customer");
+    }
+    if (customer.userId) {
+      throw new AppError(409, "This customer already has a portal account");
     }
   }
 
@@ -87,6 +97,7 @@ export async function createInvite(
     phone: input.phone?.trim(),
     villageId: input.villageId,
     employeeId: input.employeeId,
+    customerId: input.customerId,
     tokenHash,
     invitedByUserId,
     expiresAt,
@@ -204,6 +215,10 @@ export async function acceptInvite(input: AcceptInviteInput) {
           availabilityStatus: "AVAILABLE",
         },
       });
+    } else if (invite.customerId) {
+      // Grants portal access to a Customer record that already exists
+      // (invited from the Customers page) instead of creating a new one.
+      await tx.customer.update({ where: { id: invite.customerId }, data: { userId: newUser.id } });
     } else if (role.systemKey === "farmer") {
       await tx.customer.create({
         data: {

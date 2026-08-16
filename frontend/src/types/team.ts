@@ -43,6 +43,7 @@ export interface CreateInvitePayload {
   phone?: string;
   villageId?: string;
   employeeId?: string;
+  customerId?: string;
 }
 
 export interface CreateInviteResponse {
