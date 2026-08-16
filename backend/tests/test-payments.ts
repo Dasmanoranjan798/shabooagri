@@ -412,6 +412,7 @@ async function runTests() {
   await prisma.booking.deleteMany({ where: { companyId } });
   await prisma.machine.deleteMany({ where: { companyId } });
   await prisma.driver.deleteMany({ where: { companyId } });
+  await prisma.staffInvite.deleteMany({ where: { companyId } });
   await prisma.employee.deleteMany({ where: { companyId } });
   await prisma.customer.deleteMany({ where: { companyId } });
   await prisma.village.deleteMany({ where: { companyId } });

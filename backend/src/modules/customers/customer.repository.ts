@@ -22,6 +22,20 @@ export function findByUserIdScoped(companyId: string, userId: string) {
   return prisma.customer.findFirst({ where: { companyId, userId } });
 }
 
+export function findByPhoneScoped(companyId: string, phone: string) {
+  return prisma.customer.findFirst({ where: { companyId, phone } });
+}
+
+export function findByNameAndVillageScoped(companyId: string, name: string, villageId: string) {
+  return prisma.customer.findFirst({
+    where: {
+      companyId,
+      villageId,
+      name: { equals: name, mode: "insensitive" },
+    },
+  });
+}
+
 export function create(companyId: string, data: Omit<Prisma.CustomerUncheckedCreateInput, "companyId">) {
   return prisma.customer.create({ data: { ...data, companyId } });
 }

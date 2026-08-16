@@ -29,6 +29,21 @@ export async function create(companyId: string, input: CreateCustomerInput) {
   if (input.userId) {
     await authService.getUserForCompany(companyId, input.userId);
   }
+
+  // Duplicate Check 1: Mobile phone uniqueness per company
+  if (input.phone && input.phone.trim()) {
+    const existingByPhone = await customerRepository.findByPhoneScoped(companyId, input.phone.trim());
+    if (existingByPhone) {
+      throw new AppError(400, `A farmer with mobile number '${input.phone.trim()}' already exists (${existingByPhone.name}).`);
+    }
+  }
+
+  // Duplicate Check 2: Name + Village uniqueness per company
+  const existingByNameVillage = await customerRepository.findByNameAndVillageScoped(companyId, input.name.trim(), input.villageId);
+  if (existingByNameVillage) {
+    throw new AppError(400, `A farmer named '${input.name.trim()}' already exists in this village.`);
+  }
+
   return customerRepository.create(companyId, input);
 }
 
@@ -38,6 +53,13 @@ export async function update(companyId: string, id: string, input: UpdateCustome
   }
   if (input.userId) {
     await authService.getUserForCompany(companyId, input.userId);
+  }
+
+  if (input.phone && input.phone.trim()) {
+    const existingByPhone = await customerRepository.findByPhoneScoped(companyId, input.phone.trim());
+    if (existingByPhone && existingByPhone.id !== id) {
+      throw new AppError(400, `Another farmer with mobile number '${input.phone.trim()}' already exists (${existingByPhone.name}).`);
+    }
   }
   const updated = await customerRepository.updateScoped(companyId, id, input);
   if (!updated) {
