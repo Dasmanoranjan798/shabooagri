@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
+import { Fuel } from "lucide-react";
 import "./fuel.css";
 import type { FuelEntry } from "../../types/fuel";
 import type { Machine } from "../../types/machine";
@@ -160,7 +161,9 @@ export const FuelPage: React.FC = () => {
  </div>
  ) : entries.length === 0 ? (
  <div className="sa-empty-state">
- <div className="sa-empty-icon"></div>
+ <div className="sa-empty-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <Fuel size={32} color="var(--color-text-muted)" />
+ </div>
  <h3 className="sa-empty-title">No Fuel Entries Found</h3>
  <p className="sa-empty-desc">Fuel entries are logged during job execution. Use the Jobs screen to add fuel records.</p>
  </div>

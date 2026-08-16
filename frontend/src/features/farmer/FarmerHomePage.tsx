@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import "./farmer-mobile.css";
 import { Link } from "react-router-dom";
+import { Calendar, FileText } from "lucide-react";
 import type { Booking } from "../../types/booking";
 import type { Invoice } from "../../types/payment";
 import { api } from "../../lib/api";
@@ -127,11 +128,15 @@ export const FarmerHomePage: React.FC = () => {
  {/* Quick links */}
  <div className="sa-portal-quick-links">
  <Link to="/portal/bookings" className="sa-portal-quick-link">
- <span className="sa-portal-quick-icon"></span>
+ <span className="sa-portal-quick-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <Calendar size={20} />
+ </span>
  <span>{bookingTerm}</span>
  </Link>
  <Link to="/portal/invoices" className="sa-portal-quick-link">
- <span className="sa-portal-quick-icon"></span>
+ <span className="sa-portal-quick-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <FileText size={20} />
+ </span>
  <span>Invoices</span>
  </Link>
  </div>

@@ -1,4 +1,5 @@
 import React from "react";
+import { Briefcase } from "lucide-react";
 import type { Employee } from "../../types/employee";
 import { Modal } from "../../components/ui/Modal";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
@@ -42,7 +43,9 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
  {/* Profile Summary Banner */}
  <div className="sa-field-header-card">
  <div className="sa-field-machine">
- <span className="sa-field-icon"></span>
+ <span className="sa-field-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <Briefcase size={28} color="var(--color-primary)" />
+ </span>
  <div>
  <h3>{employee.name}</h3>
  <span className="sa-field-sub">

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./maintenance.css";
 import type { MaintenanceRecord, CreateMaintenanceRecordPayload } from "../../types/maintenance";
 import type { Machine } from "../../types/machine";
+import { Wrench } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { Card } from "../../components/ui/Card";
@@ -181,7 +182,9 @@ export const MaintenancePage: React.FC = () => {
  </div>
  ) : records.length === 0 ? (
  <div className="sa-empty-state">
- <div className="sa-empty-icon"></div>
+ <div className="sa-empty-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <Wrench size={32} color="var(--color-text-muted)" />
+ </div>
  <h3 className="sa-empty-title">No Service Records</h3>
  <p className="sa-empty-desc">Log completed maintenance and service work to build a service history.</p>
  <button className="sa-btn sa-btn-primary" onClick={openForm}>Log First Service</button>

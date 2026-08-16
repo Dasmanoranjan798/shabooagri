@@ -8,7 +8,7 @@ import { Modal } from "../../components/ui/Modal";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
-import { Camera, Fuel } from "lucide-react";
+import { Camera, Fuel, Truck, StickyNote } from "lucide-react";
 
 interface JobExecutionModalProps {
  job: Job | null;
@@ -268,7 +268,9 @@ export const JobExecutionModal: React.FC<JobExecutionModalProps> = ({
  {/* §11.6 Header Banner: Machine + Customer + Village + Driver */}
  <div className="sa-field-header-card">
  <div className="sa-field-machine">
- <span className="sa-field-icon"></span>
+ <span className="sa-field-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <Truck size={28} color="var(--color-primary)" />
+ </span>
  <div>
  <h3>{machineReg}</h3>
  <span className="sa-field-sub">
@@ -389,17 +391,23 @@ export const JobExecutionModal: React.FC<JobExecutionModalProps> = ({
  {job.status !== "COMPLETED" && (
  <div className="sa-quick-field-actions">
  <button className="sa-qaction-item" onClick={() => setShowFuelModal(true)}>
- <span className="sa-qaction-icon"></span>
+ <span className="sa-qaction-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <Fuel size={20} />
+ </span>
  <span className="sa-qaction-label">+ Add Fuel</span>
  </button>
 
  <button className="sa-qaction-item" onClick={() => setShowPhotoModal(true)}>
- <span className="sa-qaction-icon"></span>
+ <span className="sa-qaction-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <Camera size={20} />
+ </span>
  <span className="sa-qaction-label">+ Add Photo</span>
  </button>
 
  <button className="sa-qaction-item" onClick={() => setShowNoteModal(true)}>
- <span className="sa-qaction-icon"></span>
+ <span className="sa-qaction-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <StickyNote size={20} />
+ </span>
  <span className="sa-qaction-label">+ Add Note</span>
  </button>
  </div>

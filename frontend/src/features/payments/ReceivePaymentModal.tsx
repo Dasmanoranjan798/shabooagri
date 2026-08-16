@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { FileText } from "lucide-react";
 import type { Invoice, PaymentMethod } from "../../types/payment";
 import { api } from "../../lib/api";
 import { getTerm } from "../../lib/terminology";
@@ -88,7 +89,9 @@ export const ReceivePaymentModal: React.FC<ReceivePaymentModalProps> = ({
  {/* Invoice Summary Card */}
  <div className="sa-field-header-card" style={{ marginBottom: "1rem" }}>
  <div className="sa-field-machine">
- <span className="sa-field-icon"></span>
+ <span className="sa-field-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <FileText size={28} color="var(--color-primary)" />
+ </span>
  <div>
  <h3>{invoice.customer?.name || customerTerm}</h3>
  <span className="sa-field-sub">

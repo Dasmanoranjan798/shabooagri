@@ -9,7 +9,7 @@ import { Card } from "../../components/ui/Card";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
-import { BadgeAlert } from "lucide-react";
+import { BadgeAlert, AlertTriangle, UserCheck } from "lucide-react";
 import { getDriverLicenseWarning } from "../../lib/operationalWarnings";
 import { DriverFormModal } from "./DriverFormModal";
 import { DriverDetailModal } from "./DriverDetailModal";
@@ -174,7 +174,9 @@ export const DriversPage: React.FC = () => {
  ) : error ? (
  <div className="sa-error-container">
  <div className="sa-error-card">
- <span className="sa-error-icon"></span>
+ <span className="sa-error-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <AlertTriangle size={32} color="var(--color-error, #D32F2F)" />
+ </span>
  <h3>Error Loading Drivers</h3>
  <p>{error}</p>
  <Button variant="primary" onClick={loadDrivers}>
@@ -185,7 +187,9 @@ export const DriversPage: React.FC = () => {
  ) : filteredDrivers.length === 0 ? (
  <Card>
  <div className="sa-empty-state">
- <span className="sa-empty-icon"></span>
+ <span className="sa-empty-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <UserCheck size={32} color="var(--color-text-muted)" />
+ </span>
  <h3>No {driverTerm} Profiles Found</h3>
  <p>
  {searchQuery || activeFilter !== "ALL"

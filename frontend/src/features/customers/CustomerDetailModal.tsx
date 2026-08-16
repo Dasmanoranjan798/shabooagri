@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { Users } from "lucide-react";
 import type { Customer } from "../../types/customer";
 import { getTerm } from "../../lib/terminology";
 import { Modal } from "../../components/ui/Modal";
@@ -47,7 +48,9 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
  {/* Profile Summary Banner */}
  <div className="sa-field-header-card">
  <div className="sa-field-machine">
- <span className="sa-field-icon"></span>
+ <span className="sa-field-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <Users size={28} color="var(--color-primary)" />
+ </span>
  <div>
  <h3>{customer.name}</h3>
  <span className="sa-field-sub">

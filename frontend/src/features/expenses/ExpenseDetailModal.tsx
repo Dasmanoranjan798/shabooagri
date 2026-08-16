@@ -1,4 +1,5 @@
 import React from "react";
+import { Receipt } from "lucide-react";
 import type { Expense } from "../../types/expense";
 import { getTerm } from "../../lib/terminology";
 import { Modal } from "../../components/ui/Modal";
@@ -46,7 +47,9 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
  {/* Header Summary Banner */}
  <div className="sa-field-header-card">
  <div className="sa-field-machine">
- <span className="sa-field-icon"></span>
+ <span className="sa-field-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <Receipt size={28} color="var(--color-primary)" />
+ </span>
  <div>
  <h3>{categoryName}</h3>
  <span className="sa-field-sub">

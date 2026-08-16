@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, AlertTriangle, TrendingDown, Wrench, Briefcase, Receipt } from "lucide-react";
 import "./expenses.css";
 import type { Expense, ExpenseCategory } from "../../types/expense";
 import { api } from "../../lib/api";
@@ -140,7 +140,7 @@ export const ExpensesPage: React.FC = () => {
  {/* Financial KPI Summary Cards */}
  <div className="sa-kpi-grid" style={{ marginBottom: "1.5rem" }}>
  <Card className="sa-kpi-card">
- <div className="sa-kpi-icon"></div>
+ <div className="sa-kpi-icon"><TrendingDown size={24} color="#dc2626" /></div>
  <div className="sa-kpi-content">
  <span className="sa-kpi-label">Total Outflow</span>
  <span className="sa-kpi-value" style={{ color: "#dc2626" }}>
@@ -150,7 +150,7 @@ export const ExpensesPage: React.FC = () => {
  </Card>
 
  <Card className="sa-kpi-card">
- <div className="sa-kpi-icon"></div>
+ <div className="sa-kpi-icon"><Wrench size={24} color="var(--color-primary)" /></div>
  <div className="sa-kpi-content">
  <span className="sa-kpi-label">Machinery Expenses</span>
  <span className="sa-kpi-value">₹{machineryExpensesAmount.toLocaleString("en-IN")}</span>
@@ -158,7 +158,7 @@ export const ExpensesPage: React.FC = () => {
  </Card>
 
  <Card className="sa-kpi-card">
- <div className="sa-kpi-icon"></div>
+ <div className="sa-kpi-icon"><Briefcase size={24} color="var(--color-primary)" /></div>
  <div className="sa-kpi-content">
  <span className="sa-kpi-label">General Operations</span>
  <span className="sa-kpi-value">₹{generalExpensesAmount.toLocaleString("en-IN")}</span>
@@ -166,7 +166,7 @@ export const ExpensesPage: React.FC = () => {
  </Card>
 
  <Card className="sa-kpi-card">
- <div className="sa-kpi-icon"></div>
+ <div className="sa-kpi-icon"><Receipt size={24} color="var(--color-primary)" /></div>
  <div className="sa-kpi-content">
  <span className="sa-kpi-label">Expense Entries</span>
  <span className="sa-kpi-value">{expenses.length}</span>
@@ -217,7 +217,9 @@ export const ExpensesPage: React.FC = () => {
  ) : error ? (
  <div className="sa-error-container">
  <div className="sa-error-card">
- <span className="sa-error-icon"></span>
+ <span className="sa-error-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <AlertTriangle size={32} color="var(--color-error, #D32F2F)" />
+ </span>
  <h3>Error Loading Expenses</h3>
  <p>{error}</p>
  <Button variant="primary" onClick={loadData}>
@@ -228,7 +230,9 @@ export const ExpensesPage: React.FC = () => {
  ) : filteredExpenses.length === 0 ? (
  <Card>
  <div className="sa-empty-state">
- <span className="sa-empty-icon"></span>
+ <span className="sa-empty-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <TrendingDown size={32} color="var(--color-text-muted)" />
+ </span>
  <h3>No Expenses Found</h3>
  <p>
  {searchQuery || activeCategoryFilter !== "ALL"

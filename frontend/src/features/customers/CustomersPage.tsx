@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, AlertTriangle, Users } from "lucide-react";
 import "./customers.css";
 import type { Customer } from "../../types/customer";
 import { api } from "../../lib/api";
@@ -139,7 +139,9 @@ export const CustomersPage: React.FC = () => {
  ) : error ? (
  <div className="sa-error-container">
  <div className="sa-error-card">
- <span className="sa-error-icon"></span>
+ <span className="sa-error-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <AlertTriangle size={32} color="var(--color-error, #D32F2F)" />
+ </span>
  <h3>Error Loading Customers</h3>
  <p>{error}</p>
  <Button variant="primary" onClick={loadCustomers}>
@@ -150,7 +152,9 @@ export const CustomersPage: React.FC = () => {
  ) : filteredCustomers.length === 0 ? (
  <Card>
  <div className="sa-empty-state">
- <span className="sa-empty-icon"></span>
+ <span className="sa-empty-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <Users size={32} color="var(--color-text-muted)" />
+ </span>
  <h3>No {customerTerm} Found</h3>
  <p>
  {searchQuery

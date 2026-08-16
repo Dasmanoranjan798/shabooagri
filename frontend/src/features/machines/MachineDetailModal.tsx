@@ -5,7 +5,7 @@ import { getTerm } from "../../lib/terminology";
 import { Modal } from "../../components/ui/Modal";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { Clock, Wrench, ShieldAlert } from "lucide-react";
+import { Clock, Wrench, ShieldAlert, Truck } from "lucide-react";
 import { getMachineServiceWarning, getMachineInsuranceWarning } from "../../lib/operationalWarnings";
 
 interface MachineDetailModalProps {
@@ -54,7 +54,9 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
  {/* Header Summary Banner */}
  <div className="sa-field-header-card">
  <div className="sa-field-machine">
- <span className="sa-field-icon"></span>
+ <span className="sa-field-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <Truck size={28} color="var(--color-primary)" />
+ </span>
  <div>
  <h3>{machine.brand} {machine.model || ""}</h3>
  <span className="sa-field-sub">

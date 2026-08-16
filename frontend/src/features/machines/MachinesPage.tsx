@@ -9,7 +9,7 @@ import { Card } from "../../components/ui/Card";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
-import { Wrench, ShieldAlert } from "lucide-react";
+import { Wrench, ShieldAlert, AlertTriangle, Truck } from "lucide-react";
 import { getMachineServiceWarning, getMachineInsuranceWarning } from "../../lib/operationalWarnings";
 import { MachineFormModal } from "./MachineFormModal";
 import { MachineDetailModal } from "./MachineDetailModal";
@@ -183,7 +183,9 @@ export const MachinesPage: React.FC = () => {
  ) : error ? (
  <div className="sa-error-container">
  <div className="sa-error-card">
- <span className="sa-error-icon"></span>
+ <span className="sa-error-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <AlertTriangle size={32} color="var(--color-error, #D32F2F)" />
+ </span>
  <h3>Error Loading Machines</h3>
  <p>{error}</p>
  <Button variant="primary" onClick={loadMachines}>
@@ -194,7 +196,9 @@ export const MachinesPage: React.FC = () => {
  ) : filteredMachines.length === 0 ? (
  <Card>
  <div className="sa-empty-state">
- <span className="sa-empty-icon"></span>
+ <span className="sa-empty-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <Truck size={32} color="var(--color-text-muted)" />
+ </span>
  <h3>No {machineTerm} Found</h3>
  <p>
  {searchQuery || activeFilter !== "ALL"

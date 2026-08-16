@@ -5,7 +5,7 @@ import { getTerm } from "../../lib/terminology";
 import { Modal } from "../../components/ui/Modal";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { BadgeAlert } from "lucide-react";
+import { BadgeAlert, UserCheck } from "lucide-react";
 import { getDriverLicenseWarning } from "../../lib/operationalWarnings";
 
 interface DriverDetailModalProps {
@@ -53,7 +53,9 @@ export const DriverDetailModal: React.FC<DriverDetailModalProps> = ({
  {/* Profile Summary Banner */}
  <div className="sa-field-header-card">
  <div className="sa-field-machine">
- <span className="sa-field-icon"></span>
+ <span className="sa-field-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <UserCheck size={28} color="var(--color-primary)" />
+ </span>
  <div>
  <h3>{empName}</h3>
  <span className="sa-field-sub">

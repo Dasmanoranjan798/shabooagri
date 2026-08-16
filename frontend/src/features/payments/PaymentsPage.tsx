@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { AlertTriangle, CreditCard, FileText, Wallet, CheckCircle2, AlertCircle } from "lucide-react";
 import "./payments.css";
 import type { Invoice } from "../../types/payment";
 import { api } from "../../lib/api";
@@ -109,7 +110,7 @@ export const PaymentsPage: React.FC = () => {
  {/* Financial KPI Summary Cards */}
  <div className="sa-kpi-grid" style={{ marginBottom: "1.5rem" }}>
  <Card className="sa-kpi-card">
- <div className="sa-kpi-icon"></div>
+ <div className="sa-kpi-icon"><FileText size={24} color="var(--color-primary)" /></div>
  <div className="sa-kpi-content">
  <span className="sa-kpi-label">Total Invoices</span>
  <span className="sa-kpi-value">{invoices.length}</span>
@@ -117,7 +118,7 @@ export const PaymentsPage: React.FC = () => {
  </Card>
 
  <Card className="sa-kpi-card">
- <div className="sa-kpi-icon"></div>
+ <div className="sa-kpi-icon"><Wallet size={24} color="var(--color-primary)" /></div>
  <div className="sa-kpi-content">
  <span className="sa-kpi-label">Total Receivables</span>
  <span className="sa-kpi-value">₹{totalReceivables.toLocaleString("en-IN")}</span>
@@ -125,7 +126,7 @@ export const PaymentsPage: React.FC = () => {
  </Card>
 
  <Card className="sa-kpi-card">
- <div className="sa-kpi-icon"></div>
+ <div className="sa-kpi-icon"><CheckCircle2 size={24} color="#16a34a" /></div>
  <div className="sa-kpi-content">
  <span className="sa-kpi-label">Total Collected</span>
  <span className="sa-kpi-value" style={{ color: "#16a34a" }}>
@@ -135,7 +136,9 @@ export const PaymentsPage: React.FC = () => {
  </Card>
 
  <Card className="sa-kpi-card">
- <div className="sa-kpi-icon"></div>
+ <div className="sa-kpi-icon">
+ <AlertCircle size={24} color={totalBalanceDue > 0 ? "#dc2626" : "#16a34a"} />
+ </div>
  <div className="sa-kpi-content">
  <span className="sa-kpi-label">Outstanding Balance</span>
  <span className="sa-kpi-value" style={{ color: totalBalanceDue > 0 ? "#dc2626" : "#16a34a" }}>
@@ -185,7 +188,9 @@ export const PaymentsPage: React.FC = () => {
  ) : error ? (
  <div className="sa-error-container">
  <div className="sa-error-card">
- <span className="sa-error-icon"></span>
+ <span className="sa-error-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <AlertTriangle size={32} color="var(--color-error, #D32F2F)" />
+ </span>
  <h3>Error Loading Payments</h3>
  <p>{error}</p>
  <Button variant="primary" onClick={loadInvoices}>
@@ -196,7 +201,9 @@ export const PaymentsPage: React.FC = () => {
  ) : filteredInvoices.length === 0 ? (
  <Card>
  <div className="sa-empty-state">
- <span className="sa-empty-icon"></span>
+ <span className="sa-empty-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+ <CreditCard size={32} color="var(--color-text-muted)" />
+ </span>
  <h3>No Invoices Found</h3>
  <p>
  {searchQuery || activeFilter !== "ALL"
