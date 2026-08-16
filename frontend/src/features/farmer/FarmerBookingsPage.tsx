@@ -6,7 +6,7 @@ import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { getTerm } from "../../lib/terminology";
 
 function fmtDate(d: string) {
- return new Date(d + "T00:00:00").toLocaleDateString("en-IN", {
+ return new Date(d.slice(0, 10) + "T00:00:00").toLocaleDateString("en-IN", {
  day: "2-digit", month: "short", year: "numeric",
  });
 }

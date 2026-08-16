@@ -16,12 +16,13 @@ function statusLabel(s: Job["status"]): string {
 }
 
 function fmtDate(d: string) {
+ const dateOnly = d.slice(0, 10);
  const today = new Date().toISOString().slice(0, 10);
- if (d === today) return "Today";
+ if (dateOnly === today) return "Today";
  const tomorrow = new Date();
  tomorrow.setDate(tomorrow.getDate() + 1);
- if (d === tomorrow.toISOString().slice(0, 10)) return "Tomorrow";
- return new Date(d + "T00:00:00").toLocaleDateString("en-IN", {
+ if (dateOnly === tomorrow.toISOString().slice(0, 10)) return "Tomorrow";
+ return new Date(dateOnly + "T00:00:00").toLocaleDateString("en-IN", {
  day: "2-digit", month: "short", year: "numeric",
  });
 }
