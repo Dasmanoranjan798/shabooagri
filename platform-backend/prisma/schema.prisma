@@ -75,6 +75,20 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+// Forgot-password flow for platform accounts (the admin's own login and any
+// future platform-level account). Mirrors the operational OtpCode/RESET
+// pattern: a hashed, single-use, time-limited token emailed as a link.
+model PasswordResetToken {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email      String
+  tokenHash  String    @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@map("password_reset_tokens")
+}
+
 // One row per subscription period. Single-plan for now (no tiers), but
 // modeled as its own table rather than fields-on-PlatformUser so renewals
 // have real history instead of overwriting the same row.

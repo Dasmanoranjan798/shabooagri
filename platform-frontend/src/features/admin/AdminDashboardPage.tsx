@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import {
   Users,
   ExternalLink,
@@ -99,9 +99,14 @@ export const AdminDashboardPage: React.FC = () => {
     <div style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
         <h1 style={{ fontSize: "1.4rem", fontWeight: 800 }}>Owner Dashboard</h1>
-        <button className="pf-btn pf-btn-secondary" onClick={logout}>
-          Sign Out
-        </button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Link to="/change-password" className="pf-btn pf-btn-secondary" style={{ textDecoration: "none" }}>
+            Change Password
+          </Link>
+          <button className="pf-btn pf-btn-secondary" onClick={logout}>
+            Sign Out
+          </button>
+        </div>
       </div>
 
       {loadError && <div className="pf-alert pf-alert-danger">{loadError}</div>}

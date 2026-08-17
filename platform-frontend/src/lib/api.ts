@@ -208,6 +208,35 @@ export const api = {
     const res = await request("/admin/site-settings", { method: "PATCH", body: JSON.stringify(data) });
     return parseOrThrow<AdminSiteSettings>(res, "Could not update site settings");
   },
+
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    const res = await request("/auth/password-reset/request", { method: "POST", body: JSON.stringify({ email }) });
+    return parseOrThrow(res, "Failed to send reset link");
+  },
+
+  async verifyPasswordResetToken(email: string, token: string): Promise<{ valid: boolean }> {
+    const res = await request("/auth/password-reset/verify-token", {
+      method: "POST",
+      body: JSON.stringify({ email, token }),
+    });
+    return parseOrThrow(res, "Invalid or expired token");
+  },
+
+  async confirmPasswordReset(email: string, token: string, newPassword: string): Promise<{ message: string }> {
+    const res = await request("/auth/password-reset/confirm", {
+      method: "POST",
+      body: JSON.stringify({ email, token, newPassword }),
+    });
+    return parseOrThrow(res, "Failed to reset password");
+  },
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+    const res = await request("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    return parseOrThrow(res, "Failed to change password");
+  },
 };
 
 export interface AdminDashboardMetrics {

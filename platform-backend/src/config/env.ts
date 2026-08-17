@@ -18,6 +18,15 @@ const envSchema = z.object({
   OPERATIONAL_API_URL: z.string().min(1),
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
+  // Used to build password-reset links. Unlike the operational backend,
+  // this app has no per-tenant subdomain concept — every platform account
+  // resets its password at the same bare-domain URL.
+  PLATFORM_APP_URL: z.string().default("https://shabooagri.com"),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

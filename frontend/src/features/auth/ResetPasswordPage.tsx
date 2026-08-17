@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Tractor, CheckCircle2, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
+import { Tractor, CheckCircle2 } from "lucide-react";
 import { api } from "../../lib/api";
+import { defaultTheme } from "../../lib/theme";
+import { Input } from "../../components/ui/Input";
+import { Button } from "../../components/ui/Button";
+import { Spinner } from "../../components/ui/Spinner";
+import "./login.css";
 
 export const ResetPasswordPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -9,13 +14,10 @@ export const ResetPasswordPage: React.FC = () => {
   const token = searchParams.get("token") || "";
   const emailParam = searchParams.get("email") || "";
 
-  // Form states
   const [email, setEmail] = useState(emailParam);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
 
-  // Verification & Status states
   const isConfirmMode = Boolean(token && emailParam);
   const [isValidatingToken, setIsValidatingToken] = useState(isConfirmMode);
   const [isTokenValid, setIsTokenValid] = useState(false);
@@ -24,20 +26,18 @@ export const ResetPasswordPage: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isConfirmMode) {
-      const verifyToken = async () => {
-        try {
-          await api.verifyPasswordResetToken(emailParam, token);
-          setIsTokenValid(true);
-        } catch (err: any) {
-          setIsTokenValid(false);
-          setErrorMsg(err.message || "This password reset link is invalid or has expired.");
-        } finally {
-          setIsValidatingToken(false);
-        }
-      };
-      verifyToken();
-    }
+    if (!isConfirmMode) return;
+    (async () => {
+      try {
+        await api.verifyPasswordResetToken(emailParam, token);
+        setIsTokenValid(true);
+      } catch (err: any) {
+        setIsTokenValid(false);
+        setErrorMsg(err.message || "This password reset link is invalid or has expired.");
+      } finally {
+        setIsValidatingToken(false);
+      }
+    })();
   }, [isConfirmMode, emailParam, token]);
 
   const handleRequestSubmit = async (e: React.FormEvent) => {
@@ -70,7 +70,6 @@ export const ResetPasswordPage: React.FC = () => {
       setErrorMsg("Password must be at least 8 characters long.");
       return;
     }
-
     if (newPassword !== confirmPassword) {
       setErrorMsg("Passwords do not match. Please verify your entry.");
       return;
@@ -88,223 +87,126 @@ export const ResetPasswordPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-between font-sans">
-      
-      {/* Top minimal brand header */}
-      <header className="py-6 px-4 sm:px-8 max-w-7xl mx-auto w-full flex items-center justify-between">
-        <Link to="/login" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#15803d] flex items-center justify-center text-white shadow-xs">
-            <Tractor className="w-4.5 h-4.5" />
+    <div className="sa-login-container">
+      <div className="sa-login-card">
+        <div className="sa-login-header">
+          <div className="sa-login-brand">
+            <span className="sa-login-logo" style={{ display: "inline-flex", alignItems: "center" }}>
+              <Tractor size={28} />
+            </span>
+            <h1>{defaultTheme.companyName}</h1>
           </div>
-          <span className="text-xl font-extrabold text-slate-900 tracking-tight">
-            Shaboo<span className="text-[#15803d]">Agri</span>
-          </span>
-        </Link>
-      </header>
+          <p className="sa-login-subtext">
+            {isConfirmMode ? "Set a new password" : "Reset your password"}
+          </p>
+        </div>
 
-      {/* Centered Auth Card */}
-      <main className="flex-1 flex items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
-        <div className="w-full max-w-[400px] bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm space-y-6">
-          
-          {/* REQUEST LINK MODE */}
-          {!isConfirmMode && (
-            <>
-              <div className="text-center space-y-1">
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                  Reset your password
-                </h1>
-                <p className="text-xs text-slate-500 leading-relaxed">
+        {/* REQUEST LINK MODE */}
+        {!isConfirmMode && (
+          <>
+            {errorMsg && <div className="sa-alert sa-alert-danger">{errorMsg}</div>}
+
+            {successMsg ? (
+              <div style={{ textAlign: "center" }}>
+                <div className="sa-alert sa-alert-success" style={{ marginBottom: 16 }}>
+                  <CheckCircle2 size={16} style={{ verticalAlign: "-3px", marginRight: 6 }} />
+                  {successMsg}
+                </div>
+                <Link to="/login" style={{ textDecoration: "none" }}>
+                  <Button type="button" variant="secondary" style={{ width: "100%" }}>
+                    Back to Sign In
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <form onSubmit={handleRequestSubmit} className="sa-login-form">
+                <p style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", marginTop: 0, marginBottom: 4 }}>
                   Enter your registered email address and we'll send you a secure reset link.
                 </p>
+                <Input
+                  label="Email Address"
+                  type="email"
+                  placeholder="name@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoFocus
+                />
+                <Button type="submit" variant="primary" size="lg" isLoading={loading} style={{ width: "100%" }}>
+                  Send Reset Link
+                </Button>
+              </form>
+            )}
+          </>
+        )}
+
+        {/* CONFIRM RESET MODE */}
+        {isConfirmMode && (
+          <>
+            {isValidatingToken ? (
+              <div style={{ padding: "32px 0" }}>
+                <Spinner size="md" label="Validating reset link..." />
               </div>
-
-              {errorMsg && (
-                <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
-                  <span>{errorMsg}</span>
+            ) : successMsg ? (
+              <div style={{ textAlign: "center" }}>
+                <div className="sa-alert sa-alert-success" style={{ marginBottom: 16 }}>
+                  <CheckCircle2 size={16} style={{ verticalAlign: "-3px", marginRight: 6 }} />
+                  {successMsg}
                 </div>
-              )}
-
-              {successMsg ? (
-                <div className="space-y-4 text-center">
-                  <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-[#15803d] text-xs font-medium space-y-2">
-                    <CheckCircle2 className="w-6 h-6 mx-auto text-[#15803d]" />
-                    <p>{successMsg}</p>
-                  </div>
-                  <Link
-                    to="/login"
-                    className="block w-full py-2.5 rounded-lg border border-slate-300 text-slate-800 font-semibold text-xs hover:bg-slate-50 transition-colors"
-                  >
-                    Back to Sign In
-                  </Link>
-                </div>
-              ) : (
-                <form onSubmit={handleRequestSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                      EMAIL ADDRESS
-                    </label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@company.com"
-                      className="w-full px-3.5 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                      required
-                      autoFocus
-                    />
-                  </div>
-
-                  <div className="pt-2">
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full h-11 px-4 rounded-lg bg-[#15803d] hover:bg-[#166534] text-white font-bold text-sm shadow-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>SENDING LINK...</span>
-                        </>
-                      ) : (
-                        <span>SEND RESET LINK</span>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              <div className="pt-4 border-t border-slate-100 text-center text-xs">
-                <Link to="/login" className="font-semibold text-slate-600 hover:text-slate-900 transition-colors">
-                  Back to Sign In
+                <Link to="/login" style={{ textDecoration: "none" }}>
+                  <Button type="button" variant="primary" style={{ width: "100%" }}>
+                    Proceed to Sign In
+                  </Button>
                 </Link>
               </div>
-            </>
-          )}
-
-          {/* CONFIRM RESET MODE */}
-          {isConfirmMode && (
-            <>
-              <div className="text-center space-y-1">
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                  Set new password
-                </h1>
-                <p className="text-xs text-slate-500">
+            ) : !isTokenValid ? (
+              <div style={{ textAlign: "center" }}>
+                <div className="sa-alert sa-alert-danger" style={{ marginBottom: 16 }}>
+                  {errorMsg}
+                </div>
+                <Link to="/reset-password" style={{ textDecoration: "none" }}>
+                  <Button type="button" variant="secondary" style={{ width: "100%" }}>
+                    Request New Reset Link
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <form onSubmit={handleConfirmSubmit} className="sa-login-form">
+                {errorMsg && <div className="sa-alert sa-alert-danger">{errorMsg}</div>}
+                <p style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", marginTop: 0, marginBottom: 4 }}>
                   Enter your new password for {emailParam}
                 </p>
-              </div>
+                <Input
+                  label="New Password"
+                  type="password"
+                  placeholder="Minimum 8 characters"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  autoFocus
+                />
+                <Input
+                  label="Confirm New Password"
+                  type="password"
+                  placeholder="Re-enter new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+                <Button type="submit" variant="primary" size="lg" isLoading={loading} style={{ width: "100%" }}>
+                  Update Password
+                </Button>
+              </form>
+            )}
+          </>
+        )}
 
-              {isValidatingToken ? (
-                <div className="py-8 text-center text-xs text-slate-500 flex flex-col items-center gap-2">
-                  <Loader2 className="w-5 h-5 animate-spin text-[#15803d]" />
-                  <span>Validating security reset link...</span>
-                </div>
-              ) : successMsg ? (
-                <div className="space-y-4 text-center">
-                  <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-[#15803d] text-xs font-medium space-y-2">
-                    <CheckCircle2 className="w-6 h-6 mx-auto text-[#15803d]" />
-                    <p>{successMsg}</p>
-                  </div>
-                  <Link
-                    to="/login"
-                    className="block w-full py-2.5 rounded-lg bg-[#15803d] hover:bg-[#166534] text-white font-bold text-xs text-center shadow-xs transition-colors"
-                  >
-                    PROCEED TO SIGN IN
-                  </Link>
-                </div>
-              ) : !isTokenValid ? (
-                <div className="space-y-4 text-center">
-                  <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
-                    <span>{errorMsg}</span>
-                  </div>
-                  <Link
-                    to="/reset-password"
-                    className="block w-full py-2.5 rounded-lg border border-slate-300 text-slate-800 font-semibold text-xs hover:bg-slate-50 transition-colors"
-                  >
-                    Request New Reset Link
-                  </Link>
-                </div>
-              ) : (
-                <form onSubmit={handleConfirmSubmit} className="space-y-4">
-                  {errorMsg && (
-                    <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
-                      <span>{errorMsg}</span>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                      NEW PASSWORD
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Minimum 8 characters"
-                        className="w-full pl-3.5 pr-10 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                        required
-                        autoFocus
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                      CONFIRM NEW PASSWORD
-                    </label>
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Re-enter new password"
-                      className="w-full px-3.5 h-11 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                      required
-                    />
-                  </div>
-
-                  <div className="pt-2">
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full h-11 px-4 rounded-lg bg-[#15803d] hover:bg-[#166534] text-white font-bold text-sm shadow-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>UPDATING PASSWORD...</span>
-                        </>
-                      ) : (
-                        <span>UPDATE PASSWORD</span>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              <div className="pt-4 border-t border-slate-100 text-center text-xs">
-                <Link to="/login" className="font-semibold text-slate-600 hover:text-slate-900 transition-colors">
-                  Back to Sign In
-                </Link>
-              </div>
-            </>
-          )}
-
+        <div className="sa-login-footer">
+          <Link to="/login" style={{ color: "inherit", textDecoration: "none" }}>
+            Back to Sign In
+          </Link>
         </div>
-      </main>
-
-      <footer className="py-6 text-center text-xs text-slate-400">
-        © 2026 ShabooAgri. All rights reserved.
-      </footer>
+      </div>
     </div>
   );
 };

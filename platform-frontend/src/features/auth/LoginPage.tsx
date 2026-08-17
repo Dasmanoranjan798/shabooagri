@@ -105,6 +105,11 @@ export const LoginPage: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                <div style={{ textAlign: "right", marginTop: 6 }}>
+                  <Link to="/reset-password" style={{ fontSize: "0.82rem", color: "var(--color-primary)", fontWeight: 600 }}>
+                    Forgot password?
+                  </Link>
+                </div>
               </div>
               <button type="submit" className="pf-btn pf-btn-primary" style={{ width: "100%" }} disabled={isSubmitting}>
                 {isSubmitting ? "Signing in..." : "Sign In"}

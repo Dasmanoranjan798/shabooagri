@@ -5,6 +5,8 @@ import { PricingPage } from "../features/marketing/PricingPage";
 import { RegisterPage } from "../features/auth/RegisterPage";
 import { LoginPage } from "../features/auth/LoginPage";
 import { UpgradePage } from "../features/auth/UpgradePage";
+import { ResetPasswordPage } from "../features/auth/ResetPasswordPage";
+import { ChangePasswordPage } from "../features/auth/ChangePasswordPage";
 import { AdminDashboardPage } from "../features/admin/AdminDashboardPage";
 
 export function App() {
@@ -17,6 +19,8 @@ export function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/upgrade" element={<UpgradePage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/change-password" element={<ChangePasswordPage />} />
           <Route path="/admin" element={<AdminDashboardPage />} />
         </Routes>
       </PlatformAuthProvider>

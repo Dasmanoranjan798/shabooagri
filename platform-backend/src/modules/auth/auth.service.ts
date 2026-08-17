@@ -5,8 +5,17 @@ import type { PlatformUser } from "@prisma/client";
 import { env } from "../../config/env";
 import { AppError } from "../../shared/errors/AppError";
 import * as authRepository from "./auth.repository";
+import { sendPasswordResetEmail } from "../../shared/services/mail.service";
 import type { PlatformTokenPayload } from "../../middleware/auth.middleware";
-import type { LoginInput, RefreshInput, RegisterInput } from "./auth.validators";
+import type {
+  ChangePasswordInput,
+  ConfirmPasswordResetInput,
+  LoginInput,
+  RefreshInput,
+  RegisterInput,
+  RequestPasswordResetInput,
+  VerifyPasswordResetTokenInput,
+} from "./auth.validators";
 
 const BCRYPT_ROUNDS = 10;
 
@@ -124,4 +133,84 @@ export async function getProfile(userId: string) {
     throw new AppError(404, "User not found");
   }
   return toPublicUser(user);
+}
+
+const PASSWORD_RESET_EXPIRY_MINUTES = 15;
+
+// Forgot-password flow for a locked-out platform account. Always returns
+// the same generic message regardless of whether the email exists, to
+// avoid account enumeration.
+export async function requestPasswordReset(input: RequestPasswordResetInput) {
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const user = await authRepository.findByEmail(normalizedEmail);
+
+  if (user) {
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const expiresAt = addDuration(new Date(), `${PASSWORD_RESET_EXPIRY_MINUTES}m`);
+
+    await authRepository.createPasswordResetToken({ email: normalizedEmail, tokenHash, expiresAt });
+
+    const resetLink = `${env.PLATFORM_APP_URL}/reset-password?token=${rawToken}&email=${encodeURIComponent(normalizedEmail)}`;
+    await sendPasswordResetEmail(normalizedEmail, resetLink);
+  }
+
+  return { message: "If an account with that email exists, a password reset link has been sent." };
+}
+
+export async function verifyPasswordResetToken(input: VerifyPasswordResetTokenInput) {
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const tokenHash = crypto.createHash("sha256").update(input.token).digest("hex");
+  const activeToken = await authRepository.findActivePasswordResetToken(normalizedEmail);
+
+  if (!activeToken || activeToken.tokenHash !== tokenHash) {
+    throw new AppError(400, "Invalid or expired password reset token");
+  }
+
+  return { valid: true };
+}
+
+export async function confirmPasswordReset(input: ConfirmPasswordResetInput) {
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const tokenHash = crypto.createHash("sha256").update(input.token).digest("hex");
+  const activeToken = await authRepository.findActivePasswordResetToken(normalizedEmail);
+
+  if (!activeToken || activeToken.tokenHash !== tokenHash) {
+    throw new AppError(400, "Invalid or expired password reset token");
+  }
+
+  const user = await authRepository.findByEmail(normalizedEmail);
+  if (!user) {
+    throw new AppError(400, "Invalid or expired password reset token");
+  }
+
+  const newPasswordHash = await bcrypt.hash(input.newPassword, BCRYPT_ROUNDS);
+  await authRepository.updatePassword(user.id, newPasswordHash);
+  await authRepository.consumePasswordResetToken(activeToken.id);
+  await authRepository.revokeAllRefreshTokensForUser(user.id);
+
+  return { message: "Password has been successfully reset. You may now log in with your new password." };
+}
+
+// Self-service change, for a user who is already logged in — distinct from
+// the request/confirm email-token flow above.
+export async function changePassword(userId: string, input: ChangePasswordInput) {
+  const user = await authRepository.findById(userId);
+  if (!user) {
+    throw new AppError(404, "User not found");
+  }
+
+  const matches = await bcrypt.compare(input.currentPassword, user.passwordHash);
+  if (!matches) {
+    throw new AppError(401, "Current password is incorrect");
+  }
+
+  const newPasswordHash = await bcrypt.hash(input.newPassword, BCRYPT_ROUNDS);
+  await authRepository.updatePassword(userId, newPasswordHash);
+
+  // Force re-login on other devices/sessions; the caller's own current
+  // access token stays valid until it naturally expires.
+  await authRepository.revokeAllRefreshTokensForUser(userId);
+
+  return { message: "Password changed successfully." };
 }
