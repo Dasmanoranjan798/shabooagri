@@ -7,6 +7,7 @@ import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { Spinner } from "../../components/ui/Spinner";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
 import { getTerm } from "../../lib/terminology";
 
 function fmtCurrency(val: number) {
@@ -26,6 +27,7 @@ function bookingStatusLabel(s: Booking["status"]) {
 export const FarmerHomePage: React.FC = () => {
  const { user } = useAuth();
  const bookingTerm = getTerm("booking", true);
+ const customerTerm = getTerm("customer");
 
  const [bookings, setBookings] = useState<Booking[]>([]);
  const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -66,17 +68,17 @@ export const FarmerHomePage: React.FC = () => {
  <div className="sa-portal-greeting">
  <div>
  <div className="sa-portal-greeting-name">
- Hello, {user?.fullName?.split(" ")[0] ?? "Farmer"} 
+ Hello, {user?.fullName?.split(" ")[0] ?? customerTerm}
  </div>
  <div className="sa-portal-greeting-date">{dateStr}</div>
  </div>
- <div className="sa-portal-greeting-badge">Customer Portal</div>
+ <div className="sa-portal-greeting-badge">{customerTerm} Portal</div>
  </div>
 
  {isLoading ? (
  <div className="sa-loading-state"><Spinner /><span>Loading your account…</span></div>
  ) : error ? (
- <div className="sa-error-state"><p> {error}</p><button className="sa-btn sa-btn-secondary" onClick={load}>Retry</button></div>
+ <div className="sa-error-state"><p> {error}</p><Button variant="secondary" onClick={load}>Retry</Button></div>
  ) : (
  <>
  {/* KPI cards */}

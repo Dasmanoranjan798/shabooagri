@@ -9,7 +9,7 @@ import { Card } from "../../components/ui/Card";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
-import { BadgeAlert, AlertTriangle, UserCheck } from "lucide-react";
+import { BadgeAlert, AlertTriangle, UserCheck, Pencil, Trash2 } from "lucide-react";
 import { getDriverLicenseWarning } from "../../lib/operationalWarnings";
 import { DriverFormModal } from "./DriverFormModal";
 import { DriverDetailModal } from "./DriverDetailModal";
@@ -265,7 +265,7 @@ export const DriversPage: React.FC = () => {
  title="Edit Driver Profile"
  onClick={(e) => handleOpenEdit(d, e)}
  >
- Edit
+ <Pencil size={15} />
  </button>
  )}
  {canManage && (
@@ -275,7 +275,7 @@ export const DriversPage: React.FC = () => {
  disabled={deletingId === d.id}
  onClick={(e) => handleDelete(d.id, e)}
  >
- Delete
+ <Trash2 size={15} />
  </button>
  )}
  </div>

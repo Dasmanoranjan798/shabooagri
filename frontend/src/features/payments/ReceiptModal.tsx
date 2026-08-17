@@ -158,7 +158,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           <div className="sa-detail-grid" style={{ marginBottom: "1rem" }}>
             <div className="sa-detail-item">
               <span className="sa-detail-label">{customerTerm} Name</span>
-              <span className="sa-detail-val">{customer?.name || "Customer"}</span>
+              <span className="sa-detail-val">{customer?.name || customerTerm}</span>
             </div>
 
             <div className="sa-detail-item">
@@ -391,7 +391,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   ];
                   const dataRow = [{
                     invoiceNumber: inv.invoiceNumber,
-                    customerName: customer?.name || "Customer",
+                    customerName: customer?.name || customerTerm,
                     date: new Date(invoiceDate).toLocaleDateString("en-IN"),
                     machine: service?.machine?.registrationNumber || "N/A",
                     totalAmount: inv.totalAmount,

@@ -323,7 +323,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
           </Link>
           <Link to="/machines" className={`sa-bottom-item ${location.pathname === "/machines" ? "is-active" : ""}`}>
             <span className="sa-bottom-icon" style={{ display: "inline-flex", alignItems: "center" }}><Truck size={20} /></span>
-            <span className="sa-bottom-label">Fleet</span>
+            <span className="sa-bottom-label">{machineTerm}</span>
           </Link>
           <Link to="/customers" className={`sa-bottom-item ${location.pathname === "/customers" ? "is-active" : ""}`}>
             <span className="sa-bottom-icon" style={{ display: "inline-flex", alignItems: "center" }}><Users size={20} /></span>

@@ -3,7 +3,9 @@ import { Copy, CheckCircle2 } from "lucide-react";
 import { Modal } from "../../components/ui/Modal";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
+import { SearchableSelect } from "../../components/ui/SearchableSelect/SearchableSelect";
 import { api } from "../../lib/api";
+import { getTerm } from "../../lib/terminology";
 import type { Role } from "../../types/rbac";
 import type { VillageOption } from "../../types/booking";
 import type { CreateInviteResponse } from "../../types/team";
@@ -15,6 +17,8 @@ interface InviteStaffModalProps {
 }
 
 export const InviteStaffModal: React.FC<InviteStaffModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const villageTerm = getTerm("village");
+
   const [roles, setRoles] = useState<Role[]>([]);
   const [villages, setVillages] = useState<VillageOption[]>([]);
 
@@ -63,7 +67,7 @@ export const InviteStaffModal: React.FC<InviteStaffModalProps> = ({ isOpen, onCl
       return;
     }
     if (isFarmerRole && !villageId) {
-      setError("Please select a village for a farmer invite");
+      setError(`Please select a ${villageTerm.toLowerCase()} for a farmer invite`);
       return;
     }
 
@@ -191,15 +195,13 @@ export const InviteStaffModal: React.FC<InviteStaffModalProps> = ({ isOpen, onCl
 
           {isFarmerRole && (
             <div className="sa-input-group">
-              <label className="sa-input-label">Village</label>
-              <select className="sa-input" value={villageId} onChange={(e) => setVillageId(e.target.value)} required>
-                <option value="">Select a village</option>
-                {villages.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name}
-                  </option>
-                ))}
-              </select>
+              <label className="sa-input-label">{villageTerm}</label>
+              <SearchableSelect
+                placeholder={`Select a ${villageTerm.toLowerCase()}`}
+                value={villageId}
+                onChange={setVillageId}
+                options={villages.map((v) => ({ value: v.id, label: v.name }))}
+              />
             </div>
           )}
 

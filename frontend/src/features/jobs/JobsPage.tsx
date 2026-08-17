@@ -185,8 +185,8 @@ export const JobsPage: React.FC = () => {
  </thead>
  <tbody>
  {filteredJobs.map((j) => {
- const cName = j.booking.customer?.name || "Customer";
- const vName = j.booking.village?.name || j.booking.customer?.village?.name || "Village";
+ const cName = j.booking.customer?.name || customerTerm;
+ const vName = j.booking.village?.name || j.booking.customer?.village?.name || villageTerm;
  return (
  <tr
  key={j.id}
@@ -250,8 +250,8 @@ export const JobsPage: React.FC = () => {
  <div className="sa-mobile-only">
  <div className="sa-mobile-booking-list">
  {filteredJobs.map((j) => {
- const cName = j.booking.customer?.name || "Customer";
- const vName = j.booking.village?.name || j.booking.customer?.village?.name || "Village";
+ const cName = j.booking.customer?.name || customerTerm;
+ const vName = j.booking.village?.name || j.booking.customer?.village?.name || villageTerm;
  return (
  <div
  key={j.id}

@@ -24,6 +24,7 @@ export const JobExecutionModal: React.FC<JobExecutionModalProps> = ({
  onUpdate,
 }) => {
  const customerTerm = getTerm("customer");
+ const villageTerm = getTerm("village");
  const driverTerm = getTerm("driver");
 
  const [fuelEntries, setFuelEntries] = useState<JobFuelEntry[]>([]);
@@ -243,8 +244,8 @@ export const JobExecutionModal: React.FC<JobExecutionModalProps> = ({
  }
  };
 
- const customerName = job.booking.customer?.name || "Customer";
- const villageName = job.booking.village?.name || job.booking.customer?.village?.name || "Village";
+ const customerName = job.booking.customer?.name || customerTerm;
+ const villageName = job.booking.village?.name || job.booking.customer?.village?.name || villageTerm;
  const machineReg = job.machine.registrationNumber;
  const driverName = job.driver.employee.name;
 

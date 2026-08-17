@@ -3,10 +3,13 @@ import { AlertTriangle, FileSpreadsheet, Printer } from "lucide-react";
 import "./reports.css";
 import type { DashboardSummaryResponse, IncomeSeriesResponse, FuelSeriesResponse, TimeRange } from "../../types/dashboard";
 import { api } from "../../lib/api";
+import { getTerm } from "../../lib/terminology";
 import { exportToExcel, exportToPdf } from "../../lib/exportUtils";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
+import { IncomeOverviewChart } from "../../components/charts/IncomeOverviewChart";
+import { FuelConsumptionChart } from "../../components/charts/FuelConsumptionChart";
 
 function fmtCurrency(val: number) {
  return `₹${val.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
@@ -24,6 +27,9 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string }[] = [
 ];
 
 export const ReportsPage: React.FC = () => {
+ const customerTerm = getTerm("customer");
+ const villageTerm = getTerm("village");
+
  const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
  const [income, setIncome] = useState<IncomeSeriesResponse | null>(null);
  const [fuel, setFuel] = useState<FuelSeriesResponse | null>(null);
@@ -61,74 +67,14 @@ export const ReportsPage: React.FC = () => {
 
  const kpis = summary?.kpis;
 
- // SVG mini-chart helpers
- const renderLineChart = (points: { label: string; value: number }[], color: string) => {
- if (points.length === 0) return <p style={{ color: "var(--color-text-muted)", padding: "16px" }}>No data for this period.</p>;
- const max = Math.max(...points.map((p) => p.value), 1);
- const width = 600;
- const height = 200;
- const pad = { top: 16, right: 16, bottom: 48, left: 64 };
- const innerW = width - pad.left - pad.right;
- const innerH = height - pad.top - pad.bottom;
-
- const xs = points.map((_, i) => pad.left + (i / Math.max(points.length - 1, 1)) * innerW);
- const ys = points.map((p) => pad.top + (1 - p.value / max) * innerH);
-
- const pathD = xs.map((x, i) => `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${ys[i].toFixed(1)}`).join(" ");
- const areaD = `${pathD} L ${xs[xs.length - 1].toFixed(1)} ${(pad.top + innerH).toFixed(1)} L ${xs[0].toFixed(1)} ${(pad.top + innerH).toFixed(1)} Z`;
-
- return (
- <svg viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", maxHeight: 200 }}>
- <defs>
- <linearGradient id={`grad-${color.replace("#", "")}`} x1="0" x2="0" y1="0" y2="1">
- <stop offset="0%" stopColor={color} stopOpacity="0.25" />
- <stop offset="100%" stopColor={color} stopOpacity="0" />
- </linearGradient>
- </defs>
- {/* Grid lines */}
- {[0, 0.25, 0.5, 0.75, 1].map((frac) => {
- const y = pad.top + frac * innerH;
- const val = max * (1 - frac);
- return (
- <g key={frac}>
- <line x1={pad.left} x2={pad.left + innerW} y1={y} y2={y} stroke="var(--color-border)" strokeWidth="1" strokeDasharray="4 4" />
- <text x={pad.left - 6} y={y + 4} textAnchor="end" fontSize="10" fill="var(--color-text-muted)">
- {val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toFixed(0)}
- </text>
- </g>
- );
- })}
- {/* X labels (show every nth) */}
- {points.map((p, i) => {
- const step = Math.ceil(points.length / 8);
- if (i % step !== 0 && i !== points.length - 1) return null;
- return (
- <text key={i} x={xs[i]} y={height - 8} textAnchor="middle" fontSize="10" fill="var(--color-text-muted)">
- {p.label}
- </text>
- );
- })}
- {/* Area */}
- <path d={areaD} fill={`url(#grad-${color.replace("#", "")})`} />
- {/* Line */}
- <path d={pathD} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
- {/* Points */}
- {xs.map((x, i) => (
- <circle key={i} cx={x} cy={ys[i]} r={3} fill={color} />
- ))}
- </svg>
- );
- };
-
+ // Used only for the "Export Excel" revenue rows — chart rendering itself
+ // reuses the same IncomeOverviewChart/FuelConsumptionChart components
+ // Dashboard uses, instead of a second hand-rolled SVG renderer.
  const incomePoints = income
  ? income.data.map((d) => ({
  label: "date" in d ? fmtDate(d.date) : (d as any).month,
  value: (d as any).amount ?? 0,
  }))
- : [];
-
- const fuelPoints = fuel
- ? fuel.data.map((d) => ({ label: fmtDate(d.date), value: d.litres }))
  : [];
 
  return (
@@ -231,12 +177,12 @@ export const ReportsPage: React.FC = () => {
 
  {/* Income chart */}
  <Card title="Income Overview">
- {renderLineChart(incomePoints, "var(--color-primary)")}
+ <IncomeOverviewChart data={income?.data || []} granularity={income?.granularity || "day"} />
  </Card>
 
  {/* Fuel chart */}
  <Card title="Fuel Consumption (Litres)">
- {renderLineChart(fuelPoints, "#f59e0b")}
+ <FuelConsumptionChart data={fuel?.data || []} />
  </Card>
 
  {/* Pending payments table */}
@@ -247,8 +193,8 @@ export const ReportsPage: React.FC = () => {
  <thead>
  <tr>
  <th>Invoice</th>
- <th>Customer</th>
- <th>Village</th>
+ <th>{customerTerm}</th>
+ <th>{villageTerm}</th>
  <th>Total</th>
  <th>Paid</th>
  <th>Balance</th>

@@ -449,6 +449,18 @@ export const api = {
     return res.json();
   },
 
+  async updateVillage(id: string, payload: { name: string }): Promise<VillageOption> {
+    const res = await fetchWithAuth(`/villages/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to rename village" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to rename village");
+    }
+    return res.json();
+  },
+
   async listMachines(): Promise<Machine[]> {
     const res = await fetchWithAuth("/machines");
     if (!res.ok) {

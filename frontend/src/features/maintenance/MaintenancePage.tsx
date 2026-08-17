@@ -10,6 +10,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import { Modal } from "../../components/ui/Modal";
+import { SearchableSelect } from "../../components/ui/SearchableSelect/SearchableSelect";
 import { getTerm } from "../../lib/terminology";
 
 function fmt(date: string) {
@@ -125,7 +126,7 @@ export const MaintenancePage: React.FC = () => {
  };
 
  const handleDelete = async (id: string) => {
- if (!confirm("Delete this maintenance record? This cannot be undone.")) return;
+ if (!window.confirm("Delete this maintenance record? This cannot be undone.")) return;
  setDeletingId(id);
  try {
  await api.deleteMaintenanceRecord(id);
@@ -156,22 +157,22 @@ export const MaintenancePage: React.FC = () => {
  <div className="sa-filter-form">
  <div className="sa-form-group">
  <label className="sa-form-label">{machineTerm}</label>
- <select
- className="sa-select"
+ <SearchableSelect
+ placeholder={`All ${getTerm("machine", true)}`}
  value={filterMachineId}
- onChange={(e) => setFilterMachineId(e.target.value)}
- >
- <option value="">All {getTerm("machine", true)}</option>
- {machines.map((m) => (
- <option key={m.id} value={m.id}>
- {m.registrationNumber} — {m.brand ?? ""} {m.model ?? ""}
- </option>
- ))}
- </select>
+ onChange={setFilterMachineId}
+ options={[
+ { value: "", label: `All ${getTerm("machine", true)}` },
+ ...machines.map((m) => ({
+ value: m.id,
+ label: `${m.registrationNumber} — ${m.brand ?? ""} ${m.model ?? ""}`,
+ })),
+ ]}
+ />
  </div>
  <div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
- <button className="sa-btn sa-btn-primary" onClick={handleFilterApply}>Apply</button>
- <button className="sa-btn sa-btn-secondary" onClick={() => { setFilterMachineId(""); setTimeout(loadData, 0); }}>Clear</button>
+ <Button variant="primary" onClick={handleFilterApply}>Apply</Button>
+ <Button variant="secondary" onClick={() => { setFilterMachineId(""); setTimeout(loadData, 0); }}>Clear</Button>
  </div>
  </div>
  </Card>
@@ -261,7 +262,7 @@ export const MaintenancePage: React.FC = () => {
  <td>
  <strong>{r.machine?.registrationNumber ?? "—"}</strong>
  {(r.machine?.brand || r.machine?.model) && (
- <div style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>
+ <div style={{ fontSize: "0.78rem", color: "var(--color-text-muted)" }}>
  {[r.machine.brand, r.machine.model].filter(Boolean).join(" ")}
  </div>
  )}
@@ -273,13 +274,14 @@ export const MaintenancePage: React.FC = () => {
  <td>{r.performedBy ?? "—"}</td>
  <td>
  {canManage && (
- <button
- className="sa-btn sa-btn-danger sa-btn-sm"
+ <Button
+ variant="danger"
+ size="sm"
  onClick={() => handleDelete(r.id)}
- disabled={deletingId === r.id}
+ isLoading={deletingId === r.id}
  >
- {deletingId === r.id ? "…" : "Delete"}
- </button>
+ Delete
+ </Button>
  )}
  </td>
  </tr>
@@ -297,19 +299,15 @@ export const MaintenancePage: React.FC = () => {
 
  <div className="sa-form-group">
  <label className="sa-form-label">{machineTerm} *</label>
- <select
- className="sa-select"
+ <SearchableSelect
+ placeholder={`Select ${machineTerm}`}
  value={form.machineId}
- onChange={(e) => setForm((f) => ({ ...f, machineId: e.target.value }))}
- required
- >
- <option value="">Select {machineTerm}</option>
- {machines.map((m) => (
- <option key={m.id} value={m.id}>
- {m.registrationNumber} — {m.brand ?? ""} {m.model ?? ""}
- </option>
- ))}
- </select>
+ onChange={(val) => setForm((f) => ({ ...f, machineId: val }))}
+ options={machines.map((m) => ({
+ value: m.id,
+ label: `${m.registrationNumber} — ${m.brand ?? ""} ${m.model ?? ""}`,
+ }))}
+ />
  </div>
 
  <div className="sa-form-group">

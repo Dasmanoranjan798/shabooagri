@@ -11,6 +11,7 @@ import { getTerm } from "../../lib/terminology";
 import { Modal } from "../../components/ui/Modal";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
+import { SearchableSelect } from "../../components/ui/SearchableSelect/SearchableSelect";
 
 interface DriverFormModalProps {
   isOpen: boolean;
@@ -137,7 +138,7 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
           const newEmployee = await api.createEmployee({
             name: name.trim(),
             phone: phone.trim() || undefined,
-            roleTitle: roleTitle.trim() || "Driver",
+            roleTitle: roleTitle.trim() || driverTerm,
             compensationType,
             hourlyRate: compensationType === "HOURLY" ? parseFloat(hourlyRate) || 0 : undefined,
             monthlySalary: compensationType === "MONTHLY" ? parseFloat(monthlySalary) || 0 : undefined,
@@ -166,7 +167,7 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
           try {
             const targetName = isCreatingNewEmployee
               ? name.trim()
-              : employees.find((e) => e.id === targetEmployeeId)?.name || "Driver";
+              : employees.find((e) => e.id === targetEmployeeId)?.name || driverTerm;
             await api.createInvite({
               fullName: targetName,
               email: email.trim() || undefined,
@@ -220,19 +221,15 @@ export const DriverFormModal: React.FC<DriverFormModalProps> = ({
         {!driverToEdit && !isCreatingNewEmployee && (
           <div className="sa-input-group" style={{ marginBottom: "16px" }}>
             <label className="sa-input-label">Select Employee *</label>
-            <select
-              className="sa-input"
+            <SearchableSelect
+              placeholder="-- Select Employee --"
               value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-              required
-            >
-              <option value="">-- Select Employee --</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.name} {emp.roleTitle ? `(${emp.roleTitle})` : ""}
-                </option>
-              ))}
-            </select>
+              onChange={setEmployeeId}
+              options={employees.map((emp) => ({
+                value: emp.id,
+                label: `${emp.name}${emp.roleTitle ? ` (${emp.roleTitle})` : ""}`,
+              }))}
+            />
           </div>
         )}
 

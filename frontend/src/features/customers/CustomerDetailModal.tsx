@@ -56,7 +56,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
  <div>
  <h3>{customer.name}</h3>
  <span className="sa-field-sub">
- {villageTerm}: {customer.village?.name || "Village"} • Phone: {customer.phone || "No phone listed"}
+ {villageTerm}: {customer.village?.name || villageTerm} • Phone: {customer.phone || "No phone listed"}
  </span>
  </div>
  </div>

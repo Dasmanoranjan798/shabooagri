@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Copy, CheckCircle2 } from "lucide-react";
+import { Copy, CheckCircle2, Pencil } from "lucide-react";
 import type { CreateCustomerPayload, Customer } from "../../types/customer";
 import type { VillageOption } from "../../types/booking";
 import type { CreateInviteResponse } from "../../types/team";
@@ -8,6 +8,7 @@ import { getTerm } from "../../lib/terminology";
 import { Modal } from "../../components/ui/Modal";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
+import { SearchableSelect } from "../../components/ui/SearchableSelect/SearchableSelect";
 
 interface CustomerFormModalProps {
  isOpen: boolean;
@@ -65,6 +66,37 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
      setError(err.message || `Failed to create new ${villageTerm}`);
    } finally {
      setIsCreatingVillage(false);
+   }
+ };
+
+ // Rename inline state — fixes a mis-typed village name without needing a
+ // dedicated Villages management screen (none exists; villages are only
+ // ever created inline from here and the Booking form).
+ const [isEditingVillage, setIsEditingVillage] = useState<boolean>(false);
+ const [editVillageName, setEditVillageName] = useState<string>("");
+ const [isSavingVillageEdit, setIsSavingVillageEdit] = useState<boolean>(false);
+
+ const handleStartEditVillage = () => {
+   const current = villages.find((v) => v.id === villageId);
+   setEditVillageName(current?.name || "");
+   setIsEditingVillage(true);
+ };
+
+ const handleSaveVillageEdit = async () => {
+   if (!editVillageName.trim()) {
+     setError(`Please enter a name for the ${villageTerm.toLowerCase()}`);
+     return;
+   }
+   setIsSavingVillageEdit(true);
+   setError(null);
+   try {
+     const updated = await api.updateVillage(villageId, { name: editVillageName.trim() });
+     setVillages((prev) => prev.map((v) => (v.id === updated.id ? updated : v)));
+     setIsEditingVillage(false);
+   } catch (err: any) {
+     setError(err.message || `Failed to rename ${villageTerm.toLowerCase()}`);
+   } finally {
+     setIsSavingVillageEdit(false);
    }
  };
 
@@ -341,20 +373,49 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
             Cancel
           </Button>
         </div>
+      ) : isEditingVillage ? (
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+          <Input
+            placeholder={`${villageTerm} name`}
+            value={editVillageName}
+            onChange={(e) => setEditVillageName(e.target.value)}
+            style={{ flex: 1 }}
+            autoFocus
+          />
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={handleSaveVillageEdit}
+            isLoading={isSavingVillageEdit}
+          >
+            Save
+          </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={() => setIsEditingVillage(false)}>
+            Cancel
+          </Button>
+        </div>
       ) : (
-        <select
-          className="sa-input"
-          value={villageId}
-          onChange={(e) => setVillageId(e.target.value)}
-          required
-        >
-          <option value="">-- Select {villageTerm} --</option>
-          {villages.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.name}
-            </option>
-          ))}
-        </select>
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+          <div style={{ flex: 1 }}>
+            <SearchableSelect
+              placeholder={`-- Select ${villageTerm} --`}
+              value={villageId}
+              onChange={setVillageId}
+              options={villages.map((v) => ({ value: v.id, label: v.name }))}
+            />
+          </div>
+          {villageId && (
+            <button
+              type="button"
+              className="sa-icon-action"
+              title={`Rename this ${villageTerm.toLowerCase()}`}
+              onClick={handleStartEditVillage}
+            >
+              <Pencil size={15} />
+            </button>
+          )}
+        </div>
       )}
     </div>
 

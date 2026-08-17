@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
+import "./placeholder.css";
 
 interface PlaceholderPageProps {
   title: string;

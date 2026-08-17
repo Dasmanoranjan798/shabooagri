@@ -4,6 +4,8 @@ import type { Job } from "../../types/job";
 import { api } from "../../lib/api";
 import { Spinner } from "../../components/ui/Spinner";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
+import { getTerm } from "../../lib/terminology";
 
 function fmtDate(d: string) {
  return new Date(d.slice(0, 10) + "T00:00:00").toLocaleDateString("en-IN", {
@@ -51,6 +53,7 @@ function fmtDuration(sec: number) {
 export const DriverJobDetailPage: React.FC = () => {
  const { id } = useParams<{ id: string }>();
  const navigate = useNavigate();
+ const machineTerm = getTerm("machine");
 
  const [job, setJob] = useState<Job | null>(null);
  const [isLoading, setIsLoading] = useState(true);
@@ -97,7 +100,7 @@ export const DriverJobDetailPage: React.FC = () => {
  <div className="sa-driver-page">
  <div className="sa-error-state">
  <p> {error ?? "Job not found"}</p>
- <button className="sa-btn sa-btn-secondary" onClick={() => navigate("/driver/jobs")}>← Back</button>
+ <Button variant="secondary" onClick={() => navigate("/driver/jobs")}>← Back</Button>
  </div>
  </div>
  );
@@ -136,7 +139,7 @@ export const DriverJobDetailPage: React.FC = () => {
  <div className="sa-driver-detail-grid">
  {[
  { label: "Date", value: fmtDate(job.booking.scheduledDate) },
- { label: "Machine", value: `${job.machine.registrationNumber}${job.machine.brand ? ` — ${job.machine.brand}` : ""}` },
+ { label: machineTerm, value: `${job.machine.registrationNumber}${job.machine.brand ? ` — ${job.machine.brand}` : ""}` },
  { label: "Start Time", value: fmtTime(job.startTime) },
  { label: "End Time", value: fmtTime(job.endTime) },
  { label: "Acres Completed", value: job.completedAcres != null ? `${job.completedAcres} ac` : "—" },

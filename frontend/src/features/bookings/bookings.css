@@ -83,7 +83,7 @@
 }
 
 .sa-tab-count {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   padding: 1px 6px;
   border-radius: var(--radius-full);
   background-color: var(--color-border-light);
@@ -115,7 +115,7 @@
 }
 
 .sa-form-label {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -157,7 +157,7 @@
 }
 
 .sa-detail-label {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   color: var(--color-text-muted);
   font-weight: 600;
   text-transform: uppercase;
@@ -194,4 +194,88 @@
   .sa-form-grid-2, .sa-detail-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Page wrapper — mirrors .sa-jobs-page's spacing between header, toolbar,
+   and table/card-list sections. */
+.sa-bookings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Status transition action bar (Accept/On the way/Complete/Cancel) at the
+   top of the booking detail modal. */
+.sa-status-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background-color: var(--color-primary-light);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+}
+
+.sa-action-bar-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-primary-dark);
+}
+
+.sa-action-bar-buttons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sa-booking-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.sa-assign-section, .sa-attachments-section {
+  border-top: 1px solid var(--color-border-light);
+  padding-top: 1rem;
+}
+
+.sa-assign-section h4, .sa-attachments-section h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 0.75rem;
+}
+
+.sa-inline-assign {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sa-upload-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sa-upload-form .sa-input {
+  flex: 1;
+}
+
+.sa-estimate-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.sa-estimate-banner strong {
+  font-size: 1.05rem;
 }

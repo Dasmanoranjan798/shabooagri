@@ -1,0 +1,67 @@
+/* SearchableSelect — a typeahead dropdown for pickers with many options
+   (§11 responsive spec: dropdowns with >~8 options must be searchable,
+   not a plain <select>). Reuses .sa-input for the field itself so it's
+   visually identical to every other text input in the app. */
+
+.sa-searchable-select {
+  position: relative;
+  width: 100%;
+}
+
+.sa-searchable-select-caret {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.sa-searchable-select input.sa-input {
+  padding-right: 2.25rem;
+  cursor: text;
+}
+
+.sa-searchable-select input.sa-input:disabled {
+  cursor: not-allowed;
+  background-color: var(--color-bg);
+  color: var(--color-text-muted);
+}
+
+.sa-searchable-select-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 20;
+  padding: 4px;
+}
+
+.sa-searchable-select-option {
+  padding: 0.6rem 0.75rem;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.sa-searchable-select-option.is-highlighted {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.sa-searchable-select-option.is-selected {
+  font-weight: 700;
+}
+
+.sa-searchable-select-empty {
+  padding: 0.6rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}

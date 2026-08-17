@@ -54,6 +54,16 @@
   margin-top: 2px;
 }
 
+.sa-login-mode-selector {
+  width: 100%;
+}
+
+.sa-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .sa-login-footer {
   margin-top: 1.5rem;
   padding-top: 1rem;

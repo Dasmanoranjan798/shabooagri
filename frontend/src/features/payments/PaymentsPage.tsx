@@ -319,8 +319,8 @@ export const PaymentsPage: React.FC = () => {
  >
  <td className="sa-td-bold"> {inv.invoiceNumber}</td>
  <td>
- <div className="sa-cell-title">{inv.customer?.name || "Customer"}</div>
- <div className="sa-cell-sub">{inv.customer?.village?.name || "Village"}</div>
+ <div className="sa-cell-title">{inv.customer?.name || customerTerm}</div>
+ <div className="sa-cell-sub">{inv.customer?.village?.name || villageTerm}</div>
  </td>
  <td>₹{Number(inv.totalAmount).toLocaleString("en-IN")}</td>
  <td className="sa-text-success">₹{Number(inv.paidAmount).toLocaleString("en-IN")}</td>
@@ -448,7 +448,7 @@ export const PaymentsPage: React.FC = () => {
  {advances.map((a) => (
  <tr key={a.id}>
  <td>
- <div className="sa-cell-title">{a.customer?.name || "Customer"}</div>
+ <div className="sa-cell-title">{a.customer?.name || customerTerm}</div>
  <div className="sa-cell-sub">{a.customer?.village?.name || ""}</div>
  </td>
  <td>₹{Number(a.amount).toLocaleString("en-IN")}</td>

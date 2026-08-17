@@ -2,8 +2,11 @@ import React from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { ChangePasswordCard } from "../../components/ChangePasswordCard";
+import { Button } from "../../components/ui/Button";
+import { getTerm } from "../../lib/terminology";
 
 export const FarmerProfilePage: React.FC = () => {
+ const customerTerm = getTerm("customer");
  const { user, logout } = useAuth();
  const navigate = useNavigate();
 
@@ -20,8 +23,8 @@ export const FarmerProfilePage: React.FC = () => {
  <div className="sa-portal-profile-avatar">
  {user?.fullName?.[0]?.toUpperCase() ?? "F"}
  </div>
- <div className="sa-portal-profile-name">{user?.fullName ?? "Customer"}</div>
- <div className="sa-portal-profile-role">Customer / Farmer</div>
+ <div className="sa-portal-profile-name">{user?.fullName ?? customerTerm}</div>
+ <div className="sa-portal-profile-role">{customerTerm}</div>
  </div>
 
  <div className="sa-portal-detail-grid">
@@ -42,13 +45,13 @@ export const FarmerProfilePage: React.FC = () => {
  <ChangePasswordCard />
  </div>
 
- <button
- className="sa-portal-action-btn sa-portal-action-btn--signout"
+ <Button
+ variant="secondary"
  onClick={handleLogout}
- style={{ marginTop: "24px" }}
+ style={{ marginTop: "24px", width: "100%" }}
  >
  ⎋ Sign Out
- </button>
+ </Button>
  </div>
  );
 };

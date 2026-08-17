@@ -6,6 +6,8 @@ import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { Spinner } from "../../components/ui/Spinner";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
+import { getTerm } from "../../lib/terminology";
 
 function fmtDate(d: string) {
  return new Date(d.slice(0, 10) + "T00:00:00").toLocaleDateString("en-IN", {
@@ -72,6 +74,7 @@ const TodayJobCard: React.FC<JobCardProps> = ({ job, onAction }) => {
  finally { setActing(false); }
  };
 
+ const machineTerm = getTerm("machine");
  const isToday = job.booking.scheduledDate === new Date().toISOString().slice(0, 10);
  const customer = job.booking.customer?.name ?? "—";
  const village = job.booking.customer?.village?.name ?? job.booking.village?.name ?? "—";
@@ -90,7 +93,7 @@ const TodayJobCard: React.FC<JobCardProps> = ({ job, onAction }) => {
 
  <div className="sa-driver-job-meta-grid">
  <div className="sa-driver-job-meta-item">
- <div className="sa-driver-job-meta-label">Machine</div>
+ <div className="sa-driver-job-meta-label">{machineTerm}</div>
  <div className="sa-driver-job-meta-value">
  {job.machine.registrationNumber}
  {(job.machine.brand || job.machine.model) && (
@@ -203,6 +206,7 @@ const TodayJobCard: React.FC<JobCardProps> = ({ job, onAction }) => {
 };
 
 export const DriverHomePage: React.FC = () => {
+ const driverTerm = getTerm("driver");
  const { user } = useAuth();
 
  const [jobs, setJobs] = useState<Job[]>([]);
@@ -239,17 +243,17 @@ export const DriverHomePage: React.FC = () => {
  <div className="sa-driver-greeting">
  <div>
  <div className="sa-driver-greeting-name">
- Hello, {user?.fullName?.split(" ")[0] ?? "Driver"} 
+ Hello, {user?.fullName?.split(" ")[0] ?? driverTerm} 
  </div>
  <div className="sa-driver-greeting-date">{dateStr}</div>
  </div>
- <div className="sa-driver-greeting-badge">Driver</div>
+ <div className="sa-driver-greeting-badge">{driverTerm}</div>
  </div>
 
  {isLoading ? (
  <div className="sa-loading-state"><Spinner /><span>Loading your jobs…</span></div>
  ) : error ? (
- <div className="sa-error-state"><p> {error}</p><button className="sa-btn sa-btn-secondary" onClick={load}>Retry</button></div>
+ <div className="sa-error-state"><p> {error}</p><Button variant="secondary" onClick={load}>Retry</Button></div>
  ) : (
  <>
  {/* Today's Job */}

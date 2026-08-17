@@ -5,6 +5,7 @@ import { getTerm } from "../../lib/terminology";
 import { Modal } from "../../components/ui/Modal";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
+import { SearchableSelect } from "../../components/ui/SearchableSelect/SearchableSelect";
 
 interface NewInvoiceModalProps {
   isOpen: boolean;
@@ -83,19 +84,15 @@ export const NewInvoiceModal: React.FC<NewInvoiceModalProps> = ({ isOpen, onClos
 
         <div className="sa-input-group">
           <label className="sa-input-label">{customerTerm} *</label>
-          <select
-            className="sa-input"
+          <SearchableSelect
+            placeholder={`-- Select ${customerTerm} --`}
             value={customerId}
-            onChange={(e) => setCustomerId(e.target.value)}
-            required
-          >
-            <option value="">-- Select {customerTerm} --</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} {c.village ? `(${c.village.name})` : ""}
-              </option>
-            ))}
-          </select>
+            onChange={setCustomerId}
+            options={customers.map((c) => ({
+              value: c.id,
+              label: `${c.name}${c.village ? ` (${c.village.name})` : ""}`,
+            }))}
+          />
         </div>
 
         <Input

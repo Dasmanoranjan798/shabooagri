@@ -5,6 +5,7 @@ import { getTerm } from "../../lib/terminology";
 import { Modal } from "../../components/ui/Modal";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
+import { SearchableSelect } from "../../components/ui/SearchableSelect/SearchableSelect";
 
 interface ManualJobEntryModalProps {
  isOpen: boolean;
@@ -212,37 +213,26 @@ export const ManualJobEntryModal: React.FC<ManualJobEntryModalProps> = ({
  </Button>
  </div>
  ) : (
- <select
- className="sa-select"
+ <SearchableSelect
+ placeholder={`-- Select ${customerTerm} --`}
  value={customerId}
- onChange={(e) => setCustomerId(e.target.value)}
- required
- >
- <option value="">Select {customerTerm}…</option>
- {customers.map((c) => (
- <option key={c.id} value={c.id}>
- {c.name} {c.phone ? `(${c.phone})` : ""}
- </option>
- ))}
- </select>
+ onChange={setCustomerId}
+ options={customers.map((c) => ({
+ value: c.id,
+ label: `${c.name}${c.phone ? ` (${c.phone})` : ""}`,
+ }))}
+ />
  )}
  </div>
 
  <div className="sa-form-group" style={{ flex: 1 }}>
  <label className="sa-form-label">{villageTerm} *</label>
- <select
- className="sa-select"
+ <SearchableSelect
+ placeholder={`-- Select ${villageTerm} --`}
  value={villageId}
- onChange={(e) => setVillageId(e.target.value)}
- required
- >
- <option value="">Select {villageTerm}…</option>
- {villages.map((v) => (
- <option key={v.id} value={v.id}>
- {v.name}
- </option>
- ))}
- </select>
+ onChange={setVillageId}
+ options={villages.map((v) => ({ value: v.id, label: v.name }))}
+ />
  </div>
  </div>
 
@@ -250,36 +240,25 @@ export const ManualJobEntryModal: React.FC<ManualJobEntryModalProps> = ({
  <div className="sa-form-row">
  <div className="sa-form-group" style={{ flex: 1 }}>
  <label className="sa-form-label">{machineTerm} *</label>
- <select
- className="sa-select"
+ <SearchableSelect
+ placeholder={`-- Select ${machineTerm} --`}
  value={machineId}
- onChange={(e) => setMachineId(e.target.value)}
- required
- >
- <option value="">Select {machineTerm}…</option>
- {machines.map((m) => (
- <option key={m.id} value={m.id}>
- {m.registrationNumber} ({m.model || m.brand || "Equipment"})
- </option>
- ))}
- </select>
+ onChange={setMachineId}
+ options={machines.map((m) => ({
+ value: m.id,
+ label: `${m.registrationNumber} (${m.model || m.brand || "Equipment"})`,
+ }))}
+ />
  </div>
 
  <div className="sa-form-group" style={{ flex: 1 }}>
  <label className="sa-form-label">{driverTerm} *</label>
- <select
- className="sa-select"
+ <SearchableSelect
+ placeholder={`-- Select ${driverTerm} --`}
  value={driverId}
- onChange={(e) => setDriverId(e.target.value)}
- required
- >
- <option value="">Select {driverTerm}…</option>
- {drivers.map((d) => (
- <option key={d.id} value={d.id}>
- {d.employee?.name || "Operator"}
- </option>
- ))}
- </select>
+ onChange={setDriverId}
+ options={drivers.map((d) => ({ value: d.id, label: d.employee?.name || "Operator" }))}
+ />
  </div>
  </div>
 

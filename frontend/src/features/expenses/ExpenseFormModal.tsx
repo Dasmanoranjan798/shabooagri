@@ -6,6 +6,7 @@ import { getTerm } from "../../lib/terminology";
 import { Modal } from "../../components/ui/Modal";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
+import { SearchableSelect } from "../../components/ui/SearchableSelect/SearchableSelect";
 
 interface ExpenseFormModalProps {
  isOpen: boolean;
@@ -165,18 +166,18 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
  <div className="sa-form-grid-2">
  <div className="sa-input-group">
  <label className="sa-input-label">Linked {machineTerm} (Optional)</label>
- <select
- className="sa-input"
+ <SearchableSelect
+ placeholder="-- General Operational Expense --"
  value={machineId}
- onChange={(e) => setMachineId(e.target.value)}
- >
- <option value="">-- General Operational Expense --</option>
- {machines.map((m) => (
- <option key={m.id} value={m.id}>
- {m.registrationNumber} ({m.brand || "Machine"})
- </option>
- ))}
- </select>
+ onChange={setMachineId}
+ options={[
+ { value: "", label: "-- General Operational Expense --" },
+ ...machines.map((m) => ({
+ value: m.id,
+ label: `${m.registrationNumber} (${m.brand || "Machine"})`,
+ })),
+ ]}
+ />
  </div>
 
  <Input

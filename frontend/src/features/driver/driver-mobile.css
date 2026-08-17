@@ -6,7 +6,7 @@
 }
 
 .sa-driver-greeting {
-  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
+  background: linear-gradient(135deg, var(--color-purple-dark) 0%, var(--color-purple) 100%);
   color: white;
   padding: 1rem 1.25rem;
   border-radius: var(--radius-lg);
@@ -31,7 +31,7 @@
   background: rgba(255, 255, 255, 0.2);
   padding: 4px 10px;
   border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -51,7 +51,7 @@
 }
 
 .sa-driver-kpi-label {
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   color: var(--color-text-muted);
   font-weight: 600;
 }
@@ -123,7 +123,7 @@
 }
 
 .sa-driver-job-meta-label {
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   color: var(--color-text-muted);
   font-weight: 600;
   text-transform: uppercase;
@@ -225,4 +225,169 @@
   color: var(--color-text-muted);
   font-weight: 600;
   margin-top: 2px;
+}
+
+/* Job Detail page: back button + status header */
+.sa-driver-back-btn {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.25rem 0;
+}
+
+.sa-driver-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+/* Empty state card (no active job / no jobs in filtered view) */
+.sa-driver-empty-card {
+  background-color: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+/* Jobs list filter tabs */
+.sa-driver-filter-row {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  margin-bottom: 0.75rem;
+}
+
+.sa-driver-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sa-driver-filter-btn.is-active {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.sa-driver-filter-count {
+  font-size: 0.78rem;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.sa-driver-filter-btn.is-active .sa-driver-filter-count {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Job completed / error banners */
+.sa-driver-job-done {
+  text-align: center;
+  padding: 0.85rem;
+  border-radius: var(--radius-md);
+  background-color: #f0fdf4;
+  color: #15803d;
+  font-weight: 700;
+}
+
+.sa-driver-job-err {
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-md);
+  background-color: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.sa-driver-job-meta-sub {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  text-transform: none;
+  margin-top: 1px;
+}
+
+/* Inline running-time value within the meta grid (Job card, not the big
+   standalone timer on the detail page). */
+.sa-driver-timer {
+  color: #16a34a;
+}
+
+.sa-driver-timer-label {
+  font-size: 0.78rem;
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Jobs list row (DriverJobsPage) — a compact card rendered as a Link */
+.sa-driver-job-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 0.85rem 1rem;
+  text-decoration: none;
+}
+
+.sa-driver-job-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sa-driver-job-row-customer {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.sa-driver-job-row-sub {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.sa-driver-job-row-machine {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+/* Field notes card (Job Detail page) */
+.sa-driver-notes-card {
+  background-color: var(--color-bg);
+  border-radius: var(--radius-md);
+  padding: 0.85rem;
+}
+
+.sa-driver-notes-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.sa-driver-notes-text {
+  font-size: 0.88rem;
+  color: var(--color-text);
+  line-height: 1.5;
 }

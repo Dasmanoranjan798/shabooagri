@@ -3,6 +3,8 @@ import type { Invoice, InvoiceStatus } from "../../types/payment";
 import { api } from "../../lib/api";
 import { Spinner } from "../../components/ui/Spinner";
 import { Badge } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
+import { getTerm } from "../../lib/terminology";
 
 function fmtCurrency(val: number) {
  return `₹${Number(val).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
@@ -38,6 +40,7 @@ const STATUS_FILTERS: { label: string; value: InvoiceStatus | "ALL" }[] = [
 ];
 
 export const FarmerInvoicesPage: React.FC = () => {
+ const bookingTerm = getTerm("booking");
  const [invoices, setInvoices] = useState<Invoice[]>([]);
  const [isLoading, setIsLoading] = useState(true);
  const [error, setError] = useState<string | null>(null);
@@ -111,7 +114,7 @@ export const FarmerInvoicesPage: React.FC = () => {
  {isLoading ? (
  <div className="sa-loading-state"><Spinner /><span>Loading…</span></div>
  ) : error ? (
- <div className="sa-error-state"><p> {error}</p><button className="sa-btn sa-btn-secondary" onClick={load}>Retry</button></div>
+ <div className="sa-error-state"><p> {error}</p><Button variant="secondary" onClick={load}>Retry</Button></div>
  ) : sorted.length === 0 ? (
  <div className="sa-portal-empty-card">
  <div style={{ fontSize: "2.5rem", marginBottom: "8px" }}></div>
@@ -149,7 +152,7 @@ export const FarmerInvoicesPage: React.FC = () => {
  { label: "Total Amount", value: fmtCurrency(inv.totalAmount) },
  { label: "Paid", value: fmtCurrency(inv.paidAmount) },
  { label: "Balance", value: fmtCurrency(inv.balanceAmount) },
- { label: "Booking", value: inv.booking?.bookingNumber ?? "—" },
+ { label: bookingTerm, value: inv.booking?.bookingNumber ?? "—" },
  ...(inv.dueDate ? [{ label: "Due Date", value: fmtDate(inv.dueDate) }] : []),
  ].map((item) => (
  <div key={item.label} className="sa-portal-detail-item">

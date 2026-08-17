@@ -3,6 +3,7 @@ import type { Booking, BookingStatus } from "../../types/booking";
 import { api } from "../../lib/api";
 import { Spinner } from "../../components/ui/Spinner";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
 import { getTerm } from "../../lib/terminology";
 
 function fmtDate(d: string) {
@@ -25,6 +26,8 @@ const STATUS_FILTERS: { label: string; value: BookingStatus | "ALL" }[] = [
 
 export const FarmerBookingsPage: React.FC = () => {
  const bookingTerm = getTerm("booking", true);
+ const villageTerm = getTerm("village");
+ const machineTerm = getTerm("machine");
  const [bookings, setBookings] = useState<Booking[]>([]);
  const [isLoading, setIsLoading] = useState(true);
  const [error, setError] = useState<string | null>(null);
@@ -70,7 +73,7 @@ export const FarmerBookingsPage: React.FC = () => {
  {isLoading ? (
  <div className="sa-loading-state"><Spinner /><span>Loading…</span></div>
  ) : error ? (
- <div className="sa-error-state"><p> {error}</p><button className="sa-btn sa-btn-secondary" onClick={load}>Retry</button></div>
+ <div className="sa-error-state"><p> {error}</p><Button variant="secondary" onClick={load}>Retry</Button></div>
  ) : sorted.length === 0 ? (
  <div className="sa-portal-empty-card">
  <div style={{ fontSize: "2.5rem", marginBottom: "8px" }}></div>
@@ -107,8 +110,8 @@ export const FarmerBookingsPage: React.FC = () => {
  <div className="sa-portal-booking-detail">
  <div className="sa-portal-detail-grid">
  {[
- { label: "Village", value: b.village?.name ?? b.customer?.village?.name ?? "—" },
- { label: "Machine", value: b.machine ? `${b.machine.registrationNumber}${b.machine.brand ? ` — ${b.machine.brand}` : ""}` : "Not assigned" },
+ { label: villageTerm, value: b.village?.name ?? b.customer?.village?.name ?? "—" },
+ { label: machineTerm, value: b.machine ? `${b.machine.registrationNumber}${b.machine.brand ? ` — ${b.machine.brand}` : ""}` : "Not assigned" },
  { label: "Pricing", value: `${b.pricingMethod.label}${b.pricingMethod.unit ? ` / ${b.pricingMethod.unit}` : ""}` },
  { label: "Rate", value: fmtCurrency(b.rate) },
  { label: "Est. Amount", value: fmtCurrency(b.estimatedAmount) },

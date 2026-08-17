@@ -442,7 +442,7 @@ export const SettingsPage: React.FC = () => {
                         />
                         GST Registered Business
                       </label>
-                      <p style={{ fontSize: "11px", color: "var(--color-text-muted)", marginTop: "2px" }}>
+                      <p style={{ fontSize: "0.78rem", color: "var(--color-text-muted)", marginTop: "2px" }}>
                         Note: GST is an optional layer and is NOT forced on every farmer booking.
                       </p>
                     </div>
@@ -515,7 +515,7 @@ export const SettingsPage: React.FC = () => {
                   { label: "Created", value: profile ? new Date(profile.createdAt).toLocaleDateString("en-IN") : "—" },
                 ].map((item) => (
                   <div key={item.label} style={{ background: "var(--color-surface-secondary)", borderRadius: "8px", padding: "10px 14px" }}>
-                    <div style={{ fontSize: "12px", color: "var(--color-text-muted)", marginBottom: "4px" }}>{item.label}</div>
+                    <div style={{ fontSize: "0.78rem", color: "var(--color-text-muted)", marginBottom: "4px" }}>{item.label}</div>
                     <div style={{ fontFamily: "monospace", wordBreak: "break-all", display: "flex", alignItems: "center", gap: "6px" }}>
                       {item.icon} {item.value}
                     </div>
@@ -551,7 +551,7 @@ export const SettingsPage: React.FC = () => {
                     placeholder="e.g. INV"
                     maxLength={10}
                   />
-                  <p style={{ fontSize: "12px", color: "var(--color-text-muted)", marginTop: "4px" }}>
+                  <p style={{ fontSize: "0.78rem", color: "var(--color-text-muted)", marginTop: "4px" }}>
                     Invoice numbers are auto-generated as <strong>{profileForm.invoicePrefix || "INV"}-000001</strong>, <strong>{profileForm.invoicePrefix || "INV"}-000002</strong>, etc.
                   </p>
                 </div>
@@ -698,7 +698,7 @@ export const SettingsPage: React.FC = () => {
                       max={10000}
                       placeholder="50"
                     />
-                    <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginTop: "4px", display: "block" }}>
+                    <span style={{ fontSize: "0.78rem", color: "var(--color-text-muted)", marginTop: "4px", display: "block" }}>
                       Trigger warning when remaining service hours countdown is within this threshold (default 50h).
                     </span>
                   </div>
@@ -715,7 +715,7 @@ export const SettingsPage: React.FC = () => {
                       max={365}
                       placeholder="30"
                     />
-                    <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginTop: "4px", display: "block" }}>
+                    <span style={{ fontSize: "0.78rem", color: "var(--color-text-muted)", marginTop: "4px", display: "block" }}>
                       Trigger warning when machine insurance/registration expires within this many days (default 30 days).
                     </span>
                   </div>
@@ -732,7 +732,7 @@ export const SettingsPage: React.FC = () => {
                       max={365}
                       placeholder="30"
                     />
-                    <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginTop: "4px", display: "block" }}>
+                    <span style={{ fontSize: "0.78rem", color: "var(--color-text-muted)", marginTop: "4px", display: "block" }}>
                       Trigger warning when operator license expires within this many days (default 30 days).
                     </span>
                   </div>

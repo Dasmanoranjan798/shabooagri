@@ -31,7 +31,7 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
  if (!machine) return null;
 
  const driverName = machine.assignedDriver?.employee?.name || "Unassigned";
- const typeName = machine.machineType?.name || "Equipment";
+ const typeName = machine.machineType?.name || machineTerm;
 
  const serviceWarning = getMachineServiceWarning(machine, company);
  const insuranceWarning = getMachineInsuranceWarning(machine, company);

@@ -11,6 +11,12 @@ interface ModalProps {
   maxWidth?: string;
 }
 
+// Tracks every currently-open Modal — some screens (e.g. Jobs' quick
+// actions) open a small sub-modal on top of a larger one that's still
+// open. Only the most recently opened modal should respond to Escape, and
+// the body scroll lock should only lift once none are left open.
+let openModals: Array<() => void> = [];
+
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
@@ -20,15 +26,23 @@ export const Modal: React.FC<ModalProps> = ({
   maxWidth = "550px",
 }) => {
   useEffect(() => {
+    if (!isOpen) return;
+
+    openModals.push(onClose);
+    document.body.style.overflow = "hidden";
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && openModals[openModals.length - 1] === onClose) {
+        onClose();
+      }
     };
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-      window.addEventListener("keydown", handleKeyDown);
-    }
+    window.addEventListener("keydown", handleKeyDown);
+
     return () => {
-      document.body.style.overflow = "";
+      openModals = openModals.filter((fn) => fn !== onClose);
+      if (openModals.length === 0) {
+        document.body.style.overflow = "";
+      }
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isOpen, onClose]);

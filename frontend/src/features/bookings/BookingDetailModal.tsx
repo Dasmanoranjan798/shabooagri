@@ -7,6 +7,7 @@ import { getTerm } from "../../lib/terminology";
 import { Modal } from "../../components/ui/Modal";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { SearchableSelect } from "../../components/ui/SearchableSelect/SearchableSelect";
 
 interface BookingDetailModalProps {
   booking: Booking | null;
@@ -22,6 +23,7 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
   onUpdate,
 }) => {
   const customerTerm = getTerm("customer");
+  const villageTerm = getTerm("village");
   const machineTerm = getTerm("machine");
   const driverTerm = getTerm("driver");
 
@@ -195,7 +197,7 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
 
           <div className="sa-detail-item">
             <span className="sa-detail-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-              <MapPin size={14} /> Village
+              <MapPin size={14} /> {villageTerm}
             </span>
             <span className="sa-detail-val">{booking.village.name}</span>
           </div>
@@ -242,18 +244,18 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
             <div className="sa-input-group">
               <label className="sa-input-label">{machineTerm}</label>
               <div className="sa-inline-assign">
-                <select
-                  className="sa-input"
+                <SearchableSelect
+                  placeholder="-- Unassigned --"
                   value={selectedMachineId}
-                  onChange={(e) => setSelectedMachineId(e.target.value)}
-                >
-                  <option value="">-- Unassigned --</option>
-                  {machines.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.registrationNumber} {m.brand ? `(${m.brand})` : ""}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSelectedMachineId}
+                  options={[
+                    { value: "", label: "-- Unassigned --" },
+                    ...machines.map((m) => ({
+                      value: m.id,
+                      label: `${m.registrationNumber}${m.brand ? ` (${m.brand})` : ""}`,
+                    })),
+                  ]}
+                />
                 <Button
                   variant="secondary"
                   size="sm"
@@ -268,18 +270,15 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
             <div className="sa-input-group">
               <label className="sa-input-label">{driverTerm}</label>
               <div className="sa-inline-assign">
-                <select
-                  className="sa-input"
+                <SearchableSelect
+                  placeholder="-- Unassigned --"
                   value={selectedDriverId}
-                  onChange={(e) => setSelectedDriverId(e.target.value)}
-                >
-                  <option value="">-- Unassigned --</option>
-                  {drivers.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.employee.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSelectedDriverId}
+                  options={[
+                    { value: "", label: "-- Unassigned --" },
+                    ...drivers.map((d) => ({ value: d.id, label: d.employee.name })),
+                  ]}
+                />
                 <Button
                   variant="secondary"
                   size="sm"

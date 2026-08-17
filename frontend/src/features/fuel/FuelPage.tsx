@@ -9,6 +9,7 @@ import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
+import { SearchableSelect } from "../../components/ui/SearchableSelect/SearchableSelect";
 import { getTerm } from "../../lib/terminology";
 
 function fmt(date: string) {
@@ -108,18 +109,18 @@ export const FuelPage: React.FC = () => {
  <form onSubmit={handleFilter} className="sa-filter-form">
  <div className="sa-form-group">
  <label className="sa-form-label">{machineTerm}</label>
- <select
- className="sa-select"
+ <SearchableSelect
+ placeholder={`All ${getTerm("machine", true)}`}
  value={filterMachineId}
- onChange={(e) => setFilterMachineId(e.target.value)}
- >
- <option value="">All {getTerm("machine", true)}</option>
- {machines.map((m) => (
- <option key={m.id} value={m.id}>
- {m.registrationNumber} — {m.brand ?? ""} {m.model ?? ""}
- </option>
- ))}
- </select>
+ onChange={setFilterMachineId}
+ options={[
+ { value: "", label: `All ${getTerm("machine", true)}` },
+ ...machines.map((m) => ({
+ value: m.id,
+ label: `${m.registrationNumber} — ${m.brand ?? ""} ${m.model ?? ""}`,
+ })),
+ ]}
+ />
  </div>
 
  <div className="sa-form-group">
@@ -143,10 +144,10 @@ export const FuelPage: React.FC = () => {
  </div>
 
  <div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
- <button type="submit" className="sa-btn sa-btn-primary">Apply</button>
- <button
+ <Button type="submit" variant="primary">Apply</Button>
+ <Button
  type="button"
- className="sa-btn sa-btn-secondary"
+ variant="secondary"
  onClick={() => {
  setFilterMachineId("");
  setFilterFrom("");
@@ -155,7 +156,7 @@ export const FuelPage: React.FC = () => {
  }}
  >
  Clear
- </button>
+ </Button>
  </div>
  </form>
  </Card>
@@ -224,7 +225,7 @@ export const FuelPage: React.FC = () => {
  <td>
  <strong>{entry.machine?.registrationNumber ?? "—"}</strong>
  {(entry.machine?.brand || entry.machine?.model) && (
- <div style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>
+ <div style={{ fontSize: "0.78rem", color: "var(--color-text-muted)" }}>
  {[entry.machine.brand, entry.machine.model].filter(Boolean).join(" ")}
  </div>
  )}

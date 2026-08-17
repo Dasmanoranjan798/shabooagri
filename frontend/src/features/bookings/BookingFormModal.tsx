@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Pencil } from "lucide-react";
 import type {
   Booking,
   CreateBookingPayload,
@@ -14,6 +15,7 @@ import { getTerm } from "../../lib/terminology";
 import { Modal } from "../../components/ui/Modal";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
+import { SearchableSelect } from "../../components/ui/SearchableSelect/SearchableSelect";
 
 interface BookingFormModalProps {
   isOpen: boolean;
@@ -80,6 +82,37 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
       setError(err.message || `Failed to create new ${villageTerm}`);
     } finally {
       setIsSavingVillage(false);
+    }
+  };
+
+  // Rename inline state — fixes a mis-typed village name without needing a
+  // dedicated Villages management screen (none exists; villages are only
+  // ever created inline from here and the Customer form).
+  const [isEditingVillage, setIsEditingVillage] = useState(false);
+  const [editVillageName, setEditVillageName] = useState("");
+  const [isSavingVillageEdit, setIsSavingVillageEdit] = useState(false);
+
+  const handleStartEditVillage = () => {
+    const current = villages.find((v) => v.id === villageId);
+    setEditVillageName(current?.name || "");
+    setIsEditingVillage(true);
+  };
+
+  const handleSaveVillageEdit = async () => {
+    if (!editVillageName.trim()) {
+      setError(`Please enter a name for the ${villageTerm.toLowerCase()}`);
+      return;
+    }
+    setIsSavingVillageEdit(true);
+    setError(null);
+    try {
+      const updated = await api.updateVillage(villageId, { name: editVillageName.trim() });
+      setVillages((prev) => prev.map((v) => (v.id === updated.id ? updated : v)));
+      setIsEditingVillage(false);
+    } catch (err: any) {
+      setError(err.message || `Failed to rename ${villageTerm.toLowerCase()}`);
+    } finally {
+      setIsSavingVillageEdit(false);
     }
   };
 
@@ -366,19 +399,15 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
               </Button>
             </div>
           ) : (
-            <select
-              className="sa-input"
+            <SearchableSelect
+              placeholder={`-- Select ${customerTerm} --`}
               value={customerId}
-              onChange={(e) => handleCustomerChange(e.target.value)}
-              required
-            >
-              <option value="">-- Select {customerTerm} --</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} {c.village ? `(${c.village.name})` : ""}
-                </option>
-              ))}
-            </select>
+              onChange={handleCustomerChange}
+              options={customers.map((c) => ({
+                value: c.id,
+                label: `${c.name}${c.village ? ` (${c.village.name})` : ""}`,
+              }))}
+            />
           )}
         </div>
 
@@ -414,20 +443,49 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
                 Save
               </Button>
             </div>
+          ) : isEditingVillage ? (
+            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+              <Input
+                placeholder={`${villageTerm} name`}
+                value={editVillageName}
+                onChange={(e) => setEditVillageName(e.target.value)}
+                style={{ flex: 1 }}
+                autoFocus
+              />
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={handleSaveVillageEdit}
+                isLoading={isSavingVillageEdit}
+              >
+                Save
+              </Button>
+              <Button type="button" variant="secondary" size="sm" onClick={() => setIsEditingVillage(false)}>
+                Cancel
+              </Button>
+            </div>
           ) : (
-            <select
-              className="sa-input"
-              value={villageId}
-              onChange={(e) => setVillageId(e.target.value)}
-              required
-            >
-              <option value="">-- Select {villageTerm} --</option>
-              {villages.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name}
-                </option>
-              ))}
-            </select>
+            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+              <div style={{ flex: 1 }}>
+                <SearchableSelect
+                  placeholder={`-- Select ${villageTerm} --`}
+                  value={villageId}
+                  onChange={setVillageId}
+                  options={villages.map((v) => ({ value: v.id, label: v.name }))}
+                />
+              </div>
+              {villageId && (
+                <button
+                  type="button"
+                  className="sa-icon-action"
+                  title={`Rename this ${villageTerm.toLowerCase()}`}
+                  onClick={handleStartEditVillage}
+                >
+                  <Pencil size={15} />
+                </button>
+              )}
+            </div>
           )}
         </div>
 
@@ -435,34 +493,31 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
         <div className="sa-form-grid-2">
           <div className="sa-input-group">
             <label className="sa-input-label">{machineTerm} (Optional)</label>
-            <select
-              className="sa-input"
+            <SearchableSelect
+              placeholder="-- Unassigned --"
               value={machineId}
-              onChange={(e) => setMachineId(e.target.value)}
-            >
-              <option value="">-- Unassigned --</option>
-              {machines.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.registrationNumber} {m.brand ? `(${m.brand})` : ""}
-                </option>
-              ))}
-            </select>
+              onChange={setMachineId}
+              options={[
+                { value: "", label: "-- Unassigned --" },
+                ...machines.map((m) => ({
+                  value: m.id,
+                  label: `${m.registrationNumber}${m.brand ? ` (${m.brand})` : ""}`,
+                })),
+              ]}
+            />
           </div>
 
           <div className="sa-input-group">
             <label className="sa-input-label">{driverTerm} (Optional)</label>
-            <select
-              className="sa-input"
+            <SearchableSelect
+              placeholder="-- Unassigned --"
               value={driverId}
-              onChange={(e) => setDriverId(e.target.value)}
-            >
-              <option value="">-- Unassigned --</option>
-              {drivers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.employee.name}
-                </option>
-              ))}
-            </select>
+              onChange={setDriverId}
+              options={[
+                { value: "", label: "-- Unassigned --" },
+                ...drivers.map((d) => ({ value: d.id, label: d.employee.name })),
+              ]}
+            />
           </div>
         </div>
 

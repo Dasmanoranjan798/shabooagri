@@ -6,6 +6,7 @@ import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { getTerm } from "../../lib/terminology";
 import { Card } from "../../components/ui/Card";
+import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import { CustomerFormModal } from "./CustomerFormModal";
@@ -194,7 +195,7 @@ export const CustomersPage: React.FC = () => {
  >
  <td className="sa-td-bold"> {c.name}</td>
  <td>
- <div className="sa-cell-title">{c.village?.name || "Village"}</div>
+ <div className="sa-cell-title">{c.village?.name || villageTerm}</div>
  </td>
  <td>{c.phone || <span className="sa-text-muted">N/A</span>}</td>
  <td>
@@ -202,7 +203,7 @@ export const CustomersPage: React.FC = () => {
  </td>
  <td>
  {c.userId ? (
- <span className="sa-badge sa-badge-sm sa-badge-success">Linked</span>
+ <Badge variant="success" size="sm">Linked</Badge>
  ) : (
  <span className="sa-text-muted" style={{ fontSize: "0.8rem" }}>Standard</span>
  )}

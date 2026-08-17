@@ -4,6 +4,7 @@ import type { Job } from "../../types/job";
 import { api } from "../../lib/api";
 import { Spinner } from "../../components/ui/Spinner";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
 
 function statusLabel(s: Job["status"]): string {
  switch (s) {
@@ -95,7 +96,7 @@ export const DriverJobsPage: React.FC = () => {
  {isLoading ? (
  <div className="sa-loading-state"><Spinner /><span>Loading jobs…</span></div>
  ) : error ? (
- <div className="sa-error-state"><p> {error}</p><button className="sa-btn sa-btn-secondary" onClick={load}>Retry</button></div>
+ <div className="sa-error-state"><p> {error}</p><Button variant="secondary" onClick={load}>Retry</Button></div>
  ) : filtered.length === 0 ? (
  <div className="sa-driver-empty-card">
  <div style={{ fontSize: "2.5rem", marginBottom: "8px" }}></div>

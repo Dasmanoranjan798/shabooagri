@@ -3,22 +3,23 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./farmer-portal-layout.css";
 import { Home, Calendar, CreditCard, User, Sprout, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { getTerm } from "../lib/terminology";
 
 interface FarmerPortalLayoutProps {
   children: React.ReactNode;
 }
 
-const PORTAL_NAV = [
-  { key: "home", label: "Home", icon: <Home size={20} />, path: "/farmer" },
-  { key: "bookings", label: "Bookings", icon: <Calendar size={20} />, path: "/farmer/bookings" },
-  { key: "invoices", label: "Invoices", icon: <CreditCard size={20} />, path: "/farmer/invoices" },
-  { key: "profile", label: "Profile", icon: <User size={20} />, path: "/farmer/profile" },
-];
-
 export const FarmerPortalLayout: React.FC<FarmerPortalLayoutProps> = ({ children }) => {
   const { logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const PORTAL_NAV = [
+    { key: "home", label: "Home", icon: <Home size={20} />, path: "/farmer" },
+    { key: "bookings", label: getTerm("booking", true), icon: <Calendar size={20} />, path: "/farmer/bookings" },
+    { key: "invoices", label: getTerm("invoice", true), icon: <CreditCard size={20} />, path: "/farmer/invoices" },
+    { key: "profile", label: "Profile", icon: <User size={20} />, path: "/farmer/profile" },
+  ];
 
   const handleLogout = () => {
     logout();

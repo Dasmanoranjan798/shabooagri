@@ -12,6 +12,7 @@ import { getTerm } from "../../lib/terminology";
 import { Modal } from "../../components/ui/Modal";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
+import { SearchableSelect } from "../../components/ui/SearchableSelect/SearchableSelect";
 
 interface MachineFormModalProps {
   isOpen: boolean;
@@ -256,19 +257,15 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
                 </Button>
               </div>
             ) : (
-              <select
-                className="sa-input"
+              <SearchableSelect
+                placeholder="-- Select Type --"
                 value={machineTypeId}
-                onChange={(e) => setMachineTypeId(e.target.value)}
-                required
-              >
-                <option value="">-- Select Type --</option>
-                {machineTypes.map((mt) => (
-                  <option key={mt.id} value={mt.id}>
-                    {mt.name} {mt.category ? `(${mt.category})` : ""}
-                  </option>
-                ))}
-              </select>
+                onChange={setMachineTypeId}
+                options={machineTypes.map((mt) => ({
+                  value: mt.id,
+                  label: `${mt.name}${mt.category ? ` (${mt.category})` : ""}`,
+                }))}
+              />
             )}
           </div>
 
@@ -346,18 +343,15 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
 
           <div className="sa-input-group">
             <label className="sa-input-label">Assigned Default {driverTerm}</label>
-            <select
-              className="sa-input"
+            <SearchableSelect
+              placeholder="-- Unassigned --"
               value={assignedDriverId}
-              onChange={(e) => setAssignedDriverId(e.target.value)}
-            >
-              <option value="">-- Unassigned --</option>
-              {drivers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.employee.name}
-                </option>
-              ))}
-            </select>
+              onChange={setAssignedDriverId}
+              options={[
+                { value: "", label: "-- Unassigned --" },
+                ...drivers.map((d) => ({ value: d.id, label: d.employee.name })),
+              ]}
+            />
           </div>
         </div>
 

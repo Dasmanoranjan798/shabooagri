@@ -3,8 +3,11 @@ import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { ChangePasswordCard } from "../../components/ChangePasswordCard";
+import { Button } from "../../components/ui/Button";
+import { getTerm } from "../../lib/terminology";
 
 export const DriverProfilePage: React.FC = () => {
+ const driverTerm = getTerm("driver");
  const { user, logout } = useAuth();
  const navigate = useNavigate();
  const [compSummary, setCompSummary] = React.useState<any>(null);
@@ -39,8 +42,8 @@ export const DriverProfilePage: React.FC = () => {
  <div className="sa-driver-profile-avatar">
  {user?.fullName?.[0]?.toUpperCase() ?? "D"}
  </div>
- <div className="sa-driver-profile-name">{user?.fullName ?? "Driver"}</div>
- <div className="sa-driver-profile-role">Driver / Operator</div>
+ <div className="sa-driver-profile-name">{user?.fullName ?? driverTerm}</div>
+ <div className="sa-driver-profile-role">{driverTerm}</div>
  </div>
 
  <div className="sa-driver-detail-grid">
@@ -81,13 +84,13 @@ export const DriverProfilePage: React.FC = () => {
  <ChangePasswordCard />
  </div>
 
- <button
- className="sa-driver-action-btn sa-driver-action-btn--pause"
+ <Button
+ variant="secondary"
  onClick={handleLogout}
- style={{ marginTop: "24px" }}
+ style={{ marginTop: "24px", width: "100%" }}
  >
  ⎋ Sign Out
- </button>
+ </Button>
  </div>
  );
 };

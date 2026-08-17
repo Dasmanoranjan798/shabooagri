@@ -43,7 +43,7 @@
 }
 
 .sa-brand-subtext {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   color: rgba(255, 255, 255, 0.7);
   display: block;
   margin-top: 1px;
@@ -86,6 +86,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.sa-nav-label {
+  font-size: 0.9rem;
 }
 
 .sa-sidebar-footer {
@@ -227,6 +231,11 @@
   border-radius: var(--radius-full);
 }
 
+.sa-date-icon {
+  display: flex;
+  align-items: center;
+}
+
 .sa-icon-btn {
   position: relative;
   font-size: 1.1rem;
@@ -250,7 +259,7 @@
   right: 2px;
   background-color: var(--color-danger);
   color: white;
-  font-size: 0.65rem;
+  font-size: 0.78rem;
   font-weight: 700;
   min-width: 16px;
   height: 16px;
@@ -341,7 +350,7 @@
 }
 
 .sa-notif-item-subtitle {
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   color: var(--color-text-muted);
   margin-top: 1px;
 }
@@ -381,7 +390,7 @@
 }
 
 .sa-chip-role {
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   color: var(--color-text-muted);
 }
 
@@ -389,8 +398,6 @@
 .sa-page-content {
   flex: 1;
   padding: 1.5rem;
-  max-width: 1400px;
-  margin: 0 auto;
   width: 100%;
 }
 
@@ -417,7 +424,7 @@
   gap: 2px;
   text-decoration: none;
   color: var(--color-text-muted);
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 600;
   padding: 6px 12px;
   border-radius: var(--radius-md);
@@ -433,6 +440,10 @@
 
 .sa-bottom-icon {
   font-size: 1.2rem;
+}
+
+.sa-bottom-label {
+  font-size: 0.78rem;
 }
 
 /* Mobile Slide-out Menu Drawer */

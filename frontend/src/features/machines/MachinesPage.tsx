@@ -9,7 +9,7 @@ import { Card } from "../../components/ui/Card";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
-import { Wrench, ShieldAlert, AlertTriangle, Truck } from "lucide-react";
+import { Wrench, ShieldAlert, AlertTriangle, Truck, Pencil, Trash2 } from "lucide-react";
 import { getMachineServiceWarning, getMachineInsuranceWarning } from "../../lib/operationalWarnings";
 import { MachineFormModal } from "./MachineFormModal";
 import { MachineDetailModal } from "./MachineDetailModal";
@@ -246,7 +246,7 @@ export const MachinesPage: React.FC = () => {
  >
  <td className="sa-td-bold"> {m.registrationNumber}</td>
  <td>
- <div className="sa-cell-title">{m.machineType?.name || "Equipment"}</div>
+ <div className="sa-cell-title">{m.machineType?.name || getTerm("machine")}</div>
  <div className="sa-cell-sub">{m.machineType?.category || ""}</div>
  </td>
  <td>
@@ -300,7 +300,7 @@ export const MachinesPage: React.FC = () => {
  title="Edit Machine"
  onClick={(e) => handleOpenEdit(m, e)}
  >
- Edit
+ <Pencil size={15} />
  </button>
  )}
  {canManage && (
@@ -310,7 +310,7 @@ export const MachinesPage: React.FC = () => {
  disabled={deletingId === m.id}
  onClick={(e) => handleDelete(m.id, e)}
  >
- Delete
+ <Trash2 size={15} />
  </button>
  )}
  </div>
