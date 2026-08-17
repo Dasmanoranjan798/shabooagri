@@ -427,7 +427,14 @@ async function runTests() {
   await prisma.village.deleteMany({ where: { companyId } });
   await prisma.machineType.deleteMany({ where: { companyId } });
   await prisma.pricingMethod.deleteMany({ where: { companyId } });
-  await prisma.user.deleteMany({ where: { companyId } });
+  // managerUser/farmerUser/driverUser are created via authService.register(),
+  // which resolves its own company internally rather than using ownerAuth's
+  // companyId — in this in-process test call (no tenant header to guide it)
+  // that lands them in the shared pilot company, not this disposable one. A
+  // companyId-scoped delete alone would miss them entirely, silently leaking
+  // 3 synthetic users into pilot every run. Delete by explicit id as well so
+  // they're removed regardless of which company they actually ended up in.
+  await prisma.user.deleteMany({ where: { OR: [{ companyId }, { id: { in: userIds } }] } });
   await prisma.company.delete({ where: { id: companyId } });
 
   console.log(" Cleanup finished successfully!");
