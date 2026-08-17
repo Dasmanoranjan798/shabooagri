@@ -10,6 +10,7 @@ export default defineConfig({
       "/payments": "http://localhost:4010",
       "/provisioning": "http://localhost:4010",
       "/plans": "http://localhost:4010",
+      "/admin": "http://localhost:4010",
       "/health": "http://localhost:4010",
     },
   },

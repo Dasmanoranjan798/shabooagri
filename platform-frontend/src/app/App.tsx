@@ -5,6 +5,7 @@ import { PricingPage } from "../features/marketing/PricingPage";
 import { RegisterPage } from "../features/auth/RegisterPage";
 import { LoginPage } from "../features/auth/LoginPage";
 import { UpgradePage } from "../features/auth/UpgradePage";
+import { AdminDashboardPage } from "../features/admin/AdminDashboardPage";
 
 export function App() {
   return (
@@ -16,6 +17,7 @@ export function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/upgrade" element={<UpgradePage />} />
+          <Route path="/admin" element={<AdminDashboardPage />} />
         </Routes>
       </PlatformAuthProvider>
     </BrowserRouter>

@@ -56,6 +56,7 @@ export interface PlatformUser {
   pincode: string | null;
   gstin: string | null;
   pan: string | null;
+  isPlatformAdmin: boolean;
   companySlug: string | null;
 }
 
@@ -179,4 +180,56 @@ export const api = {
     const res = await request("/provisioning/status");
     return parseOrThrow(res, "Could not load account status");
   },
+
+  async getAdminDashboard(): Promise<AdminDashboardMetrics> {
+    const res = await request("/admin/dashboard");
+    return parseOrThrow<AdminDashboardMetrics>(res, "Could not load dashboard");
+  },
+
+  async getAdminPlans(): Promise<AdminPricingPlan[]> {
+    const res = await request("/admin/plans");
+    return parseOrThrow<AdminPricingPlan[]>(res, "Could not load plans");
+  },
+
+  async updateAdminPlan(
+    key: string,
+    data: Partial<Pick<AdminPricingPlan, "name" | "machineLimit" | "priceAnnual" | "isActive">>,
+  ): Promise<AdminPricingPlan> {
+    const res = await request(`/admin/plans/${key}`, { method: "PATCH", body: JSON.stringify(data) });
+    return parseOrThrow<AdminPricingPlan>(res, "Could not update plan");
+  },
+
+  async getAdminSiteSettings(): Promise<AdminSiteSettings> {
+    const res = await request("/admin/site-settings");
+    return parseOrThrow<AdminSiteSettings>(res, "Could not load site settings");
+  },
+
+  async updateAdminSiteSettings(data: Partial<AdminSiteSettings>): Promise<AdminSiteSettings> {
+    const res = await request("/admin/site-settings", { method: "PATCH", body: JSON.stringify(data) });
+    return parseOrThrow<AdminSiteSettings>(res, "Could not update site settings");
+  },
 };
+
+export interface AdminDashboardMetrics {
+  totalSignups: number;
+  purchases: { count: number; totalRevenue: number };
+  licensesExpiringSoon: number;
+  feedbackCount: number;
+  supportRequestCount: number;
+}
+
+export interface AdminPricingPlan {
+  key: string;
+  name: string;
+  machineLimit: number;
+  priceAnnual: number;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface AdminSiteSettings {
+  announcementEnabled: boolean;
+  announcementMessage: string | null;
+  purchasingBlocked: boolean;
+  extraMachinePrice: number;
+}

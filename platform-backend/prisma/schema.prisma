@@ -160,3 +160,29 @@ model SiteSettings {
 
   @@map("site_settings")
 }
+
+// Two of the admin dashboard's six tiles. No submission surface exists
+// yet on the marketing/customer side — that was never part of the
+// approved checkpoints — so these tables are correctly empty (real 0,
+// not a placeholder) until one is built. Modeled now so the dashboard
+// queries a real count rather than a hardcoded number.
+model Feedback {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  platformUserId String?  @map("platform_user_id") @db.Uuid
+  message        String
+  status         String   @default("NEW")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("feedback")
+}
+
+model SupportRequest {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  platformUserId String?  @map("platform_user_id") @db.Uuid
+  subject        String
+  message        String
+  status         String   @default("OPEN")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("support_requests")
+}

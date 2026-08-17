@@ -66,7 +66,16 @@ export const LoginPage: React.FC = () => {
               {user.businessName ? ` (${user.businessName})` : ""}.
             </p>
             {error && <div className="pf-alert pf-alert-danger">{error}</div>}
-            <button className="pf-btn pf-btn-primary" style={{ width: "100%" }} onClick={handleGoToDashboard} disabled={isLaunching}>
+            {user.isPlatformAdmin && (
+              <Link
+                to="/admin"
+                className="pf-btn pf-btn-primary"
+                style={{ width: "100%", textDecoration: "none", display: "block", textAlign: "center", marginBottom: 10 }}
+              >
+                Admin Dashboard
+              </Link>
+            )}
+            <button className="pf-btn pf-btn-secondary" style={{ width: "100%" }} onClick={handleGoToDashboard} disabled={isLaunching}>
               {isLaunching ? "Opening..." : "Go to my dashboard"}
             </button>
           </>

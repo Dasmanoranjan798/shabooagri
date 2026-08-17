@@ -6,6 +6,7 @@ import { authRouter } from "./modules/auth/auth.routes";
 import { paymentRouter } from "./modules/payments/payment.routes";
 import { provisioningRouter } from "./modules/provisioning/provisioning.routes";
 import { plansRouter } from "./modules/plans/plans.routes";
+import { adminRouter } from "./modules/admin/admin.routes";
 
 // Express app assembly only, exactly like the operational backend's
 // app.ts. This process has no knowledge of the operational app's routes,
@@ -29,6 +30,7 @@ app.use("/auth", authRouter);
 app.use("/payments", paymentRouter);
 app.use("/provisioning", provisioningRouter);
 app.use("/plans", plansRouter);
+app.use("/admin", adminRouter);
 
 // Must be registered after all routes.
 app.use(errorMiddleware);
