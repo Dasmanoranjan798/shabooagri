@@ -13,217 +13,241 @@ async function runTests() {
 
   const testSuffix = Date.now().toString();
 
-  // 2. Setup users for roles
-  const existingOwner = await prisma.user.findFirst({
-    where: { companyId, role: { systemKey: "owner" } },
-  });
-
-  let ownerAuth: { id: string; companyId: string; roleId: string };
-  let ownerUserRecord: { id: string; companyId: string; roleId: string; email: string };
-  if (existingOwner) {
-    ownerAuth = { id: existingOwner.id, companyId: existingOwner.companyId, roleId: existingOwner.roleId };
-    ownerUserRecord = { id: existingOwner.id, companyId: existingOwner.companyId, roleId: existingOwner.roleId, email: existingOwner.email };
-  } else {
-    const ownerRes = await authService.register({
-      fullName: "Test Owner",
-      email: `owner_${testSuffix}@example.com`,
-      password: "Password123!",
-      roleKey: "owner",
-    });
-    ownerAuth = { id: ownerRes.user.id, companyId, roleId: ownerRes.user.roleId };
-    ownerUserRecord = { id: ownerRes.user.id, companyId, roleId: ownerRes.user.roleId, email: ownerRes.user.email };
-  }
-
-  const managerUser = await authService.register(
-    {
-      fullName: "Test Manager",
-      email: `manager_${testSuffix}@example.com`,
-      password: "Password123!",
-      roleKey: "manager",
-    },
-    ownerAuth,
-  );
-
-  const farmerUser = await authService.register(
-    {
-      fullName: "Test Farmer User",
-      email: `farmer_${testSuffix}@example.com`,
-      password: "Password123!",
-      roleKey: "farmer",
-    },
-    ownerAuth,
-  );
-
-  const driverUser = await authService.register(
-    {
-      fullName: "Test Driver User",
-      email: `driver_${testSuffix}@example.com`,
-      password: "Password123!",
-      roleKey: "driver",
-    },
-    ownerAuth,
-  );
-
-  // 3. Setup master data (Village, Customer, MachineType, Employee, Driver, Machine, PricingMethod)
-  const village = await prisma.village.create({
-    data: { companyId, name: `DashVillage_${testSuffix}` },
-  });
-
-  const customer = await prisma.customer.create({
-    data: {
-      companyId,
-      name: `DashFarmer_${testSuffix}`,
-      villageId: village.id,
-      userId: farmerUser.user.id,
-      phone: "9876543211",
-    },
-  });
-
-  const machineType = await prisma.machineType.create({
-    data: { companyId, name: `Tractor_${testSuffix}` },
-  });
-
-  const employee = await prisma.employee.create({
-    data: { companyId, name: `Driver_Emp_${testSuffix}`, userId: driverUser.user.id },
-  });
-
-  const driver = await prisma.driver.create({
-    data: { companyId, employeeId: employee.id, availabilityStatus: "AVAILABLE" },
-  });
-
-  const machine = await prisma.machine.create({
-    data: {
-      companyId,
-      machineTypeId: machineType.id,
-      registrationNumber: `REG-${testSuffix}`,
-      brand: "Mahindra",
-      model: "575 DI",
-      status: "WORKING",
-      assignedDriverId: driver.id,
-    },
-  });
-
-  const pricingMethod = await prisma.pricingMethod.findFirstOrThrow({
-    where: { companyId, key: "per_hour" },
-  });
-
-  // 4. Setup today's booking, job, invoice, payment, fuel
-  const todayDate = new Date(Date.now() + 6 * 3600 * 1000);
-
-  const booking = await prisma.booking.create({
-    data: {
-      companyId,
-      bookingNumber: `BK-DASH-${testSuffix}`,
-      customerId: customer.id,
-      villageId: village.id,
-      machineId: machine.id,
-      driverId: driver.id,
-      managerId: managerUser.user.id,
-      createdBy: ownerUserRecord.id,
-      scheduledDate: todayDate,
-      scheduledTime: todayDate,
-      pricingMethodId: pricingMethod.id,
-      rate: 500,
-      estimatedHours: 2,
-      status: "WORKING",
-    },
-  });
-
-  const job = await prisma.job.create({
-    data: {
-      companyId,
-      bookingId: booking.id,
-      machineId: machine.id,
-      driverId: driver.id,
-      status: "WORKING",
-      startTime: todayDate,
-      actualHours: 2,
-      completedAcres: 5,
-      fuelUsedLitres: 15,
-    },
-  });
-
-  const invoice = await prisma.invoice.create({
-    data: {
-      companyId,
-      bookingId: booking.id,
-      customerId: customer.id,
-      invoiceNumber: `INV-DASH-${testSuffix}`,
-      totalAmount: 1000,
-      paidAmount: 400,
-      balanceAmount: 600,
-      status: "PARTIALLY_PAID",
-      invoiceDate: todayDate,
-    },
-  });
-
-  const payment = await prisma.payment.create({
-    data: {
-      companyId,
-      invoiceId: invoice.id,
-      amount: 400,
-      paymentMethod: "CASH",
-      receivedAt: todayDate,
-      receivedBy: ownerUserRecord.id,
-    },
-  });
-
-  const fuelEntry = await prisma.jobFuelEntry.create({
-    data: {
-      companyId,
-      jobId: job.id,
-      machineId: machine.id,
-      litres: 15,
-      cost: 1500,
-      recordedBy: ownerUserRecord.id,
-      recordedAt: todayDate,
-    },
-  });
-
-  // 5. Setup second company for company-scoping isolation tests
-  const secondCompany = await prisma.company.create({
-    data: { name: `Second Company ${testSuffix}`, slug: `second-${testSuffix}` },
-  });
-  const secondRole = await prisma.role.create({
-    data: {
-      companyId: secondCompany.id,
-      systemKey: "owner",
-      name: "Owner",
-      isSystemRole: true,
-    },
-  });
-  const opsViewPerm = await prisma.permission.findUniqueOrThrow({
-    where: { key: "operations.view" },
-  });
-  await prisma.rolePermission.create({
-    data: {
-      roleId: secondRole.id,
-      permissionId: opsViewPerm.id,
-    },
-  });
-  const secondOwnerUser = await prisma.user.create({
-    data: {
-      companyId: secondCompany.id,
-      roleId: secondRole.id,
-      fullName: "Second Owner",
-      email: `owner2_${testSuffix}@example.com`,
-    },
-  });
-  const secondMachineType = await prisma.machineType.create({
-    data: { companyId: secondCompany.id, name: "Harvester" },
-  });
-  await prisma.machine.create({
-    data: {
-      companyId: secondCompany.id,
-      machineTypeId: secondMachineType.id,
-      registrationNumber: `REG2-${testSuffix}`,
-      status: "WORKING",
-    },
-  });
-
-  console.log("Synthetic test data created successfully.\n");
+  // Everything this suite creates is declared here (not const-inside-try) so
+  // the finally block below can clean up whatever DID get created even if
+  // setup or an assertion throws partway through — a run that crashes
+  // halfway must not leave synthetic data behind in the shared pilot company.
+  let managerUser: Awaited<ReturnType<typeof authService.register>> | null = null;
+  let farmerUser: Awaited<ReturnType<typeof authService.register>> | null = null;
+  let driverUser: Awaited<ReturnType<typeof authService.register>> | null = null;
+  let village: { id: string } | null = null;
+  let customer: { id: string; name: string } | null = null;
+  let machineType: { id: string } | null = null;
+  let employee: { id: string } | null = null;
+  let driver: { id: string } | null = null;
+  let machine: { id: string } | null = null;
+  let booking: { id: string } | null = null;
+  let job: { id: string } | null = null;
+  let invoice: { id: string } | null = null;
+  let payment: { id: string } | null = null;
+  let fuelEntry: { id: string } | null = null;
+  let secondCompany: { id: string } | null = null;
+  let secondRole: { id: string } | null = null;
+  let secondOwnerUser: { id: string } | null = null;
+  let secondMachineType: { id: string } | null = null;
+  let secondMachine: { id: string } | null = null;
 
   try {
+    // 2. Setup users for roles
+    const existingOwner = await prisma.user.findFirst({
+      where: { companyId, role: { systemKey: "owner" } },
+    });
+
+    let ownerAuth: { id: string; companyId: string; roleId: string };
+    let ownerUserRecord: { id: string; companyId: string; roleId: string; email: string };
+    if (existingOwner) {
+      ownerAuth = { id: existingOwner.id, companyId: existingOwner.companyId, roleId: existingOwner.roleId };
+      ownerUserRecord = { id: existingOwner.id, companyId: existingOwner.companyId, roleId: existingOwner.roleId, email: existingOwner.email };
+    } else {
+      const ownerRes = await authService.register({
+        fullName: "Test Owner",
+        email: `owner_${testSuffix}@example.com`,
+        password: "Password123!",
+        roleKey: "owner",
+      });
+      ownerAuth = { id: ownerRes.user.id, companyId, roleId: ownerRes.user.roleId };
+      ownerUserRecord = { id: ownerRes.user.id, companyId, roleId: ownerRes.user.roleId, email: ownerRes.user.email };
+    }
+
+    managerUser = await authService.register(
+      {
+        fullName: "Test Manager",
+        email: `manager_${testSuffix}@example.com`,
+        password: "Password123!",
+        roleKey: "manager",
+      },
+      ownerAuth,
+    );
+
+    farmerUser = await authService.register(
+      {
+        fullName: "Test Farmer User",
+        email: `farmer_${testSuffix}@example.com`,
+        password: "Password123!",
+        roleKey: "farmer",
+      },
+      ownerAuth,
+    );
+
+    driverUser = await authService.register(
+      {
+        fullName: "Test Driver User",
+        email: `driver_${testSuffix}@example.com`,
+        password: "Password123!",
+        roleKey: "driver",
+      },
+      ownerAuth,
+    );
+
+    // 3. Setup master data (Village, Customer, MachineType, Employee, Driver, Machine, PricingMethod)
+    village = await prisma.village.create({
+      data: { companyId, name: `DashVillage_${testSuffix}` },
+    });
+
+    customer = await prisma.customer.create({
+      data: {
+        companyId,
+        name: `DashFarmer_${testSuffix}`,
+        villageId: village.id,
+        userId: farmerUser.user.id,
+        phone: "9876543211",
+      },
+    });
+
+    machineType = await prisma.machineType.create({
+      data: { companyId, name: `Tractor_${testSuffix}` },
+    });
+
+    employee = await prisma.employee.create({
+      data: { companyId, name: `Driver_Emp_${testSuffix}`, userId: driverUser.user.id },
+    });
+
+    driver = await prisma.driver.create({
+      data: { companyId, employeeId: employee.id, availabilityStatus: "AVAILABLE" },
+    });
+
+    machine = await prisma.machine.create({
+      data: {
+        companyId,
+        machineTypeId: machineType.id,
+        registrationNumber: `REG-${testSuffix}`,
+        brand: "Mahindra",
+        model: "575 DI",
+        status: "WORKING",
+        assignedDriverId: driver.id,
+      },
+    });
+
+    const pricingMethod = await prisma.pricingMethod.findFirstOrThrow({
+      where: { companyId, key: "per_hour" },
+    });
+
+    // 4. Setup today's booking, job, invoice, payment, fuel
+    const todayDate = new Date(Date.now() + 6 * 3600 * 1000);
+
+    booking = await prisma.booking.create({
+      data: {
+        companyId,
+        bookingNumber: `BK-DASH-${testSuffix}`,
+        customerId: customer.id,
+        villageId: village.id,
+        machineId: machine.id,
+        driverId: driver.id,
+        managerId: managerUser.user.id,
+        createdBy: ownerUserRecord.id,
+        scheduledDate: todayDate,
+        scheduledTime: todayDate,
+        pricingMethodId: pricingMethod.id,
+        rate: 500,
+        estimatedHours: 2,
+        status: "WORKING",
+      },
+    });
+
+    job = await prisma.job.create({
+      data: {
+        companyId,
+        bookingId: booking.id,
+        machineId: machine.id,
+        driverId: driver.id,
+        status: "WORKING",
+        startTime: todayDate,
+        actualHours: 2,
+        completedAcres: 5,
+        fuelUsedLitres: 15,
+      },
+    });
+
+    invoice = await prisma.invoice.create({
+      data: {
+        companyId,
+        bookingId: booking.id,
+        customerId: customer.id,
+        invoiceNumber: `INV-DASH-${testSuffix}`,
+        totalAmount: 1000,
+        paidAmount: 400,
+        balanceAmount: 600,
+        status: "PARTIALLY_PAID",
+        invoiceDate: todayDate,
+      },
+    });
+
+    payment = await prisma.payment.create({
+      data: {
+        companyId,
+        invoiceId: invoice.id,
+        amount: 400,
+        paymentMethod: "CASH",
+        receivedAt: todayDate,
+        receivedBy: ownerUserRecord.id,
+      },
+    });
+
+    fuelEntry = await prisma.jobFuelEntry.create({
+      data: {
+        companyId,
+        jobId: job.id,
+        machineId: machine.id,
+        litres: 15,
+        cost: 1500,
+        recordedBy: ownerUserRecord.id,
+        recordedAt: todayDate,
+      },
+    });
+
+    // 5. Setup second company for company-scoping isolation tests
+    secondCompany = await prisma.company.create({
+      data: { name: `Second Company ${testSuffix}`, slug: `second-${testSuffix}` },
+    });
+    secondRole = await prisma.role.create({
+      data: {
+        companyId: secondCompany.id,
+        systemKey: "owner",
+        name: "Owner",
+        isSystemRole: true,
+      },
+    });
+    const opsViewPerm = await prisma.permission.findUniqueOrThrow({
+      where: { key: "operations.view" },
+    });
+    await prisma.rolePermission.create({
+      data: {
+        roleId: secondRole.id,
+        permissionId: opsViewPerm.id,
+      },
+    });
+    secondOwnerUser = await prisma.user.create({
+      data: {
+        companyId: secondCompany.id,
+        roleId: secondRole.id,
+        fullName: "Second Owner",
+        email: `owner2_${testSuffix}@example.com`,
+      },
+    });
+    secondMachineType = await prisma.machineType.create({
+      data: { companyId: secondCompany.id, name: "Harvester" },
+    });
+    secondMachine = await prisma.machine.create({
+      data: {
+        companyId: secondCompany.id,
+        machineTypeId: secondMachineType.id,
+        registrationNumber: `REG2-${testSuffix}`,
+        status: "WORKING",
+      },
+    });
+
+    console.log("Synthetic test data created successfully.\n");
+
     // TEST 1: Owner Summary Access & KPI verification
     console.log("Test 1: Owner Summary Access & KPI Calculations...");
     const ownerSummary = await dashboardService.getSummary(companyId, ownerUserRecord as any);
@@ -240,12 +264,12 @@ async function runTests() {
     if (ownerSummary.machineStatus.WORKING < 1) throw new Error("Machine status WORKING count incorrect");
 
     if (ownerSummary.todaysJobs.length < 1) throw new Error("Today's jobs list empty");
-    const foundJob = ownerSummary.todaysJobs.find((j) => j.jobId === job.id);
+    const foundJob = ownerSummary.todaysJobs.find((j) => j.jobId === job!.id);
     if (!foundJob) throw new Error("Test job missing from today's jobs");
     if (foundJob.customer.name !== customer.name) throw new Error("Customer name mismatch on job");
 
     if (ownerSummary.pendingPayments.length < 1) throw new Error("Pending payments list empty");
-    const foundInvoice = ownerSummary.pendingPayments.find((i) => i.invoiceId === invoice.id);
+    const foundInvoice = ownerSummary.pendingPayments.find((i) => i.invoiceId === invoice!.id);
     if (!foundInvoice) throw new Error("Test invoice missing from pending payments");
     if (foundInvoice.balanceAmount !== 600) throw new Error("Balance amount mismatch on pending invoice");
     console.log("  PASSED");
@@ -353,29 +377,42 @@ async function runTests() {
     console.log("\nALL DASHBOARD TESTS PASSED SUCCESSFULLY!\n");
   } finally {
     console.log("Cleaning up synthetic test data...");
-    await prisma.jobFuelEntry.deleteMany({ where: { companyId: { in: [companyId, secondCompany.id] } } });
-    await prisma.jobStatusLog.deleteMany({ where: { companyId: { in: [companyId, secondCompany.id] } } });
-    await prisma.payment.deleteMany({ where: { companyId: { in: [companyId, secondCompany.id] } } });
-    await prisma.invoice.deleteMany({ where: { companyId: { in: [companyId, secondCompany.id] } } });
-    await prisma.job.deleteMany({ where: { companyId: { in: [companyId, secondCompany.id] } } });
-    await prisma.booking.deleteMany({ where: { companyId: { in: [companyId, secondCompany.id] } } });
-    await prisma.machine.deleteMany({ where: { companyId: { in: [companyId, secondCompany.id] } } });
-    await prisma.driver.deleteMany({ where: { id: driver.id } });
-    await prisma.employee.deleteMany({ where: { id: employee.id } });
-    await prisma.machineType.deleteMany({ where: { companyId: { in: [companyId, secondCompany.id] } } });
-    await prisma.customer.deleteMany({ where: { id: customer.id } });
-    await prisma.village.deleteMany({ where: { id: village.id } });
-    const userIds = [
-      managerUser.user.id,
-      farmerUser.user.id,
-      driverUser.user.id,
-      secondOwnerUser.id,
-    ];
-    await prisma.refreshToken.deleteMany({ where: { userId: { in: userIds } } });
-    await prisma.user.deleteMany({ where: { id: { in: userIds } } });
-    await prisma.rolePermission.deleteMany({ where: { roleId: secondRole.id } });
-    await prisma.role.deleteMany({ where: { id: secondRole.id } });
-    await prisma.company.deleteMany({ where: { id: secondCompany.id } });
+
+    // Pilot-side rows are deleted by their OWN id, never by companyId alone —
+    // pilot is a real, shared company, and a wholesale companyId-scoped
+    // delete here would also wipe any real bookings/jobs/invoices/payments/
+    // machines that happen to exist in it. secondCompany is fully disposable
+    // (created solely for this run), so it's safe to clear by companyId.
+    if (fuelEntry) await prisma.jobFuelEntry.deleteMany({ where: { id: fuelEntry.id } });
+    if (job) await prisma.jobStatusLog.deleteMany({ where: { jobId: job.id } });
+    if (payment) await prisma.payment.deleteMany({ where: { id: payment.id } });
+    if (invoice) await prisma.invoice.deleteMany({ where: { id: invoice.id } });
+    if (job) await prisma.job.deleteMany({ where: { id: job.id } });
+    if (booking) await prisma.booking.deleteMany({ where: { id: booking.id } });
+    if (machine) await prisma.machine.deleteMany({ where: { id: machine.id } });
+    if (driver) await prisma.driver.deleteMany({ where: { id: driver.id } });
+    if (employee) await prisma.employee.deleteMany({ where: { id: employee.id } });
+    if (machineType) await prisma.machineType.deleteMany({ where: { id: machineType.id } });
+    if (customer) await prisma.customer.deleteMany({ where: { id: customer.id } });
+    if (village) await prisma.village.deleteMany({ where: { id: village.id } });
+
+    const userIds = [managerUser?.user.id, farmerUser?.user.id, driverUser?.user.id, secondOwnerUser?.id].filter(
+      (id): id is string => !!id,
+    );
+    if (userIds.length > 0) {
+      await prisma.refreshToken.deleteMany({ where: { userId: { in: userIds } } });
+      await prisma.user.deleteMany({ where: { id: { in: userIds } } });
+    }
+
+    if (secondCompany) {
+      // secondCompany is entirely disposable — safe to clear by companyId.
+      if (secondMachine) await prisma.machine.deleteMany({ where: { companyId: secondCompany.id } });
+      if (secondMachineType) await prisma.machineType.deleteMany({ where: { companyId: secondCompany.id } });
+      if (secondRole) await prisma.rolePermission.deleteMany({ where: { roleId: secondRole.id } });
+      if (secondRole) await prisma.role.deleteMany({ where: { id: secondRole.id } });
+      await prisma.company.deleteMany({ where: { id: secondCompany.id } });
+    }
+
     console.log("Cleanup complete.");
   }
 }
