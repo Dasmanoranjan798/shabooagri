@@ -5,6 +5,7 @@ import { api } from "../../lib/api";
 import { Spinner } from "../../components/ui/Spinner";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { fmtDateRelative } from "../../lib/format";
 
 function statusLabel(s: Job["status"]): string {
  switch (s) {
@@ -14,18 +15,6 @@ function statusLabel(s: Job["status"]): string {
  case "COMPLETED": return "Completed";
  default: return s;
  }
-}
-
-function fmtDate(d: string) {
- const dateOnly = d.slice(0, 10);
- const today = new Date().toISOString().slice(0, 10);
- if (dateOnly === today) return "Today";
- const tomorrow = new Date();
- tomorrow.setDate(tomorrow.getDate() + 1);
- if (dateOnly === tomorrow.toISOString().slice(0, 10)) return "Tomorrow";
- return new Date(dateOnly + "T00:00:00").toLocaleDateString("en-IN", {
- day: "2-digit", month: "short", year: "numeric",
- });
 }
 
 const FILTER_OPTIONS = [
@@ -116,7 +105,7 @@ export const DriverJobsPage: React.FC = () => {
  <div className="sa-driver-job-row-info">
  <div className="sa-driver-job-row-customer">{customer}</div>
  <div className="sa-driver-job-row-sub">
- {village} &nbsp;·&nbsp; {fmtDate(job.booking.scheduledDate)}
+ {village} &nbsp;·&nbsp; {fmtDateRelative(job.booking.scheduledDate)}
  </div>
  <div className="sa-driver-job-row-machine">
  {job.machine.registrationNumber}

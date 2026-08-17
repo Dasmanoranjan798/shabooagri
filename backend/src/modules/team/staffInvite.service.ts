@@ -9,6 +9,7 @@ import { sendStaffInviteSms } from "../../shared/services/sms.service";
 import { issueSsoTokenPair } from "../auth/auth.service";
 import * as authRepository from "../auth/auth.repository";
 import * as staffInviteRepository from "./staffInvite.repository";
+import * as settingsRepo from "../settings/settings.repository";
 import type { AcceptInviteInput, CreateInviteInput, SetUserStatusInput } from "./staffInvite.validators";
 
 const BCRYPT_ROUNDS = 10;
@@ -104,7 +105,7 @@ export async function createInvite(
     expiresAt,
   });
 
-  const company = await prisma.company.findUnique({ where: { id: companyId } });
+  const company = await settingsRepo.findCompanyById(companyId);
   const inviter = await prisma.user.findUnique({ where: { id: invitedByUserId } });
   const baseUrl = resolveBaseUrl(company!.slug, requestHost);
   const inviteLink = `${baseUrl}/accept-invite?token=${rawToken}`;

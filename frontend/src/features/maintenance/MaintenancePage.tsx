@@ -12,19 +12,7 @@ import { Spinner } from "../../components/ui/Spinner";
 import { Modal } from "../../components/ui/Modal";
 import { SearchableSelect } from "../../components/ui/SearchableSelect/SearchableSelect";
 import { getTerm } from "../../lib/terminology";
-
-function fmt(date: string) {
- return new Date(date.slice(0, 10) + "T00:00:00").toLocaleDateString("en-IN", {
- day: "2-digit",
- month: "short",
- year: "numeric",
- });
-}
-
-function fmtCurrency(val?: number | null) {
- if (val == null) return "—";
- return `₹${Number(val).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
-}
+import { fmtCurrency, fmtDate as fmt } from "../../lib/format";
 
 export const MaintenancePage: React.FC = () => {
  const machineTerm = getTerm("machine");

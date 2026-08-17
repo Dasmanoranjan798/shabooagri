@@ -14,6 +14,7 @@ import * as driverService from "../drivers/driver.service";
 import * as machineService from "../machines/machine.service";
 import * as pricingMethodService from "../pricing-methods/pricingMethod.service";
 import * as villageService from "../villages/village.service";
+import * as settingsRepo from "../settings/settings.repository";
 import type { CompleteJobInput, CreateManualJobInput, PauseJobInput, ResumeJobInput, StartJobInput, UpdateJobInput } from "./job.validators";
 
 // Called only from booking.service.ts when a Booking moves to ON_THE_WAY —
@@ -138,7 +139,7 @@ export async function complete(companyId: string, id: string, user: Authenticate
   assertStatus(job, ["WORKING", "PAUSED"], "complete");
 
   // Phase C: Backend Enforcement of Mandatory Job Completion Rules
-  const company = await prisma.company.findUnique({ where: { id: companyId } });
+  const company = await settingsRepo.findCompanyById(companyId);
   if (company?.requireJobPhoto) {
     const photos = await jobPhotoRepository.findAllForJob(companyId, id);
     if (photos.length === 0) {
@@ -303,7 +304,7 @@ export async function createManualEntryJob(
     pricingMethodService.getById(companyId, input.pricingMethodId),
   ]);
 
-  const company = await prisma.company.findUnique({ where: { id: companyId } });
+  const company = await settingsRepo.findCompanyById(companyId);
   if (company?.requireJobFuelLog && (!input.fuelUsedLitres || input.fuelUsedLitres <= 0)) {
     throw new AppError(400, "A fuel-log entry is required before completing this job");
   }

@@ -5,19 +5,12 @@ import type { DashboardSummaryResponse, IncomeSeriesResponse, FuelSeriesResponse
 import { api } from "../../lib/api";
 import { getTerm } from "../../lib/terminology";
 import { exportToExcel, exportToPdf } from "../../lib/exportUtils";
+import { fmtCurrency, fmtDate } from "../../lib/format";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import { IncomeOverviewChart } from "../../components/charts/IncomeOverviewChart";
 import { FuelConsumptionChart } from "../../components/charts/FuelConsumptionChart";
-
-function fmtCurrency(val: number) {
- return `₹${val.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
-}
-
-function fmtDate(d: string) {
- return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
-}
 
 const TIME_RANGE_OPTIONS: { value: TimeRange; label: string }[] = [
  { value: "7d", label: "Last 7 Days" },
@@ -72,7 +65,7 @@ export const ReportsPage: React.FC = () => {
  // Dashboard uses, instead of a second hand-rolled SVG renderer.
  const incomePoints = income
  ? income.data.map((d) => ({
- label: "date" in d ? fmtDate(d.date) : (d as any).month,
+ label: "date" in d ? fmtDate(d.date, { day: "2-digit", month: "short" }) : (d as any).month,
  value: (d as any).amount ?? 0,
  }))
  : [];

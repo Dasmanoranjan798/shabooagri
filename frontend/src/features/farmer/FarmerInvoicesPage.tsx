@@ -5,14 +5,7 @@ import { Spinner } from "../../components/ui/Spinner";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { getTerm } from "../../lib/terminology";
-
-function fmtCurrency(val: number) {
- return `₹${Number(val).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
-}
-
-function fmtDate(d: string) {
- return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-}
+import { fmtCurrency, fmtDate } from "../../lib/format";
 
 function statusVariant(s: InvoiceStatus): "success" | "warning" | "info" | "danger" {
  switch (s) {

@@ -11,18 +11,10 @@ import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import { SearchableSelect } from "../../components/ui/SearchableSelect/SearchableSelect";
 import { getTerm } from "../../lib/terminology";
-
-function fmt(date: string) {
- return new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-}
+import { fmtCurrency, fmtDate as fmt } from "../../lib/format";
 
 function fmtTime(date: string) {
  return new Date(date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-}
-
-function fmtCurrency(val?: number | null) {
- if (val == null) return "—";
- return `₹${Number(val).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
 }
 
 export const FuelPage: React.FC = () => {

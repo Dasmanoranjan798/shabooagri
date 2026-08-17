@@ -5,17 +5,7 @@ import { Spinner } from "../../components/ui/Spinner";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { getTerm } from "../../lib/terminology";
-
-function fmtDate(d: string) {
- return new Date(d.slice(0, 10) + "T00:00:00").toLocaleDateString("en-IN", {
- day: "2-digit", month: "short", year: "numeric",
- });
-}
-
-function fmtCurrency(val: number | null | undefined) {
- if (val == null) return "—";
- return `₹${Number(val).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
-}
+import { fmtCurrency, fmtDate } from "../../lib/format";
 
 const STATUS_FILTERS: { label: string; value: BookingStatus | "ALL" }[] = [
  { label: "All", value: "ALL" },

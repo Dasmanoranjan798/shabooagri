@@ -2,9 +2,9 @@ import type { AuthenticatedUser } from "../auth/auth.types";
 import * as paymentService from "../payments/payment.service";
 import * as fuelService from "../fuel/fuel.service";
 import { resolveCallerScope } from "../../shared/access/callerScope";
-import { prisma } from "../../db/prisma";
 import { AppError } from "../../shared/errors/AppError";
 import * as dashboardRepository from "./dashboard.repository";
+import * as settingsRepo from "../settings/settings.repository";
 
 // ---- Date / Timezone Utilities ----
 //
@@ -24,10 +24,7 @@ import * as dashboardRepository from "./dashboard.repository";
 // crashing when a company row was inserted without a timezone value.
 
 async function getCompanyTimezone(companyId: string): Promise<string> {
-  const company = await prisma.company.findUnique({
-    where: { id: companyId },
-    select: { timezone: true },
-  });
+  const company = await settingsRepo.findCompanyById(companyId);
   const tz = company?.timezone ?? "Asia/Kolkata";
   try {
     // Validate by constructing a formatter. Throws RangeError on bad tz name.

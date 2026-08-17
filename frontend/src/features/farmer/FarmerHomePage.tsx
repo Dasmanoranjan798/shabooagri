@@ -9,16 +9,7 @@ import { Spinner } from "../../components/ui/Spinner";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { getTerm } from "../../lib/terminology";
-
-function fmtCurrency(val: number) {
- return `₹${Number(val).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
-}
-
-function fmtDate(d: string) {
- return new Date(d.slice(0, 10) + "T00:00:00").toLocaleDateString("en-IN", {
- day: "2-digit", month: "short", year: "numeric",
- });
-}
+import { fmtCurrency, fmtDate } from "../../lib/format";
 
 function bookingStatusLabel(s: Booking["status"]) {
  return s.replace(/_/g, " ");

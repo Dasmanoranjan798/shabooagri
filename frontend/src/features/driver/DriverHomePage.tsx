@@ -8,15 +8,7 @@ import { Spinner } from "../../components/ui/Spinner";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { getTerm } from "../../lib/terminology";
-
-function fmtDate(d: string) {
- return new Date(d.slice(0, 10) + "T00:00:00").toLocaleDateString("en-IN", {
- weekday: "long",
- day: "numeric",
- month: "short",
- year: "numeric",
- });
-}
+import { fmtDate } from "../../lib/format";
 
 function fmtTime(d: string | null) {
  if (!d) return "—";
@@ -106,7 +98,7 @@ const TodayJobCard: React.FC<JobCardProps> = ({ job, onAction }) => {
  <div className="sa-driver-job-meta-item">
  <div className="sa-driver-job-meta-label">Date</div>
  <div className="sa-driver-job-meta-value">
- {isToday ? "Today" : fmtDate(job.booking.scheduledDate)}
+ {isToday ? "Today" : fmtDate(job.booking.scheduledDate, { weekday: "long", day: "numeric", month: "short", year: "numeric" })}
  </div>
  </div>
  {job.startTime && (

@@ -6,12 +6,7 @@ import { Spinner } from "../../components/ui/Spinner";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { getTerm } from "../../lib/terminology";
-
-function fmtDate(d: string) {
- return new Date(d.slice(0, 10) + "T00:00:00").toLocaleDateString("en-IN", {
- weekday: "long", day: "numeric", month: "long", year: "numeric",
- });
-}
+import { fmtDate } from "../../lib/format";
 
 function fmtTime(d: string | null) {
  if (!d) return "—";
@@ -138,7 +133,7 @@ export const DriverJobDetailPage: React.FC = () => {
  {/* Details grid */}
  <div className="sa-driver-detail-grid">
  {[
- { label: "Date", value: fmtDate(job.booking.scheduledDate) },
+ { label: "Date", value: fmtDate(job.booking.scheduledDate, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) },
  { label: machineTerm, value: `${job.machine.registrationNumber}${job.machine.brand ? ` — ${job.machine.brand}` : ""}` },
  { label: "Start Time", value: fmtTime(job.startTime) },
  { label: "End Time", value: fmtTime(job.endTime) },

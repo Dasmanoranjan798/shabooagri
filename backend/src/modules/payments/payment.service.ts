@@ -8,6 +8,7 @@ import * as customerService from "../customers/customer.service";
 import * as invoiceRepository from "./invoice.repository";
 import * as paymentRepository from "./payment.repository";
 import * as customerAdvanceRepository from "./customerAdvance.repository";
+import * as settingsRepo from "../settings/settings.repository";
 import type {
   CreateManualInvoiceInput,
   ReceivePaymentInput,
@@ -236,7 +237,7 @@ export async function updateInvoiceTax(
   input: { isGstApplicable: boolean; taxRate?: number },
 ) {
   const invoice = await getInvoiceById(companyId, invoiceId, user);
-  const company = await prisma.company.findUnique({ where: { id: companyId } });
+  const company = await settingsRepo.findCompanyById(companyId);
 
   const subtotal = invoice.subtotalAmount ? Number(invoice.subtotalAmount) : Number(invoice.totalAmount);
   let taxRate = 0;
@@ -361,7 +362,7 @@ export async function getPaymentById(companyId: string, id: string, user: Authen
 
 export async function getReceipt(companyId: string, invoiceId: string, user: AuthenticatedUser) {
   const invoice = await getInvoiceById(companyId, invoiceId, user);
-  const company = await prisma.company.findUnique({ where: { id: companyId } });
+  const company = await settingsRepo.findCompanyById(companyId);
 
   if (!company) {
     throw new AppError(404, "Company not found");
