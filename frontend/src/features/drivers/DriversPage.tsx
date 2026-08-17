@@ -12,8 +12,10 @@ import { Spinner } from "../../components/ui/Spinner";
 import { BadgeAlert, AlertTriangle, UserCheck, Pencil, Trash2, Eye } from "lucide-react";
 import { getDriverLicenseWarning } from "../../lib/operationalWarnings";
 import { ActionMenu } from "../../components/ui/ActionMenu";
-import { DriverFormModal } from "./DriverFormModal";
 import { DriverDetailModal } from "./DriverDetailModal";
+import { useTaskTray } from "../../context/TaskTrayContext";
+import { subscribeDataRefresh } from "../../lib/dataRefreshBus";
+import { defaultDriverDraft } from "./DriverFormModal";
 
 const DRIVER_STATUS_FILTERS: Array<{ label: string; value: string }> = [
  { label: "All", value: "ALL" },
@@ -34,8 +36,7 @@ export const DriversPage: React.FC = () => {
  const [isLoading, setIsLoading] = useState<boolean>(true);
  const [error, setError] = useState<string | null>(null);
 
- const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false);
- const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
+ const taskTray = useTaskTray();
 
  const [selectedDetailDriver, setSelectedDetailDriver] = useState<Driver | null>(null);
  const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
@@ -71,18 +72,27 @@ export const DriversPage: React.FC = () => {
 
  useEffect(() => {
  loadDrivers();
+ return subscribeDataRefresh("drivers", loadDrivers);
  }, []);
 
  const handleOpenCreate = () => {
- setEditingDriver(null);
- setIsFormModalOpen(true);
+ taskTray.open({
+ type: "driver-form",
+ title: `Add New ${getTerm("driver")}`,
+ initProps: { driverToEdit: null },
+ defaultDraft: defaultDriverDraft(null),
+ });
  };
 
  const handleOpenEdit = (driver: Driver, e?: React.MouseEvent) => {
  if (e) e.stopPropagation();
- setEditingDriver(driver);
  setIsDetailModalOpen(false);
- setIsFormModalOpen(true);
+ taskTray.open({
+ type: "driver-form",
+ title: `Edit ${driver.employee.name}`,
+ initProps: { driverToEdit: driver },
+ defaultDraft: defaultDriverDraft(driver),
+ });
  };
 
  const handleOpenDetail = (driver: Driver) => {
@@ -338,14 +348,6 @@ export const DriversPage: React.FC = () => {
  </div>
  </>
  )}
-
- {/* Form Modal (Create / Edit) */}
- <DriverFormModal
- isOpen={isFormModalOpen}
- onClose={() => setIsFormModalOpen(false)}
- onSuccess={loadDrivers}
- driverToEdit={editingDriver}
- />
 
  {/* Detail Inspection Modal */}
  <DriverDetailModal

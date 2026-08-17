@@ -5,6 +5,10 @@ import "./taskSheetHost.css";
 import { useTaskTray, type Task, type TaskContentComponent } from "../../context/TaskTrayContext";
 import { BookingFormTask } from "../../features/bookings/BookingFormModal";
 import { VillageFormTask } from "../../features/villages/VillageFormModal";
+import { VoidReasonTask } from "../ui/VoidReasonModal";
+import { JobCancelReasonTask } from "../../features/jobs/JobCancelReasonModal";
+import { MachineFormTask } from "../../features/machines/MachineFormModal";
+import { DriverFormTask } from "../../features/drivers/DriverFormModal";
 
 // Task `type` -> the content component that renders it. Every form
 // migrated onto this system registers itself here. Growing across Pass 2
@@ -13,6 +17,10 @@ import { VillageFormTask } from "../../features/villages/VillageFormModal";
 const TASK_REGISTRY: Record<string, TaskContentComponent<any>> = {
   "booking-form": BookingFormTask,
   "village-form": VillageFormTask,
+  "void-reason": VoidReasonTask,
+  "job-cancel-reason": JobCancelReasonTask,
+  "machine-form": MachineFormTask,
+  "driver-form": DriverFormTask,
 };
 
 const TaskChrome: React.FC<{

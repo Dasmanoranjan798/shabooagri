@@ -9,6 +9,7 @@ import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Camera, Fuel, Truck, StickyNote } from "lucide-react";
+import { useTaskTray } from "../../context/TaskTrayContext";
 
 interface JobExecutionModalProps {
  job: Job | null;
@@ -28,24 +29,23 @@ export const JobExecutionModal: React.FC<JobExecutionModalProps> = ({
  onUpdate,
  canCancel = false,
 }) => {
- const [isCancelling, setIsCancelling] = useState<boolean>(false);
+ const taskTray = useTaskTray();
 
- const handleCancel = async () => {
+ // Opens the same shared job-cancel-reason task JobsPage's row action
+ // uses (JobCancelReasonModal.tsx), rather than a second, separately
+ // maintained window.prompt flow. Closes this (still old-style) Modal
+ // immediately rather than leaving it open behind the task — the task
+ // does the actual cancel + list refresh independently via
+ // notifyDataRefresh("jobs"), which JobsPage already subscribes to.
+ const handleCancel = () => {
  if (!job) return;
- const reason = window.prompt(
- "Cancel this job? This is Owner-only and reverses the job's booking to Cancelled too.\n\nOptional reason:",
- );
- if (reason === null) return;
- setIsCancelling(true);
- try {
- await api.cancelJob(job.id, reason.trim() || undefined);
- onUpdate();
+ taskTray.open({
+ type: "job-cancel-reason",
+ title: `Cancel Job — ${job.booking.bookingNumber}`,
+ initProps: { jobId: job.id },
+ defaultDraft: { reason: "" },
+ });
  onClose();
- } catch (err: any) {
- alert(err.message || "Failed to cancel job");
- } finally {
- setIsCancelling(false);
- }
  };
  const customerTerm = getTerm("customer");
  const villageTerm = getTerm("village");
@@ -420,7 +420,7 @@ export const JobExecutionModal: React.FC<JobExecutionModalProps> = ({
 
  {canCancel && job.status !== "CANCELLED" && (
  <div style={{ marginTop: "0.75rem" }}>
- <Button variant="danger" size="sm" isLoading={isCancelling} onClick={handleCancel}>
+ <Button variant="danger" size="sm" onClick={handleCancel}>
  Cancel Job
  </Button>
  </div>

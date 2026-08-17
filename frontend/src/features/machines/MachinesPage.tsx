@@ -12,8 +12,10 @@ import { Spinner } from "../../components/ui/Spinner";
 import { Wrench, ShieldAlert, AlertTriangle, Truck, Pencil, Trash2, Eye } from "lucide-react";
 import { getMachineServiceWarning, getMachineInsuranceWarning } from "../../lib/operationalWarnings";
 import { ActionMenu } from "../../components/ui/ActionMenu";
-import { MachineFormModal } from "./MachineFormModal";
+import { defaultMachineDraft } from "./MachineFormModal";
 import { MachineDetailModal } from "./MachineDetailModal";
+import { useTaskTray } from "../../context/TaskTrayContext";
+import { subscribeDataRefresh } from "../../lib/dataRefreshBus";
 
 const MACHINE_STATUS_FILTERS: Array<{ label: string; value: string }> = [
  { label: "All", value: "ALL" },
@@ -36,8 +38,7 @@ export const MachinesPage: React.FC = () => {
  const [isLoading, setIsLoading] = useState<boolean>(true);
  const [error, setError] = useState<string | null>(null);
 
- const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false);
- const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
+ const taskTray = useTaskTray();
 
  const [selectedDetailMachine, setSelectedDetailMachine] = useState<Machine | null>(null);
  const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
@@ -74,18 +75,27 @@ export const MachinesPage: React.FC = () => {
 
  useEffect(() => {
  loadMachines();
+ return subscribeDataRefresh("machines", loadMachines);
  }, []);
 
  const handleOpenCreate = () => {
- setEditingMachine(null);
- setIsFormModalOpen(true);
+ taskTray.open({
+ type: "machine-form",
+ title: `Register New ${getTerm("machine")}`,
+ initProps: { machineToEdit: null },
+ defaultDraft: defaultMachineDraft(null),
+ });
  };
 
  const handleOpenEdit = (machine: Machine, e?: React.MouseEvent) => {
  if (e) e.stopPropagation();
- setEditingMachine(machine);
  setIsDetailModalOpen(false);
- setIsFormModalOpen(true);
+ taskTray.open({
+ type: "machine-form",
+ title: `Edit ${getTerm("machine")} ${machine.registrationNumber}`,
+ initProps: { machineToEdit: machine },
+ defaultDraft: defaultMachineDraft(machine),
+ });
  };
 
  const handleOpenDetail = async (machine: Machine) => {
@@ -386,14 +396,6 @@ export const MachinesPage: React.FC = () => {
  </div>
  </>
  )}
-
- {/* Form Modal (Create / Edit) */}
- <MachineFormModal
- isOpen={isFormModalOpen}
- onClose={() => setIsFormModalOpen(false)}
- onSuccess={loadMachines}
- machineToEdit={editingMachine}
- />
 
  {/* Detail Inspection Modal */}
  <MachineDetailModal

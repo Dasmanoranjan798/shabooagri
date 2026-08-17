@@ -11,11 +11,12 @@ import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import { ActionMenu } from "../../components/ui/ActionMenu";
-import { VoidReasonModal } from "../../components/ui/VoidReasonModal";
 import { ReceivePaymentModal } from "./ReceivePaymentModal";
 import { ReceiptModal } from "./ReceiptModal";
 import { NewInvoiceModal } from "./NewInvoiceModal";
 import { RecordAdvanceModal } from "./RecordAdvanceModal";
+import { useTaskTray } from "../../context/TaskTrayContext";
+import { subscribeDataRefresh } from "../../lib/dataRefreshBus";
 
 const PAYMENT_STATUS_FILTERS: Array<{ label: string; value: string }> = [
  { label: "All", value: "ALL" },
@@ -47,8 +48,7 @@ export const PaymentsPage: React.FC = () => {
  const [isNewInvoiceModalOpen, setIsNewInvoiceModalOpen] = useState<boolean>(false);
  const [isRecordAdvanceModalOpen, setIsRecordAdvanceModalOpen] = useState<boolean>(false);
 
- const [voidingInvoice, setVoidingInvoice] = useState<Invoice | null>(null);
- const [isVoidInvoiceModalOpen, setIsVoidInvoiceModalOpen] = useState<boolean>(false);
+ const taskTray = useTaskTray();
 
  const canReceive = roleKey === "owner" || hasPermission("payment.receive");
  // Owner-only (§ dependency-locked deletion, Rule 1 & 5).
@@ -79,6 +79,7 @@ export const PaymentsPage: React.FC = () => {
 
  useEffect(() => {
  loadInvoices();
+ return subscribeDataRefresh("invoices", loadInvoices);
  }, []);
 
  const handleOpenReceivePayment = (invoice: Invoice, e?: React.MouseEvent) => {
@@ -93,8 +94,17 @@ export const PaymentsPage: React.FC = () => {
  };
 
  const handleOpenVoidInvoice = (invoice: Invoice) => {
- setVoidingInvoice(invoice);
- setIsVoidInvoiceModalOpen(true);
+ taskTray.open({
+ type: "void-reason",
+ title: `Void Invoice ${invoice.invoiceNumber}`,
+ initProps: {
+ kind: "invoice" as const,
+ targetId: invoice.id,
+ description:
+ "This voids the invoice and every non-voided payment under it. The record stays permanently visible in history/reports as Voided.",
+ },
+ defaultDraft: { reason: "" },
+ });
  };
 
  // Authoritative financial totals
@@ -503,20 +513,6 @@ export const PaymentsPage: React.FC = () => {
  onInvoiceUpdated={loadInvoices}
  canVoid={canVoid}
  onVoidInvoice={(inv) => handleOpenVoidInvoice(inv)}
- />
-
- {/* Void Invoice Modal — reason mandatory (§ dependency-locked deletion, Rule 1) */}
- <VoidReasonModal
- isOpen={isVoidInvoiceModalOpen}
- title={`Void Invoice ${voidingInvoice?.invoiceNumber || ""}`}
- description="This voids the invoice and every non-voided payment under it. The record stays permanently visible in history/reports as Voided."
- onClose={() => setIsVoidInvoiceModalOpen(false)}
- onConfirm={async (reason) => {
- if (!voidingInvoice) return;
- await api.voidInvoice(voidingInvoice.id, reason);
- setIsReceiptModalOpen(false);
- loadInvoices();
- }}
  />
 
  {/* New Invoice Modal */}

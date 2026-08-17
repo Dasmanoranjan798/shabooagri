@@ -7,73 +7,110 @@ import type {
   MachineType,
 } from "../../types/machine";
 import type { DriverOption } from "../../types/booking";
-import { api } from "../../lib/api";
+import { api, ApiError } from "../../lib/api";
 import { getTerm } from "../../lib/terminology";
-import { Modal } from "../../components/ui/Modal";
+import { notifyDataRefresh } from "../../lib/dataRefreshBus";
+import { useTaskDraft, type TaskContentComponent } from "../../context/TaskTrayContext";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { SearchableSelect } from "../../components/ui/SearchableSelect/SearchableSelect";
 import { UpgradePlanDialog } from "../../components/ui/UpgradePlanDialog";
-import { ApiError } from "../../lib/api";
 
-interface MachineFormModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-  machineToEdit?: Machine | null;
+// Migrated onto the shared task-tray system (Pass 2, Batch 1) — see
+// BookingFormModal.tsx for the full explanation of the new contract.
+
+export interface MachineFormInitProps {
+  machineToEdit: Machine | null;
 }
 
-export const MachineFormModal: React.FC<MachineFormModalProps> = ({
-  isOpen,
-  onClose,
-  onSuccess,
-  machineToEdit,
-}) => {
+export interface MachineFormDraft {
+  machineTypeId: string;
+  registrationNumber: string;
+  brand: string;
+  model: string;
+  purchaseYear: string;
+  fuelType: FuelType;
+  status: MachineStatus;
+  hourMeterReading: string;
+  insuranceNumber: string;
+  insuranceExpiryDate: string;
+  assignedDriverId: string;
+  nextServiceDueHours: string;
+  lastServiceDate: string;
+  lastServiceHourMeter: string;
+  isActive: boolean;
+  isCreatingMachineType: boolean;
+  newMachineTypeName: string;
+}
+
+export function defaultMachineDraft(machineToEdit: Machine | null): MachineFormDraft {
+  const shared = { isCreatingMachineType: false, newMachineTypeName: "" };
+  if (machineToEdit) {
+    return {
+      ...shared,
+      machineTypeId: machineToEdit.machineTypeId,
+      registrationNumber: machineToEdit.registrationNumber,
+      brand: machineToEdit.brand || "",
+      model: machineToEdit.model || "",
+      purchaseYear: machineToEdit.purchaseYear ? machineToEdit.purchaseYear.toString() : "",
+      fuelType: machineToEdit.fuelType || "DIESEL",
+      status: machineToEdit.status || "AVAILABLE",
+      hourMeterReading: machineToEdit.hourMeterReading.toString(),
+      insuranceNumber: machineToEdit.insuranceNumber || "",
+      insuranceExpiryDate: machineToEdit.insuranceExpiryDate ? machineToEdit.insuranceExpiryDate.slice(0, 10) : "",
+      assignedDriverId: machineToEdit.assignedDriverId || "",
+      nextServiceDueHours: machineToEdit.nextServiceDueHours != null ? machineToEdit.nextServiceDueHours.toString() : "",
+      lastServiceDate: machineToEdit.lastServiceDate ? machineToEdit.lastServiceDate.slice(0, 10) : "",
+      lastServiceHourMeter: machineToEdit.lastServiceHourMeter != null ? machineToEdit.lastServiceHourMeter.toString() : "",
+      isActive: machineToEdit.isActive ?? true,
+    };
+  }
+  return {
+    ...shared,
+    machineTypeId: "",
+    registrationNumber: "",
+    brand: "",
+    model: "",
+    purchaseYear: "",
+    fuelType: "DIESEL",
+    status: "AVAILABLE",
+    hourMeterReading: "0",
+    insuranceNumber: "",
+    insuranceExpiryDate: "",
+    assignedDriverId: "",
+    nextServiceDueHours: "",
+    lastServiceDate: "",
+    lastServiceHourMeter: "",
+    isActive: true,
+  };
+}
+
+export const MachineFormTask: TaskContentComponent<MachineFormInitProps> = ({ taskId, initProps, onRequestClose }) => {
+  const { machineToEdit } = initProps;
+  const [draft, setDraft] = useTaskDraft<MachineFormDraft>(taskId, defaultMachineDraft(machineToEdit));
   const machineTerm = getTerm("machine");
   const driverTerm = getTerm("driver");
 
   const [machineTypes, setMachineTypes] = useState<MachineType[]>([]);
   const [drivers, setDrivers] = useState<DriverOption[]>([]);
 
-  const [machineTypeId, setMachineTypeId] = useState<string>("");
-  const [registrationNumber, setRegistrationNumber] = useState<string>("");
-  const [brand, setBrand] = useState<string>("");
-  const [model, setModel] = useState<string>("");
-  const [purchaseYear, setPurchaseYear] = useState<string>("");
-  const [fuelType, setFuelType] = useState<FuelType>("DIESEL");
-  const [status, setStatus] = useState<MachineStatus>("AVAILABLE");
-  const [hourMeterReading, setHourMeterReading] = useState<string>("0");
-  const [insuranceNumber, setInsuranceNumber] = useState<string>("");
-  const [insuranceExpiryDate, setInsuranceExpiryDate] = useState<string>("");
-  const [assignedDriverId, setAssignedDriverId] = useState<string>("");
-  const [nextServiceDueHours, setNextServiceDueHours] = useState<string>("");
-  const [lastServiceDate, setLastServiceDate] = useState<string>("");
-  const [lastServiceHourMeter, setLastServiceHourMeter] = useState<string>("");
-  const [isActive, setIsActive] = useState<boolean>(true);
-
   const [isLoadingOptions, setIsLoadingOptions] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isSavingMachineType, setIsSavingMachineType] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [upgradeDialog, setUpgradeDialog] = useState<{ message: string; upgradeUrl: string } | null>(null);
 
-  // Quick Create Machine Type inline state
-  const [isCreatingMachineType, setIsCreatingMachineType] = useState<boolean>(false);
-  const [newMachineTypeName, setNewMachineTypeName] = useState<string>("");
-  const [isSavingMachineType, setIsSavingMachineType] = useState<boolean>(false);
-
   const handleQuickCreateMachineType = async () => {
-    if (!newMachineTypeName.trim()) {
+    if (!draft.newMachineTypeName.trim()) {
       setError(`Please enter a name for the new ${machineTerm.toLowerCase()} type`);
       return;
     }
     setIsSavingMachineType(true);
     setError(null);
     try {
-      const created = await api.createMachineType({ name: newMachineTypeName.trim() });
+      const created = await api.createMachineType({ name: draft.newMachineTypeName.trim() });
       setMachineTypes((prev) => [...prev, created]);
-      setMachineTypeId(created.id);
-      setNewMachineTypeName("");
-      setIsCreatingMachineType(false);
+      setDraft({ machineTypeId: created.id, newMachineTypeName: "", isCreatingMachineType: false });
     } catch (err: any) {
       setError(err.message || `Failed to create new ${machineTerm.toLowerCase()} type`);
     } finally {
@@ -82,20 +119,15 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
   };
 
   useEffect(() => {
-    if (!isOpen) return;
-
     async function loadOptions() {
       setIsLoadingOptions(true);
       try {
-        const [mtList, dList] = await Promise.all([
-          api.listMachineTypes(),
-          api.listDrivers(),
-        ]);
+        const [mtList, dList] = await Promise.all([api.listMachineTypes(), api.listDrivers()]);
         setMachineTypes(mtList);
         setDrivers(dList);
 
-        if (!machineToEdit && mtList.length > 0 && !machineTypeId) {
-          setMachineTypeId(mtList[0].id);
+        if (!machineToEdit && mtList.length > 0) {
+          setDraft((prev) => (prev.machineTypeId ? {} : { machineTypeId: mtList[0].id }));
         }
       } catch (err: any) {
         console.error("Failed to load machine form options:", err);
@@ -103,60 +135,17 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
         setIsLoadingOptions(false);
       }
     }
-
     loadOptions();
-  }, [isOpen, machineToEdit]);
-
-  useEffect(() => {
-    if (machineToEdit) {
-      setMachineTypeId(machineToEdit.machineTypeId);
-      setRegistrationNumber(machineToEdit.registrationNumber);
-      setBrand(machineToEdit.brand || "");
-      setModel(machineToEdit.model || "");
-      setPurchaseYear(machineToEdit.purchaseYear ? machineToEdit.purchaseYear.toString() : "");
-      setFuelType(machineToEdit.fuelType || "DIESEL");
-      setStatus(machineToEdit.status || "AVAILABLE");
-      setHourMeterReading(machineToEdit.hourMeterReading.toString());
-      setInsuranceNumber(machineToEdit.insuranceNumber || "");
-      setInsuranceExpiryDate(
-        machineToEdit.insuranceExpiryDate ? machineToEdit.insuranceExpiryDate.slice(0, 10) : ""
-      );
-      setAssignedDriverId(machineToEdit.assignedDriverId || "");
-      setNextServiceDueHours(
-        machineToEdit.nextServiceDueHours != null ? machineToEdit.nextServiceDueHours.toString() : ""
-      );
-      setLastServiceDate(
-        machineToEdit.lastServiceDate ? machineToEdit.lastServiceDate.slice(0, 10) : ""
-      );
-      setLastServiceHourMeter(
-        machineToEdit.lastServiceHourMeter != null ? machineToEdit.lastServiceHourMeter.toString() : ""
-      );
-      setIsActive(machineToEdit.isActive ?? true);
-    } else {
-      setRegistrationNumber("");
-      setBrand("");
-      setModel("");
-      setPurchaseYear("");
-      setFuelType("DIESEL");
-      setStatus("AVAILABLE");
-      setHourMeterReading("0");
-      setInsuranceNumber("");
-      setInsuranceExpiryDate("");
-      setAssignedDriverId("");
-      setNextServiceDueHours("");
-      setLastServiceDate("");
-      setLastServiceHourMeter("");
-      setIsActive(true);
-    }
-  }, [machineToEdit, isOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!machineTypeId) {
+    if (!draft.machineTypeId) {
       setError(`Please select a ${machineTerm} type`);
       return;
     }
-    if (!registrationNumber.trim()) {
+    if (!draft.registrationNumber.trim()) {
       setError("Please enter a registration number");
       return;
     }
@@ -165,21 +154,21 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
     setError(null);
 
     const payload: CreateMachinePayload = {
-      machineTypeId,
-      registrationNumber: registrationNumber.trim().toUpperCase(),
-      brand: brand.trim() || undefined,
-      model: model.trim() || undefined,
-      purchaseYear: purchaseYear ? parseInt(purchaseYear, 10) : undefined,
-      fuelType,
-      status,
-      hourMeterReading: hourMeterReading ? parseFloat(hourMeterReading) : 0,
-      insuranceNumber: insuranceNumber.trim() || undefined,
-      insuranceExpiryDate: insuranceExpiryDate || undefined,
-      assignedDriverId: assignedDriverId || undefined,
-      nextServiceDueHours: nextServiceDueHours ? parseFloat(nextServiceDueHours) : undefined,
-      lastServiceDate: lastServiceDate || undefined,
-      lastServiceHourMeter: lastServiceHourMeter ? parseFloat(lastServiceHourMeter) : undefined,
-      isActive,
+      machineTypeId: draft.machineTypeId,
+      registrationNumber: draft.registrationNumber.trim().toUpperCase(),
+      brand: draft.brand.trim() || undefined,
+      model: draft.model.trim() || undefined,
+      purchaseYear: draft.purchaseYear ? parseInt(draft.purchaseYear, 10) : undefined,
+      fuelType: draft.fuelType,
+      status: draft.status,
+      hourMeterReading: draft.hourMeterReading ? parseFloat(draft.hourMeterReading) : 0,
+      insuranceNumber: draft.insuranceNumber.trim() || undefined,
+      insuranceExpiryDate: draft.insuranceExpiryDate || undefined,
+      assignedDriverId: draft.assignedDriverId || undefined,
+      nextServiceDueHours: draft.nextServiceDueHours ? parseFloat(draft.nextServiceDueHours) : undefined,
+      lastServiceDate: draft.lastServiceDate || undefined,
+      lastServiceHourMeter: draft.lastServiceHourMeter ? parseFloat(draft.lastServiceHourMeter) : undefined,
+      isActive: draft.isActive,
     };
 
     try {
@@ -188,8 +177,8 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
       } else {
         await api.createMachine(payload);
       }
-      onSuccess();
-      onClose();
+      notifyDataRefresh("machines");
+      onRequestClose();
     } catch (err: any) {
       if (err instanceof ApiError && err.details?.code === "MACHINE_LIMIT_REACHED") {
         setUpgradeDialog({ message: err.message, upgradeUrl: String(err.details.upgradeUrl) });
@@ -202,13 +191,8 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={machineToEdit ? `Edit ${machineTerm} ${machineToEdit.registrationNumber}` : `Register New ${machineTerm}`}
-      maxWidth="600px"
-    >
-      <form onSubmit={handleSubmit} className="sa-booking-form">
+    <>
+      <form onSubmit={handleSubmit} className="sa-booking-form" style={{ padding: "1.5rem" }}>
         {error && <div className="sa-alert sa-alert-danger">{error}</div>}
         {isLoadingOptions && <div className="sa-alert sa-alert-info">Loading equipment options...</div>}
 
@@ -217,61 +201,39 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
           <div className="sa-input-group">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
               <label className="sa-input-label">{machineTerm} Type *</label>
-              {!isCreatingMachineType && (
+              {!draft.isCreatingMachineType && (
                 <button
                   type="button"
-                  onClick={() => setIsCreatingMachineType(true)}
-                  style={{
-                    fontSize: "0.78rem",
-                    fontWeight: 600,
-                    color: "var(--color-primary)",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: 0,
-                  }}
+                  onClick={() => setDraft({ isCreatingMachineType: true })}
+                  style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--color-primary)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
                 >
                   + Add Type
                 </button>
               )}
             </div>
 
-            {isCreatingMachineType ? (
+            {draft.isCreatingMachineType ? (
               <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                 <Input
                   placeholder="e.g. Combine Harvester"
-                  value={newMachineTypeName}
-                  onChange={(e) => setNewMachineTypeName(e.target.value)}
+                  value={draft.newMachineTypeName}
+                  onChange={(e) => setDraft({ newMachineTypeName: e.target.value })}
                   style={{ flex: 1 }}
                   autoFocus
                 />
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  onClick={handleQuickCreateMachineType}
-                  isLoading={isSavingMachineType}
-                >
+                <Button type="button" variant="primary" size="sm" onClick={handleQuickCreateMachineType} isLoading={isSavingMachineType}>
                   Save
                 </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setIsCreatingMachineType(false)}
-                >
+                <Button type="button" variant="secondary" size="sm" onClick={() => setDraft({ isCreatingMachineType: false })}>
                   Cancel
                 </Button>
               </div>
             ) : (
               <SearchableSelect
                 placeholder="-- Select Type --"
-                value={machineTypeId}
-                onChange={setMachineTypeId}
-                options={machineTypes.map((mt) => ({
-                  value: mt.id,
-                  label: `${mt.name}${mt.category ? ` (${mt.category})` : ""}`,
-                }))}
+                value={draft.machineTypeId}
+                onChange={(v) => setDraft({ machineTypeId: v })}
+                options={machineTypes.map((mt) => ({ value: mt.id, label: `${mt.name}${mt.category ? ` (${mt.category})` : ""}` }))}
               />
             )}
           </div>
@@ -280,8 +242,8 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
             label="Registration Number *"
             type="text"
             placeholder="e.g. KA-05-AG-1234"
-            value={registrationNumber}
-            onChange={(e) => setRegistrationNumber(e.target.value)}
+            value={draft.registrationNumber}
+            onChange={(e) => setDraft({ registrationNumber: e.target.value })}
             required
             autoFocus
           />
@@ -293,15 +255,15 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
             label="Brand / Make"
             type="text"
             placeholder="e.g. Mahindra, John Deere"
-            value={brand}
-            onChange={(e) => setBrand(e.target.value)}
+            value={draft.brand}
+            onChange={(e) => setDraft({ brand: e.target.value })}
           />
           <Input
             label="Model"
             type="text"
             placeholder="e.g. 575 DI, 5050 D"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
+            value={draft.model}
+            onChange={(e) => setDraft({ model: e.target.value })}
           />
         </div>
 
@@ -309,11 +271,7 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
         <div className="sa-form-grid-2">
           <div className="sa-input-group">
             <label className="sa-input-label">Fuel Type</label>
-            <select
-              className="sa-input"
-              value={fuelType}
-              onChange={(e) => setFuelType(e.target.value as FuelType)}
-            >
+            <select className="sa-input" value={draft.fuelType} onChange={(e) => setDraft({ fuelType: e.target.value as FuelType })}>
               <option value="DIESEL">Diesel</option>
               <option value="PETROL">Petrol</option>
               <option value="ELECTRIC">Electric</option>
@@ -323,11 +281,7 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
 
           <div className="sa-input-group">
             <label className="sa-input-label">Status</label>
-            <select
-              className="sa-input"
-              value={status}
-              onChange={(e) => setStatus(e.target.value as MachineStatus)}
-            >
+            <select className="sa-input" value={draft.status} onChange={(e) => setDraft({ status: e.target.value as MachineStatus })}>
               <option value="AVAILABLE">Available</option>
               <option value="WORKING">Working (On Job)</option>
               <option value="REPAIR">Maintenance & Repair</option>
@@ -343,8 +297,8 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
             type="number"
             min="0"
             step="0.1"
-            value={hourMeterReading}
-            onChange={(e) => setHourMeterReading(e.target.value)}
+            value={draft.hourMeterReading}
+            onChange={(e) => setDraft({ hourMeterReading: e.target.value })}
             placeholder="e.g. 1420.5"
           />
 
@@ -352,12 +306,9 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
             <label className="sa-input-label">Assigned Default {driverTerm}</label>
             <SearchableSelect
               placeholder="-- Unassigned --"
-              value={assignedDriverId}
-              onChange={setAssignedDriverId}
-              options={[
-                { value: "", label: "-- Unassigned --" },
-                ...drivers.map((d) => ({ value: d.id, label: d.employee.name })),
-              ]}
+              value={draft.assignedDriverId}
+              onChange={(v) => setDraft({ assignedDriverId: v })}
+              options={[{ value: "", label: "-- Unassigned --" }, ...drivers.map((d) => ({ value: d.id, label: d.employee.name }))]}
             />
           </div>
         </div>
@@ -369,16 +320,16 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
             type="number"
             min="0"
             step="1"
-            value={nextServiceDueHours}
-            onChange={(e) => setNextServiceDueHours(e.target.value)}
+            value={draft.nextServiceDueHours}
+            onChange={(e) => setDraft({ nextServiceDueHours: e.target.value })}
             placeholder="e.g. 1500"
           />
           <Input
             label="Insurance Number"
             type="text"
             placeholder="e.g. POL-88723-AG"
-            value={insuranceNumber}
-            onChange={(e) => setInsuranceNumber(e.target.value)}
+            value={draft.insuranceNumber}
+            onChange={(e) => setDraft({ insuranceNumber: e.target.value })}
           />
         </div>
 
@@ -386,24 +337,22 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
           <Input
             label="Insurance Expiry Date"
             type="date"
-            value={insuranceExpiryDate}
-            onChange={(e) => setInsuranceExpiryDate(e.target.value)}
+            value={draft.insuranceExpiryDate}
+            onChange={(e) => setDraft({ insuranceExpiryDate: e.target.value })}
           />
-
           <Input
             label="Purchase Year"
             type="number"
             min="1990"
             max="2030"
-            value={purchaseYear}
-            onChange={(e) => setPurchaseYear(e.target.value)}
+            value={draft.purchaseYear}
+            onChange={(e) => setDraft({ purchaseYear: e.target.value })}
             placeholder="e.g. 2022"
           />
         </div>
 
-        {/* Form Actions */}
         <div className="sa-form-actions">
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onRequestClose}>
             Cancel
           </Button>
           <Button type="submit" variant="primary" isLoading={isSubmitting}>
@@ -418,6 +367,6 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
         message={upgradeDialog?.message ?? ""}
         upgradeUrl={upgradeDialog?.upgradeUrl ?? "#"}
       />
-    </Modal>
+    </>
   );
 };

@@ -12,6 +12,8 @@ import { Spinner } from "../../components/ui/Spinner";
 import { ActionMenu } from "../../components/ui/ActionMenu";
 import { JobExecutionModal } from "./JobExecutionModal";
 import { ManualJobEntryModal } from "./ManualJobEntryModal";
+import { useTaskTray } from "../../context/TaskTrayContext";
+import { subscribeDataRefresh } from "../../lib/dataRefreshBus";
 
 const JOB_STATUS_FILTERS: Array<{ label: string; value: string }> = [
  { label: "All", value: "ALL" },
@@ -36,10 +38,11 @@ export const JobsPage: React.FC = () => {
  const [isLoading, setIsLoading] = useState<boolean>(true);
  const [error, setError] = useState<string | null>(null);
 
+ const taskTray = useTaskTray();
+
  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
  const [isExecutionModalOpen, setIsExecutionModalOpen] = useState<boolean>(false);
  const [isManualEntryOpen, setIsManualEntryOpen] = useState<boolean>(false);
- const [cancellingId, setCancellingId] = useState<string | null>(null);
 
  // Owner-only (§ dependency-locked deletion, Rule 2 & 5) — blocked
  // server-side while a non-voided payment is linked to the job.
@@ -66,6 +69,7 @@ export const JobsPage: React.FC = () => {
 
  useEffect(() => {
  loadJobs();
+ return subscribeDataRefresh("jobs", loadJobs);
  }, []);
 
  const handleOpenExecution = (job: Job) => {
@@ -73,20 +77,13 @@ export const JobsPage: React.FC = () => {
  setIsExecutionModalOpen(true);
  };
 
- const handleCancel = async (job: Job) => {
- const reason = window.prompt(
- `Cancel this job? This is Owner-only and reverses the job's booking to Cancelled too.\n\nOptional reason:`,
- );
- if (reason === null) return; // user hit Cancel on the prompt itself
- setCancellingId(job.id);
- try {
- await api.cancelJob(job.id, reason.trim() || undefined);
- loadJobs();
- } catch (err: any) {
- alert(err.message || "Failed to cancel job");
- } finally {
- setCancellingId(null);
- }
+ const handleCancel = (job: Job) => {
+ taskTray.open({
+ type: "job-cancel-reason",
+ title: `Cancel Job — ${job.booking.bookingNumber}`,
+ initProps: { jobId: job.id },
+ defaultDraft: { reason: "" },
+ });
  };
 
  // Filter jobs by status tab & search query
@@ -260,7 +257,6 @@ export const JobsPage: React.FC = () => {
  label: "Cancel Job",
  icon: <XCircle size={15} />,
  danger: true,
- disabled: cancellingId === j.id,
  onClick: () => handleCancel(j),
  hidden: !canCancel || j.status === "CANCELLED",
  },

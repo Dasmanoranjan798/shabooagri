@@ -9,6 +9,8 @@ import { Modal } from "../../components/ui/Modal";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
+import { useTaskTray } from "../../context/TaskTrayContext";
+import { subscribeDataRefresh } from "../../lib/dataRefreshBus";
 
 interface ReceiptModalProps {
   invoice: Invoice | null;
@@ -34,7 +36,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 }) => {
   const { hasPermission, roleKey } = useAuth();
   const canVoidPayment = roleKey === "owner" || hasPermission("payment.void");
-  const [voidingPaymentId, setVoidingPaymentId] = useState<string | null>(null);
+  const taskTray = useTaskTray();
   const customerTerm = getTerm("customer");
   const machineTerm = getTerm("machine");
   const driverTerm = getTerm("driver");
@@ -69,6 +71,24 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     }
   }, [invoice, isOpen]);
 
+  // A payment/invoice void opened from elsewhere (the shared void-reason
+  // task, which this modal itself now opens too — see handleVoidPayment)
+  // can't call back into this specific modal instance directly — it isn't
+  // migrated onto the task system itself yet, just refresh-aware.
+  // Subscribing is the same pattern the page-level lists use.
+  useEffect(() => {
+    if (!invoice || !isOpen) return;
+    return subscribeDataRefresh("invoices", async () => {
+      try {
+        const data = await api.getReceipt(invoice.id);
+        setReceiptData(data);
+      } catch {
+        // Ignore — the visible data just won't refresh this tick; the
+        // next successful load (e.g. reopening the modal) catches it up.
+      }
+    });
+  }, [invoice, isOpen]);
+
   if (!invoice) return null;
 
   const handleSaveTax = async () => {
@@ -92,24 +112,13 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     }
   };
 
-  const handleVoidPayment = async (paymentId: string) => {
-    const reason = window.prompt("A reason is required to void this payment:");
-    if (reason === null) return;
-    if (!reason.trim()) {
-      alert("A reason is required to void this payment.");
-      return;
-    }
-    setVoidingPaymentId(paymentId);
-    try {
-      await api.voidPayment(paymentId, reason.trim());
-      const refreshed = await api.getReceipt(invoice.id);
-      setReceiptData(refreshed);
-      if (onInvoiceUpdated) onInvoiceUpdated();
-    } catch (err: any) {
-      alert(err.message || "Failed to void payment");
-    } finally {
-      setVoidingPaymentId(null);
-    }
+  const handleVoidPayment = (paymentId: string) => {
+    taskTray.open({
+      type: "void-reason",
+      title: "Void Payment",
+      initProps: { kind: "payment" as const, targetId: paymentId },
+      defaultDraft: { reason: "" },
+    });
   };
 
   const inv = receiptData?.invoice || invoice;
@@ -406,7 +415,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                             <Button
                               variant="danger"
                               size="sm"
-                              isLoading={voidingPaymentId === p.id}
                               onClick={() => handleVoidPayment(p.id)}
                             >
                               Void
