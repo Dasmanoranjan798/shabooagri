@@ -11,7 +11,7 @@ import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import { ActionMenu } from "../../components/ui/ActionMenu";
 import { JobExecutionModal } from "./JobExecutionModal";
-import { ManualJobEntryModal } from "./ManualJobEntryModal";
+import { defaultManualJobEntryDraft } from "./ManualJobEntryModal";
 import { useTaskTray } from "../../context/TaskTrayContext";
 import { subscribeDataRefresh } from "../../lib/dataRefreshBus";
 
@@ -42,7 +42,6 @@ export const JobsPage: React.FC = () => {
 
  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
  const [isExecutionModalOpen, setIsExecutionModalOpen] = useState<boolean>(false);
- const [isManualEntryOpen, setIsManualEntryOpen] = useState<boolean>(false);
 
  // Owner-only (§ dependency-locked deletion, Rule 2 & 5) — blocked
  // server-side while a non-voided payment is linked to the job.
@@ -75,6 +74,15 @@ export const JobsPage: React.FC = () => {
  const handleOpenExecution = (job: Job) => {
  setSelectedJob(job);
  setIsExecutionModalOpen(true);
+ };
+
+ const handleOpenManualEntry = () => {
+ taskTray.open({
+ type: "manual-job-entry",
+ title: "Log Completed Field Work",
+ initProps: {},
+ defaultDraft: defaultManualJobEntryDraft(),
+ });
  };
 
  const handleCancel = (job: Job) => {
@@ -116,7 +124,7 @@ export const JobsPage: React.FC = () => {
  <p>Live field operations, equipment tracking, fuel & progress logging</p>
  </div>
  <div className="sa-page-header-actions">
- <Button variant="primary" onClick={() => setIsManualEntryOpen(true)}>
+ <Button variant="primary" onClick={handleOpenManualEntry}>
  Log After-Work Entry
  </Button>
  </div>
@@ -331,13 +339,6 @@ export const JobsPage: React.FC = () => {
  job={selectedJob}
  onUpdate={loadJobs}
  canCancel={canCancel}
- />
-
- {/* Manual After-Work Entry Modal */}
- <ManualJobEntryModal
- isOpen={isManualEntryOpen}
- onClose={() => setIsManualEntryOpen(false)}
- onSuccess={loadJobs}
  />
  </div>
  );

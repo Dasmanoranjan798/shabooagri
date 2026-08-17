@@ -10,8 +10,10 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import { ActionMenu } from "../../components/ui/ActionMenu";
-import { CustomerFormModal } from "./CustomerFormModal";
+import { defaultCustomerDraft } from "./CustomerFormModal";
 import { CustomerDetailModal } from "./CustomerDetailModal";
+import { useTaskTray } from "../../context/TaskTrayContext";
+import { subscribeDataRefresh } from "../../lib/dataRefreshBus";
 
 export const CustomersPage: React.FC = () => {
  const { roleKey, hasPermission } = useAuth();
@@ -24,8 +26,7 @@ export const CustomersPage: React.FC = () => {
  const [isLoading, setIsLoading] = useState<boolean>(true);
  const [error, setError] = useState<string | null>(null);
 
- const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false);
- const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+ const taskTray = useTaskTray();
 
  const [selectedDetailCustomer, setSelectedDetailCustomer] = useState<Customer | null>(null);
  const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
@@ -57,18 +58,27 @@ export const CustomersPage: React.FC = () => {
 
  useEffect(() => {
  loadCustomers();
+ return subscribeDataRefresh("customers", loadCustomers);
  }, []);
 
  const handleOpenCreate = () => {
- setEditingCustomer(null);
- setIsFormModalOpen(true);
+ taskTray.open({
+ type: "customer-form",
+ title: `Register New ${getTerm("customer")}`,
+ initProps: { customerToEdit: null },
+ defaultDraft: defaultCustomerDraft(null),
+ });
  };
 
  const handleOpenEdit = (customer: Customer, e?: React.MouseEvent) => {
  if (e) e.stopPropagation();
- setEditingCustomer(customer);
  setIsDetailModalOpen(false);
- setIsFormModalOpen(true);
+ taskTray.open({
+ type: "customer-form",
+ title: `Edit ${customer.name}`,
+ initProps: { customerToEdit: customer },
+ defaultDraft: defaultCustomerDraft(customer),
+ });
  };
 
  const handleOpenDetail = (customer: Customer) => {
@@ -271,14 +281,6 @@ export const CustomersPage: React.FC = () => {
  </div>
  </>
  )}
-
- {/* Form Modal (Create / Edit) */}
- <CustomerFormModal
- isOpen={isFormModalOpen}
- onClose={() => setIsFormModalOpen(false)}
- onSuccess={loadCustomers}
- customerToEdit={editingCustomer}
- />
 
  {/* Detail Inspection Modal */}
  <CustomerDetailModal

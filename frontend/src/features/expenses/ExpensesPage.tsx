@@ -10,8 +10,10 @@ import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
-import { ExpenseFormModal } from "./ExpenseFormModal";
+import { defaultExpenseDraft } from "./ExpenseFormModal";
 import { ExpenseDetailModal } from "./ExpenseDetailModal";
+import { useTaskTray } from "../../context/TaskTrayContext";
+import { subscribeDataRefresh } from "../../lib/dataRefreshBus";
 
 export const ExpensesPage: React.FC = () => {
  const { roleKey, hasPermission } = useAuth();
@@ -25,8 +27,7 @@ export const ExpensesPage: React.FC = () => {
  const [isLoading, setIsLoading] = useState<boolean>(true);
  const [error, setError] = useState<string | null>(null);
 
- const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false);
- const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+ const taskTray = useTaskTray();
 
  const [selectedDetailExpense, setSelectedDetailExpense] = useState<Expense | null>(null);
  const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
@@ -60,18 +61,27 @@ export const ExpensesPage: React.FC = () => {
 
  useEffect(() => {
  loadData();
+ return subscribeDataRefresh("expenses", loadData);
  }, []);
 
  const handleOpenCreate = () => {
- setEditingExpense(null);
- setIsFormModalOpen(true);
+ taskTray.open({
+ type: "expense-form",
+ title: "Record New Business Expense",
+ initProps: { expenseToEdit: null },
+ defaultDraft: defaultExpenseDraft(null),
+ });
  };
 
  const handleOpenEdit = (expense: Expense, e?: React.MouseEvent) => {
  if (e) e.stopPropagation();
- setEditingExpense(expense);
  setIsDetailModalOpen(false);
- setIsFormModalOpen(true);
+ taskTray.open({
+ type: "expense-form",
+ title: "Edit Expense Record",
+ initProps: { expenseToEdit: expense },
+ defaultDraft: defaultExpenseDraft(expense),
+ });
  };
 
  const handleOpenDetail = (expense: Expense) => {
@@ -400,14 +410,6 @@ export const ExpensesPage: React.FC = () => {
  </div>
  </>
  )}
-
- {/* Form Modal (Create / Edit) */}
- <ExpenseFormModal
- isOpen={isFormModalOpen}
- onClose={() => setIsFormModalOpen(false)}
- onSuccess={loadData}
- expenseToEdit={editingExpense}
- />
 
  {/* Detail Inspection Modal */}
  <ExpenseDetailModal

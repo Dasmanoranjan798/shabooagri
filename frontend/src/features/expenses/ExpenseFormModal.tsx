@@ -1,216 +1,213 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { CreateExpensePayload, Expense, ExpenseCategory } from "../../types/expense";
 import type { Machine } from "../../types/machine";
 import { api } from "../../lib/api";
 import { getTerm } from "../../lib/terminology";
-import { Modal } from "../../components/ui/Modal";
+import { notifyDataRefresh } from "../../lib/dataRefreshBus";
+import { useTaskDraft, type TaskContentComponent } from "../../context/TaskTrayContext";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { SearchableSelect } from "../../components/ui/SearchableSelect/SearchableSelect";
 
-interface ExpenseFormModalProps {
- isOpen: boolean;
- onClose: () => void;
- onSuccess: () => void;
- expenseToEdit?: Expense | null;
+// Migrated onto the shared task-tray system (Pass 2, Batch 2) — see
+// BookingFormModal.tsx for the full explanation of the new contract.
+
+export interface ExpenseFormInitProps {
+  expenseToEdit: Expense | null;
 }
 
-export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
- isOpen,
- onClose,
- onSuccess,
- expenseToEdit,
+export interface ExpenseFormDraft {
+  categoryId: string;
+  amount: string;
+  machineId: string;
+  expenseDate: string;
+  description: string;
+}
+
+export function defaultExpenseDraft(expenseToEdit: Expense | null): ExpenseFormDraft {
+  if (expenseToEdit) {
+    return {
+      categoryId: expenseToEdit.categoryId,
+      amount: expenseToEdit.amount.toString(),
+      machineId: expenseToEdit.machineId || "",
+      expenseDate: expenseToEdit.expenseDate ? expenseToEdit.expenseDate.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      description: expenseToEdit.description || "",
+    };
+  }
+  return {
+    categoryId: "",
+    amount: "",
+    machineId: "",
+    expenseDate: new Date().toISOString().slice(0, 10),
+    description: "",
+  };
+}
+
+export const ExpenseFormTask: TaskContentComponent<ExpenseFormInitProps> = ({
+  taskId,
+  initProps,
+  onRequestClose,
 }) => {
- const machineTerm = getTerm("machine");
+  const { expenseToEdit } = initProps;
+  const machineTerm = getTerm("machine");
+  const [draft, setDraft] = useTaskDraft<ExpenseFormDraft>(taskId, defaultExpenseDraft(expenseToEdit));
 
- const [categories, setCategories] = useState<ExpenseCategory[]>([]);
- const [machines, setMachines] = useState<Machine[]>([]);
+  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
+  const [machines, setMachines] = useState<Machine[]>([]);
 
- const [categoryId, setCategoryId] = useState<string>("");
- const [amount, setAmount] = useState<string>("");
- const [machineId, setMachineId] = useState<string>("");
- const [expenseDate, setExpenseDate] = useState<string>(new Date().toISOString().slice(0, 10));
- const [description, setDescription] = useState<string>("");
+  const [isLoadingOptions, setIsLoadingOptions] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
- const [isLoadingOptions, setIsLoadingOptions] = useState<boolean>(false);
- const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
- const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    async function loadOptions() {
+      setIsLoadingOptions(true);
+      try {
+        const [catList, mList] = await Promise.all([
+          api.listExpenseCategories(),
+          api.listMachines(),
+        ]);
+        setCategories(catList);
+        setMachines(mList);
 
- useEffect(() => {
- if (!isOpen) return;
+        if (!expenseToEdit && catList.length > 0) {
+          setDraft((prev) => (prev.categoryId ? {} : { categoryId: catList[0].id }));
+        }
+      } catch (err: any) {
+        console.error("Failed to load expense form options:", err);
+      } finally {
+        setIsLoadingOptions(false);
+      }
+    }
+    loadOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
- async function loadOptions() {
- setIsLoadingOptions(true);
- try {
- const [catList, mList] = await Promise.all([
- api.listExpenseCategories(),
- api.listMachines(),
- ]);
- setCategories(catList);
- setMachines(mList);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!draft.categoryId) {
+      setError("Please select an expense category");
+      return;
+    }
 
- if (!expenseToEdit && catList.length > 0 && !categoryId) {
- setCategoryId(catList[0].id);
- }
- } catch (err: any) {
- console.error("Failed to load expense form options:", err);
- } finally {
- setIsLoadingOptions(false);
- }
- }
+    const parsedAmount = parseFloat(draft.amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      setError("Please enter a valid expense amount greater than 0");
+      return;
+    }
 
- loadOptions();
- }, [isOpen, expenseToEdit]);
+    setIsSubmitting(true);
+    setError(null);
 
- useEffect(() => {
- if (expenseToEdit) {
- setCategoryId(expenseToEdit.categoryId);
- setAmount(expenseToEdit.amount.toString());
- setMachineId(expenseToEdit.machineId || "");
- setExpenseDate(
- expenseToEdit.expenseDate ? expenseToEdit.expenseDate.slice(0, 10) : new Date().toISOString().slice(0, 10)
- );
- setDescription(expenseToEdit.description || "");
- } else {
- setAmount("");
- setMachineId("");
- setExpenseDate(new Date().toISOString().slice(0, 10));
- setDescription("");
- }
- }, [expenseToEdit, isOpen]);
+    const payload: CreateExpensePayload = {
+      categoryId: draft.categoryId,
+      amount: parsedAmount,
+      machineId: draft.machineId || undefined,
+      expenseDate: draft.expenseDate || undefined,
+      description: draft.description.trim() || undefined,
+    };
 
- const handleSubmit = async (e: React.FormEvent) => {
- e.preventDefault();
- if (!categoryId) {
- setError("Please select an expense category");
- return;
- }
+    try {
+      if (expenseToEdit) {
+        await api.updateExpense(expenseToEdit.id, payload);
+      } else {
+        await api.createExpense(payload);
+      }
 
- const parsedAmount = parseFloat(amount);
- if (isNaN(parsedAmount) || parsedAmount <= 0) {
- setError("Please enter a valid expense amount greater than 0");
- return;
- }
+      notifyDataRefresh("expenses");
+      onRequestClose();
+    } catch (err: any) {
+      setError(err.message || "Failed to save expense record");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
- setIsSubmitting(true);
- setError(null);
+  return (
+    <form onSubmit={handleSubmit} className="sa-booking-form" style={{ padding: "1.5rem" }}>
+      {error && <div className="sa-alert sa-alert-danger">{error}</div>}
+      {isLoadingOptions && <div className="sa-alert sa-alert-info">Loading expense categories & machines...</div>}
 
- const payload: CreateExpensePayload = {
- categoryId,
- amount: parsedAmount,
- machineId: machineId || undefined,
- expenseDate: expenseDate || undefined,
- description: description.trim() || undefined,
- };
+      {/* 1. Category & Amount */}
+      <div className="sa-form-grid-2">
+        <div className="sa-input-group">
+          <label className="sa-input-label">Expense Category *</label>
+          <select
+            className="sa-input"
+            value={draft.categoryId}
+            onChange={(e) => setDraft({ categoryId: e.target.value })}
+            required
+          >
+            <option value="">-- Select Category --</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
- try {
- if (expenseToEdit) {
- await api.updateExpense(expenseToEdit.id, payload);
- } else {
- await api.createExpense(payload);
- }
+        <Input
+          label="Amount (₹) *"
+          type="number"
+          min="1"
+          step="1"
+          placeholder="e.g. 2500"
+          value={draft.amount}
+          onChange={(e) => setDraft({ amount: e.target.value })}
+          required
+          autoFocus
+        />
+      </div>
 
- onSuccess();
- onClose();
- } catch (err: any) {
- setError(err.message || "Failed to save expense record");
- } finally {
- setIsSubmitting(false);
- }
- };
+      {/* 2. Linked Machine & Expense Date */}
+      <div className="sa-form-grid-2">
+        <div className="sa-input-group">
+          <label className="sa-input-label">Linked {machineTerm} (Optional)</label>
+          <SearchableSelect
+            placeholder="-- General Operational Expense --"
+            value={draft.machineId}
+            onChange={(v) => setDraft({ machineId: v })}
+            options={[
+              { value: "", label: "-- General Operational Expense --" },
+              ...machines.map((m) => ({
+                value: m.id,
+                label: `${m.registrationNumber} (${m.brand || "Machine"})`,
+              })),
+            ]}
+          />
+        </div>
 
- return (
- <Modal
- isOpen={isOpen}
- onClose={onClose}
- title={expenseToEdit ? "Edit Expense Record" : "Record New Business Expense"}
- maxWidth="500px"
- >
- <form onSubmit={handleSubmit} className="sa-booking-form">
- {error && <div className="sa-alert sa-alert-danger">{error}</div>}
- {isLoadingOptions && <div className="sa-alert sa-alert-info">Loading expense categories & machines...</div>}
+        <Input
+          label="Expense Date"
+          type="date"
+          value={draft.expenseDate}
+          onChange={(e) => setDraft({ expenseDate: e.target.value })}
+          required
+        />
+      </div>
 
- {/* 1. Category & Amount */}
- <div className="sa-form-grid-2">
- <div className="sa-input-group">
- <label className="sa-input-label">Expense Category *</label>
- <select
- className="sa-input"
- value={categoryId}
- onChange={(e) => setCategoryId(e.target.value)}
- required
- >
- <option value="">-- Select Category --</option>
- {categories.map((cat) => (
- <option key={cat.id} value={cat.id}>
- {cat.name}
- </option>
- ))}
- </select>
- </div>
+      {/* 3. Description / Reason */}
+      <div className="sa-input-group">
+        <label className="sa-input-label">Description / Remarks</label>
+        <textarea
+          className="sa-input sa-textarea"
+          rows={3}
+          placeholder="Details of spare parts purchased, oil change, maintenance vendor..."
+          value={draft.description}
+          onChange={(e) => setDraft({ description: e.target.value })}
+        />
+      </div>
 
- <Input
- label="Amount (₹) *"
- type="number"
- min="1"
- step="1"
- placeholder="e.g. 2500"
- value={amount}
- onChange={(e) => setAmount(e.target.value)}
- required
- autoFocus
- />
- </div>
-
- {/* 2. Linked Machine & Expense Date */}
- <div className="sa-form-grid-2">
- <div className="sa-input-group">
- <label className="sa-input-label">Linked {machineTerm} (Optional)</label>
- <SearchableSelect
- placeholder="-- General Operational Expense --"
- value={machineId}
- onChange={setMachineId}
- options={[
- { value: "", label: "-- General Operational Expense --" },
- ...machines.map((m) => ({
- value: m.id,
- label: `${m.registrationNumber} (${m.brand || "Machine"})`,
- })),
- ]}
- />
- </div>
-
- <Input
- label="Expense Date"
- type="date"
- value={expenseDate}
- onChange={(e) => setExpenseDate(e.target.value)}
- required
- />
- </div>
-
- {/* 3. Description / Reason */}
- <div className="sa-input-group">
- <label className="sa-input-label">Description / Remarks</label>
- <textarea
- className="sa-input sa-textarea"
- rows={3}
- placeholder="Details of spare parts purchased, oil change, maintenance vendor..."
- value={description}
- onChange={(e) => setDescription(e.target.value)}
- />
- </div>
-
- {/* Actions */}
- <div className="sa-form-actions" style={{ marginTop: "1.5rem" }}>
- <Button type="button" variant="secondary" onClick={onClose}>
- Cancel
- </Button>
- <Button type="submit" variant="primary" isLoading={isSubmitting}>
- {expenseToEdit ? "Save Expense" : "Record Expense"}
- </Button>
- </div>
- </form>
- </Modal>
- );
+      {/* Actions */}
+      <div className="sa-form-actions" style={{ marginTop: "1.5rem" }}>
+        <Button type="button" variant="secondary" onClick={onRequestClose}>
+          Cancel
+        </Button>
+        <Button type="submit" variant="primary" isLoading={isSubmitting}>
+          {expenseToEdit ? "Save Expense" : "Record Expense"}
+        </Button>
+      </div>
+    </form>
+  );
 };

@@ -9,6 +9,14 @@ import { VoidReasonTask } from "../ui/VoidReasonModal";
 import { JobCancelReasonTask } from "../../features/jobs/JobCancelReasonModal";
 import { MachineFormTask } from "../../features/machines/MachineFormModal";
 import { DriverFormTask } from "../../features/drivers/DriverFormModal";
+import { CustomerFormTask } from "../../features/customers/CustomerFormModal";
+import { EmployeeFormTask } from "../../features/employees/EmployeeFormModal";
+import { ExpenseFormTask } from "../../features/expenses/ExpenseFormModal";
+import { NewInvoiceTask } from "../../features/payments/NewInvoiceModal";
+import { ReceivePaymentTask } from "../../features/payments/ReceivePaymentModal";
+import { RecordAdvanceTask } from "../../features/payments/RecordAdvanceModal";
+import { InviteStaffTask } from "../../features/team/InviteStaffModal";
+import { ManualJobEntryTask } from "../../features/jobs/ManualJobEntryModal";
 
 // Task `type` -> the content component that renders it. Every form
 // migrated onto this system registers itself here. Growing across Pass 2
@@ -21,6 +29,14 @@ const TASK_REGISTRY: Record<string, TaskContentComponent<any>> = {
   "job-cancel-reason": JobCancelReasonTask,
   "machine-form": MachineFormTask,
   "driver-form": DriverFormTask,
+  "customer-form": CustomerFormTask,
+  "employee-form": EmployeeFormTask,
+  "expense-form": ExpenseFormTask,
+  "new-invoice": NewInvoiceTask,
+  "receive-payment": ReceivePaymentTask,
+  "record-advance": RecordAdvanceTask,
+  "invite-staff": InviteStaffTask,
+  "manual-job-entry": ManualJobEntryTask,
 };
 
 const TaskChrome: React.FC<{

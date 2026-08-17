@@ -9,8 +9,10 @@ import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import { ActionMenu } from "../../components/ui/ActionMenu";
-import { EmployeeFormModal } from "./EmployeeFormModal";
+import { defaultEmployeeDraft } from "./EmployeeFormModal";
 import { EmployeeDetailModal } from "./EmployeeDetailModal";
+import { useTaskTray } from "../../context/TaskTrayContext";
+import { subscribeDataRefresh } from "../../lib/dataRefreshBus";
 
 const EMPLOYEE_STATUS_FILTERS: Array<{ label: string; value: string }> = [
  { label: "All", value: "ALL" },
@@ -28,8 +30,7 @@ export const EmployeesPage: React.FC = () => {
  const [isLoading, setIsLoading] = useState<boolean>(true);
  const [error, setError] = useState<string | null>(null);
 
- const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false);
- const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+ const taskTray = useTaskTray();
 
  const [selectedDetailEmployee, setSelectedDetailEmployee] = useState<Employee | null>(null);
  const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
@@ -61,18 +62,27 @@ export const EmployeesPage: React.FC = () => {
 
  useEffect(() => {
  loadEmployees();
+ return subscribeDataRefresh("employees", loadEmployees);
  }, []);
 
  const handleOpenCreate = () => {
- setEditingEmployee(null);
- setIsFormModalOpen(true);
+ taskTray.open({
+ type: "employee-form",
+ title: "Register New Staff Member",
+ initProps: { employeeToEdit: null },
+ defaultDraft: defaultEmployeeDraft(null),
+ });
  };
 
  const handleOpenEdit = (employee: Employee, e?: React.MouseEvent) => {
  if (e) e.stopPropagation();
- setEditingEmployee(employee);
  setIsDetailModalOpen(false);
- setIsFormModalOpen(true);
+ taskTray.open({
+ type: "employee-form",
+ title: `Edit Staff Member — ${employee.name}`,
+ initProps: { employeeToEdit: employee },
+ defaultDraft: defaultEmployeeDraft(employee),
+ });
  };
 
  const handleOpenDetail = (employee: Employee) => {
@@ -292,14 +302,6 @@ export const EmployeesPage: React.FC = () => {
  </div>
  </>
  )}
-
- {/* Form Modal (Create / Edit) */}
- <EmployeeFormModal
- isOpen={isFormModalOpen}
- onClose={() => setIsFormModalOpen(false)}
- onSuccess={loadEmployees}
- employeeToEdit={editingEmployee}
- />
 
  {/* Detail Inspection Modal */}
  <EmployeeDetailModal

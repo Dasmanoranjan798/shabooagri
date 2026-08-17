@@ -5,8 +5,10 @@ import { Card } from "../../components/ui/Card";
 import { Badge, type BadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
-import { InviteStaffModal } from "./InviteStaffModal";
+import { defaultInviteStaffDraft } from "./InviteStaffModal";
 import type { TeamUser, StaffInvite } from "../../types/team";
+import { useTaskTray } from "../../context/TaskTrayContext";
+import { subscribeDataRefresh } from "../../lib/dataRefreshBus";
 
 function inviteStatusVariant(status: StaffInvite["status"]): BadgeVariant {
   if (status === "PENDING") return "warning";
@@ -20,8 +22,8 @@ export const TeamPage: React.FC = () => {
   const [invites, setInvites] = useState<StaffInvite[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const taskTray = useTaskTray();
 
   const loadData = async () => {
     setIsLoading(true);
@@ -39,7 +41,17 @@ export const TeamPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
+    return subscribeDataRefresh("team", loadData);
   }, []);
+
+  const handleOpenInvite = () => {
+    taskTray.open({
+      type: "invite-staff",
+      title: "Invite Staff Member",
+      initProps: {},
+      defaultDraft: defaultInviteStaffDraft(),
+    });
+  };
 
   const handleToggleUserStatus = async (user: TeamUser) => {
     const nextStatus = user.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
@@ -83,7 +95,7 @@ export const TeamPage: React.FC = () => {
           <h2>Team</h2>
           <p>Invite staff members and manage who has access to your company's software</p>
         </div>
-        <Button variant="primary" size="md" onClick={() => setIsInviteModalOpen(true)}>
+        <Button variant="primary" size="md" onClick={handleOpenInvite}>
           + Invite Staff
         </Button>
       </div>
@@ -230,11 +242,6 @@ export const TeamPage: React.FC = () => {
         </>
       )}
 
-      <InviteStaffModal
-        isOpen={isInviteModalOpen}
-        onClose={() => setIsInviteModalOpen(false)}
-        onSuccess={loadData}
-      />
-    </div>
+      </div>
   );
 };

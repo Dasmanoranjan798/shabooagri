@@ -1,119 +1,108 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Copy, CheckCircle2, Pencil } from "lucide-react";
 import type { CreateCustomerPayload, Customer } from "../../types/customer";
 import type { VillageOption } from "../../types/booking";
 import type { CreateInviteResponse } from "../../types/team";
 import { api } from "../../lib/api";
 import { getTerm } from "../../lib/terminology";
-import { Modal } from "../../components/ui/Modal";
+import { notifyDataRefresh } from "../../lib/dataRefreshBus";
+import { useTaskDraft, type TaskContentComponent } from "../../context/TaskTrayContext";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { SearchableSelect } from "../../components/ui/SearchableSelect/SearchableSelect";
 
-interface CustomerFormModalProps {
- isOpen: boolean;
- onClose: () => void;
- onSuccess: () => void;
- customerToEdit?: Customer | null;
+// Migrated onto the shared task-tray system (Pass 2, Batch 2) — see
+// BookingFormModal.tsx for the full explanation of the new contract.
+
+export interface CustomerFormInitProps {
+  customerToEdit: Customer | null;
 }
 
-export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
- isOpen,
- onClose,
- onSuccess,
- customerToEdit,
+export interface CustomerFormDraft {
+  name: string;
+  villageId: string;
+  phone: string;
+  address: string;
+  notes: string;
+  isGstApplicable: boolean;
+  gstin: string;
+  isActive: boolean;
+  sendInvite: boolean;
+  email: string;
+  isAddingNewVillage: boolean;
+  newVillageName: string;
+  isEditingVillage: boolean;
+  editVillageName: string;
+}
+
+export function defaultCustomerDraft(customerToEdit: Customer | null): CustomerFormDraft {
+  const shared = {
+    sendInvite: false,
+    email: "",
+    isAddingNewVillage: false,
+    newVillageName: "",
+    isEditingVillage: false,
+    editVillageName: "",
+  };
+  if (customerToEdit) {
+    return {
+      ...shared,
+      name: customerToEdit.name,
+      villageId: customerToEdit.villageId,
+      phone: customerToEdit.phone || "",
+      address: customerToEdit.address || "",
+      notes: customerToEdit.notes || "",
+      isGstApplicable: customerToEdit.isGstApplicable || false,
+      gstin: customerToEdit.gstin || "",
+      isActive: customerToEdit.isActive ?? true,
+    };
+  }
+  return {
+    ...shared,
+    name: "",
+    villageId: "",
+    phone: "",
+    address: "",
+    notes: "",
+    isGstApplicable: false,
+    gstin: "",
+    isActive: true,
+  };
+}
+
+export const CustomerFormTask: TaskContentComponent<CustomerFormInitProps> = ({
+  taskId,
+  initProps,
+  onRequestClose,
 }) => {
- const customerTerm = getTerm("customer");
- const villageTerm = getTerm("village");
+  const { customerToEdit } = initProps;
+  const customerTerm = getTerm("customer");
+  const villageTerm = getTerm("village");
+  const [draft, setDraft] = useTaskDraft<CustomerFormDraft>(taskId, defaultCustomerDraft(customerToEdit));
 
- const [villages, setVillages] = useState<VillageOption[]>([]);
- const [name, setName] = useState<string>("");
- const [villageId, setVillageId] = useState<string>("");
- const [phone, setPhone] = useState<string>("");
- const [address, setAddress] = useState<string>("");
- const [notes, setNotes] = useState<string>("");
+  const [villages, setVillages] = useState<VillageOption[]>([]);
+  const [farmerRoleId, setFarmerRoleId] = useState<string>("");
+  const [inviteResult, setInviteResult] = useState<CreateInviteResponse | null>(null);
+  const [linkCopied, setLinkCopied] = useState<boolean>(false);
 
- // Send Farmer Portal Invite state
- const [sendInvite, setSendInvite] = useState<boolean>(false);
- const [email, setEmail] = useState<string>("");
- const [farmerRoleId, setFarmerRoleId] = useState<string>("");
- const [inviteResult, setInviteResult] = useState<CreateInviteResponse | null>(null);
- const [linkCopied, setLinkCopied] = useState<boolean>(false);
+  const [isLoadingVillages, setIsLoadingVillages] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isCreatingVillage, setIsCreatingVillage] = useState<boolean>(false);
+  const [isSavingVillageEdit, setIsSavingVillageEdit] = useState<boolean>(false);
 
- const [isLoadingVillages, setIsLoadingVillages] = useState<boolean>(false);
- const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
- const [error, setError] = useState<string | null>(null);
+  // Existing customer with no portal login yet can also be invited — only
+  // a customer who already has a User account is excluded.
+  const canSendInvite = !customerToEdit || !customerToEdit.userId;
 
- // Inline New Village Creation state
- const [isAddingNewVillage, setIsAddingNewVillage] = useState<boolean>(false);
- const [newVillageName, setNewVillageName] = useState<string>("");
- const [isCreatingVillage, setIsCreatingVillage] = useState<boolean>(false);
-
- const handleCreateInlineVillage = async () => {
-   if (!newVillageName.trim()) {
-     setError(`Please enter a name for the new ${villageTerm.toLowerCase()}`);
-     return;
-   }
-   setIsCreatingVillage(true);
-   setError(null);
-   try {
-     const created = await api.createVillage({ name: newVillageName.trim() });
-     setVillages((prev) => [...prev, created]);
-     setVillageId(created.id);
-     setNewVillageName("");
-     setIsAddingNewVillage(false);
-   } catch (err: any) {
-     setError(err.message || `Failed to create new ${villageTerm}`);
-   } finally {
-     setIsCreatingVillage(false);
-   }
- };
-
- // Rename inline state — fixes a mis-typed village name without needing a
- // dedicated Villages management screen (none exists; villages are only
- // ever created inline from here and the Booking form).
- const [isEditingVillage, setIsEditingVillage] = useState<boolean>(false);
- const [editVillageName, setEditVillageName] = useState<string>("");
- const [isSavingVillageEdit, setIsSavingVillageEdit] = useState<boolean>(false);
-
- const handleStartEditVillage = () => {
-   const current = villages.find((v) => v.id === villageId);
-   setEditVillageName(current?.name || "");
-   setIsEditingVillage(true);
- };
-
- const handleSaveVillageEdit = async () => {
-   if (!editVillageName.trim()) {
-     setError(`Please enter a name for the ${villageTerm.toLowerCase()}`);
-     return;
-   }
-   setIsSavingVillageEdit(true);
-   setError(null);
-   try {
-     const updated = await api.updateVillage(villageId, { name: editVillageName.trim() });
-     setVillages((prev) => prev.map((v) => (v.id === updated.id ? updated : v)));
-     setIsEditingVillage(false);
-   } catch (err: any) {
-     setError(err.message || `Failed to rename ${villageTerm.toLowerCase()}`);
-   } finally {
-     setIsSavingVillageEdit(false);
-   }
- };
-
- // Existing customer with no portal login yet can also be invited — only
- // a customer who already has a User account is excluded.
- const canSendInvite = !customerToEdit || !customerToEdit.userId;
-
- useEffect(() => {
-    if (!isOpen) return;
-
+  useEffect(() => {
     async function loadVillages() {
       setIsLoadingVillages(true);
       try {
         const list = await api.listVillages();
         setVillages(list);
         if (!customerToEdit && list.length > 0) {
-          setVillageId((current) => current || list[0].id);
+          setDraft((prev) => (prev.villageId ? {} : { villageId: list[0].id }));
         }
       } catch (err: any) {
         console.error("Failed to load villages:", err);
@@ -121,53 +110,61 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
         setIsLoadingVillages(false);
       }
     }
-
     loadVillages();
 
     api.listRoles().then((roles) => {
       const farmerRole = roles.find((r) => r.systemKey === "farmer");
       if (farmerRole) setFarmerRoleId(farmerRole.id);
     }).catch(() => {});
-  }, [isOpen, customerToEdit]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const [isGstApplicable, setIsGstApplicable] = useState<boolean>(false);
-  const [gstin, setGstin] = useState<string>("");
-  // The Manager-facing alternative to delete (§ dependency-locked
-  // deletion, Rule 5) — only meaningful for an existing customer, so it's
-  // not part of the create payload at all (defaults true server-side).
-  const [isActive, setIsActive] = useState<boolean>(true);
-
-  useEffect(() => {
-    if (customerToEdit) {
-      setName(customerToEdit.name);
-      setVillageId(customerToEdit.villageId);
-      setPhone(customerToEdit.phone || "");
-      setAddress(customerToEdit.address || "");
-      setNotes(customerToEdit.notes || "");
-      setIsGstApplicable(customerToEdit.isGstApplicable || false);
-      setGstin(customerToEdit.gstin || "");
-      setIsActive(customerToEdit.isActive ?? true);
-    } else {
-      setName("");
-      setPhone("");
-      setAddress("");
-      setNotes("");
-      setIsGstApplicable(false);
-      setGstin("");
-      setIsActive(true);
-      setIsAddingNewVillage(false);
-      setNewVillageName("");
+  const handleCreateInlineVillage = async () => {
+    if (!draft.newVillageName.trim()) {
+      setError(`Please enter a name for the new ${villageTerm.toLowerCase()}`);
+      return;
     }
-    setSendInvite(false);
-    setEmail("");
-    setInviteResult(null);
-    setLinkCopied(false);
+    setIsCreatingVillage(true);
     setError(null);
-  }, [customerToEdit, isOpen]);
+    try {
+      const created = await api.createVillage({ name: draft.newVillageName.trim() });
+      setVillages((prev) => [...prev, created]);
+      setDraft({ villageId: created.id, newVillageName: "", isAddingNewVillage: false });
+      notifyDataRefresh("villages");
+    } catch (err: any) {
+      setError(err.message || `Failed to create new ${villageTerm}`);
+    } finally {
+      setIsCreatingVillage(false);
+    }
+  };
+
+  const handleStartEditVillage = () => {
+    const current = villages.find((v) => v.id === draft.villageId);
+    setDraft({ editVillageName: current?.name || "", isEditingVillage: true });
+  };
+
+  const handleSaveVillageEdit = async () => {
+    if (!draft.editVillageName.trim()) {
+      setError(`Please enter a name for the ${villageTerm.toLowerCase()}`);
+      return;
+    }
+    setIsSavingVillageEdit(true);
+    setError(null);
+    try {
+      const updated = await api.updateVillage(draft.villageId, { name: draft.editVillageName.trim() });
+      setVillages((prev) => prev.map((v) => (v.id === updated.id ? updated : v)));
+      setDraft({ isEditingVillage: false });
+      notifyDataRefresh("villages");
+    } catch (err: any) {
+      setError(err.message || `Failed to rename ${villageTerm.toLowerCase()}`);
+    } finally {
+      setIsSavingVillageEdit(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
+    if (!draft.name.trim()) {
       setError(`Please enter ${customerTerm} name`);
       return;
     }
@@ -175,17 +172,15 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
     setIsSubmitting(true);
     setError(null);
 
-    let activeVillageId = villageId;
+    let activeVillageId = draft.villageId;
 
-    // Auto-create new village if inline village creation is active with a village name typed
-    if (isAddingNewVillage && newVillageName.trim()) {
+    if (draft.isAddingNewVillage && draft.newVillageName.trim()) {
       try {
-        const created = await api.createVillage({ name: newVillageName.trim() });
+        const created = await api.createVillage({ name: draft.newVillageName.trim() });
         setVillages((prev) => [...prev, created]);
         activeVillageId = created.id;
-        setVillageId(created.id);
-        setNewVillageName("");
-        setIsAddingNewVillage(false);
+        setDraft({ villageId: created.id, newVillageName: "", isAddingNewVillage: false });
+        notifyDataRefresh("villages");
       } catch (vErr: any) {
         setError(vErr.message || `Failed to create new ${villageTerm.toLowerCase()}`);
         setIsSubmitting(false);
@@ -199,7 +194,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
       return;
     }
 
-    if (sendInvite && !email.trim() && !phone.trim()) {
+    if (draft.sendInvite && !draft.email.trim() && !draft.phone.trim()) {
       setError(`Email or Mobile Number is required to send a ${customerTerm.toLowerCase()} portal invite`);
       setIsSubmitting(false);
       return;
@@ -207,23 +202,24 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
 
     try {
       const payload: CreateCustomerPayload = {
-        name: name.trim(),
+        name: draft.name.trim(),
         villageId: activeVillageId,
-        phone: phone.trim() || undefined,
-        address: address.trim() || undefined,
-        notes: notes.trim() || undefined,
-        isGstApplicable,
-        gstin: gstin.trim() || undefined,
-        ...(customerToEdit ? { isActive } : {}),
+        phone: draft.phone.trim() || undefined,
+        address: draft.address.trim() || undefined,
+        notes: draft.notes.trim() || undefined,
+        isGstApplicable: draft.isGstApplicable,
+        gstin: draft.gstin.trim() || undefined,
+        ...(customerToEdit ? { isActive: draft.isActive } : {}),
       };
 
       const savedCustomer = customerToEdit
         ? await api.updateCustomer(customerToEdit.id, payload)
         : await api.createCustomer(payload);
 
-      if (sendInvite) {
+      notifyDataRefresh("customers");
+
+      if (draft.sendInvite) {
         if (!farmerRoleId) {
-          onSuccess();
           setError(
             `${customerTerm} record saved, but the portal invite could not be sent (couldn't find the Farmer role). Please try again or check Settings > Roles.`
           );
@@ -232,17 +228,15 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
 
         try {
           const invite = await api.createInvite({
-            fullName: name.trim(),
+            fullName: draft.name.trim(),
             roleId: farmerRoleId,
-            email: email.trim() || undefined,
-            phone: phone.trim() || undefined,
+            email: draft.email.trim() || undefined,
+            phone: draft.phone.trim() || undefined,
             customerId: savedCustomer.id,
           });
           setInviteResult(invite);
-          onSuccess();
           return;
         } catch (inviteErr: any) {
-          onSuccess();
           setError(
             `${customerTerm} record saved, but the portal invite failed: ${inviteErr.message || "Unknown error"}`
           );
@@ -250,8 +244,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
         }
       }
 
-      onSuccess();
-      onClose();
+      onRequestClose();
     } catch (err: any) {
       setError(err.message || `Failed to save ${customerTerm.toLowerCase()} record`);
     } finally {
@@ -259,283 +252,272 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
     }
   };
 
- const handleCopyLink = async () => {
- if (!inviteResult) return;
- await navigator.clipboard.writeText(inviteResult.inviteLink);
- setLinkCopied(true);
- setTimeout(() => setLinkCopied(false), 2000);
- };
+  const handleCopyLink = async () => {
+    if (!inviteResult) return;
+    await navigator.clipboard.writeText(inviteResult.inviteLink);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
 
- return (
- <Modal
- isOpen={isOpen}
- onClose={onClose}
- title={
- inviteResult
- ? "Invite Sent"
- : customerToEdit
- ? `Edit ${customerTerm} ${customerToEdit.name}`
- : `Register New ${customerTerm}`
- }
- maxWidth="550px"
- >
- {inviteResult ? (
- <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
- {inviteResult.deliveryMethod === "email" ? (
- <div className="sa-alert sa-alert-success" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
- <CheckCircle2 size={16} />
- <span>Invite emailed to {email}. They can click the link to set their password and get started.</span>
- </div>
- ) : (
- <div className="sa-alert sa-alert-info">
- <p style={{ marginBottom: "8px" }}>
- SMS delivery isn't connected yet — copy this link and share it with them directly (WhatsApp, SMS,
- etc.).
- </p>
- <div
- style={{
- display: "flex",
- gap: "8px",
- alignItems: "center",
- background: "var(--color-surface-alt, #f1f5f9)",
- borderRadius: "8px",
- padding: "8px 10px",
- }}
- >
- <span style={{ fontSize: "0.78rem", wordBreak: "break-all", flex: 1 }}>{inviteResult.inviteLink}</span>
- <button type="button" className="sa-icon-action" onClick={handleCopyLink} title="Copy link">
- {linkCopied ? <CheckCircle2 size={15} /> : <Copy size={15} />}
- </button>
- </div>
- </div>
- )}
- <Button type="button" variant="secondary" onClick={onClose} style={{ width: "100%" }}>
- Done
- </Button>
- </div>
- ) : (
- <form onSubmit={handleSubmit} className="sa-booking-form">
- {error && <div className="sa-alert sa-alert-danger">{error}</div>}
- {isLoadingVillages && <div className="sa-alert sa-alert-info">Loading {villageTerm.toLowerCase()} directory...</div>}
+  if (inviteResult) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "1.5rem" }}>
+        {inviteResult.deliveryMethod === "email" ? (
+          <div className="sa-alert sa-alert-success" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <CheckCircle2 size={16} />
+            <span>Invite emailed to {draft.email}. They can click the link to set their password and get started.</span>
+          </div>
+        ) : (
+          <div className="sa-alert sa-alert-info">
+            <p style={{ marginBottom: "8px" }}>
+              SMS delivery isn't connected yet — copy this link and share it with them directly (WhatsApp, SMS,
+              etc.).
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                alignItems: "center",
+                background: "var(--color-surface-alt, #f1f5f9)",
+                borderRadius: "8px",
+                padding: "8px 10px",
+              }}
+            >
+              <span style={{ fontSize: "0.78rem", wordBreak: "break-all", flex: 1 }}>{inviteResult.inviteLink}</span>
+              <button type="button" className="sa-icon-action" onClick={handleCopyLink} title="Copy link">
+                {linkCopied ? <CheckCircle2 size={15} /> : <Copy size={15} />}
+              </button>
+            </div>
+          </div>
+        )}
+        <Button type="button" variant="secondary" onClick={onRequestClose} style={{ width: "100%" }}>
+          Done
+        </Button>
+      </div>
+    );
+  }
 
- {/* 1. Customer Name */}
- <Input
- label={`${customerTerm} Name *`}
- type="text"
- placeholder="e.g. Ramesh Kumar"
- value={name}
- onChange={(e) => setName(e.target.value)}
- required
- autoFocus
- />
+  return (
+    <form onSubmit={handleSubmit} className="sa-booking-form" style={{ padding: "1.5rem" }}>
+      {error && <div className="sa-alert sa-alert-danger">{error}</div>}
+      {isLoadingVillages && <div className="sa-alert sa-alert-info">Loading {villageTerm.toLowerCase()} directory...</div>}
 
-  {/* 2. Village Selection & Phone Number */}
-  <div className="sa-form-grid-2">
-    <div className="sa-input-group">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-        <label className="sa-input-label">{villageTerm} *</label>
-        {!isAddingNewVillage && (
-          <button
-            type="button"
-            onClick={() => setIsAddingNewVillage(true)}
-            style={{
-              fontSize: "0.78rem",
-              fontWeight: 600,
-              color: "var(--color-primary)",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
-            }}
-          >
-            + Add New {villageTerm}
-          </button>
+      {/* 1. Customer Name */}
+      <Input
+        label={`${customerTerm} Name *`}
+        type="text"
+        placeholder="e.g. Ramesh Kumar"
+        value={draft.name}
+        onChange={(e) => setDraft({ name: e.target.value })}
+        required
+        autoFocus
+      />
+
+      {/* 2. Village Selection & Phone Number */}
+      <div className="sa-form-grid-2">
+        <div className="sa-input-group">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+            <label className="sa-input-label">{villageTerm} *</label>
+            {!draft.isAddingNewVillage && (
+              <button
+                type="button"
+                onClick={() => setDraft({ isAddingNewVillage: true })}
+                style={{
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  color: "var(--color-primary)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >
+                + Add New {villageTerm}
+              </button>
+            )}
+          </div>
+
+          {draft.isAddingNewVillage ? (
+            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+              <Input
+                placeholder={`Enter ${villageTerm.toLowerCase()} name`}
+                value={draft.newVillageName}
+                onChange={(e) => setDraft({ newVillageName: e.target.value })}
+                style={{ flex: 1 }}
+                autoFocus
+              />
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={handleCreateInlineVillage}
+                isLoading={isCreatingVillage}
+              >
+                Save
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setDraft({ isAddingNewVillage: false })}
+              >
+                Cancel
+              </Button>
+            </div>
+          ) : draft.isEditingVillage ? (
+            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+              <Input
+                placeholder={`${villageTerm} name`}
+                value={draft.editVillageName}
+                onChange={(e) => setDraft({ editVillageName: e.target.value })}
+                style={{ flex: 1 }}
+                autoFocus
+              />
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={handleSaveVillageEdit}
+                isLoading={isSavingVillageEdit}
+              >
+                Save
+              </Button>
+              <Button type="button" variant="secondary" size="sm" onClick={() => setDraft({ isEditingVillage: false })}>
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+              <div style={{ flex: 1 }}>
+                <SearchableSelect
+                  placeholder={`-- Select ${villageTerm} --`}
+                  value={draft.villageId}
+                  onChange={(v) => setDraft({ villageId: v })}
+                  options={villages.map((v) => ({ value: v.id, label: v.name }))}
+                />
+              </div>
+              {draft.villageId && (
+                <button
+                  type="button"
+                  className="sa-icon-action"
+                  title={`Rename this ${villageTerm.toLowerCase()}`}
+                  onClick={handleStartEditVillage}
+                >
+                  <Pencil size={15} />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <Input
+          label="Mobile Phone Number"
+          type="tel"
+          placeholder="e.g. 9876543210"
+          value={draft.phone}
+          onChange={(e) => setDraft({ phone: e.target.value })}
+        />
+      </div>
+
+      {/* 3. Address & Field Location */}
+      <div className="sa-input-group">
+        <label className="sa-input-label">Address / Field Location</label>
+        <textarea
+          className="sa-input sa-textarea"
+          rows={2}
+          value={draft.address}
+          onChange={(e) => setDraft({ address: e.target.value })}
+          placeholder="Farm address, landmark, or plot details..."
+        />
+      </div>
+
+      {/* 4. Optional Customer GST Details */}
+      <div style={{ background: "var(--color-bg-secondary)", padding: "10px", borderRadius: "6px", marginBottom: "12px" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.85rem", marginBottom: draft.isGstApplicable ? "8px" : 0 }}>
+          <input
+            type="checkbox"
+            checked={draft.isGstApplicable}
+            onChange={(e) => setDraft({ isGstApplicable: e.target.checked })}
+          />
+          {customerTerm} GST Registered / GST Applicable
+        </label>
+        {draft.isGstApplicable && (
+          <Input
+            label={`${customerTerm} GSTIN (Optional)`}
+            type="text"
+            placeholder="e.g. 21AAAAA0000A1Z5"
+            value={draft.gstin}
+            onChange={(e) => setDraft({ gstin: e.target.value.toUpperCase() })}
+            maxLength={15}
+          />
         )}
       </div>
 
-      {isAddingNewVillage ? (
-        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-          <Input
-            placeholder={`Enter ${villageTerm.toLowerCase()} name`}
-            value={newVillageName}
-            onChange={(e) => setNewVillageName(e.target.value)}
-            style={{ flex: 1 }}
-            autoFocus
-          />
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            onClick={handleCreateInlineVillage}
-            isLoading={isCreatingVillage}
-          >
-            Save
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => setIsAddingNewVillage(false)}
-          >
-            Cancel
-          </Button>
-        </div>
-      ) : isEditingVillage ? (
-        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-          <Input
-            placeholder={`${villageTerm} name`}
-            value={editVillageName}
-            onChange={(e) => setEditVillageName(e.target.value)}
-            style={{ flex: 1 }}
-            autoFocus
-          />
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            onClick={handleSaveVillageEdit}
-            isLoading={isSavingVillageEdit}
-          >
-            Save
-          </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={() => setIsEditingVillage(false)}>
-            Cancel
-          </Button>
-        </div>
-      ) : (
-        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-          <div style={{ flex: 1 }}>
-            <SearchableSelect
-              placeholder={`-- Select ${villageTerm} --`}
-              value={villageId}
-              onChange={setVillageId}
-              options={villages.map((v) => ({ value: v.id, label: v.name }))}
+      {/* Active/Inactive — the deactivate alternative to delete, edit-mode only */}
+      {customerToEdit && (
+        <div style={{ marginBottom: "12px" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.85rem" }}>
+            <input
+              type="checkbox"
+              checked={draft.isActive}
+              onChange={(e) => setDraft({ isActive: e.target.checked })}
             />
-          </div>
-          {villageId && (
-            <button
-              type="button"
-              className="sa-icon-action"
-              title={`Rename this ${villageTerm.toLowerCase()}`}
-              onClick={handleStartEditVillage}
-            >
-              <Pencil size={15} />
-            </button>
+            Active ({customerTerm} can be booked/assigned)
+          </label>
+        </div>
+      )}
+
+      {/* 5. Notes */}
+      <div className="sa-input-group">
+        <label className="sa-input-label">Notes (Optional)</label>
+        <textarea
+          className="sa-input sa-textarea"
+          rows={2}
+          value={draft.notes}
+          onChange={(e) => setDraft({ notes: e.target.value })}
+          placeholder="Special billing instructions, preferred equipment..."
+        />
+      </div>
+
+      {/* 6. Optional Farmer Portal Invite */}
+      {canSendInvite && (
+        <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: "12px", marginTop: "12px" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.9rem" }}>
+            <input
+              type="checkbox"
+              checked={draft.sendInvite}
+              onChange={(e) => setDraft({ sendInvite: e.target.checked })}
+            />
+            Send {customerTerm} Portal Invite
+          </label>
+
+          {draft.sendInvite && (
+            <div style={{ background: "var(--color-bg-secondary)", padding: "10px", borderRadius: "6px", marginTop: "8px" }}>
+              <p style={{ fontSize: "0.8rem", color: "var(--color-text-secondary, #64748b)", marginBottom: "10px" }}>
+                They'll get an invite to set their own password — email if provided below, otherwise you'll get a
+                link to share with them directly (their phone number above is used if no email is given).
+              </p>
+              <Input
+                label="Email Address (Optional)"
+                type="email"
+                placeholder="e.g. farmer@example.com"
+                value={draft.email}
+                onChange={(e) => setDraft({ email: e.target.value })}
+              />
+            </div>
           )}
         </div>
       )}
-    </div>
 
-    <Input
-      label="Mobile Phone Number"
-      type="tel"
-      placeholder="e.g. 9876543210"
-      value={phone}
-      onChange={(e) => setPhone(e.target.value)}
-    />
-  </div>
-
- {/* 3. Address & Field Location */}
- <div className="sa-input-group">
- <label className="sa-input-label">Address / Field Location</label>
- <textarea
- className="sa-input sa-textarea"
- rows={2}
- value={address}
- onChange={(e) => setAddress(e.target.value)}
- placeholder="Farm address, landmark, or plot details..."
- />
- </div>
-
-  {/* 4. Optional Customer GST Details */}
-  <div style={{ background: "var(--color-bg-secondary)", padding: "10px", borderRadius: "6px", marginBottom: "12px" }}>
-    <label style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.85rem", marginBottom: isGstApplicable ? "8px" : 0 }}>
-      <input
-        type="checkbox"
-        checked={isGstApplicable}
-        onChange={(e) => setIsGstApplicable(e.target.checked)}
-      />
-      {customerTerm} GST Registered / GST Applicable
-    </label>
-    {isGstApplicable && (
-      <Input
-        label={`${customerTerm} GSTIN (Optional)`}
-        type="text"
-        placeholder="e.g. 21AAAAA0000A1Z5"
-        value={gstin}
-        onChange={(e) => setGstin(e.target.value.toUpperCase())}
-        maxLength={15}
-      />
-    )}
-  </div>
-
-  {/* Active/Inactive — the deactivate alternative to delete, edit-mode only */}
-  {customerToEdit && (
-    <div style={{ marginBottom: "12px" }}>
-      <label style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.85rem" }}>
-        <input
-          type="checkbox"
-          checked={isActive}
-          onChange={(e) => setIsActive(e.target.checked)}
-        />
-        Active ({customerTerm} can be booked/assigned)
-      </label>
-    </div>
-  )}
-
- {/* 5. Notes */}
- <div className="sa-input-group">
- <label className="sa-input-label">Notes (Optional)</label>
- <textarea
- className="sa-input sa-textarea"
- rows={2}
- value={notes}
- onChange={(e) => setNotes(e.target.value)}
- placeholder="Special billing instructions, preferred equipment..."
- />
- </div>
-
- {/* 6. Optional Farmer Portal Invite */}
- {canSendInvite && (
- <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: "12px", marginTop: "12px" }}>
- <label style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.9rem" }}>
- <input
- type="checkbox"
- checked={sendInvite}
- onChange={(e) => setSendInvite(e.target.checked)}
- />
- Send {customerTerm} Portal Invite
- </label>
-
- {sendInvite && (
- <div style={{ background: "var(--color-bg-secondary)", padding: "10px", borderRadius: "6px", marginTop: "8px" }}>
- <p style={{ fontSize: "0.8rem", color: "var(--color-text-secondary, #64748b)", marginBottom: "10px" }}>
- They'll get an invite to set their own password — email if provided below, otherwise you'll get a
- link to share with them directly (their phone number above is used if no email is given).
- </p>
- <Input
- label="Email Address (Optional)"
- type="email"
- placeholder="e.g. farmer@example.com"
- value={email}
- onChange={(e) => setEmail(e.target.value)}
- />
- </div>
- )}
- </div>
- )}
-
- {/* Form Actions */}
- <div className="sa-form-actions">
- <Button type="button" variant="secondary" onClick={onClose}>
- Cancel
- </Button>
- <Button type="submit" variant="primary" isLoading={isSubmitting}>
- {customerToEdit ? "Save Changes" : `Register ${customerTerm}`}
- </Button>
- </div>
- </form>
- )}
- </Modal>
- );
+      {/* Form Actions */}
+      <div className="sa-form-actions">
+        <Button type="button" variant="secondary" onClick={onRequestClose}>
+          Cancel
+        </Button>
+        <Button type="submit" variant="primary" isLoading={isSubmitting}>
+          {customerToEdit ? "Save Changes" : `Register ${customerTerm}`}
+        </Button>
+      </div>
+    </form>
+  );
 };

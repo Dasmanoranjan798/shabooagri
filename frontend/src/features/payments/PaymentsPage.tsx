@@ -11,10 +11,10 @@ import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import { ActionMenu } from "../../components/ui/ActionMenu";
-import { ReceivePaymentModal } from "./ReceivePaymentModal";
+import { defaultReceivePaymentDraft } from "./ReceivePaymentModal";
 import { ReceiptModal } from "./ReceiptModal";
-import { NewInvoiceModal } from "./NewInvoiceModal";
-import { RecordAdvanceModal } from "./RecordAdvanceModal";
+import { defaultNewInvoiceDraft } from "./NewInvoiceModal";
+import { defaultRecordAdvanceDraft } from "./RecordAdvanceModal";
 import { useTaskTray } from "../../context/TaskTrayContext";
 import { subscribeDataRefresh } from "../../lib/dataRefreshBus";
 
@@ -39,14 +39,8 @@ export const PaymentsPage: React.FC = () => {
  const [isLoading, setIsLoading] = useState<boolean>(true);
  const [error, setError] = useState<string | null>(null);
 
- const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<Invoice | null>(null);
- const [isPaymentModalOpen, setIsPaymentModalOpen] = useState<boolean>(false);
-
  const [selectedInvoiceForReceipt, setSelectedInvoiceForReceipt] = useState<Invoice | null>(null);
  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState<boolean>(false);
-
- const [isNewInvoiceModalOpen, setIsNewInvoiceModalOpen] = useState<boolean>(false);
- const [isRecordAdvanceModalOpen, setIsRecordAdvanceModalOpen] = useState<boolean>(false);
 
  const taskTray = useTaskTray();
 
@@ -84,8 +78,30 @@ export const PaymentsPage: React.FC = () => {
 
  const handleOpenReceivePayment = (invoice: Invoice, e?: React.MouseEvent) => {
  if (e) e.stopPropagation();
- setSelectedInvoiceForPayment(invoice);
- setIsPaymentModalOpen(true);
+ taskTray.open({
+ type: "receive-payment",
+ title: `Receive Payment — ${invoice.invoiceNumber}`,
+ initProps: { invoice },
+ defaultDraft: defaultReceivePaymentDraft(invoice),
+ });
+ };
+
+ const handleOpenNewInvoice = () => {
+ taskTray.open({
+ type: "new-invoice",
+ title: "Create New Invoice",
+ initProps: {},
+ defaultDraft: defaultNewInvoiceDraft(),
+ });
+ };
+
+ const handleOpenRecordAdvance = () => {
+ taskTray.open({
+ type: "record-advance",
+ title: "Record Advance Payment",
+ initProps: {},
+ defaultDraft: defaultRecordAdvanceDraft(),
+ });
  };
 
  const handleOpenReceipt = (invoice: Invoice) => {
@@ -149,7 +165,7 @@ export const PaymentsPage: React.FC = () => {
  <Button
  variant="secondary"
  size="md"
- onClick={() => setIsRecordAdvanceModalOpen(true)}
+ onClick={handleOpenRecordAdvance}
  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
  >
  <PiggyBank size={16} /> Record Advance
@@ -160,7 +176,7 @@ export const PaymentsPage: React.FC = () => {
  <Button
  variant="primary"
  size="md"
- onClick={() => setIsNewInvoiceModalOpen(true)}
+ onClick={handleOpenNewInvoice}
  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
  >
  <Plus size={16} /> New Invoice
@@ -496,14 +512,6 @@ export const PaymentsPage: React.FC = () => {
  </div>
  )}
 
- {/* Receive Payment Modal */}
- <ReceivePaymentModal
- isOpen={isPaymentModalOpen}
- onClose={() => setIsPaymentModalOpen(false)}
- onSuccess={loadInvoices}
- invoice={selectedInvoiceForPayment}
- />
-
  {/* Receipt / Invoice Details Modal */}
  <ReceiptModal
  isOpen={isReceiptModalOpen}
@@ -513,20 +521,6 @@ export const PaymentsPage: React.FC = () => {
  onInvoiceUpdated={loadInvoices}
  canVoid={canVoid}
  onVoidInvoice={(inv) => handleOpenVoidInvoice(inv)}
- />
-
- {/* New Invoice Modal */}
- <NewInvoiceModal
- isOpen={isNewInvoiceModalOpen}
- onClose={() => setIsNewInvoiceModalOpen(false)}
- onSuccess={loadInvoices}
- />
-
- {/* Record Advance Payment Modal */}
- <RecordAdvanceModal
- isOpen={isRecordAdvanceModalOpen}
- onClose={() => setIsRecordAdvanceModalOpen(false)}
- onSuccess={loadInvoices}
  />
  </div>
  );
