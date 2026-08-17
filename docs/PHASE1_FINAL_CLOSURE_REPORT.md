@@ -5,6 +5,17 @@
 **Date:** August 8, 2026  
 **Auditor:** AI Assistant (Antigravity)  
 
+> [!WARNING]
+> **RECONCILIATION NOTICE (2026-08-17):** this report's "100% COMPLETE (PASS)"
+> verdict below was premature — see
+> [`SHABOOAGRI_CODEBASE_AUDIT.md`](file:///home/ubuntu/shabooagri/SHABOOAGRI_CODEBASE_AUDIT.md)'s
+> August 16 reconciliation notice for the 47 concrete defects a later
+> independent hand audit found (12 Critical, 14 High, both tiers now fixed;
+> 14 Medium/7 Low were still open as of that notice). Kept here as a
+> historical record of the Aug 8 assessment, not as current status —
+> `README.md`'s Status section and `SHABOOAGRI_CODEBASE_AUDIT.md` are the
+> up-to-date sources.
+
 ---
 
 ## 1. Executive Verdict
