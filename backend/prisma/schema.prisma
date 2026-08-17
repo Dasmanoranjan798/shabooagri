@@ -104,6 +104,14 @@ model Company {
   invoicePrefix     String? @default("INV") @map("invoice_prefix")
   printLayout       Json?   @map("print_layout")
   isActive          Boolean @default(true) @map("is_active")
+  // Opaque reference to the ShabooAgri platform's PlatformUser id, set only
+  // by /internal/provision-company. Deliberately a plain string, not a
+  // Prisma relation — the platform database is a separate database
+  // entirely, so there is nothing here for a relation to point to. This
+  // field exists purely so the internal endpoint can recognize "has this
+  // platform user already been provisioned" without a second DB round trip
+  // through the platform side.
+  platformUserId    String? @unique @map("platform_user_id")
   // Monotonic counter backing Booking.bookingNumber (BK-000001, ...).
   // Incremented atomically ("SET x = x + 1") on every booking creation and
   // NEVER decremented or reused, even if the booking that consumed a

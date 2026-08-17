@@ -1,0 +1,112 @@
+// ShabooAgri Platform database — completely separate from the operational
+// ShabooAgri database (shabooagri_db). No model here has a relation into
+// the operational schema; the only connection between the two systems is
+// an HTTP call (see modules/provisioning), never a shared table or join.
+// This separation is deliberate: a prior version of this system had SaaS
+// billing models directly related to the operational Company/User models
+// in one shared schema, which is what let a license check end up gating
+// every operational request. Never again.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("PLATFORM_DATABASE_URL")
+}
+
+enum LicenseStatus {
+  ACTIVE
+  EXPIRING_SOON
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+// A registered business owner on the public/marketing side. Distinct from
+// the operational User model — a PlatformUser's credentials only ever
+// authenticate against the platform API, never the operational one.
+model PlatformUser {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  businessName  String   @map("business_name")
+  contactPerson String   @map("contact_person")
+  phone         String
+  address       String?
+  city          String?
+  state         String?
+  pincode       String?
+  gstin         String?
+  pan           String?
+  // Set once /internal/provision-company succeeds. Purely informational on
+  // this side — the operational company record is the source of truth for
+  // everything about the provisioned tenant; this is just enough to know
+  // "has this user already been provisioned, and where do they go."
+  companySlug   String?  @map("company_slug")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  refreshTokens RefreshToken[]
+  licenses      License[]
+  payments      Payment[]
+
+  @@map("platform_users")
+}
+
+model RefreshToken {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  platformUserId String  @map("platform_user_id") @db.Uuid
+  tokenHash    String    @unique @map("token_hash")
+  expiresAt    DateTime  @map("expires_at")
+  revokedAt    DateTime? @map("revoked_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  platformUser PlatformUser @relation(fields: [platformUserId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+// One row per subscription period. Single-plan for now (no tiers), but
+// modeled as its own table rather than fields-on-PlatformUser so renewals
+// have real history instead of overwriting the same row.
+model License {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  platformUserId String        @map("platform_user_id") @db.Uuid
+  paymentId      String?       @unique @map("payment_id") @db.Uuid
+  startDate      DateTime?     @map("start_date")
+  expiryDate     DateTime?     @map("expiry_date")
+  status         LicenseStatus @default(ACTIVE)
+  renewalCount   Int           @default(0) @map("renewal_count")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  platformUser PlatformUser @relation(fields: [platformUserId], references: [id])
+  payment      Payment?     @relation(fields: [paymentId], references: [id])
+
+  @@map("licenses")
+}
+
+model Payment {
+  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  platformUserId    String        @map("platform_user_id") @db.Uuid
+  gatewayOrderId    String?       @map("gateway_order_id")
+  gatewayPaymentId  String?       @map("gateway_payment_id")
+  gatewaySignature  String?       @map("gateway_signature")
+  amount            Decimal       @db.Decimal(10, 2)
+  currency          String        @default("INR")
+  status            PaymentStatus @default(PENDING)
+  gatewayPayload    Json?         @map("gateway_payload")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  platformUser PlatformUser @relation(fields: [platformUserId], references: [id])
+  license      License?
+
+  @@map("payments")
+}

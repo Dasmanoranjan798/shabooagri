@@ -26,6 +26,12 @@ const envSchema = z.object({
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_FROM_NUMBER: z.string().optional(),
+  // Shared secret the platform backend presents to call
+  // /internal/provision-company. Optional at boot (like the SMS/SMTP
+  // providers above) so this backend never fails to start over a platform-
+  // side concern; modules/internal simply rejects every request with a 503
+  // if it's unset, rather than the whole process refusing to boot.
+  INTERNAL_API_KEY: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

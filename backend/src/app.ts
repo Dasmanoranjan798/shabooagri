@@ -23,6 +23,8 @@ import { maintenanceRouter } from "./modules/maintenance/maintenance.routes";
 import { settingsRouter } from "./modules/settings/settings.routes";
 import { rbacRouter } from "./modules/rbac/rbac.routes";
 import { teamRouter } from "./modules/team/staffInvite.routes";
+import { internalRouter } from "./modules/internal/internal.routes";
+import { internalApiKeyMiddleware } from "./middleware/internalApiKey.middleware";
 
 // Express app assembly only. Module routers are mounted here once they exist —
 // this file must never contain business logic itself.
@@ -55,6 +57,15 @@ import { tenantResolverMiddleware } from "./middleware/tenantResolver.middleware
 // access token (passed via Authorization Bearer header or ?token= query parameter).
 app.use("/uploads/booking-attachments", authMiddleware, express.static(BOOKING_ATTACHMENT_UPLOAD_ROOT));
 app.use("/uploads/job-photos", authMiddleware, express.static(JOB_PHOTO_UPLOAD_ROOT));
+
+// Mounted BEFORE tenantResolverMiddleware and without authMiddleware —
+// this endpoint has no operational company/user context to resolve yet
+// (it's what CREATES that context), and Express stops here for any
+// matching /internal/* request, so tenantResolverMiddleware never runs
+// for these calls at all. This is the platform backend's one and only
+// connection point into this app; nothing else reaches it, and nothing
+// on the operational request path below depends on it.
+app.use("/internal", internalApiKeyMiddleware, internalRouter);
 
 app.use(tenantResolverMiddleware);
 
