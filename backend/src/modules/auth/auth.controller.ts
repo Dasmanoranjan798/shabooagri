@@ -20,31 +20,31 @@ import {
 
 export async function register(req: Request, res: Response) {
   const input = registerSchema.parse(req.body);
-  const result = await authService.register(input, req.user);
+  const result = await authService.register(input, req.user, req.tenantCompany);
   res.status(201).json(result);
 }
 
 export async function requestOtp(req: Request, res: Response) {
   const input = otpRequestSchema.parse(req.body);
-  const result = await authService.requestOtp(input);
+  const result = await authService.requestOtp(input, req.tenantCompany);
   res.status(200).json(result);
 }
 
 export async function verifyOtp(req: Request, res: Response) {
   const input = otpVerifySchema.parse(req.body);
-  const result = await authService.verifyOtpAndLogin(input);
+  const result = await authService.verifyOtpAndLogin(input, req.tenantCompany);
   res.status(200).json(result);
 }
 
 export async function loginWithPassword(req: Request, res: Response) {
   const input = passwordLoginSchema.parse(req.body);
-  const result = await authService.loginWithPassword(input);
+  const result = await authService.loginWithPassword(input, req.tenantCompany);
   res.status(200).json(result);
 }
 
 export async function loginWithPin(req: Request, res: Response) {
   const input = pinLoginSchema.parse(req.body);
-  const result = await authService.loginWithPin(input);
+  const result = await authService.loginWithPin(input, req.tenantCompany);
   res.status(200).json(result);
 }
 

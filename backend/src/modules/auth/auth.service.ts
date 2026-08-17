@@ -109,8 +109,8 @@ export async function issueSsoTokenPair(user: User): Promise<TokenPair> {
 //      module hardcoding its own role-name comparison.
 const REGISTER_USER_PERMISSION = "user.manage";
 
-export async function register(input: RegisterInput, requestingUser?: AuthenticatedUser) {
-  const company = await authRepository.findSingleTenantCompany();
+export async function register(input: RegisterInput, requestingUser?: AuthenticatedUser, tenantCompany?: any) {
+  const company = tenantCompany || (await authRepository.findSingleTenantCompany());
   const existingUserCount = await authRepository.countUsersInCompany(company.id);
 
   let roleKey: string = input.roleKey;
@@ -153,8 +153,8 @@ export async function register(input: RegisterInput, requestingUser?: Authentica
   return { user: toPublicUser(user), ...tokens };
 }
 
-export async function requestOtp(input: OtpRequestInput) {
-  const company = await authRepository.findSingleTenantCompany();
+export async function requestOtp(input: OtpRequestInput, tenantCompany?: any) {
+  const company = tenantCompany || (await authRepository.findSingleTenantCompany());
   const user = await authRepository.findUserByIdentifier(company.id, input.identifier);
   if (!user) {
     throw new AppError(404, "No account found for this identifier");
@@ -181,7 +181,7 @@ export async function requestOtp(input: OtpRequestInput) {
   };
 }
 
-export async function verifyOtpAndLogin(input: OtpVerifyInput) {
+export async function verifyOtpAndLogin(input: OtpVerifyInput, tenantCompany?: any) {
   const otp = await authRepository.findActiveOtp(input.identifier, "LOGIN");
   if (!otp) {
     throw new AppError(400, "No active OTP for this identifier — request a new one");
@@ -197,7 +197,7 @@ export async function verifyOtpAndLogin(input: OtpVerifyInput) {
   }
   await authRepository.consumeOtp(otp.id);
 
-  const company = await authRepository.findSingleTenantCompany();
+  const company = tenantCompany || (await authRepository.findSingleTenantCompany());
   const user = await authRepository.findUserByIdentifier(company.id, input.identifier);
   if (!user) {
     throw new AppError(404, "No account found for this identifier");
@@ -208,8 +208,8 @@ export async function verifyOtpAndLogin(input: OtpVerifyInput) {
   return { user: toPublicUser(updatedUser), ...tokens };
 }
 
-export async function loginWithPassword(input: PasswordLoginInput) {
-  const company = await authRepository.findSingleTenantCompany();
+export async function loginWithPassword(input: PasswordLoginInput, tenantCompany?: any) {
+  const company = tenantCompany || (await authRepository.findSingleTenantCompany());
   const user = await authRepository.findUserByIdentifier(company.id, input.identifier);
   if (!user?.passwordHash) {
     throw new AppError(401, "Invalid credentials");
@@ -225,8 +225,8 @@ export async function loginWithPassword(input: PasswordLoginInput) {
   return { user: toPublicUser(updatedUser), ...tokens };
 }
 
-export async function loginWithPin(input: PinLoginInput) {
-  const company = await authRepository.findSingleTenantCompany();
+export async function loginWithPin(input: PinLoginInput, tenantCompany?: any) {
+  const company = tenantCompany || (await authRepository.findSingleTenantCompany());
   const user = await authRepository.findUserByIdentifier(company.id, input.identifier);
   if (!user?.pinHash) {
     throw new AppError(401, "Invalid credentials");
