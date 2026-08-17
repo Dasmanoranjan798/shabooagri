@@ -262,6 +262,7 @@ model User {
   customerProfile Customer?
   employeeProfile Employee?
   refreshTokens   RefreshToken[]
+  launchTokens    LaunchToken[]
   auditLogs       AuditLog[]
 
   managedBookings     Booking[]           @relation("BookingManager")
@@ -823,6 +824,27 @@ model RefreshToken {
   user User @relation(fields: [userId], references: [id])
 
   @@map("refresh_tokens")
+}
+
+// Single-use, short-lived handoff token for the platform-backend ->
+// browser -> operational-backend launch flow: after a company is
+// provisioned, the browser is redirected to
+// https://<slug>.shabooagri.com/sso?token=<raw>, which exchanges it here
+// for a real access/refresh token pair (see auth.service.exchangeLaunchToken).
+// Owned entirely by this schema — no relation to any platform-database
+// table, and nothing about it is ever readable by the platform backend
+// after issuance.
+model LaunchToken {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  userId    String    @map("user_id") @db.Uuid
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("launch_tokens")
 }
 
 // ---------- Audit (flagged addition, approved) ----------

@@ -164,6 +164,24 @@ export const api = {
     return data;
   },
 
+  // Exchanges a short-lived, single-use launch token (issued when the
+  // platform-backend provisions a company) for a real session — the
+  // browser lands here after being redirected from the platform site,
+  // never carrying a real access/refresh token in the URL itself.
+  async ssoExchange(token: string): Promise<LoginResponse> {
+    const res = await fetchWithAuth("/auth/sso-exchange", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Invalid or expired launch link" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Invalid or expired launch link");
+    }
+    const data: LoginResponse = await res.json();
+    setStoredTokens(data.accessToken, data.refreshToken);
+    return data;
+  },
+
   async me(): Promise<User> {
     const res = await fetchWithAuth("/auth/me");
     if (!res.ok) {

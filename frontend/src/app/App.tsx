@@ -10,6 +10,7 @@ import { Spinner } from "../components/ui/Spinner";
 import { LoginPage } from "../features/auth/LoginPage";
 import { AcceptInvitePage } from "../features/auth/AcceptInvitePage";
 import { ResetPasswordPage } from "../features/auth/ResetPasswordPage";
+import { SsoExchangePage } from "../features/auth/SsoExchangePage";
 import { DashboardPage } from "../features/dashboard/DashboardPage";
 import { BookingsPage } from "../features/bookings/BookingsPage";
 import { JobsPage } from "../features/jobs/JobsPage";
@@ -84,6 +85,7 @@ export function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/accept-invite" element={<AcceptInvitePage />} />
+          <Route path="/sso" element={<SsoExchangePage />} />
 
           {/* Root route */}
           <Route path="/" element={<SmartRootRoute />} />

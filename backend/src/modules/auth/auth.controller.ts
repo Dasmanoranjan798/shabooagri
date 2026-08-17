@@ -12,6 +12,7 @@ import {
   refreshSchema,
   registerSchema,
   requestPasswordResetSchema,
+  ssoExchangeSchema,
   verifyPasswordResetTokenSchema,
 } from "./auth.validators";
 
@@ -51,6 +52,14 @@ export async function loginWithPin(req: Request, res: Response) {
 export async function refresh(req: Request, res: Response) {
   const input = refreshSchema.parse(req.body);
   const result = await authService.refreshTokens(input);
+  res.status(200).json(result);
+}
+
+// Public — the browser calls this directly after being redirected from the
+// platform backend's provisioning flow. See auth.service.exchangeLaunchToken.
+export async function ssoExchange(req: Request, res: Response) {
+  const input = ssoExchangeSchema.parse(req.body);
+  const result = await authService.exchangeLaunchToken(input.token);
   res.status(200).json(result);
 }
 

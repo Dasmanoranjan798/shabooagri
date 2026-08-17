@@ -94,6 +94,46 @@ export async function issueSsoTokenPair(user: User): Promise<TokenPair> {
   return issueTokenPair(user);
 }
 
+const LAUNCH_TOKEN_EXPIRY_MINUTES = 5;
+
+// Called only from modules/internal (company provisioning) — never returns
+// a real access/refresh token pair directly to the platform backend.
+// Instead this is a short-lived, single-use, hashed handoff: the platform
+// backend embeds the raw value in a browser redirect
+// (https://<slug>.shabooagri.com/sso?token=<raw>), and only the browser
+// itself ever exchanges it for real tokens via exchangeLaunchToken below.
+// This keeps a real, hours-long-lived credential from ever sitting in a
+// URL, redirect chain, or server log.
+export async function issueLaunchToken(userId: string): Promise<string> {
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  await authRepository.createLaunchToken({
+    userId,
+    tokenHash: hashRefreshToken(rawToken),
+    expiresAt: addDuration(new Date(), `${LAUNCH_TOKEN_EXPIRY_MINUTES}m`),
+  });
+  return rawToken;
+}
+
+export async function exchangeLaunchToken(rawToken: string) {
+  const tokenHash = hashRefreshToken(rawToken);
+  const stored = await authRepository.findValidLaunchTokenByHash(tokenHash);
+  if (!stored) {
+    throw new AppError(401, "Invalid or expired launch link");
+  }
+  // Single-use: mark it consumed before issuing anything, so a token that
+  // somehow gets exchanged twice concurrently can't mint two token pairs.
+  await authRepository.markLaunchTokenUsed(stored.id);
+
+  const user = await authRepository.findUserById(stored.userId);
+  if (!user) {
+    throw new AppError(401, "Account no longer exists");
+  }
+
+  const updatedUser = await authRepository.updateLastLogin(user.id);
+  const tokens = await issueTokenPair(updatedUser);
+  return { user: toPublicUser(updatedUser), ...tokens };
+}
+
 // §6: Owner creates Manager/Driver/Customer accounts. Phase 1 has no
 // Employees/Customers admin UI yet to do that through, so this endpoint is
 // the only way to create a user — which makes its own gate the only thing

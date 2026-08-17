@@ -43,6 +43,10 @@ export const refreshSchema = z.object({
   refreshToken: z.string().min(1),
 });
 
+export const ssoExchangeSchema = z.object({
+  token: z.string().min(1),
+});
+
 export const logoutSchema = z.object({
   refreshToken: z.string().min(1),
 });
@@ -80,4 +84,5 @@ export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetSchem
 export type VerifyPasswordResetTokenInput = z.infer<typeof verifyPasswordResetTokenSchema>;
 export type ConfirmPasswordResetInput = z.infer<typeof confirmPasswordResetSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type SsoExchangeInput = z.infer<typeof ssoExchangeSchema>;
 

@@ -4,6 +4,7 @@ import { prisma } from "./db/prisma";
 import { errorMiddleware } from "./middleware/error.middleware";
 import { authRouter } from "./modules/auth/auth.routes";
 import { paymentRouter } from "./modules/payments/payment.routes";
+import { provisioningRouter } from "./modules/provisioning/provisioning.routes";
 
 // Express app assembly only, exactly like the operational backend's
 // app.ts. This process has no knowledge of the operational app's routes,
@@ -25,6 +26,7 @@ app.get("/health", async (_req, res) => {
 
 app.use("/auth", authRouter);
 app.use("/payments", paymentRouter);
+app.use("/provisioning", provisioningRouter);
 
 // Must be registered after all routes.
 app.use(errorMiddleware);

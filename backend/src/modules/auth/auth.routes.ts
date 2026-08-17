@@ -19,6 +19,7 @@ authRouter.post("/otp/verify", asyncHandler(authController.verifyOtp));
 authRouter.post("/login/password", asyncHandler(authController.loginWithPassword));
 authRouter.post("/login/pin", asyncHandler(authController.loginWithPin));
 authRouter.post("/refresh", asyncHandler(authController.refresh));
+authRouter.post("/sso-exchange", asyncHandler(authController.ssoExchange));
 authRouter.post("/logout", asyncHandler(authController.logout));
 authRouter.get("/me", authMiddleware, asyncHandler(authController.me));
 

@@ -138,6 +138,23 @@ export function revokeRefreshToken(id: string) {
   });
 }
 
+export function createLaunchToken(data: { userId: string; tokenHash: string; expiresAt: Date }) {
+  return prisma.launchToken.create({ data });
+}
+
+export function findValidLaunchTokenByHash(tokenHash: string) {
+  return prisma.launchToken.findFirst({
+    where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } },
+  });
+}
+
+export function markLaunchTokenUsed(id: string) {
+  return prisma.launchToken.update({
+    where: { id },
+    data: { usedAt: new Date() },
+  });
+}
+
 export function revokeAllUserRefreshTokens(userId: string) {
   return prisma.refreshToken.updateMany({
     where: { userId, revokedAt: null },

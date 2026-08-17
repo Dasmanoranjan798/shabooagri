@@ -1,6 +1,6 @@
 import { prisma } from "../../db/prisma";
 import { AppError } from "../../shared/errors/AppError";
-import { issueSsoTokenPair } from "../auth/auth.service";
+import { issueLaunchToken } from "../auth/auth.service";
 import { PRICING_METHOD_DEFAULTS, ROLE_PERMISSIONS, SYSTEM_ROLES } from "../../shared/seedData";
 import { isReservedSlug, slugify } from "../../shared/utils/slug";
 import type { ProvisionCompanyInput } from "./internal.validators";
@@ -23,11 +23,11 @@ export async function provisionCompany(input: ProvisionCompanyInput) {
     if (!ownerUser) {
       throw new AppError(500, "Previously provisioned company has no owner user");
     }
-    const tokens = await issueSsoTokenPair(ownerUser);
+    const launchToken = await issueLaunchToken(ownerUser.id);
     return {
       company: { id: existing.id, slug: existing.slug, name: existing.name },
       ownerUser: { id: ownerUser.id, fullName: ownerUser.fullName, email: ownerUser.email },
-      tokens,
+      launchToken,
       softwareUrl: `https://${existing.slug}.shabooagri.com`,
       alreadyProvisioned: true,
     };
@@ -88,9 +88,10 @@ export async function provisionCompany(input: ProvisionCompanyInput) {
       });
     }
 
-    // No password set here — this owner's first access is via the SSO
-    // token pair returned below. They can set a direct-login password
-    // later through the existing forgot-password flow (looks up by email,
+    // No password set here — this owner's first access is via the launch
+    // token returned below (exchanged for real tokens by the browser at
+    // /auth/sso-exchange). They can set a direct-login password later
+    // through the existing forgot-password flow (looks up by email,
     // unaffected by this endpoint).
     const ownerUser = await tx.user.create({
       data: {
@@ -106,12 +107,12 @@ export async function provisionCompany(input: ProvisionCompanyInput) {
     return { company, ownerUser };
   });
 
-  const tokens = await issueSsoTokenPair(result.ownerUser);
+  const launchToken = await issueLaunchToken(result.ownerUser.id);
 
   return {
     company: { id: result.company.id, slug: result.company.slug, name: result.company.name },
     ownerUser: { id: result.ownerUser.id, fullName: result.ownerUser.fullName, email: result.ownerUser.email },
-    tokens,
+    launchToken,
     softwareUrl: `https://${result.company.slug}.shabooagri.com`,
     alreadyProvisioned: false,
   };
