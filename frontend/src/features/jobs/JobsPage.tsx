@@ -10,7 +10,7 @@ import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import { ActionMenu } from "../../components/ui/ActionMenu";
-import { JobExecutionModal } from "./JobExecutionModal";
+import { defaultJobExecutionDraft } from "./JobExecutionModal";
 import { defaultManualJobEntryDraft } from "./ManualJobEntryModal";
 import { useTaskTray } from "../../context/TaskTrayContext";
 import { subscribeDataRefresh } from "../../lib/dataRefreshBus";
@@ -40,9 +40,6 @@ export const JobsPage: React.FC = () => {
 
  const taskTray = useTaskTray();
 
- const [selectedJob, setSelectedJob] = useState<Job | null>(null);
- const [isExecutionModalOpen, setIsExecutionModalOpen] = useState<boolean>(false);
-
  // Owner-only (§ dependency-locked deletion, Rule 2 & 5) — blocked
  // server-side while a non-voided payment is linked to the job.
  const canCancel = roleKey === "owner" || hasPermission("job.cancel");
@@ -53,12 +50,6 @@ export const JobsPage: React.FC = () => {
  try {
  const list = await api.listJobs();
  setJobs(list);
-
- // Refresh currently selected job if modal is open
- if (selectedJob) {
- const updated = list.find((j) => j.id === selectedJob.id);
- if (updated) setSelectedJob(updated);
- }
  } catch (err: any) {
  setError(err.message || "Failed to load jobs");
  } finally {
@@ -72,8 +63,12 @@ export const JobsPage: React.FC = () => {
  }, []);
 
  const handleOpenExecution = (job: Job) => {
- setSelectedJob(job);
- setIsExecutionModalOpen(true);
+ taskTray.open({
+ type: "job-execution",
+ title: `Job Execution #${job.booking.bookingNumber}`,
+ initProps: { jobId: job.id, bookingNumber: job.booking.bookingNumber, canCancel },
+ defaultDraft: defaultJobExecutionDraft(),
+ });
  };
 
  const handleOpenManualEntry = () => {
@@ -332,14 +327,6 @@ export const JobsPage: React.FC = () => {
  </>
  )}
 
- {/* Execution Modal */}
- <JobExecutionModal
- isOpen={isExecutionModalOpen}
- onClose={() => setIsExecutionModalOpen(false)}
- job={selectedJob}
- onUpdate={loadJobs}
- canCancel={canCancel}
- />
  </div>
  );
 };

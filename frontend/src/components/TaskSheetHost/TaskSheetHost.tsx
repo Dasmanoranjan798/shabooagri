@@ -17,6 +17,8 @@ import { ReceivePaymentTask } from "../../features/payments/ReceivePaymentModal"
 import { RecordAdvanceTask } from "../../features/payments/RecordAdvanceModal";
 import { InviteStaffTask } from "../../features/team/InviteStaffModal";
 import { ManualJobEntryTask } from "../../features/jobs/ManualJobEntryModal";
+import { JobExecutionTask } from "../../features/jobs/JobExecutionModal";
+import { MaintenanceLogTask } from "../../features/maintenance/MaintenanceLogModal";
 
 // Task `type` -> the content component that renders it. Every form
 // migrated onto this system registers itself here. Growing across Pass 2
@@ -37,6 +39,8 @@ const TASK_REGISTRY: Record<string, TaskContentComponent<any>> = {
   "record-advance": RecordAdvanceTask,
   "invite-staff": InviteStaffTask,
   "manual-job-entry": ManualJobEntryTask,
+  "job-execution": JobExecutionTask,
+  "maintenance-log": MaintenanceLogTask,
 };
 
 const TaskChrome: React.FC<{

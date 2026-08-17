@@ -27,6 +27,45 @@
   gap: 1.25rem;
 }
 
+/* Inline quick-action sub-dialog (Fuel/Photo/Note/Complete) — replaces
+   the old separate stacked <Modal>s so it stays part of the same task
+   (position: absolute within the task's own content area, not a
+   page-level overlay, so it travels with minimize/resume and never
+   escapes above other task windows). */
+.sa-job-subdialog-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  overflow-y: auto;
+  z-index: 5;
+  border-radius: inherit;
+}
+
+.sa-job-subdialog {
+  background: var(--color-surface, #fff);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 420px;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.sa-job-subdialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.sa-job-subdialog-header h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
 .sa-field-header-card {
   background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
   color: white;

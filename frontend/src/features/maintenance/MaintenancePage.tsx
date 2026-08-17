@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./maintenance.css";
-import type { MaintenanceRecord, CreateMaintenanceRecordPayload, MaintenanceAlert } from "../../types/maintenance";
+import type { MaintenanceRecord, MaintenanceAlert } from "../../types/maintenance";
 import type { Machine } from "../../types/machine";
 import { Wrench, AlertTriangle, ShieldAlert } from "lucide-react";
 import { api } from "../../lib/api";
@@ -9,10 +9,12 @@ import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
-import { Modal } from "../../components/ui/Modal";
 import { SearchableSelect } from "../../components/ui/SearchableSelect/SearchableSelect";
 import { getTerm } from "../../lib/terminology";
 import { fmtCurrency, fmtDate as fmt } from "../../lib/format";
+import { useTaskTray } from "../../context/TaskTrayContext";
+import { subscribeDataRefresh } from "../../lib/dataRefreshBus";
+import { defaultMaintenanceLogDraft } from "./MaintenanceLogModal";
 
 export const MaintenancePage: React.FC = () => {
  const machineTerm = getTerm("machine");
@@ -26,27 +28,9 @@ export const MaintenancePage: React.FC = () => {
  const [error, setError] = useState<string | null>(null);
  const [filterMachineId, setFilterMachineId] = useState<string>("");
 
- const [isFormOpen, setIsFormOpen] = useState(false);
- const [formLoading, setFormLoading] = useState(false);
- const [formError, setFormError] = useState<string | null>(null);
  const [deletingId, setDeletingId] = useState<string | null>(null);
 
- // Form state
- const [form, setForm] = useState<{
- machineId: string;
- serviceDate: string;
- hourMeterAtService: string;
- description: string;
- cost: string;
- performedBy: string;
- }>({
- machineId: "",
- serviceDate: new Date().toISOString().slice(0, 10),
- hourMeterAtService: "",
- description: "",
- cost: "",
- performedBy: "",
- });
+ const taskTray = useTaskTray();
 
  const loadData = async () => {
  setIsLoading(true);
@@ -69,48 +53,18 @@ export const MaintenancePage: React.FC = () => {
 
  useEffect(() => {
  loadData();
+ return subscribeDataRefresh("maintenance", loadData);
  }, []);
 
  const handleFilterApply = () => loadData();
 
  const openForm = () => {
- setForm({
- machineId: machines[0]?.id ?? "",
- serviceDate: new Date().toISOString().slice(0, 10),
- hourMeterAtService: "",
- description: "",
- cost: "",
- performedBy: "",
+ taskTray.open({
+ type: "maintenance-log",
+ title: "Log Service Record",
+ initProps: { machines },
+ defaultDraft: defaultMaintenanceLogDraft(machines),
  });
- setFormError(null);
- setIsFormOpen(true);
- };
-
- const handleSubmit = async (e: React.FormEvent) => {
- e.preventDefault();
- if (!form.machineId || !form.serviceDate) {
- setFormError("Machine and service date are required.");
- return;
- }
- setFormLoading(true);
- setFormError(null);
- try {
- const payload: CreateMaintenanceRecordPayload = {
- machineId: form.machineId,
- serviceDate: form.serviceDate,
- hourMeterAtService: form.hourMeterAtService ? Number(form.hourMeterAtService) : undefined,
- description: form.description.trim() || undefined,
- cost: form.cost ? Number(form.cost) : undefined,
- performedBy: form.performedBy.trim() || undefined,
- };
- await api.createMaintenanceRecord(payload);
- setIsFormOpen(false);
- await loadData();
- } catch (err: any) {
- setFormError(err.message || "Failed to log service record");
- } finally {
- setFormLoading(false);
- }
  };
 
  const handleDelete = async (id: string) => {
@@ -280,94 +234,6 @@ export const MaintenancePage: React.FC = () => {
  </Card>
  )}
 
- {/* Log Service Modal */}
- <Modal isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} title="Log Service Record">
- <form onSubmit={handleSubmit} className="sa-form">
- {formError && <div className="sa-form-error">{formError}</div>}
-
- <div className="sa-form-group">
- <label className="sa-form-label">{machineTerm} *</label>
- <SearchableSelect
- placeholder={`Select ${machineTerm}`}
- value={form.machineId}
- onChange={(val) => setForm((f) => ({ ...f, machineId: val }))}
- options={machines.map((m) => ({
- value: m.id,
- label: `${m.registrationNumber} — ${m.brand ?? ""} ${m.model ?? ""}`,
- }))}
- />
- </div>
-
- <div className="sa-form-group">
- <label className="sa-form-label">Service Date *</label>
- <input
- type="date"
- className="sa-input"
- value={form.serviceDate}
- onChange={(e) => setForm((f) => ({ ...f, serviceDate: e.target.value }))}
- required
- />
- </div>
-
- <div className="sa-form-row">
- <div className="sa-form-group">
- <label className="sa-form-label">Hour Meter (hrs)</label>
- <input
- type="number"
- step="0.1"
- min="0"
- className="sa-input"
- value={form.hourMeterAtService}
- onChange={(e) => setForm((f) => ({ ...f, hourMeterAtService: e.target.value }))}
- placeholder="e.g. 1250"
- />
- </div>
- <div className="sa-form-group">
- <label className="sa-form-label">Cost (₹)</label>
- <input
- type="number"
- step="0.01"
- min="0"
- className="sa-input"
- value={form.cost}
- onChange={(e) => setForm((f) => ({ ...f, cost: e.target.value }))}
- placeholder="0.00"
- />
- </div>
- </div>
-
- <div className="sa-form-group">
- <label className="sa-form-label">Description</label>
- <input
- type="text"
- className="sa-input"
- value={form.description}
- onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
- placeholder="e.g. Oil change, filter replacement"
- />
- </div>
-
- <div className="sa-form-group">
- <label className="sa-form-label">Performed By</label>
- <input
- type="text"
- className="sa-input"
- value={form.performedBy}
- onChange={(e) => setForm((f) => ({ ...f, performedBy: e.target.value }))}
- placeholder="Technician name or workshop"
- />
- </div>
-
- <div className="sa-form-actions">
- <Button variant="secondary" onClick={() => setIsFormOpen(false)} type="button">
- Cancel
- </Button>
- <Button variant="primary" type="submit" disabled={formLoading}>
- {formLoading ? "Saving…" : "Log Service"}
- </Button>
- </div>
- </form>
- </Modal>
  </div>
  );
 };
