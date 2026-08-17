@@ -1,6 +1,8 @@
 import * as driverService from "../drivers/driver.service";
 import * as machineTypeService from "../machine-types/machineType.service";
 import { AppError } from "../../shared/errors/AppError";
+import { env } from "../../config/env";
+import * as settingsRepo from "../settings/settings.repository";
 import * as machineRepository from "./machine.repository";
 import type { CreateMachineInput, UpdateMachineInput } from "./machine.validators";
 
@@ -25,7 +27,34 @@ async function assertDriverExists(companyId: string, driverId: string) {
   await driverService.getById(companyId, driverId);
 }
 
+// Plans are a machine-count ceiling only — Drivers, Managers, and
+// Employees are never restricted by plan, on any tier. machineLimit is a
+// value cached on the company's own row (set by /internal/update-plan at
+// provisioning/upgrade time), never a live lookup against the platform
+// backend — this check works identically whether the platform backend is
+// up, down, or has never existed for this company (machineLimit is just
+// null, meaning unlimited).
+async function assertUnderMachineLimit(companyId: string) {
+  const company = await settingsRepo.findCompanyById(companyId);
+  if (!company || company.machineLimit == null) {
+    return;
+  }
+  const currentCount = await machineRepository.countForCompany(companyId);
+  if (currentCount >= company.machineLimit) {
+    throw new AppError(
+      402,
+      "You've reached your plan's machine limit — upgrade to add more.",
+      {
+        code: "MACHINE_LIMIT_REACHED",
+        machineLimit: company.machineLimit,
+        upgradeUrl: `${env.PLATFORM_APP_URL}/upgrade?company=${company.slug}`,
+      },
+    );
+  }
+}
+
 export async function create(companyId: string, input: CreateMachineInput) {
+  await assertUnderMachineLimit(companyId);
   await assertMachineTypeExists(companyId, input.machineTypeId);
   if (input.assignedDriverId) {
     await assertDriverExists(companyId, input.assignedDriverId);

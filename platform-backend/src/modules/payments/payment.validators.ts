@@ -1,6 +1,11 @@
 import { z } from "zod";
 
 export const createOrderSchema = z.object({
+  planKey: z.string().min(1),
+  // Extra machine slots on top of the plan's base limit, at the flat
+  // per-machine add-on price — independent of which plan is chosen, so a
+  // company can both switch tiers and add extras in one purchase.
+  extraMachines: z.coerce.number().int().nonnegative().default(0),
   isInterState: z.boolean().optional(),
 });
 

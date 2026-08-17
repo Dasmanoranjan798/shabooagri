@@ -22,6 +22,10 @@ export function findAllForCompany(companyId: string) {
   });
 }
 
+export function countForCompany(companyId: string) {
+  return prisma.machine.count({ where: { companyId } });
+}
+
 export function findByIdScopedWithRelations(companyId: string, id: string) {
   return prisma.machine.findFirst({ where: { id, companyId }, include: includeRelations });
 }

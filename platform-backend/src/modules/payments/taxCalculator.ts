@@ -1,8 +1,7 @@
-// Single-plan annual subscription pricing (§ "pricing — single plan for
-// now, no tiers"). Figures carried forward from the prior version of this
-// system (₹4999/year, GST-inclusive) as a placeholder — this is a real
-// business/pricing decision, not an engineering one, and should be
-// confirmed or changed before this goes live with real payments.
+// Generic GST-inclusive tax split — used for both a plan's annual price
+// and the flat extra-machine add-on. Standard 18% GST inclusive: the
+// listed price IS what the customer pays; base/gst are backed out of it,
+// not added on top.
 export interface TaxBreakdown {
   totalAmount: number;
   baseAmount: number;
@@ -13,29 +12,35 @@ export interface TaxBreakdown {
   igstAmount: number | null;
 }
 
-const TOTAL_AMOUNT = 4999.0;
-const BASE_AMOUNT = 4236.44;
-const GST_AMOUNT = 762.56;
+const GST_RATE = 0.18;
 
-export function calculateAnnualTax(isInterState = false): TaxBreakdown {
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+export function calculateTax(totalAmount: number, isInterState = false): TaxBreakdown {
+  const baseAmount = round2(totalAmount / (1 + GST_RATE));
+  const gstAmount = round2(totalAmount - baseAmount);
+
   if (isInterState) {
     return {
-      totalAmount: TOTAL_AMOUNT,
-      baseAmount: BASE_AMOUNT,
-      gstAmount: GST_AMOUNT,
+      totalAmount,
+      baseAmount,
+      gstAmount,
       isInterState: true,
       cgstAmount: null,
       sgstAmount: null,
-      igstAmount: GST_AMOUNT,
+      igstAmount: gstAmount,
     };
   }
+  const cgstAmount = round2(gstAmount / 2);
   return {
-    totalAmount: TOTAL_AMOUNT,
-    baseAmount: BASE_AMOUNT,
-    gstAmount: GST_AMOUNT,
+    totalAmount,
+    baseAmount,
+    gstAmount,
     isInterState: false,
-    cgstAmount: GST_AMOUNT / 2,
-    sgstAmount: GST_AMOUNT / 2,
+    cgstAmount,
+    sgstAmount: round2(gstAmount - cgstAmount),
     igstAmount: null,
   };
 }

@@ -25,7 +25,10 @@ export interface ProvisionResult extends InternalProvisionResponse {
   redirectUrl: string;
 }
 
-export async function provisionCompanyForUser(platformUserId: string): Promise<ProvisionResult> {
+export async function provisionCompanyForUser(
+  platformUserId: string,
+  plan: { planKey: string; machineLimit: number },
+): Promise<ProvisionResult> {
   const user = await prisma.platformUser.findUnique({ where: { id: platformUserId } });
   if (!user) {
     throw new AppError(404, "Platform user not found");
@@ -49,6 +52,8 @@ export async function provisionCompanyForUser(platformUserId: string): Promise<P
       pincode: user.pincode,
       gstin: user.gstin,
       pan: user.pan,
+      planKey: plan.planKey,
+      machineLimit: plan.machineLimit,
     }),
   });
 
@@ -67,5 +72,46 @@ export async function provisionCompanyForUser(platformUserId: string): Promise<P
   return {
     ...result,
     redirectUrl: `${result.softwareUrl}/sso?token=${encodeURIComponent(result.launchToken)}`,
+  };
+}
+
+interface InternalUpdatePlanResponse {
+  company: { id: string; slug: string; name: string; planKey: string | null; machineLimit: number | null };
+  launchToken: string | null;
+  softwareUrl: string;
+}
+
+// Upgrade path for an already-provisioned company: updates only the
+// operational Company's cached plan/limit fields via /internal/update-plan
+// — never touches roles/users, and never re-runs provisioning.
+export async function updatePlanForUser(
+  platformUserId: string,
+  plan: { planKey: string; machineLimit: number },
+): Promise<InternalUpdatePlanResponse & { redirectUrl: string | null }> {
+  const user = await prisma.platformUser.findUnique({ where: { id: platformUserId } });
+  if (!user || !user.companySlug) {
+    throw new AppError(404, "No company has been provisioned for this account yet");
+  }
+
+  const res = await fetch(`${env.OPERATIONAL_API_URL}/internal/update-plan`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Internal-Api-Key": env.INTERNAL_API_KEY,
+    },
+    body: JSON.stringify({ platformUserId: user.id, planKey: plan.planKey, machineLimit: plan.machineLimit }),
+  });
+
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({ error: `HTTP ${res.status}` }))) as { error?: string };
+    throw new AppError(502, `Plan update failed: ${body.error || res.statusText}`);
+  }
+
+  const result = (await res.json()) as InternalUpdatePlanResponse;
+  return {
+    ...result,
+    redirectUrl: result.launchToken
+      ? `${result.softwareUrl}/sso?token=${encodeURIComponent(result.launchToken)}`
+      : null,
   };
 }

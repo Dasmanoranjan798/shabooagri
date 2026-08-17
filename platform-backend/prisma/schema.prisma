@@ -44,6 +44,9 @@ model PlatformUser {
   pincode       String?
   gstin         String?
   pan           String?
+  // Owner admin dashboard access (Checkpoint 3) — false for every regular
+  // signup. No self-service way to become true; set directly in the DB.
+  isPlatformAdmin Boolean @default(false) @map("is_platform_admin")
   // Set once /internal/provision-company succeeds. Purely informational on
   // this side — the operational company record is the source of truth for
   // everything about the provisioned tenant; this is just enough to know
@@ -79,6 +82,11 @@ model License {
   id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   platformUserId String        @map("platform_user_id") @db.Uuid
   paymentId      String?       @unique @map("payment_id") @db.Uuid
+  // Which PricingPlan.key this subscription period bought — recorded on
+  // the license (not just looked up live from PlatformUser/Company) so
+  // history is accurate even after the plan is later renamed or its price
+  // changes.
+  planKey        String        @default("starter") @map("plan_key")
   startDate      DateTime?     @map("start_date")
   expiryDate     DateTime?     @map("expiry_date")
   status         LicenseStatus @default(ACTIVE)
@@ -95,6 +103,11 @@ model License {
 model Payment {
   id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   platformUserId    String        @map("platform_user_id") @db.Uuid
+  planKey           String        @map("plan_key")
+  // "signup" for a brand-new company, "upgrade" for an existing one
+  // buying a higher tier — verifyPayment branches on this to call
+  // /internal/provision-company vs /internal/update-plan.
+  intent            String        @default("signup")
   gatewayOrderId    String?       @map("gateway_order_id")
   gatewayPaymentId  String?       @map("gateway_payment_id")
   gatewaySignature  String?       @map("gateway_signature")
@@ -109,4 +122,41 @@ model Payment {
   license      License?
 
   @@map("payments")
+}
+
+// Machine-count-ceiling plans (§ "plans are defined by a machine-count
+// ceiling only — Drivers/Managers/Employees are never restricted").
+// Owner-editable from the admin dashboard (Checkpoint 3), not hardcoded
+// in application code — starting values are seeded once by seed.ts.
+model PricingPlan {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key          String   @unique
+  name         String
+  machineLimit Int      @map("machine_limit")
+  priceAnnual  Decimal  @map("price_annual") @db.Decimal(10, 2)
+  sortOrder    Int      @default(0) @map("sort_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("pricing_plans")
+}
+
+// Singleton row (application-enforced, not a DB constraint — the
+// repository always reads/creates/updates the single oldest row). Two
+// deliberately independent switches: an announcement banner can run
+// without blocking purchases (a promotion), and purchasing can be
+// blocked without any banner explaining why (a quiet pause) — neither
+// implies the other.
+model SiteSettings {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  announcementEnabled Boolean  @default(false) @map("announcement_enabled")
+  announcementMessage String?  @map("announcement_message")
+  purchasingBlocked   Boolean  @default(false) @map("purchasing_blocked")
+  // Flat annual add-on price for a machine beyond a plan's limit, applied
+  // the same regardless of which plan the company is on.
+  extraMachinePrice   Decimal  @default(2000) @map("extra_machine_price") @db.Decimal(10, 2)
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("site_settings")
 }

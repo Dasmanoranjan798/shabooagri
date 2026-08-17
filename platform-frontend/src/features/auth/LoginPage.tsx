@@ -1,16 +1,25 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Tractor } from "lucide-react";
 import { usePlatformAuth } from "../../context/PlatformAuthContext";
 import { api, ApiError } from "../../lib/api";
 
 export const LoginPage: React.FC = () => {
   const { login, user, isAuthenticated } = usePlatformAuth();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const next = searchParams.get("next");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated && next) {
+      navigate(next, { replace: true });
+    }
+  }, [isAuthenticated, next, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,6 +27,9 @@ export const LoginPage: React.FC = () => {
     setIsSubmitting(true);
     try {
       await login(email, password);
+      if (next) {
+        navigate(next, { replace: true });
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Invalid email or password.");
     } finally {
@@ -30,7 +42,9 @@ export const LoginPage: React.FC = () => {
     setIsLaunching(true);
     try {
       const result = await api.relaunch();
-      window.location.href = result.redirectUrl;
+      if (result.redirectUrl) {
+        window.location.href = result.redirectUrl;
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not open your dashboard.");
       setIsLaunching(false);

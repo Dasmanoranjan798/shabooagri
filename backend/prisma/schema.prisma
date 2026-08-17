@@ -112,6 +112,16 @@ model Company {
   // platform user already been provisioned" without a second DB round trip
   // through the platform side.
   platformUserId    String? @unique @map("platform_user_id")
+  // Cached from the platform database at provisioning/upgrade time via
+  // /internal/update-plan — never read live from the platform backend on
+  // any operational request path (same principle as the old license-
+  // expiry gate this project already had to remove once). planKey is
+  // purely informational (which tier, for display/support purposes);
+  // machineLimit is what machine.service actually enforces. null on both
+  // means "no plan assigned" (e.g. pilot, or any internally-managed
+  // company) — unlimited, not zero.
+  planKey           String? @map("plan_key")
+  machineLimit      Int?    @map("machine_limit")
   // Monotonic counter backing Booking.bookingNumber (BK-000001, ...).
   // Incremented atomically ("SET x = x + 1") on every booking creation and
   // NEVER decremented or reused, even if the booking that consumed a

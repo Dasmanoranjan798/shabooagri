@@ -9,6 +9,7 @@ export default defineConfig({
       "/auth": "http://localhost:4010",
       "/payments": "http://localhost:4010",
       "/provisioning": "http://localhost:4010",
+      "/plans": "http://localhost:4010",
       "/health": "http://localhost:4010",
     },
   },

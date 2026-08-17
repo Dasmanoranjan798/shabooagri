@@ -3,7 +3,7 @@ import { AppError } from "../../shared/errors/AppError";
 import { issueLaunchToken } from "../auth/auth.service";
 import { PRICING_METHOD_DEFAULTS, ROLE_PERMISSIONS, SYSTEM_ROLES } from "../../shared/seedData";
 import { isReservedSlug, slugify } from "../../shared/utils/slug";
-import type { ProvisionCompanyInput } from "./internal.validators";
+import type { ProvisionCompanyInput, UpdatePlanInput } from "./internal.validators";
 
 // Called exactly once per platform customer, from the platform backend's
 // payment-verification flow — never from a browser, never on any
@@ -59,6 +59,8 @@ export async function provisionCompany(input: ProvisionCompanyInput) {
         gstin: input.gstin ?? undefined,
         pan: input.pan ?? undefined,
         isGstRegistered: !!input.gstin,
+        planKey: input.planKey,
+        machineLimit: input.machineLimit,
       },
     });
 
@@ -115,5 +117,38 @@ export async function provisionCompany(input: ProvisionCompanyInput) {
     launchToken,
     softwareUrl: `https://${result.company.slug}.shabooagri.com`,
     alreadyProvisioned: false,
+  };
+}
+
+// Called from the platform backend's upgrade-payment flow, for a company
+// that already exists — updates only the cached plan/limit fields
+// machine.service checks. Never touches roles, users, or anything else
+// about the company; a plan upgrade is a machine-count ceiling change,
+// nothing more (§ "Drivers/Managers/Employees remain unlimited on every
+// plan, always").
+export async function updatePlan(input: UpdatePlanInput) {
+  const company = await prisma.company.findUnique({
+    where: { platformUserId: input.platformUserId },
+    include: { users: { include: { role: true } } },
+  });
+  if (!company) {
+    throw new AppError(404, "No company has been provisioned for this account yet");
+  }
+
+  const updated = await prisma.company.update({
+    where: { id: company.id },
+    data: { planKey: input.planKey, machineLimit: input.machineLimit },
+  });
+
+  // Issue a launch token too, same as provisioning, so the upgrade
+  // payment flow can redirect the browser straight back into the
+  // dashboard afterward instead of leaving them on the platform site.
+  const ownerUser = company.users.find((u) => u.role.systemKey === "owner") ?? company.users[0];
+  const launchToken = ownerUser ? await issueLaunchToken(ownerUser.id) : null;
+
+  return {
+    company: { id: updated.id, slug: updated.slug, name: updated.name, planKey: updated.planKey, machineLimit: updated.machineLimit },
+    launchToken,
+    softwareUrl: `https://${updated.slug}.shabooagri.com`,
   };
 }

@@ -53,10 +53,15 @@ export function clearStoredTokens(): void {
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  // Machine-readable extras from the backend's AppError.details (e.g.
+  // { code: "MACHINE_LIMIT_REACHED", upgradeUrl }), when present — most
+  // ApiErrors don't carry this.
+  details?: Record<string, unknown>;
+  constructor(status: number, message: string, details?: Record<string, unknown>) {
     super(message);
     this.status = status;
     this.name = "ApiError";
+    this.details = details;
   }
 }
 
@@ -504,7 +509,12 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to create machine" }));
-      throw new ApiError(res.status, (err.error || err.message) || "Failed to create machine");
+      const { error: _error, message: _message, ...details } = err;
+      throw new ApiError(
+        res.status,
+        (err.error || err.message) || "Failed to create machine",
+        Object.keys(details).length > 0 ? details : undefined,
+      );
     }
     return res.json();
   },

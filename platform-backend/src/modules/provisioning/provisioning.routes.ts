@@ -7,3 +7,4 @@ export const provisioningRouter = Router();
 
 provisioningRouter.use(platformAuthMiddleware);
 provisioningRouter.post("/relaunch", asyncHandler(provisioningController.relaunch));
+provisioningRouter.get("/status", asyncHandler(provisioningController.status));

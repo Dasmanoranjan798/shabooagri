@@ -4,8 +4,10 @@ import type { Prisma } from "@prisma/client";
 import { env } from "../../config/env";
 import { AppError } from "../../shared/errors/AppError";
 import * as paymentRepository from "./payment.repository";
-import { calculateAnnualTax } from "./taxCalculator";
+import { calculateTax } from "./taxCalculator";
+import * as plansRepository from "../plans/plans.repository";
 import * as provisioningService from "../provisioning/provisioning.service";
+import { prisma } from "../../db/prisma";
 import type { CreateOrderInput, VerifyPaymentInput } from "./payment.validators";
 
 // Real Razorpay client only constructed when both keys are present — no
@@ -31,7 +33,20 @@ function safeSignatureEquals(a: string, b: string): boolean {
 }
 
 export async function createOrder(platformUserId: string, input: CreateOrderInput) {
-  const tax = calculateAnnualTax(!!input.isInterState);
+  const settings = await plansRepository.getSiteSettings();
+  if (settings.purchasingBlocked) {
+    throw new AppError(403, "Purchasing is temporarily unavailable. Please check back shortly.");
+  }
+
+  const plan = await plansRepository.findPlanByKey(input.planKey);
+  if (!plan || !plan.isActive) {
+    throw new AppError(400, "Unknown or unavailable pricing plan");
+  }
+
+  const machineLimit = plan.machineLimit + input.extraMachines;
+  const totalPrice =
+    Number(plan.priceAnnual) + input.extraMachines * Number(settings.extraMachinePrice);
+  const tax = calculateTax(totalPrice, !!input.isInterState);
 
   let gatewayOrderId: string;
   if (razorpay) {
@@ -40,7 +55,7 @@ export async function createOrder(platformUserId: string, input: CreateOrderInpu
         amount: rupeesToPaise(tax.totalAmount),
         currency: "INR",
         receipt: `sag_${platformUserId}_${Date.now()}`,
-        notes: { platformUserId, purpose: "Annual ShabooAgri Subscription" },
+        notes: { platformUserId, planKey: plan.key, extraMachines: input.extraMachines },
       });
       gatewayOrderId = order.id;
     } catch (err: any) {
@@ -53,13 +68,18 @@ export async function createOrder(platformUserId: string, input: CreateOrderInpu
     gatewayOrderId = `order_stub_${Date.now()}`;
   }
 
+  const user = await prisma.platformUser.findUnique({ where: { id: platformUserId } });
+  const intent = user?.companySlug ? "upgrade" : "signup";
+
   const payment = await paymentRepository.createPayment({
     platformUserId,
+    planKey: plan.key,
+    intent,
     gatewayOrderId,
     amount: tax.totalAmount,
     currency: "INR",
     status: "PENDING",
-    gatewayPayload: { tax } as unknown as Prisma.InputJsonValue,
+    gatewayPayload: { tax, machineLimit, extraMachines: input.extraMachines } as unknown as Prisma.InputJsonValue,
   });
 
   return {
@@ -69,6 +89,8 @@ export async function createOrder(platformUserId: string, input: CreateOrderInpu
     currency: "INR",
     key: env.RAZORPAY_KEY_ID || null,
     taxBreakdown: tax,
+    plan: { key: plan.key, name: plan.name, machineLimit },
+    intent,
     mode: razorpay ? "LIVE" : "STUB",
   };
 }
@@ -101,6 +123,8 @@ export async function verifyPayment(platformUserId: string, input: VerifyPayment
     gatewaySignature: input.gatewaySignature,
   });
 
+  const machineLimit = (payment.gatewayPayload as any)?.machineLimit ?? 0;
+
   const startDate = new Date();
   const expiryDate = new Date(startDate.getTime() + 365 * 24 * 60 * 60 * 1000);
 
@@ -108,6 +132,7 @@ export async function verifyPayment(platformUserId: string, input: VerifyPayment
   const license = existingLicense
     ? await paymentRepository.updateLicense(existingLicense.id, {
         paymentId: payment.id,
+        planKey: payment.planKey,
         status: "ACTIVE",
         startDate,
         expiryDate,
@@ -115,15 +140,22 @@ export async function verifyPayment(platformUserId: string, input: VerifyPayment
       })
     : await paymentRepository.createLicense({
         platformUserId,
+        planKey: payment.planKey,
         paymentId: payment.id,
         status: "ACTIVE",
         startDate,
         expiryDate,
       });
 
-  // Payment succeeded -> automatically provision the operational company.
-  // No manual approval step, per the approved plan.
-  const provisionResult = await provisioningService.provisionCompanyForUser(platformUserId);
+  // Payment succeeded -> automatically provision (new company) or update
+  // the plan (existing company). No manual approval step, per the
+  // approved plan. Which path runs is decided by `intent`, set server-side
+  // in createOrder from whether this platform user already has a company
+  // — never trusted from client input.
+  const provisionResult =
+    payment.intent === "upgrade"
+      ? await provisioningService.updatePlanForUser(platformUserId, { planKey: payment.planKey, machineLimit })
+      : await provisioningService.provisionCompanyForUser(platformUserId, { planKey: payment.planKey, machineLimit });
 
   return { payment, license, provisioning: provisionResult };
 }

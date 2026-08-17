@@ -94,6 +94,8 @@ export interface OrderResponse {
     sgstAmount: number | null;
     igstAmount: number | null;
   };
+  plan: { key: string; name: string; machineLimit: number };
+  intent: "signup" | "upgrade";
   mode: "LIVE" | "STUB";
 }
 
@@ -101,11 +103,25 @@ export interface VerifyPaymentResponse {
   payment: { id: string; status: string };
   license: { id: string; status: string; expiryDate: string };
   provisioning: {
-    company: { id: string; slug: string; name: string };
-    ownerUser: { id: string; fullName: string; email: string };
-    redirectUrl: string;
-    alreadyProvisioned: boolean;
+    company: { id: string; slug: string; name: string; planKey?: string | null; machineLimit?: number | null };
+    ownerUser?: { id: string; fullName: string; email: string };
+    redirectUrl: string | null;
+    alreadyProvisioned?: boolean;
   };
+}
+
+export interface PricingPlan {
+  key: string;
+  name: string;
+  machineLimit: number;
+  priceAnnual: number;
+}
+
+export interface PublicConfig {
+  plans: PricingPlan[];
+  extraMachinePrice: number;
+  announcement: { enabled: boolean; message: string | null };
+  purchasingBlocked: boolean;
 }
 
 export const api = {
@@ -132,8 +148,16 @@ export const api = {
     clearStoredTokens();
   },
 
-  async createOrder(isInterState = false): Promise<OrderResponse> {
-    const res = await request("/payments/orders", { method: "POST", body: JSON.stringify({ isInterState }) });
+  async getPublicConfig(): Promise<PublicConfig> {
+    const res = await request("/plans/config");
+    return parseOrThrow<PublicConfig>(res, "Could not load pricing");
+  },
+
+  async createOrder(planKey: string, extraMachines = 0, isInterState = false): Promise<OrderResponse> {
+    const res = await request("/payments/orders", {
+      method: "POST",
+      body: JSON.stringify({ planKey, extraMachines, isInterState }),
+    });
     return parseOrThrow<OrderResponse>(res, "Failed to start checkout");
   },
 
@@ -149,5 +173,10 @@ export const api = {
   async relaunch(): Promise<VerifyPaymentResponse["provisioning"]> {
     const res = await request("/provisioning/relaunch", { method: "POST" });
     return parseOrThrow<VerifyPaymentResponse["provisioning"]>(res, "Could not open your dashboard");
+  },
+
+  async getStatus(): Promise<{ companySlug: string | null; currentPlanKey: string | null }> {
+    const res = await request("/provisioning/status");
+    return parseOrThrow(res, "Could not load account status");
   },
 };

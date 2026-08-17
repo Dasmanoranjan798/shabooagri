@@ -18,6 +18,12 @@ const envSchema = z.object({
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM: z.string().optional().default("support@shabooagri.com"),
   APP_URL: z.string().optional().default("http://localhost:5173"),
+  // Base URL of the commercial platform site — used only to build the
+  // "Upgrade Plan" redirect link shown when a company hits its machine
+  // limit. A plain string, never a live call: if this is wrong or the
+  // platform site is down, the link just doesn't work, nothing else here
+  // is affected.
+  PLATFORM_APP_URL: z.string().optional().default("https://shabooagri.com"),
   // Multi-Provider SMS Gateway Configuration (Fast2SMS, MSG91, Twilio, Mock)
   SMS_PROVIDER: z.enum(["fast2sms", "msg91", "twilio", "mock"]).optional().default("mock"),
   SMS_API_KEY: z.string().optional(),

@@ -8,3 +8,4 @@ import * as internalController from "./internal.controller";
 export const internalRouter = Router();
 
 internalRouter.post("/provision-company", asyncHandler(internalController.provisionCompany));
+internalRouter.post("/update-plan", asyncHandler(internalController.updatePlan));

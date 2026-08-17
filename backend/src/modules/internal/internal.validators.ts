@@ -12,6 +12,15 @@ export const provisionCompanySchema = z.object({
   pincode: z.string().optional().nullable(),
   gstin: z.string().optional().nullable(),
   pan: z.string().optional().nullable(),
+  planKey: z.string().min(1),
+  machineLimit: z.number().int().nonnegative(),
+});
+
+export const updatePlanSchema = z.object({
+  platformUserId: z.string().min(1),
+  planKey: z.string().min(1),
+  machineLimit: z.number().int().nonnegative(),
 });
 
 export type ProvisionCompanyInput = z.infer<typeof provisionCompanySchema>;
+export type UpdatePlanInput = z.infer<typeof updatePlanSchema>;

@@ -41,6 +41,8 @@ export function findCompanyById(id: string) {
       licenseAlertDays: true,
       requireJobPhoto: true,
       requireJobFuelLog: true,
+      planKey: true,
+      machineLimit: true,
       isActive: true,
       createdAt: true,
       updatedAt: true,

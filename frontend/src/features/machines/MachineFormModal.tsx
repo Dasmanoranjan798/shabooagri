@@ -13,6 +13,8 @@ import { Modal } from "../../components/ui/Modal";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { SearchableSelect } from "../../components/ui/SearchableSelect/SearchableSelect";
+import { UpgradePlanDialog } from "../../components/ui/UpgradePlanDialog";
+import { ApiError } from "../../lib/api";
 
 interface MachineFormModalProps {
   isOpen: boolean;
@@ -52,6 +54,7 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
   const [isLoadingOptions, setIsLoadingOptions] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [upgradeDialog, setUpgradeDialog] = useState<{ message: string; upgradeUrl: string } | null>(null);
 
   // Quick Create Machine Type inline state
   const [isCreatingMachineType, setIsCreatingMachineType] = useState<boolean>(false);
@@ -188,7 +191,11 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err.message || "Failed to save machine record");
+      if (err instanceof ApiError && err.details?.code === "MACHINE_LIMIT_REACHED") {
+        setUpgradeDialog({ message: err.message, upgradeUrl: String(err.details.upgradeUrl) });
+      } else {
+        setError(err.message || "Failed to save machine record");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -404,6 +411,13 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
           </Button>
         </div>
       </form>
+
+      <UpgradePlanDialog
+        isOpen={!!upgradeDialog}
+        onClose={() => setUpgradeDialog(null)}
+        message={upgradeDialog?.message ?? ""}
+        upgradeUrl={upgradeDialog?.upgradeUrl ?? "#"}
+      />
     </Modal>
   );
 };
