@@ -44,3 +44,26 @@ export function platformAuthMiddleware(req: Request, _res: Response, next: NextF
     return next(new AppError(401, "Invalid or expired token"));
   }
 }
+
+// For public endpoints (feedback/support submission) open to any visitor,
+// where a logged-in caller's identity is just a nice-to-have (auto-fill,
+// linking the row to their account) rather than a requirement. Unlike
+// platformAuthMiddleware, a missing or invalid token is never an error —
+// it just means the request proceeds as anonymous.
+export function optionalPlatformAuthMiddleware(req: Request, _res: Response, next: NextFunction) {
+  const header = req.headers.authorization;
+  if (!header?.startsWith("Bearer ")) {
+    return next();
+  }
+
+  const token = header.slice("Bearer ".length);
+  try {
+    const payload = jwt.verify(token, env.JWT_ACCESS_SECRET) as PlatformTokenPayload;
+    if (payload.type === "platform_access") {
+      req.platformUser = { id: payload.sub, email: payload.email };
+    }
+  } catch {
+    // Ignore — treat as anonymous rather than rejecting the request.
+  }
+  next();
+}

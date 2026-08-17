@@ -8,6 +8,11 @@ import { UpgradePage } from "../features/auth/UpgradePage";
 import { ResetPasswordPage } from "../features/auth/ResetPasswordPage";
 import { ChangePasswordPage } from "../features/auth/ChangePasswordPage";
 import { AdminDashboardPage } from "../features/admin/AdminDashboardPage";
+import { FeedbackPage } from "../features/marketing/FeedbackPage";
+import { ContactPage } from "../features/marketing/ContactPage";
+import { TermsOfServicePage } from "../features/legal/TermsOfServicePage";
+import { PrivacyPolicyPage } from "../features/legal/PrivacyPolicyPage";
+import { RefundPolicyPage } from "../features/legal/RefundPolicyPage";
 
 export function App() {
   return (
@@ -22,6 +27,11 @@ export function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/change-password" element={<ChangePasswordPage />} />
           <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route path="/feedback" element={<FeedbackPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/terms" element={<TermsOfServicePage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/refund-policy" element={<RefundPolicyPage />} />
         </Routes>
       </PlatformAuthProvider>
     </BrowserRouter>

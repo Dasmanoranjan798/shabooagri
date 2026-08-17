@@ -118,6 +118,24 @@ button {
   border: 1px solid #bbf7d0;
 }
 
+.pf-legal-doc h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 4px 0 0;
+}
+.pf-legal-doc ul,
+.pf-legal-doc ol {
+  margin: 0;
+  padding-left: 22px;
+}
+.pf-legal-doc li {
+  margin-bottom: 6px;
+}
+.pf-legal-doc a {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
 .pf-center-viewport {
   min-height: 100vh;
   display: flex;

@@ -55,6 +55,31 @@ export const MarketingLayout: React.FC<{ children: (config: PublicConfig | null)
           borderTop: "1px solid var(--color-border)",
         }}
       >
+        <nav
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "8px 20px",
+            justifyContent: "center",
+            marginBottom: 12,
+          }}
+        >
+          <Link to="/contact" style={{ color: "var(--color-text-muted)", textDecoration: "none" }}>
+            Contact Us
+          </Link>
+          <Link to="/feedback" style={{ color: "var(--color-text-muted)", textDecoration: "none" }}>
+            Feedback
+          </Link>
+          <Link to="/terms" style={{ color: "var(--color-text-muted)", textDecoration: "none" }}>
+            Terms of Service
+          </Link>
+          <Link to="/privacy" style={{ color: "var(--color-text-muted)", textDecoration: "none" }}>
+            Privacy Policy
+          </Link>
+          <Link to="/refund-policy" style={{ color: "var(--color-text-muted)", textDecoration: "none" }}>
+            Refund Policy
+          </Link>
+        </nav>
         A Shaboo Product · © {new Date().getFullYear()} ShabooAgri
       </footer>
     </div>

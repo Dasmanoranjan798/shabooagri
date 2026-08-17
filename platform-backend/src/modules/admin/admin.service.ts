@@ -68,3 +68,17 @@ export async function updateSiteSettings(data: {
   const settings = await plansRepository.updateSiteSettings(data);
   return serializeSiteSettings(settings);
 }
+
+// Most-recent-first, capped rather than paginated — this is a lightweight
+// "what's come in" view for the owner, not a full inbox/ticketing system.
+export async function listFeedback() {
+  return prisma.feedback.findMany({ orderBy: { createdAt: "desc" }, take: 100 });
+}
+
+export async function listSupportRequests() {
+  return prisma.supportRequest.findMany({ orderBy: { createdAt: "desc" }, take: 100 });
+}
+
+export async function updateSupportRequestStatus(id: string, status: "OPEN" | "RESOLVED") {
+  return prisma.supportRequest.update({ where: { id }, data: { status } });
+}

@@ -175,14 +175,16 @@ model SiteSettings {
   @@map("site_settings")
 }
 
-// Two of the admin dashboard's six tiles. No submission surface exists
-// yet on the marketing/customer side — that was never part of the
-// approved checkpoints — so these tables are correctly empty (real 0,
-// not a placeholder) until one is built. Modeled now so the dashboard
-// queries a real count rather than a hardcoded number.
+// Two of the admin dashboard's six tiles. Submission surface: public
+// /contact/feedback and /contact/support endpoints, open to any visitor
+// (not just logged-in platform users) — name/email identify anonymous
+// submitters and are always populated (auto-filled from the account when
+// the submitter is logged in, typed by hand otherwise).
 model Feedback {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   platformUserId String?  @map("platform_user_id") @db.Uuid
+  name           String
+  email          String
   message        String
   status         String   @default("NEW")
   createdAt      DateTime @default(now()) @map("created_at")
@@ -193,6 +195,8 @@ model Feedback {
 model SupportRequest {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   platformUserId String?  @map("platform_user_id") @db.Uuid
+  name           String
+  email          String
   subject        String
   message        String
   status         String   @default("OPEN")

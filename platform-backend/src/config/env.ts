@@ -27,6 +27,10 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM: z.string().optional(),
+  // Mailbox that receives Feedback/Support Request notifications. Falls
+  // back to SMTP_USER (the support mailbox itself) when unset, so no extra
+  // config is required in the common case of sending-to-self.
+  SUPPORT_NOTIFY_EMAIL: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

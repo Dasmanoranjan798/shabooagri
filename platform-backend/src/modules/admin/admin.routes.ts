@@ -13,3 +13,6 @@ adminRouter.get("/plans", asyncHandler(adminController.listPlans));
 adminRouter.patch("/plans/:key", asyncHandler(adminController.updatePlan));
 adminRouter.get("/site-settings", asyncHandler(adminController.getSiteSettings));
 adminRouter.patch("/site-settings", asyncHandler(adminController.updateSiteSettings));
+adminRouter.get("/feedback", asyncHandler(adminController.listFeedback));
+adminRouter.get("/support-requests", asyncHandler(adminController.listSupportRequests));
+adminRouter.patch("/support-requests/:id", asyncHandler(adminController.updateSupportRequest));

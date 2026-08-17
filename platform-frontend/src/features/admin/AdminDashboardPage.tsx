@@ -10,7 +10,15 @@ import {
   Tractor,
 } from "lucide-react";
 import { usePlatformAuth } from "../../context/PlatformAuthContext";
-import { api, ApiError, type AdminDashboardMetrics, type AdminPricingPlan, type AdminSiteSettings } from "../../lib/api";
+import {
+  api,
+  ApiError,
+  type AdminDashboardMetrics,
+  type AdminFeedbackItem,
+  type AdminPricingPlan,
+  type AdminSiteSettings,
+  type AdminSupportRequestItem,
+} from "../../lib/api";
 
 const StatTile: React.FC<{ icon: React.ElementType; label: string; value: React.ReactNode }> = ({
   icon: Icon,
@@ -32,20 +40,31 @@ export const AdminDashboardPage: React.FC = () => {
   const [metrics, setMetrics] = useState<AdminDashboardMetrics | null>(null);
   const [plans, setPlans] = useState<AdminPricingPlan[] | null>(null);
   const [settings, setSettings] = useState<AdminSiteSettings | null>(null);
+  const [feedback, setFeedback] = useState<AdminFeedbackItem[] | null>(null);
+  const [supportRequests, setSupportRequests] = useState<AdminSupportRequestItem[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [planSaving, setPlanSaving] = useState<string | null>(null);
   const [planSaved, setPlanSaved] = useState<string | null>(null);
+  const [requestUpdating, setRequestUpdating] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated || !user?.isPlatformAdmin) return;
-    Promise.all([api.getAdminDashboard(), api.getAdminPlans(), api.getAdminSiteSettings()])
-      .then(([m, p, s]) => {
+    Promise.all([
+      api.getAdminDashboard(),
+      api.getAdminPlans(),
+      api.getAdminSiteSettings(),
+      api.getAdminFeedback(),
+      api.getAdminSupportRequests(),
+    ])
+      .then(([m, p, s, f, sr]) => {
         setMetrics(m);
         setPlans(p);
         setSettings(s);
+        setFeedback(f);
+        setSupportRequests(sr);
       })
       .catch((err) => setLoadError(err instanceof ApiError ? err.message : "Could not load dashboard data"));
   }, [isAuthenticated, user]);
@@ -77,6 +96,27 @@ export const AdminDashboardPage: React.FC = () => {
       setLoadError(err instanceof ApiError ? err.message : "Could not save site settings");
     } finally {
       setSettingsSaving(false);
+    }
+  };
+
+  const toggleSupportRequestStatus = async (item: AdminSupportRequestItem) => {
+    const nextStatus = item.status === "OPEN" ? "RESOLVED" : "OPEN";
+    setRequestUpdating(item.id);
+    try {
+      const updated = await api.updateAdminSupportRequest(item.id, nextStatus);
+      setSupportRequests((prev) => (prev ? prev.map((r) => (r.id === item.id ? updated : r)) : prev));
+      setMetrics((prev) =>
+        prev
+          ? {
+              ...prev,
+              supportRequestCount: prev.supportRequestCount + (nextStatus === "RESOLVED" ? -1 : 1),
+            }
+          : prev,
+      );
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not update support request");
+    } finally {
+      setRequestUpdating(null);
     }
   };
 
@@ -286,6 +326,78 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* ---- Support Requests ---- */}
+      <section className="pf-card" style={{ padding: 24, marginTop: 24 }}>
+        <h2 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: 16 }}>Support Requests</h2>
+        {!supportRequests ? (
+          <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem" }}>Loading...</p>
+        ) : supportRequests.length === 0 ? (
+          <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem" }}>No support requests yet.</p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {supportRequests.map((item) => (
+              <div key={item.id} style={{ border: "1px solid var(--color-border)", borderRadius: 10, padding: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 6 }}>
+                  <div>
+                    <strong style={{ fontSize: "0.95rem" }}>{item.subject}</strong>
+                    <div style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>
+                      {item.name} · {item.email} · {new Date(item.createdAt).toLocaleString("en-IN")}
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      padding: "3px 10px",
+                      borderRadius: 999,
+                      whiteSpace: "nowrap",
+                      backgroundColor: item.status === "OPEN" ? "#fef2f2" : "var(--color-primary-light)",
+                      color: item.status === "OPEN" ? "var(--color-danger)" : "var(--color-primary-dark)",
+                    }}
+                  >
+                    {item.status}
+                  </span>
+                </div>
+                <p style={{ fontSize: "0.88rem", whiteSpace: "pre-wrap", marginBottom: 10 }}>{item.message}</p>
+                <button
+                  className="pf-btn pf-btn-secondary"
+                  style={{ padding: "6px 14px", fontSize: "0.82rem" }}
+                  onClick={() => toggleSupportRequestStatus(item)}
+                  disabled={requestUpdating === item.id}
+                >
+                  {requestUpdating === item.id
+                    ? "Updating..."
+                    : item.status === "OPEN"
+                      ? "Mark Resolved"
+                      : "Reopen"}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ---- Feedback ---- */}
+      <section className="pf-card" style={{ padding: 24, marginTop: 24 }}>
+        <h2 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: 16 }}>Feedback Received</h2>
+        {!feedback ? (
+          <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem" }}>Loading...</p>
+        ) : feedback.length === 0 ? (
+          <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem" }}>No feedback yet.</p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {feedback.map((item) => (
+              <div key={item.id} style={{ border: "1px solid var(--color-border)", borderRadius: 10, padding: 14 }}>
+                <div style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", marginBottom: 6 }}>
+                  {item.name} · {item.email} · {new Date(item.createdAt).toLocaleString("en-IN")}
+                </div>
+                <p style={{ fontSize: "0.88rem", whiteSpace: "pre-wrap" }}>{item.message}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

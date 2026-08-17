@@ -14,5 +14,10 @@ export const updateSiteSettingsSchema = z.object({
   extraMachinePrice: z.coerce.number().nonnegative().optional(),
 });
 
+export const updateSupportRequestSchema = z.object({
+  status: z.enum(["OPEN", "RESOLVED"]),
+});
+
 export type UpdatePlanInput = z.infer<typeof updatePlanSchema>;
 export type UpdateSiteSettingsInput = z.infer<typeof updateSiteSettingsSchema>;
+export type UpdateSupportRequestInput = z.infer<typeof updateSupportRequestSchema>;

@@ -237,6 +237,36 @@ export const api = {
     });
     return parseOrThrow(res, "Failed to change password");
   },
+
+  async submitFeedback(input: { name: string; email: string; message: string }): Promise<{ message: string }> {
+    const res = await request("/api/contact/feedback", { method: "POST", body: JSON.stringify(input) });
+    return parseOrThrow(res, "Failed to submit feedback");
+  },
+
+  async submitSupportRequest(input: {
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+  }): Promise<{ message: string }> {
+    const res = await request("/api/contact/support", { method: "POST", body: JSON.stringify(input) });
+    return parseOrThrow(res, "Failed to submit your request");
+  },
+
+  async getAdminFeedback(): Promise<AdminFeedbackItem[]> {
+    const res = await request("/admin/feedback");
+    return parseOrThrow<AdminFeedbackItem[]>(res, "Could not load feedback");
+  },
+
+  async getAdminSupportRequests(): Promise<AdminSupportRequestItem[]> {
+    const res = await request("/admin/support-requests");
+    return parseOrThrow<AdminSupportRequestItem[]>(res, "Could not load support requests");
+  },
+
+  async updateAdminSupportRequest(id: string, status: "OPEN" | "RESOLVED"): Promise<AdminSupportRequestItem> {
+    const res = await request(`/admin/support-requests/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
+    return parseOrThrow<AdminSupportRequestItem>(res, "Could not update support request");
+  },
 };
 
 export interface AdminDashboardMetrics {
@@ -261,4 +291,23 @@ export interface AdminSiteSettings {
   announcementMessage: string | null;
   purchasingBlocked: boolean;
   extraMachinePrice: number;
+}
+
+export interface AdminFeedbackItem {
+  id: string;
+  name: string;
+  email: string;
+  message: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface AdminSupportRequestItem {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: string;
+  createdAt: string;
 }
