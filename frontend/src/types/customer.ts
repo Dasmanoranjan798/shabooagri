@@ -9,6 +9,7 @@ export interface Customer {
   userId: string | null;
   isGstApplicable?: boolean;
   gstin?: string | null;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
   village: {
@@ -26,6 +27,7 @@ export interface CreateCustomerPayload {
   userId?: string;
   isGstApplicable?: boolean;
   gstin?: string;
+  isActive?: boolean;
 }
 
 export interface UpdateCustomerPayload extends Partial<CreateCustomerPayload> {}

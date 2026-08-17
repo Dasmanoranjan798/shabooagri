@@ -1,6 +1,8 @@
 import * as authService from "../auth/auth.service";
 import * as villageService from "../villages/village.service";
 import { AppError } from "../../shared/errors/AppError";
+import { assertNoBookingReferences } from "../../shared/utils/dependencyGuard";
+import * as bookingRepository from "../bookings/booking.repository";
 import * as customerRepository from "./customer.repository";
 import type { CreateCustomerInput, UpdateCustomerInput } from "./customer.validators";
 
@@ -69,6 +71,12 @@ export async function update(companyId: string, id: string, input: UpdateCustome
 }
 
 export async function remove(companyId: string, id: string) {
+  // Rule 4 (§ dependency-locked deletion) — bookings.customer_id is
+  // ON DELETE RESTRICT at the DB level too, but that would surface as a
+  // raw constraint error instead of this clear message.
+  const bookingCount = await bookingRepository.countByReference(companyId, { customerId: id });
+  assertNoBookingReferences("customer", bookingCount);
+
   const deleted = await customerRepository.deleteScoped(companyId, id);
   if (!deleted) {
     throw new AppError(404, "Customer not found");

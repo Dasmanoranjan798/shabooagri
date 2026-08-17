@@ -1,4 +1,4 @@
-export type JobStatus = "NOT_STARTED" | "WORKING" | "PAUSED" | "COMPLETED";
+export type JobStatus = "NOT_STARTED" | "WORKING" | "PAUSED" | "COMPLETED" | "CANCELLED";
 export type JobExecutionMode = "LIVE" | "MANUAL";
 
 export interface JobFuelEntry {

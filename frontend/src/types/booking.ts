@@ -68,6 +68,7 @@ export interface CustomerOption {
 export interface VillageOption {
   id: string;
   name: string;
+  isActive: boolean;
 }
 
 export interface MachineOption {

@@ -12,4 +12,6 @@ villageRouter.get("/", requirePermission("operations.view"), asyncHandler(villag
 villageRouter.get("/:id", requirePermission("operations.view"), asyncHandler(villageController.getById));
 villageRouter.post("/", requirePermission("village.manage"), asyncHandler(villageController.create));
 villageRouter.patch("/:id", requirePermission("village.manage"), asyncHandler(villageController.update));
-villageRouter.delete("/:id", requirePermission("village.manage"), asyncHandler(villageController.remove));
+// Owner-only (§ dependency-locked deletion, Rule 4 & 5) — distinct from
+// village.manage, which a Manager holds for create/edit/deactivate.
+villageRouter.delete("/:id", requirePermission("village.delete"), asyncHandler(villageController.remove));

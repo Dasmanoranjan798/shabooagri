@@ -11,8 +11,10 @@ import {
   Tractor,
   UserCheck,
   Banknote,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Eye,
 } from "lucide-react";
+import { ActionMenu } from "../../components/ui/ActionMenu";
 import type { Booking } from "../../types/booking";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
@@ -91,8 +93,8 @@ export const BookingsPage: React.FC = () => {
     setIsFormModalOpen(true);
   };
 
-  const handleOpenEdit = (booking: Booking, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleOpenEdit = (booking: Booking, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setEditingBooking(booking);
     setIsFormModalOpen(true);
   };
@@ -102,8 +104,8 @@ export const BookingsPage: React.FC = () => {
     setIsDetailModalOpen(true);
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDelete = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (!window.confirm("Are you sure you want to permanently delete this booking?")) {
       return;
     }
@@ -314,25 +316,21 @@ export const BookingsPage: React.FC = () => {
                         </td>
                         <td>
                           <div className="sa-table-actions" onClick={(e) => e.stopPropagation()}>
-                            {canEdit && (
-                              <button
-                                className="sa-icon-action"
-                                title="Edit Booking"
-                                onClick={(e) => handleOpenEdit(b, e)}
-                              >
-                                <Pencil size={15} />
-                              </button>
-                            )}
-                            {canDelete && (
-                              <button
-                                className="sa-icon-action"
-                                title="Delete Booking"
-                                disabled={deletingId === b.id}
-                                onClick={(e) => handleDelete(b.id, e)}
-                              >
-                                <Trash2 size={15} />
-                              </button>
-                            )}
+                            <ActionMenu
+                              items={[
+                                { key: "view", label: "View Details", icon: <Eye size={15} />, onClick: () => handleOpenDetail(b) },
+                                { key: "edit", label: "Edit", icon: <Pencil size={15} />, onClick: () => handleOpenEdit(b), hidden: !canEdit },
+                                {
+                                  key: "delete",
+                                  label: "Delete",
+                                  icon: <Trash2 size={15} />,
+                                  danger: true,
+                                  disabled: deletingId === b.id,
+                                  onClick: () => handleDelete(b.id),
+                                  hidden: !canDelete,
+                                },
+                              ]}
+                            />
                           </div>
                         </td>
                       </tr>

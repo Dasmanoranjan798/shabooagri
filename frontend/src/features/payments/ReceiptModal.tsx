@@ -16,6 +16,11 @@ interface ReceiptModalProps {
   onClose: () => void;
   onReceivePayment: (invoice: Invoice) => void;
   onInvoiceUpdated?: () => void;
+  // Owner-only (§ dependency-locked deletion, Rule 1 & 5) — both default
+  // false/no-op so any caller that hasn't been updated never shows void
+  // actions; PaymentsPage always passes them explicitly.
+  canVoid?: boolean;
+  onVoidInvoice?: (invoice: Invoice) => void;
 }
 
 export const ReceiptModal: React.FC<ReceiptModalProps> = ({
@@ -24,8 +29,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   onClose,
   onReceivePayment,
   onInvoiceUpdated,
+  canVoid = false,
+  onVoidInvoice,
 }) => {
-  const { hasPermission } = useAuth();
+  const { hasPermission, roleKey } = useAuth();
+  const canVoidPayment = roleKey === "owner" || hasPermission("payment.void");
+  const [voidingPaymentId, setVoidingPaymentId] = useState<string | null>(null);
   const customerTerm = getTerm("customer");
   const machineTerm = getTerm("machine");
   const driverTerm = getTerm("driver");
@@ -80,6 +89,26 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
       setError(err.message || "Failed to update tax configuration");
     } finally {
       setIsSavingTax(false);
+    }
+  };
+
+  const handleVoidPayment = async (paymentId: string) => {
+    const reason = window.prompt("A reason is required to void this payment:");
+    if (reason === null) return;
+    if (!reason.trim()) {
+      alert("A reason is required to void this payment.");
+      return;
+    }
+    setVoidingPaymentId(paymentId);
+    try {
+      await api.voidPayment(paymentId, reason.trim());
+      const refreshed = await api.getReceipt(invoice.id);
+      setReceiptData(refreshed);
+      if (onInvoiceUpdated) onInvoiceUpdated();
+    } catch (err: any) {
+      alert(err.message || "Failed to void payment");
+    } finally {
+      setVoidingPaymentId(null);
     }
   };
 
@@ -340,11 +369,13 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                     <th>Ref #</th>
                     <th>Collected By</th>
                     <th style={{ textAlign: "right" }}>Amount</th>
+                    <th>Status</th>
+                    {canVoidPayment && <th>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {payments.map((p) => (
-                    <tr key={p.id}>
+                    <tr key={p.id} style={p.voided ? { opacity: 0.6 } : undefined}>
                       <td>{new Date(p.receivedAt).toLocaleDateString("en-IN")}</td>
                       <td>
                         <Badge variant="neutral" size="sm">
@@ -353,9 +384,36 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                       </td>
                       <td>{p.referenceNumber || "—"}</td>
                       <td>{p.receivedBy || "Staff"}</td>
-                      <td style={{ textAlign: "right", fontWeight: 600 }}>
+                      <td style={{ textAlign: "right", fontWeight: 600, textDecoration: p.voided ? "line-through" : undefined }}>
                         ₹{p.amount.toLocaleString("en-IN")}
                       </td>
+                      <td>
+                        {p.voided ? (
+                          <span title={p.voidReason || undefined}>
+                            <Badge variant="danger" size="sm">
+                              Voided
+                            </Badge>
+                          </span>
+                        ) : (
+                          <Badge variant="success" size="sm">
+                            Active
+                          </Badge>
+                        )}
+                      </td>
+                      {canVoidPayment && (
+                        <td>
+                          {!p.voided && (
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              isLoading={voidingPaymentId === p.id}
+                              onClick={() => handleVoidPayment(p.id)}
+                            >
+                              Void
+                            </Button>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -420,18 +478,30 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               </Button>
             </div>
 
-            {inv.balanceAmount > 0 && (
-              <Button
-                variant="primary"
-                size="md"
-                onClick={() => {
-                  onClose();
-                  onReceivePayment({ ...invoice, ...inv, customer: invoice.customer });
-                }}
-              >
-                Receive Payment (₹{inv.balanceAmount.toLocaleString("en-IN")} Due)
-              </Button>
-            )}
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              {canVoid && inv.status !== "VOIDED" && onVoidInvoice && (
+                <Button
+                  variant="danger"
+                  size="md"
+                  onClick={() => onVoidInvoice({ ...invoice, ...inv, customer: invoice.customer })}
+                >
+                  Void Invoice
+                </Button>
+              )}
+
+              {inv.balanceAmount > 0 && inv.status !== "VOIDED" && (
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={() => {
+                    onClose();
+                    onReceivePayment({ ...invoice, ...inv, customer: invoice.customer });
+                  }}
+                >
+                  Receive Payment (₹{inv.balanceAmount.toLocaleString("en-IN")} Due)
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       )}

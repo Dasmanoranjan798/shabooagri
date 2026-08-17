@@ -9,8 +9,9 @@ import { Card } from "../../components/ui/Card";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
-import { BadgeAlert, AlertTriangle, UserCheck, Pencil, Trash2 } from "lucide-react";
+import { BadgeAlert, AlertTriangle, UserCheck, Pencil, Trash2, Eye } from "lucide-react";
 import { getDriverLicenseWarning } from "../../lib/operationalWarnings";
+import { ActionMenu } from "../../components/ui/ActionMenu";
 import { DriverFormModal } from "./DriverFormModal";
 import { DriverDetailModal } from "./DriverDetailModal";
 
@@ -42,6 +43,8 @@ export const DriversPage: React.FC = () => {
  const [deletingId, setDeletingId] = useState<string | null>(null);
 
  const canManage = roleKey === "owner" || hasPermission("driver.manage");
+ // Owner-only (§ dependency-locked deletion, Rule 4 & 5).
+ const canDelete = roleKey === "owner" || hasPermission("driver.delete");
 
  const loadDrivers = async () => {
  setIsLoading(true);
@@ -259,25 +262,21 @@ export const DriversPage: React.FC = () => {
  </td>
  <td>
  <div className="sa-table-actions" onClick={(e) => e.stopPropagation()}>
- {canManage && (
- <button
- className="sa-icon-action"
- title="Edit Driver Profile"
- onClick={(e) => handleOpenEdit(d, e)}
- >
- <Pencil size={15} />
- </button>
- )}
- {canManage && (
- <button
- className="sa-icon-action"
- title="Delete Driver Profile"
- disabled={deletingId === d.id}
- onClick={(e) => handleDelete(d.id, e)}
- >
- <Trash2 size={15} />
- </button>
- )}
+ <ActionMenu
+ items={[
+ { key: "view", label: "View Details", icon: <Eye size={15} />, onClick: () => handleOpenDetail(d) },
+ { key: "edit", label: "Edit", icon: <Pencil size={15} />, onClick: () => handleOpenEdit(d), hidden: !canManage },
+ {
+ key: "delete",
+ label: "Delete",
+ icon: <Trash2 size={15} />,
+ danger: true,
+ disabled: deletingId === d.id,
+ onClick: () => handleDelete(d.id),
+ hidden: !canDelete,
+ },
+ ]}
+ />
  </div>
  </td>
  </tr>
@@ -354,6 +353,8 @@ export const DriversPage: React.FC = () => {
  onClose={() => setIsDetailModalOpen(false)}
  driver={selectedDetailDriver}
  company={company}
+ canEdit={canManage}
+ canDelete={canDelete}
  onEdit={(d) => handleOpenEdit(d)}
  onDelete={(id) => handleDelete(id)}
  />

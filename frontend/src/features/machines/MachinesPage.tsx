@@ -9,8 +9,9 @@ import { Card } from "../../components/ui/Card";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
-import { Wrench, ShieldAlert, AlertTriangle, Truck, Pencil, Trash2 } from "lucide-react";
+import { Wrench, ShieldAlert, AlertTriangle, Truck, Pencil, Trash2, Eye } from "lucide-react";
 import { getMachineServiceWarning, getMachineInsuranceWarning } from "../../lib/operationalWarnings";
+import { ActionMenu } from "../../components/ui/ActionMenu";
 import { MachineFormModal } from "./MachineFormModal";
 import { MachineDetailModal } from "./MachineDetailModal";
 
@@ -44,6 +45,9 @@ export const MachinesPage: React.FC = () => {
  const [deletingId, setDeletingId] = useState<string | null>(null);
 
  const canManage = roleKey === "owner" || hasPermission("machine.manage");
+ // Owner-only (§ dependency-locked deletion, Rule 4 & 5) — distinct from
+ // canManage, which also lets a Manager create/edit.
+ const canDelete = roleKey === "owner" || hasPermission("machine.delete");
 
  const loadMachines = async () => {
  setIsLoading(true);
@@ -294,25 +298,21 @@ export const MachinesPage: React.FC = () => {
  </td>
  <td>
  <div className="sa-table-actions" onClick={(e) => e.stopPropagation()}>
- {canManage && (
- <button
- className="sa-icon-action"
- title="Edit Machine"
- onClick={(e) => handleOpenEdit(m, e)}
- >
- <Pencil size={15} />
- </button>
- )}
- {canManage && (
- <button
- className="sa-icon-action"
- title="Delete Machine"
- disabled={deletingId === m.id}
- onClick={(e) => handleDelete(m.id, e)}
- >
- <Trash2 size={15} />
- </button>
- )}
+ <ActionMenu
+ items={[
+ { key: "view", label: "View Details", icon: <Eye size={15} />, onClick: () => handleOpenDetail(m) },
+ { key: "edit", label: "Edit", icon: <Pencil size={15} />, onClick: () => handleOpenEdit(m), hidden: !canManage },
+ {
+ key: "delete",
+ label: "Delete",
+ icon: <Trash2 size={15} />,
+ danger: true,
+ disabled: deletingId === m.id,
+ onClick: () => handleDelete(m.id),
+ hidden: !canDelete,
+ },
+ ]}
+ />
  </div>
  </td>
  </tr>
@@ -401,6 +401,8 @@ export const MachinesPage: React.FC = () => {
  onClose={() => setIsDetailModalOpen(false)}
  machine={selectedDetailMachine}
  company={company}
+ canEdit={canManage}
+ canDelete={canDelete}
  onEdit={(m) => handleOpenEdit(m)}
  onDelete={(id) => handleDelete(id)}
  />

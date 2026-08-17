@@ -15,6 +15,11 @@ interface MachineDetailModalProps {
  onClose: () => void;
  onEdit: (machine: Machine) => void;
  onDelete: (id: string) => void;
+ canEdit?: boolean;
+ // Owner-only (§ dependency-locked deletion, Rule 4 & 5) — defaults true
+ // only to avoid breaking any other unmigrated caller; MachinesPage always
+ // passes this explicitly.
+ canDelete?: boolean;
 }
 
 export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
@@ -24,6 +29,8 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
  onClose,
  onEdit,
  onDelete,
+ canEdit = true,
+ canDelete = true,
 }) => {
  const machineTerm = getTerm("machine");
  const driverTerm = getTerm("driver");
@@ -161,6 +168,7 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
 
  {/* Action Controls */}
  <div className="sa-form-actions" style={{ marginTop: "1.5rem" }}>
+ {canDelete && (
  <Button
  variant="danger"
  size="md"
@@ -168,7 +176,9 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
  >
  Delete Machine
  </Button>
+ )}
 
+ {canEdit && (
  <Button
  variant="primary"
  size="md"
@@ -176,6 +186,7 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
  >
  Edit {machineTerm}
  </Button>
+ )}
  </div>
  </div>
  </Modal>

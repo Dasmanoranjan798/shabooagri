@@ -277,6 +277,29 @@ export async function updateInvoiceTax(
   });
 }
 
+// Rule 1 (§ dependency-locked deletion): void, not delete — permission
+// gating (Owner-only) is enforced at the route via payment.void, not here.
+export async function voidInvoice(companyId: string, invoiceId: string, user: AuthenticatedUser, reason: string) {
+  const voided = await invoiceRepository.voidScoped(companyId, invoiceId, reason, user.id);
+  if (!voided) {
+    throw new AppError(404, "Invoice not found");
+  }
+  return voided;
+}
+
+export async function voidPayment(companyId: string, paymentId: string, user: AuthenticatedUser, reason: string) {
+  return paymentRepository.voidPaymentTx(companyId, paymentId, reason, user.id);
+}
+
+// Rule 2 dependency-guard support: how many non-voided payments are
+// linked to a Job, via its booking's invoice. 0 if the booking has no
+// invoice yet (nothing to void first).
+export async function countNonVoidedPaymentsForBooking(companyId: string, bookingId: string): Promise<number> {
+  const invoice = await invoiceRepository.findByBookingIdScoped(companyId, bookingId);
+  if (!invoice) return 0;
+  return paymentRepository.countNonVoidedByInvoiceId(companyId, invoice.id);
+}
+
 export async function listInvoices(companyId: string, user: AuthenticatedUser) {
   const scope = await resolveCallerScope(companyId, user);
   if (scope.kind === "company") {
@@ -469,6 +492,8 @@ export async function getReceipt(companyId: string, invoiceId: string, user: Aut
       receivedAt: p.receivedAt,
       receivedBy: p.receiver.fullName,
       notes: p.notes,
+      voided: p.voided,
+      voidReason: p.voidReason,
     })),
   };
 }

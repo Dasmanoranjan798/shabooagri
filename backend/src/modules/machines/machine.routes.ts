@@ -12,4 +12,6 @@ machineRouter.get("/", requirePermission("operations.view"), asyncHandler(machin
 machineRouter.get("/:id", requirePermission("operations.view"), asyncHandler(machineController.getById));
 machineRouter.post("/", requirePermission("machine.manage"), asyncHandler(machineController.create));
 machineRouter.patch("/:id", requirePermission("machine.manage"), asyncHandler(machineController.update));
-machineRouter.delete("/:id", requirePermission("machine.manage"), asyncHandler(machineController.remove));
+// Owner-only (§ dependency-locked deletion, Rule 4 & 5) — distinct from
+// machine.manage, which a Manager holds for create/edit/deactivate.
+machineRouter.delete("/:id", requirePermission("machine.delete"), asyncHandler(machineController.remove));

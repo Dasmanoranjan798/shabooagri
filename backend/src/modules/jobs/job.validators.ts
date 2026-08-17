@@ -38,6 +38,13 @@ export const updateJobSchema = z.object({
   notes: z.string().optional(),
 });
 
+// Reason is optional (unlike Payment/Invoice void's mandatory reason) —
+// only the Payment/Invoice void action in § dependency-locked deletion
+// requires one; logged as the JobStatusLog note when provided.
+export const cancelJobSchema = z.object({
+  reason: z.string().trim().optional(),
+});
+
 export const addFuelEntrySchema = z.object({
   litres: z.coerce.number().positive(),
   cost: z.coerce.number().nonnegative().optional(),
@@ -68,6 +75,7 @@ export type StartJobInput = z.infer<typeof startJobSchema>;
 export type PauseJobInput = z.infer<typeof pauseJobSchema>;
 export type ResumeJobInput = z.infer<typeof resumeJobSchema>;
 export type CompleteJobInput = z.infer<typeof completeJobSchema>;
+export type CancelJobInput = z.infer<typeof cancelJobSchema>;
 export type UpdateJobInput = z.infer<typeof updateJobSchema>;
 export type AddFuelEntryInput = z.infer<typeof addFuelEntrySchema>;
 export type AddJobPhotoInput = z.infer<typeof addJobPhotoSchema>;

@@ -15,6 +15,10 @@ interface JobExecutionModalProps {
  isOpen: boolean;
  onClose: () => void;
  onUpdate: () => void;
+ // Owner-only (§ dependency-locked deletion, Rule 2 & 5) — defaults false
+ // so any caller that hasn't been updated (e.g. the driver-facing surface)
+ // never shows it; JobsPage always passes it explicitly.
+ canCancel?: boolean;
 }
 
 export const JobExecutionModal: React.FC<JobExecutionModalProps> = ({
@@ -22,7 +26,27 @@ export const JobExecutionModal: React.FC<JobExecutionModalProps> = ({
  isOpen,
  onClose,
  onUpdate,
+ canCancel = false,
 }) => {
+ const [isCancelling, setIsCancelling] = useState<boolean>(false);
+
+ const handleCancel = async () => {
+ if (!job) return;
+ const reason = window.prompt(
+ "Cancel this job? This is Owner-only and reverses the job's booking to Cancelled too.\n\nOptional reason:",
+ );
+ if (reason === null) return;
+ setIsCancelling(true);
+ try {
+ await api.cancelJob(job.id, reason.trim() || undefined);
+ onUpdate();
+ onClose();
+ } catch (err: any) {
+ alert(err.message || "Failed to cancel job");
+ } finally {
+ setIsCancelling(false);
+ }
+ };
  const customerTerm = getTerm("customer");
  const villageTerm = getTerm("village");
  const driverTerm = getTerm("driver");
@@ -386,7 +410,21 @@ export const JobExecutionModal: React.FC<JobExecutionModalProps> = ({
  {job.completedAcres != null ? ` • ${job.completedAcres} acres` : ""})
  </div>
  )}
+
+ {job.status === "CANCELLED" && (
+ <div className="sa-alert sa-alert-danger" style={{ textCenter: "center", width: "100%" } as any}>
+ Job Cancelled
  </div>
+ )}
+ </div>
+
+ {canCancel && job.status !== "CANCELLED" && (
+ <div style={{ marginTop: "0.75rem" }}>
+ <Button variant="danger" size="sm" isLoading={isCancelling} onClick={handleCancel}>
+ Cancel Job
+ </Button>
+ </div>
+ )}
 
  {/* Quick Action Icon Buttons (§11.6) */}
  {job.status !== "COMPLETED" && (

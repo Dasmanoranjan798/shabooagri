@@ -17,6 +17,7 @@ import { JobsPage } from "../features/jobs/JobsPage";
 import { MachinesPage } from "../features/machines/MachinesPage";
 import { DriversPage } from "../features/drivers/DriversPage";
 import { CustomersPage } from "../features/customers/CustomersPage";
+import { VillagesPage } from "../features/villages/VillagesPage";
 import { EmployeesPage } from "../features/employees/EmployeesPage";
 import { PaymentsPage } from "../features/payments/PaymentsPage";
 import { ExpensesPage } from "../features/expenses/ExpensesPage";
@@ -119,6 +120,17 @@ export function App() {
               <ProtectedRoute permission="operations.view">
                 <AppLayout>
                   <CustomersPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/villages"
+            element={
+              <ProtectedRoute permission="operations.view">
+                <AppLayout>
+                  <VillagesPage />
                 </AppLayout>
               </ProtectedRoute>
             }

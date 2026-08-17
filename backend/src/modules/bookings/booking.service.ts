@@ -9,6 +9,7 @@ import * as pricingMethodService from "../pricing-methods/pricingMethod.service"
 import * as villageService from "../villages/village.service";
 import { resolveCallerScope } from "../../shared/access/callerScope";
 import { AppError } from "../../shared/errors/AppError";
+import { assertBookingCancellable, assertBookingDeletable } from "../../shared/utils/dependencyGuard";
 import { calculateAmount, type PricingUnit } from "../../shared/pricing/pricing-calculator";
 import * as bookingAttachmentRepository from "./bookingAttachment.repository";
 import * as bookingRepository from "./booking.repository";
@@ -227,6 +228,12 @@ export async function updateStatus(companyId: string, id: string, nextStatus: Bo
     throw new AppError(400, `Cannot transition a booking from ${booking.status} to ${nextStatus}`);
   }
 
+  // Rule 3 (§ dependency-locked deletion).
+  if (nextStatus === "CANCELLED") {
+    const linkedJob = await jobService.findLinkedForBooking(companyId, id);
+    assertBookingCancellable(!!linkedJob && linkedJob.status !== "CANCELLED");
+  }
+
   // §7 step 5 ("machine travels to location") is the point a Job — which
   // requires both machineId and driverId to be non-null per its schema —
   // can meaningfully exist. Rather than create it silently incomplete,
@@ -291,6 +298,13 @@ export async function assignDriver(companyId: string, id: string, driverId: stri
 }
 
 export async function remove(companyId: string, id: string) {
+  // Rule 3 (§ dependency-locked deletion): checked before the delete
+  // itself — jobs.booking_id is ON DELETE RESTRICT at the DB level too,
+  // but that would surface as a raw constraint error instead of this
+  // clear message telling the caller what to do about it.
+  const linkedJob = await jobService.findLinkedForBooking(companyId, id);
+  assertBookingDeletable(!!linkedJob);
+
   const deleted = await bookingRepository.deleteScoped(companyId, id);
   if (!deleted) {
     throw new AppError(404, "Booking not found");

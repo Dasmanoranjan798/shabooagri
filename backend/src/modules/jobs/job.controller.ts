@@ -5,6 +5,7 @@ import * as jobService from "./job.service";
 import {
   addFuelEntrySchema,
   addJobPhotoSchema,
+  cancelJobSchema,
   completeJobSchema,
   createManualJobSchema,
   pauseJobSchema,
@@ -57,6 +58,13 @@ export async function complete(req: Request, res: Response) {
   const user = requireUser(req);
   const input = completeJobSchema.parse(req.body);
   const job = await jobService.complete(user.companyId, req.params.id, user, input);
+  res.status(200).json(job);
+}
+
+export async function cancel(req: Request, res: Response) {
+  const user = requireUser(req);
+  const input = cancelJobSchema.parse(req.body);
+  const job = await jobService.cancel(user.companyId, req.params.id, user, input.reason);
   res.status(200).json(job);
 }
 

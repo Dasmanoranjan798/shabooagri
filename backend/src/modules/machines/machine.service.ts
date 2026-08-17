@@ -2,6 +2,8 @@ import * as driverService from "../drivers/driver.service";
 import * as machineTypeService from "../machine-types/machineType.service";
 import { AppError } from "../../shared/errors/AppError";
 import { env } from "../../config/env";
+import { assertNoBookingReferences } from "../../shared/utils/dependencyGuard";
+import * as bookingRepository from "../bookings/booking.repository";
 import * as settingsRepo from "../settings/settings.repository";
 import * as machineRepository from "./machine.repository";
 import type { CreateMachineInput, UpdateMachineInput } from "./machine.validators";
@@ -77,6 +79,13 @@ export async function update(companyId: string, id: string, input: UpdateMachine
 }
 
 export async function remove(companyId: string, id: string) {
+  // Rule 4 (§ dependency-locked deletion) — checked before the delete
+  // itself; bookings.machine_id is ON DELETE SET NULL at the DB level, so
+  // without this check a delete would silently succeed and null out every
+  // referencing booking's machine instead of being blocked.
+  const bookingCount = await bookingRepository.countByReference(companyId, { machineId: id });
+  assertNoBookingReferences("machine", bookingCount);
+
   const deleted = await machineRepository.deleteScoped(companyId, id);
   if (!deleted) {
     throw new AppError(404, "Machine not found");

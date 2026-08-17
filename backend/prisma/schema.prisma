@@ -57,6 +57,7 @@ enum JobStatus {
   WORKING
   PAUSED
   COMPLETED
+  CANCELLED
 }
 
 enum JobExecutionMode {
@@ -74,6 +75,7 @@ enum InvoiceStatus {
   UNPAID
   PARTIALLY_PAID
   PAID
+  VOIDED
 }
 
 enum PaymentMethod {
@@ -282,7 +284,9 @@ model User {
   uploadedJobPhotos   JobPhoto[]
   recordedFuelEntries JobFuelEntry[]
   recordedExpenses    Expense[]
-  receivedPayments    Payment[]
+  receivedPayments    Payment[]         @relation("PaymentReceivedBy")
+  voidedPayments      Payment[]         @relation("PaymentVoidedBy")
+  voidedInvoices      Invoice[]
   receivedAdvances    CustomerAdvance[]
   invitesSent         StaffInvite[]
 
@@ -303,6 +307,11 @@ model Customer {
   // Phase B Customer GST fields (Optional)
   isGstApplicable Boolean  @default(false) @map("is_gst_applicable")
   gstin           String?  @map("gstin")
+  // Manager-facing "remove" action — a Customer with any Booking history
+  // can never be hard-deleted (see dependencyGuard), so this is the
+  // non-Owner alternative: mark inactive without losing booking/invoice
+  // history. Same pattern as Machine.isActive / Employee.employmentStatus.
+  isActive        Boolean  @default(true) @map("is_active")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -361,9 +370,13 @@ model Driver {
 }
 
 model Village {
-  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId String @map("company_id") @db.Uuid
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String  @map("company_id") @db.Uuid
   name      String
+  // Same rationale as Customer.isActive — a Village referenced by any
+  // Booking can never be hard-deleted; this is the Manager-facing
+  // alternative once it's no longer usable for new bookings.
+  isActive  Boolean @default(true) @map("is_active")
 
   company      Company       @relation(fields: [companyId], references: [id])
   customers    Customer[]
@@ -708,13 +721,22 @@ model Invoice {
   igstAmount          Decimal?      @default(0) @map("igst_amount") @db.Decimal(10, 2)
   cessRate            Decimal?      @default(0) @map("cess_rate") @db.Decimal(5, 2)
   cessAmount          Decimal?      @default(0) @map("cess_amount") @db.Decimal(10, 2)
+  // Void, not delete (§ dependency-locked deletion) — an invoice stays
+  // permanently visible in history/reports with status VOIDED instead of
+  // being removed. voidReason is mandatory at the service layer whenever
+  // status is set to VOIDED; nullable here only because every other status
+  // never populates these three.
+  voidReason          String?       @map("void_reason")
+  voidedAt            DateTime?     @map("voided_at")
+  voidedBy            String?       @map("voided_by") @db.Uuid
   createdAt           DateTime      @default(now()) @map("created_at")
   updatedAt           DateTime      @updatedAt @map("updated_at")
 
-  company  Company   @relation(fields: [companyId], references: [id])
-  booking  Booking?  @relation(fields: [bookingId], references: [id])
-  customer Customer  @relation(fields: [customerId], references: [id])
-  payments Payment[]
+  company      Company   @relation(fields: [companyId], references: [id])
+  booking      Booking?  @relation(fields: [bookingId], references: [id])
+  customer     Customer  @relation(fields: [customerId], references: [id])
+  voidedByUser User?     @relation(fields: [voidedBy], references: [id])
+  payments     Payment[]
 
   @@unique([companyId, invoiceNumber])
   @@index([companyId, status])
@@ -731,13 +753,22 @@ model Payment {
   receivedBy      String        @map("received_by") @db.Uuid
   receivedAt      DateTime      @default(now()) @map("received_at")
   notes           String?
+  // Same void-not-delete pattern as Invoice — independent of the parent
+  // invoice's own void state, since a single payment (not the whole
+  // invoice) can be the one that was recorded in error.
+  voided          Boolean       @default(false)
+  voidReason      String?       @map("void_reason")
+  voidedAt        DateTime?     @map("voided_at")
+  voidedBy        String?       @map("voided_by") @db.Uuid
   createdAt       DateTime      @default(now()) @map("created_at")
 
-  company  Company @relation(fields: [companyId], references: [id])
-  invoice  Invoice @relation(fields: [invoiceId], references: [id])
-  receiver User    @relation(fields: [receivedBy], references: [id])
+  company      Company @relation(fields: [companyId], references: [id])
+  invoice      Invoice @relation(fields: [invoiceId], references: [id])
+  receiver     User    @relation("PaymentReceivedBy", fields: [receivedBy], references: [id])
+  voidedByUser User?   @relation("PaymentVoidedBy", fields: [voidedBy], references: [id])
 
   @@index([invoiceId])
+  @@index([voided])
   @@map("payments")
 }
 

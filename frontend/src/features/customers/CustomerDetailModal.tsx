@@ -13,6 +13,11 @@ interface CustomerDetailModalProps {
  onEdit: (customer: Customer) => void;
  onDelete: (id: string) => void;
  canManage: boolean;
+ // Owner-only (§ dependency-locked deletion, Rule 4 & 5) — distinct from
+ // canManage, which also lets a Manager create/edit. Defaults to
+ // canManage's value only for any caller that hasn't been updated to pass
+ // it explicitly; CustomersPage always does.
+ canDelete?: boolean;
 }
 
 export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
@@ -22,7 +27,9 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
  onEdit,
  onDelete,
  canManage,
+ canDelete,
 }) => {
+ const canActuallyDelete = canDelete ?? canManage;
  const navigate = useNavigate();
  const customerTerm = getTerm("customer");
  const villageTerm = getTerm("village");
@@ -105,7 +112,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
  {/* Action Controls */}
  <div className="sa-form-actions" style={{ marginTop: "1.5rem" }}>
- {canManage && (
+ {canActuallyDelete && (
  <Button
  variant="danger"
  size="md"

@@ -55,6 +55,62 @@ export function findAllForInvoice(companyId: string, invoiceId: string) {
   });
 }
 
+// Dependency-guard support (§ dependency-locked deletion) — how many
+// non-voided payments a given invoice still has. Used to block Job
+// cancellation while real, unvoided money is still linked to it.
+export function countNonVoidedByInvoiceId(companyId: string, invoiceId: string) {
+  return prisma.payment.count({ where: { companyId, invoiceId, voided: false } });
+}
+
+// Void, not delete — a Payment stays permanently in history/reports with
+// voided=true instead of being removed. Independent of the parent
+// invoice's own void state (see Payment.voided doc comment in
+// schema.prisma). Mirrors recordPaymentTx's locked-read-then-recompute
+// shape: reversing a payment must adjust the invoice's paidAmount/
+// balanceAmount/status the same way applying one does, just subtracting
+// instead of adding — skipped entirely if the invoice itself is already
+// VOIDED, since a voided invoice's own numbers are frozen history, not
+// something a payment void should reopen.
+export async function voidPaymentTx(companyId: string, paymentId: string, reason: string, voidedBy: string) {
+  return prisma.$transaction(async (tx) => {
+    const payment = await tx.payment.findFirst({ where: { id: paymentId, companyId } });
+    if (!payment) {
+      throw new AppError(404, "Payment not found");
+    }
+    if (payment.voided) {
+      throw new AppError(400, "This payment has already been voided");
+    }
+
+    const locked = await tx.$queryRaw<
+      Array<{ id: string; total_amount: string; paid_amount: string; status: InvoiceStatus }>
+    >`
+      SELECT id, total_amount::text, paid_amount::text, status
+      FROM invoices
+      WHERE id = ${payment.invoiceId}::uuid AND company_id = ${companyId}::uuid
+      FOR UPDATE
+    `;
+    const invoiceRow = locked[0];
+
+    if (invoiceRow && invoiceRow.status !== "VOIDED") {
+      const totalAmount = Number(invoiceRow.total_amount);
+      const newPaidAmount = Math.max(0, Math.round((Number(invoiceRow.paid_amount) - Number(payment.amount)) * 100) / 100);
+      const newBalanceAmount = Math.max(0, Math.round((totalAmount - newPaidAmount) * 100) / 100);
+      const newStatus: InvoiceStatus = newPaidAmount <= 0 ? "UNPAID" : newBalanceAmount === 0 ? "PAID" : "PARTIALLY_PAID";
+
+      await tx.invoice.update({
+        where: { id: payment.invoiceId },
+        data: { paidAmount: newPaidAmount, balanceAmount: newBalanceAmount, status: newStatus },
+      });
+    }
+
+    return tx.payment.update({
+      where: { id: paymentId },
+      data: { voided: true, voidReason: reason, voidedAt: new Date(), voidedBy },
+      include: paymentIncludeRelations,
+    });
+  });
+}
+
 export interface RecordPaymentData {
   amount: number;
   paymentMethod: PaymentMethod;
@@ -133,10 +189,12 @@ export async function recordPaymentTx(companyId: string, invoiceId: string, paym
 // All aggregations are pushed to PostgreSQL. receivedAt is stored as UTC;
 // callers pass UTC window boundaries derived from the company timezone.
 
-// Total payment amount received within a UTC window.
+// Total payment amount received within a UTC window. Excludes voided
+// payments — a voided payment is kept in history/reports as "Voided" but
+// must not keep counting toward revenue once it's been reversed.
 export async function sumReceivedInWindow(companyId: string, fromUtc: Date, toUtc: Date): Promise<number> {
   const result = await prisma.payment.aggregate({
-    where: { companyId, receivedAt: { gte: fromUtc, lt: toUtc } },
+    where: { companyId, voided: false, receivedAt: { gte: fromUtc, lt: toUtc } },
     _sum: { amount: true },
   });
   return result._sum.amount != null ? Number(result._sum.amount) : 0;
@@ -182,6 +240,7 @@ export async function getReceivedByDay(
       SUM(amount)::text                    AS total
     FROM payments
     WHERE company_id = ${companyId}::uuid
+      AND voided = false
       AND received_at >= ${fromUtc}
       AND received_at <  ${toUtc}
     GROUP BY day
@@ -206,6 +265,7 @@ export async function getReceivedByMonth(
       SUM(amount)::text                      AS total
     FROM payments
     WHERE company_id = ${companyId}::uuid
+      AND voided = false
       AND received_at >= ${fromUtc}
       AND received_at <  ${toUtc}
     GROUP BY month

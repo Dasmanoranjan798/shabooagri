@@ -12,4 +12,6 @@ customerRouter.get("/", requirePermission("operations.view"), asyncHandler(custo
 customerRouter.get("/:id", requirePermission("operations.view"), asyncHandler(customerController.getById));
 customerRouter.post("/", requirePermission("customer.manage"), asyncHandler(customerController.create));
 customerRouter.patch("/:id", requirePermission("customer.manage"), asyncHandler(customerController.update));
-customerRouter.delete("/:id", requirePermission("customer.manage"), asyncHandler(customerController.remove));
+// Owner-only (§ dependency-locked deletion, Rule 4 & 5) — distinct from
+// customer.manage, which a Manager holds for create/edit/deactivate.
+customerRouter.delete("/:id", requirePermission("customer.delete"), asyncHandler(customerController.remove));

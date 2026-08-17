@@ -14,18 +14,35 @@ export const PERMISSIONS = [
   { key: "driver.assign", description: "Assign a driver to a booking" },
   { key: "job.update_status", description: "Record job execution progress (start/pause/complete, hours, acres, fuel)" },
   { key: "payment.receive", description: "Record a payment against an invoice" },
+  // Void, not delete (§ dependency-locked deletion) — reversing a payment
+  // or invoice while keeping it permanently visible in history/reports.
+  // Owner-only: not granted to manager below.
+  { key: "payment.void", description: "Void a payment or invoice (Owner only)" },
   { key: "report.generate", description: "View/generate reports" },
   { key: "user.manage", description: "Create/edit/deactivate users" },
   { key: "settings.manage", description: "Change company settings" },
   { key: "data.export", description: "Export data" },
-  { key: "village.manage", description: "Create/edit/delete villages" },
+  // "*.manage" now covers create/edit only — hard-delete for these five
+  // master-data types moved to its own Owner-only "*.delete" permission
+  // below, per the dependency-locked deletion rules (a Manager may still
+  // deactivate/mark unavailable via *.manage, never hard-delete).
+  { key: "village.manage", description: "Create/edit villages; mark active/inactive" },
   { key: "machine_type.manage", description: "Create/edit/delete machine types" },
-  { key: "machine.manage", description: "Create/edit/delete machines (fleet records, not booking assignment)" },
-  { key: "employee.manage", description: "Create/edit/delete employee records" },
-  { key: "driver.manage", description: "Create/edit/delete driver profiles (not booking assignment)" },
-  { key: "customer.manage", description: "Create/edit/delete customer records" },
+  { key: "machine.manage", description: "Create/edit machines (fleet records, not booking assignment); mark active/inactive" },
+  { key: "employee.manage", description: "Create/edit employee records; mark active/inactive" },
+  { key: "driver.manage", description: "Create/edit driver profiles (not booking assignment); mark unavailable" },
+  { key: "customer.manage", description: "Create/edit customer records; mark active/inactive" },
   { key: "expense.manage", description: "Create/edit/delete expense records" },
   { key: "maintenance.manage", description: "Log/edit/delete machine maintenance records and schedules" },
+  { key: "village.delete", description: "Hard-delete a village with no linked bookings (Owner only)" },
+  { key: "machine.delete", description: "Hard-delete a machine with no linked bookings (Owner only)" },
+  { key: "employee.delete", description: "Hard-delete an employee with no linked bookings (Owner only)" },
+  { key: "driver.delete", description: "Hard-delete a driver profile with no linked bookings (Owner only)" },
+  { key: "customer.delete", description: "Hard-delete a customer with no linked bookings (Owner only)" },
+  // Cancelling a Job (distinct from the normal start/pause/complete
+  // lifecycle) is Owner-only because it can only happen after voiding any
+  // linked payment — a deliberately rare, corrective action.
+  { key: "job.cancel", description: "Cancel a job (Owner only)" },
   {
     key: "operations.view",
     description: "Browse company-wide operational lists (villages, machines, employees, drivers, customers)",

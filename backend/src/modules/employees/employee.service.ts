@@ -1,5 +1,8 @@
 import * as authService from "../auth/auth.service";
 import { AppError } from "../../shared/errors/AppError";
+import { assertNoBookingReferences } from "../../shared/utils/dependencyGuard";
+import * as bookingRepository from "../bookings/booking.repository";
+import * as driverRepository from "../drivers/driver.repository";
 import * as employeeRepository from "./employee.repository";
 import type { CreateEmployeeInput, UpdateEmployeeInput } from "./employee.validators";
 
@@ -49,6 +52,21 @@ export async function update(companyId: string, id: string, input: UpdateEmploye
 }
 
 export async function remove(companyId: string, id: string) {
+  // Rule 4 (§ dependency-locked deletion) — an Employee isn't referenced
+  // by Booking directly, only via its optional Driver profile (Driver is
+  // the FK Booking actually holds). No Driver profile means trivially no
+  // bookings to block on. drivers.employee_id is separately ON DELETE
+  // RESTRICT at the DB level regardless of booking history — that case
+  // (a Driver profile exists at all, even with zero bookings) still
+  // surfaces as a raw constraint error; not this feature's concern to
+  // paper over, since "remove the Driver profile first" is already the
+  // correct, self-explanatory fix for that one.
+  const driver = await driverRepository.findByEmployeeIdScoped(companyId, id);
+  if (driver) {
+    const bookingCount = await bookingRepository.countByReference(companyId, { driverId: driver.id });
+    assertNoBookingReferences("employee", bookingCount);
+  }
+
   const deleted = await employeeRepository.deleteScoped(companyId, id);
   if (!deleted) {
     throw new AppError(404, "Employee not found");

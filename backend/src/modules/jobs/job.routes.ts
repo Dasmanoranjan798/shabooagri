@@ -27,6 +27,12 @@ jobRouter.post("/:id/start", requirePermission("job.update_status"), asyncHandle
 jobRouter.post("/:id/pause", requirePermission("job.update_status"), asyncHandler(jobController.pause));
 jobRouter.post("/:id/resume", requirePermission("job.update_status"), asyncHandler(jobController.resume));
 jobRouter.post("/:id/complete", requirePermission("job.update_status"), asyncHandler(jobController.complete));
+// Owner-only (§ dependency-locked deletion, Rule 2 & 5) — distinct from
+// job.update_status, which Driver/Manager also hold for the normal
+// start/pause/complete lifecycle. Cancelling is a rarer, corrective
+// action gated by dependencyGuard's non-voided-payment check in
+// job.service.ts.
+jobRouter.post("/:id/cancel", requirePermission("job.cancel"), asyncHandler(jobController.cancel));
 jobRouter.post(
   "/:id/fuel-entries",
   requirePermission("job.update_status"),

@@ -9,6 +9,10 @@ export const createCustomerSchema = z.object({
   address: z.string().optional(),
   notes: z.string().optional(),
   userId: z.string().uuid().optional(),
+  // The Manager-facing alternative to delete (§ dependency-locked
+  // deletion, Rule 5) — a Customer referenced by any Booking can never be
+  // hard-deleted, only marked inactive.
+  isActive: z.boolean().optional(),
   isGstApplicable: z.boolean().optional(),
   gstin: z
     .string()

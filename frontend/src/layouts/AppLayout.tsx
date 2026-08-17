@@ -26,6 +26,7 @@ import {
   BadgeAlert,
   Receipt,
   CalendarClock,
+  MapPin,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { getTerm } from "../lib/terminology";
@@ -82,6 +83,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
     { key: "bookings", label: bookingTerm, path: "/bookings", icon: <Calendar size={18} />, permission: "operations.view" },
     { key: "jobs", label: "Jobs", path: "/jobs", icon: <Tractor size={18} />, permission: "operations.view" },
     { key: "customers", label: customerTerm, path: "/customers", icon: <Users size={18} />, permission: "operations.view" },
+    { key: "villages", label: "Villages", path: "/villages", icon: <MapPin size={18} />, permission: "operations.view" },
     { key: "machines", label: machineTerm, path: "/machines", icon: <Truck size={18} />, permission: "operations.view" },
     { key: "drivers", label: driverTerm, path: "/drivers", icon: <UserCheck size={18} />, permission: "operations.view" },
     { key: "employees", label: "Employees", path: "/employees", icon: <Briefcase size={18} />, permission: "operations.view" },

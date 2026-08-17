@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { AlertTriangle, CreditCard, FileText, Wallet, CheckCircle2, AlertCircle, FileSpreadsheet, Plus, PiggyBank } from "lucide-react";
+import { AlertTriangle, CreditCard, FileText, Wallet, CheckCircle2, AlertCircle, FileSpreadsheet, Plus, PiggyBank, Receipt, Ban } from "lucide-react";
 import "./payments.css";
 import type { CustomerAdvance, Invoice } from "../../types/payment";
 import { api } from "../../lib/api";
@@ -10,6 +10,8 @@ import { Card } from "../../components/ui/Card";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
+import { ActionMenu } from "../../components/ui/ActionMenu";
+import { VoidReasonModal } from "../../components/ui/VoidReasonModal";
 import { ReceivePaymentModal } from "./ReceivePaymentModal";
 import { ReceiptModal } from "./ReceiptModal";
 import { NewInvoiceModal } from "./NewInvoiceModal";
@@ -20,6 +22,7 @@ const PAYMENT_STATUS_FILTERS: Array<{ label: string; value: string }> = [
  { label: "Unpaid", value: "UNPAID" },
  { label: "Partially Paid", value: "PARTIALLY_PAID" },
  { label: "Paid", value: "PAID" },
+ { label: "Voided", value: "VOIDED" },
 ];
 
 export const PaymentsPage: React.FC = () => {
@@ -44,7 +47,12 @@ export const PaymentsPage: React.FC = () => {
  const [isNewInvoiceModalOpen, setIsNewInvoiceModalOpen] = useState<boolean>(false);
  const [isRecordAdvanceModalOpen, setIsRecordAdvanceModalOpen] = useState<boolean>(false);
 
+ const [voidingInvoice, setVoidingInvoice] = useState<Invoice | null>(null);
+ const [isVoidInvoiceModalOpen, setIsVoidInvoiceModalOpen] = useState<boolean>(false);
+
  const canReceive = roleKey === "owner" || hasPermission("payment.receive");
+ // Owner-only (§ dependency-locked deletion, Rule 1 & 5).
+ const canVoid = roleKey === "owner" || hasPermission("payment.void");
 
  const loadInvoices = async () => {
  setIsLoading(true);
@@ -82,6 +90,11 @@ export const PaymentsPage: React.FC = () => {
  const handleOpenReceipt = (invoice: Invoice) => {
  setSelectedInvoiceForReceipt(invoice);
  setIsReceiptModalOpen(true);
+ };
+
+ const handleOpenVoidInvoice = (invoice: Invoice) => {
+ setVoidingInvoice(invoice);
+ setIsVoidInvoiceModalOpen(true);
  };
 
  // Authoritative financial totals
@@ -334,7 +347,7 @@ export const PaymentsPage: React.FC = () => {
  </td>
  <td>
  <div className="sa-table-actions" onClick={(e) => e.stopPropagation()}>
- {canReceive && inv.balanceAmount > 0 && (
+ {canReceive && inv.balanceAmount > 0 && inv.status !== "VOIDED" && (
  <Button
  variant="primary"
  size="sm"
@@ -344,13 +357,19 @@ export const PaymentsPage: React.FC = () => {
  </Button>
  )}
 
- <Button
- variant="secondary"
- size="sm"
- onClick={() => handleOpenReceipt(inv)}
- >
- Receipt
- </Button>
+ <ActionMenu
+ items={[
+ { key: "receipt", label: "View Receipt", icon: <Receipt size={15} />, onClick: () => handleOpenReceipt(inv) },
+ {
+ key: "void",
+ label: "Void Invoice",
+ icon: <Ban size={15} />,
+ danger: true,
+ onClick: () => handleOpenVoidInvoice(inv),
+ hidden: !canVoid || inv.status === "VOIDED",
+ },
+ ]}
+ />
  </div>
  </td>
  </tr>
@@ -482,6 +501,22 @@ export const PaymentsPage: React.FC = () => {
  invoice={selectedInvoiceForReceipt}
  onReceivePayment={(inv) => handleOpenReceivePayment(inv)}
  onInvoiceUpdated={loadInvoices}
+ canVoid={canVoid}
+ onVoidInvoice={(inv) => handleOpenVoidInvoice(inv)}
+ />
+
+ {/* Void Invoice Modal — reason mandatory (§ dependency-locked deletion, Rule 1) */}
+ <VoidReasonModal
+ isOpen={isVoidInvoiceModalOpen}
+ title={`Void Invoice ${voidingInvoice?.invoiceNumber || ""}`}
+ description="This voids the invoice and every non-voided payment under it. The record stays permanently visible in history/reports as Voided."
+ onClose={() => setIsVoidInvoiceModalOpen(false)}
+ onConfirm={async (reason) => {
+ if (!voidingInvoice) return;
+ await api.voidInvoice(voidingInvoice.id, reason);
+ setIsReceiptModalOpen(false);
+ loadInvoices();
+ }}
  />
 
  {/* New Invoice Modal */}

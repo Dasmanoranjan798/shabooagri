@@ -132,6 +132,10 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
 
   const [isGstApplicable, setIsGstApplicable] = useState<boolean>(false);
   const [gstin, setGstin] = useState<string>("");
+  // The Manager-facing alternative to delete (§ dependency-locked
+  // deletion, Rule 5) — only meaningful for an existing customer, so it's
+  // not part of the create payload at all (defaults true server-side).
+  const [isActive, setIsActive] = useState<boolean>(true);
 
   useEffect(() => {
     if (customerToEdit) {
@@ -142,6 +146,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
       setNotes(customerToEdit.notes || "");
       setIsGstApplicable(customerToEdit.isGstApplicable || false);
       setGstin(customerToEdit.gstin || "");
+      setIsActive(customerToEdit.isActive ?? true);
     } else {
       setName("");
       setPhone("");
@@ -149,6 +154,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
       setNotes("");
       setIsGstApplicable(false);
       setGstin("");
+      setIsActive(true);
       setIsAddingNewVillage(false);
       setNewVillageName("");
     }
@@ -208,6 +214,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
         notes: notes.trim() || undefined,
         isGstApplicable,
         gstin: gstin.trim() || undefined,
+        ...(customerToEdit ? { isActive } : {}),
       };
 
       const savedCustomer = customerToEdit
@@ -461,6 +468,20 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
       />
     )}
   </div>
+
+  {/* Active/Inactive — the deactivate alternative to delete, edit-mode only */}
+  {customerToEdit && (
+    <div style={{ marginBottom: "12px" }}>
+      <label style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.85rem" }}>
+        <input
+          type="checkbox"
+          checked={isActive}
+          onChange={(e) => setIsActive(e.target.checked)}
+        />
+        Active ({customerTerm} can be booked/assigned)
+      </label>
+    </div>
+  )}
 
  {/* 5. Notes */}
  <div className="sa-input-group">

@@ -11,6 +11,8 @@ interface EmployeeDetailModalProps {
  onClose: () => void;
  onEdit: (employee: Employee) => void;
  onDelete: (id: string) => void;
+ canEdit?: boolean;
+ canDelete?: boolean;
 }
 
 export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
@@ -19,6 +21,8 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
  onClose,
  onEdit,
  onDelete,
+ canEdit = true,
+ canDelete = true,
 }) => {
  if (!employee) return null;
 
@@ -98,6 +102,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
 
  {/* Action Controls */}
  <div className="sa-form-actions" style={{ marginTop: "1.5rem" }}>
+ {canDelete && (
  <Button
  variant="danger"
  size="md"
@@ -105,7 +110,9 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
  >
  Delete Record
  </Button>
+ )}
 
+ {canEdit && (
  <Button
  variant="primary"
  size="md"
@@ -113,6 +120,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
  >
  Edit Staff Record
  </Button>
+ )}
  </div>
  </div>
  </Modal>

@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../../db/prisma";
+import { AppError } from "../../shared/errors/AppError";
 import { createScopedRepository } from "../../shared/db/scopedRepository";
 
 const scoped = createScopedRepository(prisma.invoice);
@@ -111,6 +112,34 @@ export async function create(
   });
 }
 
-export function deleteScoped(companyId: string, id: string) {
-  return scoped.deleteScoped(companyId, id);
+// Void, not delete (§ dependency-locked deletion) — an Invoice stays
+// permanently in history/reports with status VOIDED instead of being
+// removed. No deleteScoped export exists on this repository on purpose.
+//
+// Cascades to every non-voided Payment under this invoice: an invoice
+// voided as a whole must also stop each of its payments counting toward
+// revenue (payment.repository.ts's sum* queries filter on `voided`, not
+// on the parent invoice's status), so leaving them un-voided would let a
+// "Voided" invoice keep contributing to reported revenue. Each payment
+// keeps its own voidReason distinct from the invoice's, prefixed so the
+// cascade is traceable from the payment side too.
+export async function voidScoped(companyId: string, id: string, reason: string, voidedBy: string) {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.invoice.findFirst({ where: { id, companyId } });
+    if (!existing) return null;
+    if (existing.status === "VOIDED") {
+      throw new AppError(400, "This invoice has already been voided");
+    }
+
+    await tx.payment.updateMany({
+      where: { invoiceId: id, voided: false },
+      data: { voided: true, voidReason: `Invoice voided: ${reason}`, voidedAt: new Date(), voidedBy },
+    });
+
+    return tx.invoice.update({
+      where: { id },
+      data: { status: "VOIDED", voidReason: reason, voidedAt: new Date(), voidedBy },
+      include: invoiceIncludeRelations,
+    });
+  });
 }

@@ -1,6 +1,8 @@
 import * as employeeService from "../employees/employee.service";
 import * as driverCompensationService from "./driverCompensation.service";
 import { AppError } from "../../shared/errors/AppError";
+import { assertNoBookingReferences } from "../../shared/utils/dependencyGuard";
+import * as bookingRepository from "../bookings/booking.repository";
 import * as driverRepository from "./driver.repository";
 import { resolveCallerScope } from "../../shared/access/callerScope";
 import type { AuthenticatedUser } from "../auth/auth.types";
@@ -49,6 +51,13 @@ export async function update(companyId: string, id: string, input: UpdateDriverI
 }
 
 export async function remove(companyId: string, id: string) {
+  // Rule 4 (§ dependency-locked deletion) — bookings.driver_id is
+  // ON DELETE SET NULL at the DB level, so without this check a delete
+  // would silently succeed and null out every referencing booking's
+  // driver instead of being blocked.
+  const bookingCount = await bookingRepository.countByReference(companyId, { driverId: id });
+  assertNoBookingReferences("driver", bookingCount);
+
   const deleted = await driverRepository.deleteScoped(companyId, id);
   if (!deleted) {
     throw new AppError(404, "Driver not found");

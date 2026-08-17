@@ -17,4 +17,6 @@ driverRouter.get("/:id", requirePermission("operations.view"), asyncHandler(driv
 driverRouter.get("/:id/compensation", asyncHandler(driverController.getCompensationSummary));
 driverRouter.post("/", requirePermission("driver.manage"), asyncHandler(driverController.create));
 driverRouter.patch("/:id", requirePermission("driver.manage"), asyncHandler(driverController.update));
-driverRouter.delete("/:id", requirePermission("driver.manage"), asyncHandler(driverController.remove));
+// Owner-only (§ dependency-locked deletion, Rule 4 & 5) — distinct from
+// driver.manage, which a Manager holds for create/edit/mark-unavailable.
+driverRouter.delete("/:id", requirePermission("driver.delete"), asyncHandler(driverController.remove));

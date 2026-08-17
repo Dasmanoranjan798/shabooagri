@@ -15,6 +15,8 @@ interface DriverDetailModalProps {
  onClose: () => void;
  onEdit: (driver: Driver) => void;
  onDelete: (id: string) => void;
+ canEdit?: boolean;
+ canDelete?: boolean;
 }
 
 export const DriverDetailModal: React.FC<DriverDetailModalProps> = ({
@@ -24,6 +26,8 @@ export const DriverDetailModal: React.FC<DriverDetailModalProps> = ({
  onClose,
  onEdit,
  onDelete,
+ canEdit = true,
+ canDelete = true,
 }) => {
  const driverTerm = getTerm("driver");
 
@@ -105,6 +109,7 @@ export const DriverDetailModal: React.FC<DriverDetailModalProps> = ({
 
  {/* Action Controls */}
  <div className="sa-form-actions" style={{ marginTop: "1.5rem" }}>
+ {canDelete && (
  <Button
  variant="danger"
  size="md"
@@ -112,7 +117,9 @@ export const DriverDetailModal: React.FC<DriverDetailModalProps> = ({
  >
  Delete Profile
  </Button>
+ )}
 
+ {canEdit && (
  <Button
  variant="primary"
  size="md"
@@ -120,6 +127,7 @@ export const DriverDetailModal: React.FC<DriverDetailModalProps> = ({
  >
  Edit {driverTerm} Profile
  </Button>
+ )}
  </div>
  </div>
  </Modal>

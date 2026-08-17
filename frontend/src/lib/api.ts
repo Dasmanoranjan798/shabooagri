@@ -472,16 +472,26 @@ export const api = {
     return res.json();
   },
 
-  async updateVillage(id: string, payload: { name: string }): Promise<VillageOption> {
+  async updateVillage(id: string, payload: { name?: string; isActive?: boolean }): Promise<VillageOption> {
     const res = await fetchWithAuth(`/villages/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: "Failed to rename village" }));
-      throw new ApiError(res.status, (err.error || err.message) || "Failed to rename village");
+      const err = await res.json().catch(() => ({ message: "Failed to update village" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to update village");
     }
     return res.json();
+  },
+
+  async deleteVillage(id: string): Promise<void> {
+    const res = await fetchWithAuth(`/villages/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to delete village" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to delete village");
+    }
   },
 
   async listMachines(): Promise<Machine[]> {
@@ -754,6 +764,20 @@ export const api = {
     return res.json();
   },
 
+  // Owner-only (§ dependency-locked deletion, Rule 2 & 5) — blocked
+  // server-side while a non-voided payment is linked; void it first.
+  async cancelJob(id: string, reason?: string): Promise<Job> {
+    const res = await fetchWithAuth(`/jobs/${id}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to cancel job" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to cancel job");
+    }
+    return res.json();
+  },
+
   async listJobFuelEntries(id: string): Promise<JobFuelEntry[]> {
     const res = await fetchWithAuth(`/jobs/${id}/fuel-entries`);
     if (!res.ok) {
@@ -835,6 +859,33 @@ export const api = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to record payment" }));
       throw new ApiError(res.status, (err.error || err.message) || "Failed to record payment");
+    }
+    return res.json();
+  },
+
+  // Void, not delete (§ dependency-locked deletion, Rule 1) — Owner-only,
+  // reason required server-side. Voiding an invoice cascades to void every
+  // non-voided payment under it (see invoice.repository.ts's voidScoped).
+  async voidInvoice(invoiceId: string, reason: string): Promise<Invoice> {
+    const res = await fetchWithAuth(`/invoices/${invoiceId}/void`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to void invoice" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to void invoice");
+    }
+    return res.json();
+  },
+
+  async voidPayment(paymentId: string, reason: string): Promise<PaymentRecord> {
+    const res = await fetchWithAuth(`/payments/${paymentId}/void`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to void payment" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to void payment");
     }
     return res.json();
   },

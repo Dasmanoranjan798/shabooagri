@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Pencil, Trash2, AlertTriangle, Briefcase } from "lucide-react";
+import { Pencil, Trash2, AlertTriangle, Briefcase, Eye } from "lucide-react";
 import "./employees.css";
 import type { Employee } from "../../types/employee";
 import { api } from "../../lib/api";
@@ -8,6 +8,7 @@ import { Card } from "../../components/ui/Card";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
+import { ActionMenu } from "../../components/ui/ActionMenu";
 import { EmployeeFormModal } from "./EmployeeFormModal";
 import { EmployeeDetailModal } from "./EmployeeDetailModal";
 
@@ -36,6 +37,8 @@ export const EmployeesPage: React.FC = () => {
  const [deletingId, setDeletingId] = useState<string | null>(null);
 
  const canManage = roleKey === "owner" || hasPermission("employee.manage");
+ // Owner-only (§ dependency-locked deletion, Rule 4 & 5).
+ const canDelete = roleKey === "owner" || hasPermission("employee.delete");
 
  const loadEmployees = async () => {
  setIsLoading(true);
@@ -231,25 +234,21 @@ export const EmployeesPage: React.FC = () => {
  </td>
  <td>
  <div className="sa-table-actions" onClick={(e) => e.stopPropagation()}>
- {canManage && (
- <button
- className="sa-icon-action"
- title="Edit Employee"
- onClick={(e) => handleOpenEdit(emp, e)}
- >
- <Pencil size={15} />
- </button>
- )}
- {canManage && (
- <button
- className="sa-icon-action"
- title="Delete Employee"
- disabled={deletingId === emp.id}
- onClick={(e) => handleDelete(emp.id, e)}
- >
- <Trash2 size={15} />
- </button>
- )}
+ <ActionMenu
+ items={[
+ { key: "view", label: "View Details", icon: <Eye size={15} />, onClick: () => handleOpenDetail(emp) },
+ { key: "edit", label: "Edit", icon: <Pencil size={15} />, onClick: () => handleOpenEdit(emp), hidden: !canManage },
+ {
+ key: "delete",
+ label: "Delete",
+ icon: <Trash2 size={15} />,
+ danger: true,
+ disabled: deletingId === emp.id,
+ onClick: () => handleDelete(emp.id),
+ hidden: !canDelete,
+ },
+ ]}
+ />
  </div>
  </td>
  </tr>
@@ -307,6 +306,8 @@ export const EmployeesPage: React.FC = () => {
  isOpen={isDetailModalOpen}
  onClose={() => setIsDetailModalOpen(false)}
  employee={selectedDetailEmployee}
+ canEdit={canManage}
+ canDelete={canDelete}
  onEdit={(emp) => handleOpenEdit(emp)}
  onDelete={(id) => handleDelete(id)}
  />

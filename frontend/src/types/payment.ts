@@ -1,4 +1,4 @@
-export type InvoiceStatus = "UNPAID" | "PARTIALLY_PAID" | "PAID";
+export type InvoiceStatus = "UNPAID" | "PARTIALLY_PAID" | "PAID" | "VOIDED";
 export type PaymentMethod = "CASH" | "UPI" | "BANK_TRANSFER" | "CREDIT";
 
 export interface PaymentRecord {
@@ -11,6 +11,9 @@ export interface PaymentRecord {
   referenceNumber?: string | null;
   notes?: string | null;
   createdAt: string;
+  voided: boolean;
+  voidReason?: string | null;
+  voidedAt?: string | null;
   receiver?: {
     id: string;
     fullName: string;
@@ -41,6 +44,8 @@ export interface Invoice {
   dueDate?: string | null;
   notes?: string | null;
   description?: string | null;
+  voidReason?: string | null;
+  voidedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   customer?: {
@@ -133,6 +138,8 @@ export interface ReceiptPayment {
   receivedAt: string;
   receivedBy: string;
   notes?: string | null;
+  voided: boolean;
+  voidReason?: string | null;
 }
 
 export interface ReceiptData {

@@ -5,6 +5,7 @@ import * as fuelService from "../fuel/fuel.service";
 import * as paymentService from "../payments/payment.service";
 import { resolveCallerScope } from "../../shared/access/callerScope";
 import { AppError } from "../../shared/errors/AppError";
+import { assertNoNonVoidedPayments } from "../../shared/utils/dependencyGuard";
 import * as jobPhotoRepository from "./jobPhoto.repository";
 import * as jobRepository from "./job.repository";
 import * as bookingRepository from "../bookings/booking.repository";
@@ -190,6 +191,44 @@ export async function complete(companyId: string, id: string, user: Authenticate
     }
     return updated;
   });
+}
+
+// Rule 2 (§ dependency-locked deletion): Owner-only (gated by job.cancel
+// at the route), and only reachable while no non-voided Payment is linked
+// via the booking's invoice — void the payment(s) first. Mirrors
+// complete()'s pattern of keeping the Booking's status in lockstep with
+// the Job's: a cancelled Job leaves its Booking CANCELLED too, both
+// written in one transaction, same as complete() does for COMPLETED.
+//
+// COMPLETED is deliberately included as a cancellable source status, not
+// just NOT_STARTED/WORKING/PAUSED — an Invoice (and therefore a Payment)
+// is only ever created via createInvoiceForCompletedJob, which only runs
+// once a Job reaches COMPLETED. Excluding COMPLETED here would make the
+// payment-guard below unreachable: nothing would ever have a linked
+// payment left to block on. The real scenario this rule protects is
+// exactly "job was completed, invoice/payment generated, now needs
+// reversing" — void the payment, then cancel the (completed) job.
+export async function cancel(companyId: string, id: string, user: AuthenticatedUser, reason?: string) {
+  const job = await jobRepository.findByIdScopedWithRelations(companyId, id);
+  if (!job) throw new AppError(404, "Job not found");
+  assertStatus(job, ["NOT_STARTED", "WORKING", "PAUSED", "COMPLETED"], "cancel");
+
+  const paymentCount = await paymentService.countNonVoidedPaymentsForBooking(companyId, job.bookingId);
+  assertNoNonVoidedPayments(paymentCount);
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await jobRepository.updateScopedWithRelations(companyId, id, { status: "CANCELLED" }, tx);
+    await bookingRepository.updateScopedWithRelations(companyId, job.bookingId, { status: "CANCELLED" }, tx);
+    await jobStatusLogRepository.create(companyId, id, "CANCELLED", user.id, reason, tx);
+    return updated;
+  });
+}
+
+// Rule 3 dependency-guard support: does this booking have a Job that
+// isn't itself already CANCELLED? Used by booking.service.ts before
+// letting a Booking be deleted or transitioned to CANCELLED.
+export async function findLinkedForBooking(companyId: string, bookingId: string) {
+  return jobRepository.findByBookingIdScoped(companyId, bookingId);
 }
 
 export async function completeForBooking(companyId: string, bookingId: string) {

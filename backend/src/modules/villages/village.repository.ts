@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../../db/prisma";
 import { createScopedRepository } from "../../shared/db/scopedRepository";
 
@@ -16,8 +17,8 @@ export function create(companyId: string, name: string) {
   return prisma.village.create({ data: { companyId, name } });
 }
 
-export function updateScoped(companyId: string, id: string, name: string) {
-  return scoped.updateScoped(companyId, id, { name });
+export function updateScoped(companyId: string, id: string, data: Prisma.VillageUncheckedUpdateInput) {
+  return scoped.updateScoped(companyId, id, data);
 }
 
 export function deleteScoped(companyId: string, id: string) {

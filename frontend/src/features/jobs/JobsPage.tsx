@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { AlertTriangle, Tractor } from "lucide-react";
+import { AlertTriangle, Tractor, PlayCircle, XCircle } from "lucide-react";
 import "./jobs.css";
 import type { Job } from "../../types/job";
 import { api } from "../../lib/api";
+import { useAuth } from "../../context/AuthContext";
 import { getTerm } from "../../lib/terminology";
 import { Card } from "../../components/ui/Card";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
+import { ActionMenu } from "../../components/ui/ActionMenu";
 import { JobExecutionModal } from "./JobExecutionModal";
 import { ManualJobEntryModal } from "./ManualJobEntryModal";
 
@@ -17,9 +19,11 @@ const JOB_STATUS_FILTERS: Array<{ label: string; value: string }> = [
  { label: "Working", value: "WORKING" },
  { label: "Paused", value: "PAUSED" },
  { label: "Completed", value: "COMPLETED" },
+ { label: "Cancelled", value: "CANCELLED" },
 ];
 
 export const JobsPage: React.FC = () => {
+ const { roleKey, hasPermission } = useAuth();
  const customerTerm = getTerm("customer");
  const villageTerm = getTerm("village");
  const machineTerm = getTerm("machine");
@@ -35,6 +39,11 @@ export const JobsPage: React.FC = () => {
  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
  const [isExecutionModalOpen, setIsExecutionModalOpen] = useState<boolean>(false);
  const [isManualEntryOpen, setIsManualEntryOpen] = useState<boolean>(false);
+ const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+ // Owner-only (§ dependency-locked deletion, Rule 2 & 5) — blocked
+ // server-side while a non-voided payment is linked to the job.
+ const canCancel = roleKey === "owner" || hasPermission("job.cancel");
 
  const loadJobs = async () => {
  setIsLoading(true);
@@ -62,6 +71,22 @@ export const JobsPage: React.FC = () => {
  const handleOpenExecution = (job: Job) => {
  setSelectedJob(job);
  setIsExecutionModalOpen(true);
+ };
+
+ const handleCancel = async (job: Job) => {
+ const reason = window.prompt(
+ `Cancel this job? This is Owner-only and reverses the job's booking to Cancelled too.\n\nOptional reason:`,
+ );
+ if (reason === null) return; // user hit Cancel on the prompt itself
+ setCancellingId(job.id);
+ try {
+ await api.cancelJob(job.id, reason.trim() || undefined);
+ loadJobs();
+ } catch (err: any) {
+ alert(err.message || "Failed to cancel job");
+ } finally {
+ setCancellingId(null);
+ }
  };
 
  // Filter jobs by status tab & search query
@@ -226,16 +251,22 @@ export const JobsPage: React.FC = () => {
  </span>
  </td>
  <td>
- <Button
- variant="outline"
- size="sm"
- onClick={(e) => {
- e.stopPropagation();
- handleOpenExecution(j);
- }}
- >
- Execute
- </Button>
+ <div className="sa-table-actions" onClick={(e) => e.stopPropagation()}>
+ <ActionMenu
+ items={[
+ { key: "execute", label: "Execute / View", icon: <PlayCircle size={15} />, onClick: () => handleOpenExecution(j) },
+ {
+ key: "cancel",
+ label: "Cancel Job",
+ icon: <XCircle size={15} />,
+ danger: true,
+ disabled: cancellingId === j.id,
+ onClick: () => handleCancel(j),
+ hidden: !canCancel || j.status === "CANCELLED",
+ },
+ ]}
+ />
+ </div>
  </td>
  </tr>
  );
@@ -303,6 +334,7 @@ export const JobsPage: React.FC = () => {
  onClose={() => setIsExecutionModalOpen(false)}
  job={selectedJob}
  onUpdate={loadJobs}
+ canCancel={canCancel}
  />
 
  {/* Manual After-Work Entry Modal */}

@@ -38,6 +38,13 @@ invoiceRouter.patch(
   asyncHandler(paymentController.updateInvoiceTax),
 );
 
+// Void, not delete (§ dependency-locked deletion, Rule 1 & 5) — Owner-only.
+invoiceRouter.post(
+  "/:id/void",
+  requirePermission("payment.void"),
+  asyncHandler(paymentController.voidInvoice),
+);
+
 // Scoped payment history routes
 paymentRouter.get("/", asyncHandler(paymentController.listPayments));
 
@@ -51,3 +58,10 @@ paymentRouter.post(
 );
 
 paymentRouter.get("/:id", asyncHandler(paymentController.getPaymentById));
+
+// Void, not delete (§ dependency-locked deletion, Rule 1 & 5) — Owner-only.
+paymentRouter.post(
+  "/:id/void",
+  requirePermission("payment.void"),
+  asyncHandler(paymentController.voidPayment),
+);
