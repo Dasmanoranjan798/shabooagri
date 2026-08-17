@@ -25,7 +25,9 @@ import { Card } from "../../components/ui/Card";
 import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
-import { BookingFormModal } from "./BookingFormModal";
+import { defaultBookingDraft } from "./BookingFormModal";
+import { useTaskTray } from "../../context/TaskTrayContext";
+import { subscribeDataRefresh } from "../../lib/dataRefreshBus";
 import { BookingDetailModal } from "./BookingDetailModal";
 
 const STATUS_FILTERS: Array<{ label: string; value: string }> = [
@@ -53,8 +55,7 @@ export const BookingsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false);
-  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const taskTray = useTaskTray();
 
   const [selectedDetailBooking, setSelectedDetailBooking] = useState<Booking | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
@@ -86,17 +87,30 @@ export const BookingsPage: React.FC = () => {
 
   useEffect(() => {
     loadBookings();
+    // A saved Booking form may finish long after this page's own
+    // handleOpenCreate/handleOpenEdit closure is gone (the task sat
+    // minimized while the user was elsewhere) — subscribe to the topic
+    // instead of relying on a callback prop passed at open-time.
+    return subscribeDataRefresh("bookings", loadBookings);
   }, []);
 
   const handleOpenCreate = () => {
-    setEditingBooking(null);
-    setIsFormModalOpen(true);
+    taskTray.open({
+      type: "booking-form",
+      title: "New Booking",
+      initProps: { bookingToEdit: null },
+      defaultDraft: defaultBookingDraft(null),
+    });
   };
 
   const handleOpenEdit = (booking: Booking, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setEditingBooking(booking);
-    setIsFormModalOpen(true);
+    taskTray.open({
+      type: "booking-form",
+      title: `Edit Booking ${booking.bookingNumber}`,
+      initProps: { bookingToEdit: booking },
+      defaultDraft: defaultBookingDraft(booking),
+    });
   };
 
   const handleOpenDetail = (booking: Booking) => {
@@ -405,14 +419,6 @@ export const BookingsPage: React.FC = () => {
           </div>
         </>
       )}
-
-      {/* Form Modal (Create / Edit) */}
-      <BookingFormModal
-        isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
-        onSuccess={loadBookings}
-        bookingToEdit={editingBooking}
-      />
 
       {/* Details & Workflow Modal */}
       <BookingDetailModal

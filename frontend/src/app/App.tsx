@@ -1,5 +1,7 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "../context/AuthContext";
+import { TaskTrayProvider } from "../context/TaskTrayContext";
+import { TaskSheetHost } from "../components/TaskSheetHost/TaskSheetHost";
 import { AppLayout } from "../layouts/AppLayout";
 import { DriverLayout } from "../layouts/DriverLayout";
 import { FarmerPortalLayout } from "../layouts/FarmerPortalLayout";
@@ -81,6 +83,12 @@ export function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        {/* Mounted above <Routes> deliberately — every route below re-wraps
+            its own <AppLayout>, which remounts on every navigation. A task
+            minimized on one page has to survive navigating to another, so
+            its state (TaskTrayProvider) and renderer (TaskSheetHost) can't
+            live inside anything Routes itself unmounts. */}
+        <TaskTrayProvider>
         <Routes>
           {/* Operational Login & Password Reset */}
           <Route path="/login" element={<LoginPage />} />
@@ -338,6 +346,8 @@ export function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <TaskSheetHost />
+        </TaskTrayProvider>
       </AuthProvider>
     </BrowserRouter>
   );

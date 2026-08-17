@@ -10,7 +10,9 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import { ActionMenu } from "../../components/ui/ActionMenu";
-import { VillageFormModal } from "./VillageFormModal";
+import { defaultVillageDraft } from "./VillageFormModal";
+import { useTaskTray } from "../../context/TaskTrayContext";
+import { subscribeDataRefresh } from "../../lib/dataRefreshBus";
 
 // New page (§ dependency-locked deletion) — villages were previously only
 // manageable inline from Booking/Customer forms (create + rename, no
@@ -28,8 +30,7 @@ export const VillagesPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false);
-  const [editingVillage, setEditingVillage] = useState<VillageOption | null>(null);
+  const taskTray = useTaskTray();
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -52,16 +53,25 @@ export const VillagesPage: React.FC = () => {
 
   useEffect(() => {
     loadVillages();
+    return subscribeDataRefresh("villages", loadVillages);
   }, []);
 
   const handleOpenCreate = () => {
-    setEditingVillage(null);
-    setIsFormModalOpen(true);
+    taskTray.open({
+      type: "village-form",
+      title: `Add ${getTerm("village")}`,
+      initProps: { villageToEdit: null },
+      defaultDraft: defaultVillageDraft(null),
+    });
   };
 
   const handleOpenEdit = (village: VillageOption) => {
-    setEditingVillage(village);
-    setIsFormModalOpen(true);
+    taskTray.open({
+      type: "village-form",
+      title: `Rename ${getTerm("village")}`,
+      initProps: { villageToEdit: village },
+      defaultDraft: defaultVillageDraft(village),
+    });
   };
 
   const handleDelete = async (id: string) => {
@@ -209,12 +219,6 @@ export const VillagesPage: React.FC = () => {
         </Card>
       )}
 
-      <VillageFormModal
-        isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
-        onSuccess={loadVillages}
-        villageToEdit={editingVillage}
-      />
     </div>
   );
 };
