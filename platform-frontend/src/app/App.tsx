@@ -8,6 +8,8 @@ import { UpgradePage } from "../features/auth/UpgradePage";
 import { ResetPasswordPage } from "../features/auth/ResetPasswordPage";
 import { ChangePasswordPage } from "../features/auth/ChangePasswordPage";
 import { AdminDashboardPage } from "../features/admin/AdminDashboardPage";
+import { CustomerListPage } from "../features/admin/CustomerListPage";
+import { CustomerDetailPage } from "../features/admin/CustomerDetailPage";
 import { FeedbackPage } from "../features/marketing/FeedbackPage";
 import { ContactPage } from "../features/marketing/ContactPage";
 import { TermsOfServicePage } from "../features/legal/TermsOfServicePage";
@@ -27,6 +29,8 @@ export function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/change-password" element={<ChangePasswordPage />} />
           <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route path="/admin/customers" element={<CustomerListPage />} />
+          <Route path="/admin/customers/:id" element={<CustomerDetailPage />} />
           <Route path="/feedback" element={<FeedbackPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/terms" element={<TermsOfServicePage />} />

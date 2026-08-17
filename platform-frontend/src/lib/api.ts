@@ -267,6 +267,18 @@ export const api = {
     const res = await request(`/admin/support-requests/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
     return parseOrThrow<AdminSupportRequestItem>(res, "Could not update support request");
   },
+
+  // Customer drill-down (read-only) — from the Total Signups / Purchases
+  // dashboard tiles.
+  async getAdminPlatformUsers(): Promise<AdminPlatformUserListItem[]> {
+    const res = await request("/admin/platform-users");
+    return parseOrThrow<AdminPlatformUserListItem[]>(res, "Could not load customers");
+  },
+
+  async getAdminPlatformUserDetail(id: string): Promise<AdminPlatformUserDetail> {
+    const res = await request(`/admin/platform-users/${id}`);
+    return parseOrThrow<AdminPlatformUserDetail>(res, "Could not load customer detail");
+  },
 };
 
 export interface AdminDashboardMetrics {
@@ -310,4 +322,67 @@ export interface AdminSupportRequestItem {
   message: string;
   status: string;
   createdAt: string;
+}
+
+export type LicenseStatus = "ACTIVE" | "EXPIRING_SOON" | "EXPIRED";
+
+export interface AdminPlatformUserPlanSummary {
+  key: string;
+  name: string;
+  machineLimit: number;
+}
+
+export interface AdminPlatformUserListItem {
+  id: string;
+  businessName: string;
+  contactPerson: string;
+  email: string;
+  createdAt: string;
+  currentPlan: AdminPlatformUserPlanSummary | null;
+  licenseStatus: LicenseStatus | null;
+  licenseExpiryDate: string | null;
+}
+
+export interface AdminPlatformUserHistoryEntry {
+  paymentId: string;
+  planKey: string;
+  planName: string;
+  intent: string;
+  amount: number;
+  currency: string;
+  status: string;
+  gatewayPaymentId: string | null;
+  createdAt: string;
+  license: {
+    startDate: string | null;
+    expiryDate: string | null;
+    status: LicenseStatus;
+    renewalCount: number;
+  } | null;
+}
+
+export interface AdminPlatformUserDetail {
+  id: string;
+  businessName: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
+  gstin: string | null;
+  pan: string | null;
+  companySlug: string | null;
+  createdAt: string;
+  currentPlan: AdminPlatformUserPlanSummary | null;
+  currentLicense: {
+    status: LicenseStatus;
+    startDate: string | null;
+    expiryDate: string | null;
+    renewalCount: number;
+  } | null;
+  history: AdminPlatformUserHistoryEntry[];
+  feedback: AdminFeedbackItem[];
+  supportRequests: AdminSupportRequestItem[];
 }

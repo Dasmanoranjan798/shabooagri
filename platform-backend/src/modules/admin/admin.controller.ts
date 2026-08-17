@@ -44,3 +44,13 @@ export async function updateSupportRequest(req: Request, res: Response) {
   const result = await adminService.updateSupportRequestStatus(req.params.id, input.status);
   res.status(200).json(result);
 }
+
+export async function listPlatformUsers(req: Request, res: Response) {
+  const result = await adminService.listPlatformUsers();
+  res.status(200).json(result);
+}
+
+export async function getPlatformUserDetail(req: Request, res: Response) {
+  const result = await adminService.getPlatformUserDetail(req.params.id);
+  res.status(200).json(result);
+}

@@ -16,3 +16,10 @@ adminRouter.patch("/site-settings", asyncHandler(adminController.updateSiteSetti
 adminRouter.get("/feedback", asyncHandler(adminController.listFeedback));
 adminRouter.get("/support-requests", asyncHandler(adminController.listSupportRequests));
 adminRouter.patch("/support-requests/:id", asyncHandler(adminController.updateSupportRequest));
+
+// Customer drill-down (read-only) — from the Total Signups / Purchases
+// dashboard tiles. No mutation endpoints here on purpose; a manual
+// license-extension/adjustment action was explicitly deferred as its own
+// separate decision, not assumed as part of this view.
+adminRouter.get("/platform-users", asyncHandler(adminController.listPlatformUsers));
+adminRouter.get("/platform-users/:id", asyncHandler(adminController.getPlatformUserDetail));

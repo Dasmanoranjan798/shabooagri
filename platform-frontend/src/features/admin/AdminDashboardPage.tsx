@@ -20,19 +20,28 @@ import {
   type AdminSupportRequestItem,
 } from "../../lib/api";
 
-const StatTile: React.FC<{ icon: React.ElementType; label: string; value: React.ReactNode }> = ({
+const StatTile: React.FC<{ icon: React.ElementType; label: string; value: React.ReactNode; linkTo?: string }> = ({
   icon: Icon,
   label,
   value,
-}) => (
-  <div className="pf-card" style={{ padding: 20 }}>
-    <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-text-muted)", marginBottom: 10 }}>
-      <Icon size={16} />
-      <span style={{ fontSize: "0.82rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.3 }}>{label}</span>
+  linkTo,
+}) => {
+  const content = (
+    <div className="pf-card" style={{ padding: 20, cursor: linkTo ? "pointer" : undefined }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-text-muted)", marginBottom: 10 }}>
+        <Icon size={16} />
+        <span style={{ fontSize: "0.82rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.3 }}>{label}</span>
+      </div>
+      <div style={{ fontSize: "1.6rem", fontWeight: 800 }}>{value}</div>
     </div>
-    <div style={{ fontSize: "1.6rem", fontWeight: 800 }}>{value}</div>
-  </div>
-);
+  );
+  if (!linkTo) return content;
+  return (
+    <Link to={linkTo} style={{ textDecoration: "none", color: "inherit" }}>
+      {content}
+    </Link>
+  );
+};
 
 export const AdminDashboardPage: React.FC = () => {
   const { isAuthenticated, isLoading: authLoading, user, logout } = usePlatformAuth();
@@ -153,7 +162,7 @@ export const AdminDashboardPage: React.FC = () => {
 
       {/* ---- 6 metric tiles ---- */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 36 }}>
-        <StatTile icon={Users} label="Total Signups" value={metrics ? metrics.totalSignups : "—"} />
+        <StatTile icon={Users} label="Total Signups" value={metrics ? metrics.totalSignups : "—"} linkTo="/admin/customers" />
         <a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "inherit" }}>
           <div className="pf-card" style={{ padding: 20, cursor: "pointer" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-text-muted)", marginBottom: 10 }}>
@@ -166,6 +175,7 @@ export const AdminDashboardPage: React.FC = () => {
         <StatTile
           icon={IndianRupee}
           label="Purchases"
+          linkTo="/admin/customers"
           value={
             metrics ? (
               <>
