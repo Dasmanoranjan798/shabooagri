@@ -49,6 +49,7 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
   final _invitePhoneController = TextEditingController();
   String _employmentStatus = 'ACTIVE';
   String _compensationType = 'MONTHLY';
+  DateTime? _joinedDate;
   bool _hasExistingUser = false;
   bool _sendInvite = false;
   String? _inviteRoleId;
@@ -67,8 +68,21 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
     _employmentStatus = employee['employmentStatus'] as String? ?? 'ACTIVE';
     _compensationType = employee['compensationType'] as String? ?? 'MONTHLY';
     _hasExistingUser = employee['userId'] != null;
+    if (employee['joinedDate'] != null) {
+      _joinedDate = DateTime.parse(employee['joinedDate'] as String);
+    }
     final rate = employee['hourlyRate'] ?? employee['monthlySalary'] ?? employee['yearlySalary'];
     _rateController.text = (rate as num?)?.toString() ?? '';
+  }
+
+  Future<void> _pickJoinedDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _joinedDate ?? DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 365 * 30)),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) setState(() => _joinedDate = picked);
   }
 
   @override
@@ -121,6 +135,7 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
       'employmentStatus': _employmentStatus,
       'compensationType': _compensationType,
       if (rate != null) _rateFieldKey: rate,
+      if (_joinedDate != null) 'joinedDate': _joinedDate!.toIso8601String(),
     };
     try {
       String employeeId;
@@ -219,6 +234,14 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
             onChanged: _saving ? null : (value) => setState(() => _employmentStatus = value!),
           ),
           const SizedBox(height: 16),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Joined Date'),
+            subtitle: Text(_joinedDate == null ? 'Not set' : _joinedDate!.toIso8601String().split('T').first),
+            trailing: const Icon(Icons.calendar_today),
+            onTap: _saving ? null : _pickJoinedDate,
+          ),
+          const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             initialValue: _compensationType,
             decoration: const InputDecoration(labelText: 'Compensation Type', border: OutlineInputBorder()),

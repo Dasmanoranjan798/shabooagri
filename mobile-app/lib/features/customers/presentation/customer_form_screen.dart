@@ -33,6 +33,7 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
   final _gstinController = TextEditingController();
   String? _villageId;
   bool _isGstApplicable = false;
+  bool _isActive = true;
   bool _saving = false;
   bool _prefilled = false;
   String? _error;
@@ -48,6 +49,7 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
     _notesController.text = customer['notes'] as String? ?? '';
     _gstinController.text = customer['gstin'] as String? ?? '';
     _isGstApplicable = customer['isGstApplicable'] as bool? ?? false;
+    _isActive = customer['isActive'] as bool? ?? true;
     _villageId = customer['villageId'] as String?;
   }
 
@@ -80,6 +82,7 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
       if (_notesController.text.trim().isNotEmpty) 'notes': _notesController.text.trim(),
       'isGstApplicable': _isGstApplicable,
       if (_isGstApplicable && _gstinController.text.trim().isNotEmpty) 'gstin': _gstinController.text.trim(),
+      if (_isEdit) 'isActive': _isActive,
     };
     try {
       if (_isEdit) {
@@ -164,7 +167,15 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
             decoration: const InputDecoration(labelText: 'Address', border: OutlineInputBorder()),
             enabled: !_saving,
           ),
-          const SizedBox(height: 16),
+          if (_isEdit) ...[
+            const SizedBox(height: 8),
+            SwitchListTile(
+              title: const Text('Active (customer can be booked/assigned)'),
+              value: _isActive,
+              onChanged: _saving ? null : (value) => setState(() => _isActive = value),
+            ),
+          ],
+          const SizedBox(height: 8),
           SwitchListTile(
             title: const Text('GST Applicable'),
             value: _isGstApplicable,

@@ -206,3 +206,40 @@ Fixed by adding a "Set Pricing" dialog to `job_detail_screen.dart` (pricing-meth
 - Minor non-blocking build warning noticed in the final build log: `share_plus` still applies the legacy Kotlin Gradle Plugin path (a deprecation warning from Flutter's tooling, not an error) — noted for a future dependency bump, doesn't affect this build's correctness.
 
 ---
+
+# FULL PARITY RUN — closing every gap in PARITY_INVENTORY.md
+
+Second autonomous run, started after the exhaustive screen-by-screen inventory. **Resumability note for a fresh session:** `PARITY_INVENTORY.md`'s ✅/🟡/🔴 markers are updated as each gap actually closes — that file plus this log section are the source of truth for what remains. Task list (in-session only, not persisted) mirrors the same breakdown.
+
+## Shared infrastructure built first (unblocks several modules below)
+
+- `lib/core/widgets/search_field.dart` — shared `SearchField` (client-side filter, no new network calls) and `FilterTabsRow<T>` (single-select chips with live counts), reused across every list screen touched this run.
+- `lib/core/models/company_profile.dart` + `lib/core/providers/company_profile_provider.dart` — `GET /settings/profile` model/provider, plus `machineServiceWarning()`/`expiryWarning()` helpers mirroring the website's `operationalWarnings.ts` formulas exactly (overdue vs. due-soon vs. healthy, using the company's configured `serviceAlertHours`/`insuranceAlertDays`/`licenseAlertDays`, defaulting to the backend's own defaults 50/30/30 when unset). This is shared by Machines, Drivers, Dashboard (later), Job Detail (later), and is the data source Settings itself (later) will read/write.
+
+## Checkpoint 1: quick-win list/detail/form gaps closed
+
+**Bookings** — added search box to List. Added **Scheduled Time** field to the Create/Edit form (was missing entirely — a real gap, not previously built). Rewrote Detail screen to fetch live data instead of the offline cache: added inline Machine/Driver reassignment dropdowns (calling the same dedicated assign endpoints as Edit), Rate & Method display, and the **entire Photo Attachments feature** (camera capture via `image_picker`, multipart upload to `POST /bookings/:id/attachments`, thumbnail gallery via `GET /bookings/:id/attachments` rendered with `Image.network` against the tenant's base URL) — none of this existed before.
+
+**Jobs** — List rebuilt on live data (`GET /jobs`) instead of the flat offline cache, fixing a real pre-existing UX problem beyond what the audit flagged: rows showed a raw truncated job ID instead of booking number/customer name. Added all 6 status filter tabs (All/Awaiting Machine/Ready to Start/In Progress/Completed/Cancelled, with live counts, same logic as `mapJobRow`) and search (booking #, customer, machine, driver). Added `JobActionsRepository.list()`.
+
+**Machines** — List and Detail rebuilt on live data. Added status filter tabs, search, and **service/insurance warning chips** (using the new shared warning helpers) to the List. Detail now shows Default Driver, Next Service Due, Purchase Year, Insurance Number/Expiry, and an Operational Warnings banner — none of this existed before. Form gained Assigned Default Driver, Next Service Due, Insurance Number, Insurance Expiry Date, Purchase Year — closing the form gap completely (previously only type/registration/brand/model/status/hour-meter existed).
+
+**Drivers** — List and Detail rebuilt on live data. Added status filter tabs, search, license-expiry warning badges to the List. **Detail was missing License Number and License Expiry Date entirely** (not just the form) — both added, plus a license warning banner. Form gained License Expiry Date (previously only License Number existed, despite the field being in the validator all along).
+
+**Customers** — List and Detail rebuilt on live data. Added search box, Village name + Portal Access to List rows. **Detail was showing only Name + Mobile Number** — Village (missing despite being shown in the List — an internal inconsistency, not just a website gap), Portal Access, Address, Notes all added. Form gained the isActive toggle (edit mode only).
+
+**Villages** — List rebuilt on live data. Added search box, a Status (Active/Inactive) subtitle, and **the entire Mark Inactive/Active toggle action** — previously there was no way to deactivate a village from mobile at all.
+
+**Employees** — List rebuilt with status filter tabs (All/Active/Inactive) and search. Detail gained Joined Date and System Account status. Form gained the Joined Date field.
+
+**Type-change ripple effects, traced and fixed:** switching Machines/Drivers/Customers/Villages List providers from the flat offline `Offline*` Drift types to richer live `*Summary`/raw-map types broke 1 dependent file (`machine_detail_screen.dart`, which the compiler caught immediately as a `return_of_invalid_type_from_closure` error) — fixed by rewriting it to also use live data rather than papering over the type mismatch. Five other dependent files (booking/customer/expense/maintenance forms using these providers for dropdown options) were unaffected because they only reference `.id`/`.name`-shaped fields present under identical names on both old and new types — verified via `flutter analyze`, not assumed.
+
+**Deliberately not done in this checkpoint, disclosed:** Driver creation's "Send Driver App Login Invite" checkbox (low value given PIN/OTP infra is still deferred per the original V1 scope decision) and inline-create-new-employee mode for Drivers remain open — both already flagged in the original build log, unchanged here.
+
+**Self-test:**
+- `flutter analyze`: 0 errors after every file change in this checkpoint (fixed 2 real issues along the way: the machine_detail_screen type break above, and a missing `dio` import for `FormData`/`MultipartFile` in the new Booking photo upload code).
+- `flutter test`: passes.
+- Live-curled all 9 newly-touched/newly-added endpoints (`GET /settings/profile`, `GET /machines`, `GET /drivers`, `GET /customers`, `GET /villages`, `PATCH /villages/:id`, `GET`+`POST /bookings/:id/attachments`, `GET /jobs`) — all 401, none 404.
+- Cross-checked every new field against the real backend validators/schema before writing parsing code (e.g. confirmed `Company.serviceAlertHours`/`insuranceAlertDays`/`licenseAlertDays` defaults are 50/30/30 directly from `schema.prisma`, not assumed from the website's UI copy; confirmed `scheduledTime` round-trips as a full ISO datetime anchored to an epoch date since the backend stores it as a Postgres `TIME` column, and handled that explicitly rather than naively parsing it as a real calendar date).
+
+---

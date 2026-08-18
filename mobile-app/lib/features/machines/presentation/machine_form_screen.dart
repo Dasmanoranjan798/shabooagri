@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
+import '../../drivers/presentation/driver_list_screen.dart';
 import 'machine_list_screen.dart';
 
 class MachineTypeOption {
@@ -49,8 +50,13 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
   final _brandController = TextEditingController();
   final _modelController = TextEditingController();
   final _hourMeterController = TextEditingController();
+  final _nextServiceDueController = TextEditingController();
+  final _insuranceNumberController = TextEditingController();
+  final _purchaseYearController = TextEditingController();
   String? _machineTypeId;
   String _status = 'AVAILABLE';
+  String? _assignedDriverId;
+  DateTime? _insuranceExpiryDate;
   bool _saving = false;
   bool _prefilled = false;
   String? _error;
@@ -64,8 +70,15 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
     _brandController.text = machine['brand'] as String? ?? '';
     _modelController.text = machine['model'] as String? ?? '';
     _hourMeterController.text = (machine['hourMeterReading'] as num?)?.toString() ?? '';
+    _nextServiceDueController.text = (machine['nextServiceDueHours'] as num?)?.toString() ?? '';
+    _insuranceNumberController.text = machine['insuranceNumber'] as String? ?? '';
+    _purchaseYearController.text = (machine['purchaseYear'] as num?)?.toString() ?? '';
     _machineTypeId = machine['machineTypeId'] as String?;
     _status = machine['status'] as String? ?? 'AVAILABLE';
+    _assignedDriverId = machine['assignedDriverId'] as String?;
+    if (machine['insuranceExpiryDate'] != null) {
+      _insuranceExpiryDate = DateTime.parse(machine['insuranceExpiryDate'] as String);
+    }
   }
 
   @override
@@ -74,7 +87,20 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
     _brandController.dispose();
     _modelController.dispose();
     _hourMeterController.dispose();
+    _nextServiceDueController.dispose();
+    _insuranceNumberController.dispose();
+    _purchaseYearController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickInsuranceExpiry() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _insuranceExpiryDate ?? DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 365 * 5)),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+    );
+    if (picked != null) setState(() => _insuranceExpiryDate = picked);
   }
 
   Future<void> _save() async {
@@ -96,6 +122,13 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
       'status': _status,
       if (_hourMeterController.text.trim().isNotEmpty)
         'hourMeterReading': double.tryParse(_hourMeterController.text.trim()),
+      'assignedDriverId': _assignedDriverId,
+      if (_nextServiceDueController.text.trim().isNotEmpty)
+        'nextServiceDueHours': double.tryParse(_nextServiceDueController.text.trim()),
+      if (_insuranceNumberController.text.trim().isNotEmpty) 'insuranceNumber': _insuranceNumberController.text.trim(),
+      if (_insuranceExpiryDate != null) 'insuranceExpiryDate': _insuranceExpiryDate!.toIso8601String(),
+      if (_purchaseYearController.text.trim().isNotEmpty)
+        'purchaseYear': int.tryParse(_purchaseYearController.text.trim()),
     };
     try {
       if (_isEdit) {
@@ -191,6 +224,53 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
               controller: _hourMeterController,
               decoration: const InputDecoration(labelText: 'Hour Meter Reading', border: OutlineInputBorder()),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              enabled: !_saving,
+            ),
+            const SizedBox(height: 16),
+            Consumer(builder: (context, ref, _) {
+              final driversAsync = ref.watch(driversListProvider);
+              return driversAsync.when(
+                data: (drivers) => DropdownButtonFormField<String>(
+                  initialValue: _assignedDriverId,
+                  decoration: const InputDecoration(labelText: 'Assigned Default Driver', border: OutlineInputBorder()),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('Unassigned')),
+                    ...drivers.map((d) => DropdownMenuItem(value: d.id, child: Text(d.name))),
+                  ],
+                  onChanged: _saving ? null : (value) => setState(() => _assignedDriverId = value),
+                ),
+                loading: () => const LinearProgressIndicator(),
+                error: (e, s) => Text('Could not load drivers: ${apiErrorMessage(e)}'),
+              );
+            }),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _nextServiceDueController,
+              decoration: const InputDecoration(labelText: 'Next Service Due (hrs)', border: OutlineInputBorder()),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              enabled: !_saving,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _insuranceNumberController,
+              decoration: const InputDecoration(labelText: 'Insurance Number', border: OutlineInputBorder()),
+              enabled: !_saving,
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Insurance Expiry Date'),
+              subtitle: Text(_insuranceExpiryDate == null
+                  ? 'Not set'
+                  : _insuranceExpiryDate!.toIso8601String().split('T').first),
+              trailing: const Icon(Icons.calendar_today),
+              onTap: _saving ? null : _pickInsuranceExpiry,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _purchaseYearController,
+              decoration: const InputDecoration(labelText: 'Purchase Year', border: OutlineInputBorder()),
+              keyboardType: TextInputType.number,
               enabled: !_saving,
             ),
             const SizedBox(height: 24),

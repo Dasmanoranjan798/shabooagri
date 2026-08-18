@@ -45,6 +45,7 @@ class _DriverFormScreenState extends ConsumerState<DriverFormScreen> {
   final _licenseController = TextEditingController();
   String? _employeeId;
   String _availability = 'AVAILABLE';
+  DateTime? _licenseExpiryDate;
   bool _saving = false;
   bool _prefilled = false;
   String? _error;
@@ -57,12 +58,25 @@ class _DriverFormScreenState extends ConsumerState<DriverFormScreen> {
     _employeeId = driver['employeeId'] as String?;
     _licenseController.text = driver['licenseNumber'] as String? ?? '';
     _availability = driver['availabilityStatus'] as String? ?? 'AVAILABLE';
+    if (driver['licenseExpiryDate'] != null) {
+      _licenseExpiryDate = DateTime.parse(driver['licenseExpiryDate'] as String);
+    }
   }
 
   @override
   void dispose() {
     _licenseController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickLicenseExpiry() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _licenseExpiryDate ?? DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 20)),
+    );
+    if (picked != null) setState(() => _licenseExpiryDate = picked);
   }
 
   Future<void> _save() async {
@@ -78,6 +92,7 @@ class _DriverFormScreenState extends ConsumerState<DriverFormScreen> {
     final data = {
       'employeeId': _employeeId,
       if (_licenseController.text.trim().isNotEmpty) 'licenseNumber': _licenseController.text.trim(),
+      if (_licenseExpiryDate != null) 'licenseExpiryDate': _licenseExpiryDate!.toIso8601String(),
       'availabilityStatus': _availability,
     };
     try {
@@ -151,6 +166,14 @@ class _DriverFormScreenState extends ConsumerState<DriverFormScreen> {
             enabled: !_saving,
           ),
           const SizedBox(height: 16),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('License Expiry Date'),
+            subtitle: Text(_licenseExpiryDate == null ? 'Not set' : _licenseExpiryDate!.toIso8601String().split('T').first),
+            trailing: const Icon(Icons.calendar_today),
+            onTap: _saving ? null : _pickLicenseExpiry,
+          ),
+          const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             initialValue: _availability,
             decoration: const InputDecoration(labelText: 'Availability', border: OutlineInputBorder()),

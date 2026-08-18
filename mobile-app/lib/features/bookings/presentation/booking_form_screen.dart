@@ -40,6 +40,7 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
   String? _machineId;
   String? _driverId;
   DateTime _scheduledDate = DateTime.now();
+  TimeOfDay? _scheduledTime;
   bool _saving = false;
   bool _prefilled = false;
   String? _error;
@@ -61,6 +62,18 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
     if (booking['scheduledDate'] != null) {
       _scheduledDate = DateTime.parse(booking['scheduledDate'] as String);
     }
+    // scheduledTime comes back as a full ISO datetime anchored to an
+    // epoch date (backend stores it as a Postgres TIME column) — only the
+    // time-of-day part is meaningful.
+    if (booking['scheduledTime'] != null) {
+      final parsed = DateTime.parse(booking['scheduledTime'] as String);
+      _scheduledTime = TimeOfDay(hour: parsed.hour, minute: parsed.minute);
+    }
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(context: context, initialTime: _scheduledTime ?? TimeOfDay.now());
+    if (picked != null) setState(() => _scheduledTime = picked);
   }
 
   @override
@@ -99,6 +112,9 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
       'villageId': _villageId,
       'workDescription': workDescription,
       'scheduledDate': _scheduledDate.toIso8601String(),
+      if (_scheduledTime != null)
+        'scheduledTime':
+            '${_scheduledTime!.hour.toString().padLeft(2, '0')}:${_scheduledTime!.minute.toString().padLeft(2, '0')}',
       if (_locationController.text.trim().isNotEmpty) 'location': _locationController.text.trim(),
       if (_estimatedHoursController.text.trim().isNotEmpty)
         'estimatedHours': double.tryParse(_estimatedHoursController.text.trim()),
@@ -213,6 +229,13 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
             subtitle: Text('${_scheduledDate.year}-${_scheduledDate.month.toString().padLeft(2, '0')}-${_scheduledDate.day.toString().padLeft(2, '0')}'),
             trailing: const Icon(Icons.calendar_today),
             onTap: _saving ? null : _pickDate,
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Scheduled Time'),
+            subtitle: Text(_scheduledTime == null ? 'Not set' : _scheduledTime!.format(context)),
+            trailing: const Icon(Icons.access_time),
+            onTap: _saving ? null : _pickTime,
           ),
           const SizedBox(height: 8),
           TextField(

@@ -26,6 +26,14 @@ class JobActionsRepository {
     return JobDetail.fromJson(response.data as Map<String, dynamic>);
   }
 
+  /// Live list with full relations (booking number, customer name, machine)
+  /// — used by the Jobs list screens instead of the flat offline cache, so
+  /// rows can show real identifying info instead of a raw job ID.
+  Future<List<JobDetail>> list() async {
+    final response = await _dio.get('/jobs');
+    return (response.data as List<dynamic>).map((j) => JobDetail.fromJson(j as Map<String, dynamic>)).toList();
+  }
+
   Future<JobDetail> start(String id) async {
     final response = await _dio.post('/jobs/$id/start');
     return JobDetail.fromJson(response.data as Map<String, dynamic>);
