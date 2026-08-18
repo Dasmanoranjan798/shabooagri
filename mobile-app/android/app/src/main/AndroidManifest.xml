@@ -1,4 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for all network calls (login, sync, etc.) in every build
+         variant. Only present in the debug/profile manifests by default
+         (Flutter's stock template) — release builds don't merge those, so
+         without this line here a release APK cannot make any network
+         request at all, silently, at the OS level. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.CAMERA"/>
     <application
         android:label="shabooagri_mobile"
         android:name="${applicationName}"

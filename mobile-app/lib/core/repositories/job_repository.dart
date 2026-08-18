@@ -94,35 +94,4 @@ class JobRepository {
     
     await _syncService.enqueueSync('job', jobId, 'CREATE', payload);
   }
-
-  Future<void> updateJobStatusOffline(String jobId, String status, {DateTime? time}) async {
-    await (_db.update(_db.jobs)..where((t) => t.id.equals(jobId))).write(
-      JobsCompanion(
-        status: Value(status),
-        isSynced: const Value(false),
-        updatedAt: Value(DateTime.now()),
-        startTime: status == 'WORKING' ? Value(time ?? DateTime.now()) : const Value.absent(),
-        endTime: status == 'COMPLETED' ? Value(time ?? DateTime.now()) : const Value.absent(),
-      ),
-    );
-
-    // Depending on the API, map status to operations
-    String operation;
-    if (status == 'WORKING') {
-      operation = 'JOB_ACTION_START';
-    } else if (status == 'PAUSED') {
-      operation = 'JOB_ACTION_PAUSE';
-    } else if (status == 'COMPLETED') {
-      operation = 'JOB_ACTION_COMPLETE';
-    } else {
-      operation = 'UPDATE';
-    }
-    
-    final payload = {
-      'status': status,
-      'time': (time ?? DateTime.now()).toIso8601String(),
-    };
-    
-    await _syncService.enqueueSync('job', jobId, operation, payload);
-  }
 }
