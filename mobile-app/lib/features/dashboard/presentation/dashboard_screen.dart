@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/network_provider.dart';
 import '../../../core/providers/session_provider.dart';
-import '../../../core/repositories/auth_repository.dart';
 import '../../../core/repositories/job_repository.dart';
 import '../../../core/database/database.dart';
+import '../../../core/widgets/app_drawer.dart';
 
 /// Owner/Manager home. `GET /jobs` is already scoped server-side to the
 /// whole company for these roles (vs. a Driver's own jobs only), so the
@@ -31,6 +31,7 @@ class DashboardScreen extends ConsumerWidget {
     final completedCount = jobsAsync.valueOrNull?.where((j) => j.status == 'COMPLETED').length;
 
     return Scaffold(
+      drawer: const AppDrawer(currentRoute: '/dashboard'),
       appBar: AppBar(
         title: Text(user?.fullName ?? 'Dashboard'),
         actions: [
@@ -38,14 +39,7 @@ class DashboardScreen extends ConsumerWidget {
             isOnline ? Icons.cloud_done : Icons.cloud_off,
             color: isOnline ? Colors.green : Colors.red,
           ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await ref.read(authRepositoryProvider).logout();
-              if (context.mounted) context.go('/login');
-            },
-          ),
+          const SizedBox(width: 16),
         ],
       ),
       body: RefreshIndicator(

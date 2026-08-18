@@ -12,7 +12,9 @@ class Bookings extends Table {
   DateTimeColumn get scheduledDate => dateTime().nullable()();
   RealColumn get estimatedHours => real().nullable()();
   RealColumn get estimatedAcres => real().nullable()();
-  TextColumn get pricingMethodId => text()();
+  // Nullable — pricing is assigned on the Live Job screen right before
+  // Start, not at booking time, so it's null on every fresh booking.
+  TextColumn get pricingMethodId => text().nullable()();
   TextColumn get status => text()(); // PENDING, ACCEPTED, ON_THE_WAY, WORKING, COMPLETED, CANCELLED
   TextColumn get notes => text().nullable()();
   BoolColumn get isSynced => boolean().withDefault(const Constant(true))();
@@ -50,9 +52,11 @@ class Machines extends Table {
   TextColumn get id => text()();
   TextColumn get companyId => text()();
   TextColumn get registrationNumber => text()();
-  TextColumn get brand => text()();
-  TextColumn get model => text()();
-  TextColumn get status => text()(); // Working, Available, Repair, Offline
+  // Nullable — the real backend Machine.brand/model are optional fields.
+  TextColumn get brand => text().nullable()();
+  TextColumn get model => text().nullable()();
+  TextColumn get status => text()(); // AVAILABLE, WORKING, MAINTENANCE, ...
+  // Maps from the backend's `hourMeterReading` field.
   RealColumn get hourMeter => real().nullable()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
 
@@ -64,10 +68,13 @@ class Machines extends Table {
 class Drivers extends Table {
   TextColumn get id => text()();
   TextColumn get companyId => text()();
-  TextColumn get userId => text().nullable()();
+  // A Driver doesn't carry name/phone directly on the backend — those live
+  // on its linked Employee record (`driver.employee.name`/`.phone`), so
+  // this table denormalizes them at sync time for simple offline reads.
+  TextColumn get employeeId => text()();
   TextColumn get name => text()();
-  TextColumn get mobileNumber => text()();
-  TextColumn get status => text()();
+  TextColumn get mobileNumber => text().nullable()();
+  TextColumn get availabilityStatus => text()(); // AVAILABLE, ON_DUTY, OFF_DUTY, ...
   DateTimeColumn get updatedAt => dateTime().nullable()();
 
   @override
@@ -79,7 +86,8 @@ class Customers extends Table {
   TextColumn get id => text()();
   TextColumn get companyId => text()();
   TextColumn get name => text()();
-  TextColumn get mobileNumber => text()();
+  // Maps from the backend's `phone` field.
+  TextColumn get mobileNumber => text().nullable()();
   TextColumn get villageId => text()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
 

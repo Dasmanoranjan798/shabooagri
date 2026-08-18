@@ -125,9 +125,9 @@ class $BookingsTable extends Bookings
   late final GeneratedColumn<String> pricingMethodId = GeneratedColumn<String>(
     'pricing_method_id',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
@@ -290,8 +290,6 @@ class $BookingsTable extends Bookings
           _pricingMethodIdMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_pricingMethodIdMeta);
     }
     if (data.containsKey('status')) {
       context.handle(
@@ -371,7 +369,7 @@ class $BookingsTable extends Bookings
       pricingMethodId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}pricing_method_id'],
-      )!,
+      ),
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}status'],
@@ -408,7 +406,7 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
   final DateTime? scheduledDate;
   final double? estimatedHours;
   final double? estimatedAcres;
-  final String pricingMethodId;
+  final String? pricingMethodId;
   final String status;
   final String? notes;
   final bool isSynced;
@@ -424,7 +422,7 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
     this.scheduledDate,
     this.estimatedHours,
     this.estimatedAcres,
-    required this.pricingMethodId,
+    this.pricingMethodId,
     required this.status,
     this.notes,
     required this.isSynced,
@@ -453,7 +451,9 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
     if (!nullToAbsent || estimatedAcres != null) {
       map['estimated_acres'] = Variable<double>(estimatedAcres);
     }
-    map['pricing_method_id'] = Variable<String>(pricingMethodId);
+    if (!nullToAbsent || pricingMethodId != null) {
+      map['pricing_method_id'] = Variable<String>(pricingMethodId);
+    }
     map['status'] = Variable<String>(status);
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
@@ -487,7 +487,9 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
       estimatedAcres: estimatedAcres == null && nullToAbsent
           ? const Value.absent()
           : Value(estimatedAcres),
-      pricingMethodId: Value(pricingMethodId),
+      pricingMethodId: pricingMethodId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pricingMethodId),
       status: Value(status),
       notes: notes == null && nullToAbsent
           ? const Value.absent()
@@ -515,7 +517,7 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
       scheduledDate: serializer.fromJson<DateTime?>(json['scheduledDate']),
       estimatedHours: serializer.fromJson<double?>(json['estimatedHours']),
       estimatedAcres: serializer.fromJson<double?>(json['estimatedAcres']),
-      pricingMethodId: serializer.fromJson<String>(json['pricingMethodId']),
+      pricingMethodId: serializer.fromJson<String?>(json['pricingMethodId']),
       status: serializer.fromJson<String>(json['status']),
       notes: serializer.fromJson<String?>(json['notes']),
       isSynced: serializer.fromJson<bool>(json['isSynced']),
@@ -536,7 +538,7 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
       'scheduledDate': serializer.toJson<DateTime?>(scheduledDate),
       'estimatedHours': serializer.toJson<double?>(estimatedHours),
       'estimatedAcres': serializer.toJson<double?>(estimatedAcres),
-      'pricingMethodId': serializer.toJson<String>(pricingMethodId),
+      'pricingMethodId': serializer.toJson<String?>(pricingMethodId),
       'status': serializer.toJson<String>(status),
       'notes': serializer.toJson<String?>(notes),
       'isSynced': serializer.toJson<bool>(isSynced),
@@ -555,7 +557,7 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
     Value<DateTime?> scheduledDate = const Value.absent(),
     Value<double?> estimatedHours = const Value.absent(),
     Value<double?> estimatedAcres = const Value.absent(),
-    String? pricingMethodId,
+    Value<String?> pricingMethodId = const Value.absent(),
     String? status,
     Value<String?> notes = const Value.absent(),
     bool? isSynced,
@@ -577,7 +579,9 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
     estimatedAcres: estimatedAcres.present
         ? estimatedAcres.value
         : this.estimatedAcres,
-    pricingMethodId: pricingMethodId ?? this.pricingMethodId,
+    pricingMethodId: pricingMethodId.present
+        ? pricingMethodId.value
+        : this.pricingMethodId,
     status: status ?? this.status,
     notes: notes.present ? notes.value : this.notes,
     isSynced: isSynced ?? this.isSynced,
@@ -687,7 +691,7 @@ class BookingsCompanion extends UpdateCompanion<OfflineBooking> {
   final Value<DateTime?> scheduledDate;
   final Value<double?> estimatedHours;
   final Value<double?> estimatedAcres;
-  final Value<String> pricingMethodId;
+  final Value<String?> pricingMethodId;
   final Value<String> status;
   final Value<String?> notes;
   final Value<bool> isSynced;
@@ -722,7 +726,7 @@ class BookingsCompanion extends UpdateCompanion<OfflineBooking> {
     this.scheduledDate = const Value.absent(),
     this.estimatedHours = const Value.absent(),
     this.estimatedAcres = const Value.absent(),
-    required String pricingMethodId,
+    this.pricingMethodId = const Value.absent(),
     required String status,
     this.notes = const Value.absent(),
     this.isSynced = const Value.absent(),
@@ -733,7 +737,6 @@ class BookingsCompanion extends UpdateCompanion<OfflineBooking> {
        bookingNumber = Value(bookingNumber),
        customerId = Value(customerId),
        villageId = Value(villageId),
-       pricingMethodId = Value(pricingMethodId),
        status = Value(status);
   static Insertable<OfflineBooking> custom({
     Expression<String>? id,
@@ -784,7 +787,7 @@ class BookingsCompanion extends UpdateCompanion<OfflineBooking> {
     Value<DateTime?>? scheduledDate,
     Value<double?>? estimatedHours,
     Value<double?>? estimatedAcres,
-    Value<String>? pricingMethodId,
+    Value<String?>? pricingMethodId,
     Value<String>? status,
     Value<String?>? notes,
     Value<bool>? isSynced,
@@ -1765,18 +1768,18 @@ class $MachinesTable extends Machines
   late final GeneratedColumn<String> brand = GeneratedColumn<String>(
     'brand',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _modelMeta = const VerificationMeta('model');
   @override
   late final GeneratedColumn<String> model = GeneratedColumn<String>(
     'model',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
@@ -1861,16 +1864,12 @@ class $MachinesTable extends Machines
         _brandMeta,
         brand.isAcceptableOrUnknown(data['brand']!, _brandMeta),
       );
-    } else if (isInserting) {
-      context.missing(_brandMeta);
     }
     if (data.containsKey('model')) {
       context.handle(
         _modelMeta,
         model.isAcceptableOrUnknown(data['model']!, _modelMeta),
       );
-    } else if (isInserting) {
-      context.missing(_modelMeta);
     }
     if (data.containsKey('status')) {
       context.handle(
@@ -1916,11 +1915,11 @@ class $MachinesTable extends Machines
       brand: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}brand'],
-      )!,
+      ),
       model: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}model'],
-      )!,
+      ),
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}status'],
@@ -1946,8 +1945,8 @@ class OfflineMachine extends DataClass implements Insertable<OfflineMachine> {
   final String id;
   final String companyId;
   final String registrationNumber;
-  final String brand;
-  final String model;
+  final String? brand;
+  final String? model;
   final String status;
   final double? hourMeter;
   final DateTime? updatedAt;
@@ -1955,8 +1954,8 @@ class OfflineMachine extends DataClass implements Insertable<OfflineMachine> {
     required this.id,
     required this.companyId,
     required this.registrationNumber,
-    required this.brand,
-    required this.model,
+    this.brand,
+    this.model,
     required this.status,
     this.hourMeter,
     this.updatedAt,
@@ -1967,8 +1966,12 @@ class OfflineMachine extends DataClass implements Insertable<OfflineMachine> {
     map['id'] = Variable<String>(id);
     map['company_id'] = Variable<String>(companyId);
     map['registration_number'] = Variable<String>(registrationNumber);
-    map['brand'] = Variable<String>(brand);
-    map['model'] = Variable<String>(model);
+    if (!nullToAbsent || brand != null) {
+      map['brand'] = Variable<String>(brand);
+    }
+    if (!nullToAbsent || model != null) {
+      map['model'] = Variable<String>(model);
+    }
     map['status'] = Variable<String>(status);
     if (!nullToAbsent || hourMeter != null) {
       map['hour_meter'] = Variable<double>(hourMeter);
@@ -1984,8 +1987,12 @@ class OfflineMachine extends DataClass implements Insertable<OfflineMachine> {
       id: Value(id),
       companyId: Value(companyId),
       registrationNumber: Value(registrationNumber),
-      brand: Value(brand),
-      model: Value(model),
+      brand: brand == null && nullToAbsent
+          ? const Value.absent()
+          : Value(brand),
+      model: model == null && nullToAbsent
+          ? const Value.absent()
+          : Value(model),
       status: Value(status),
       hourMeter: hourMeter == null && nullToAbsent
           ? const Value.absent()
@@ -2007,8 +2014,8 @@ class OfflineMachine extends DataClass implements Insertable<OfflineMachine> {
       registrationNumber: serializer.fromJson<String>(
         json['registrationNumber'],
       ),
-      brand: serializer.fromJson<String>(json['brand']),
-      model: serializer.fromJson<String>(json['model']),
+      brand: serializer.fromJson<String?>(json['brand']),
+      model: serializer.fromJson<String?>(json['model']),
       status: serializer.fromJson<String>(json['status']),
       hourMeter: serializer.fromJson<double?>(json['hourMeter']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
@@ -2021,8 +2028,8 @@ class OfflineMachine extends DataClass implements Insertable<OfflineMachine> {
       'id': serializer.toJson<String>(id),
       'companyId': serializer.toJson<String>(companyId),
       'registrationNumber': serializer.toJson<String>(registrationNumber),
-      'brand': serializer.toJson<String>(brand),
-      'model': serializer.toJson<String>(model),
+      'brand': serializer.toJson<String?>(brand),
+      'model': serializer.toJson<String?>(model),
       'status': serializer.toJson<String>(status),
       'hourMeter': serializer.toJson<double?>(hourMeter),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
@@ -2033,8 +2040,8 @@ class OfflineMachine extends DataClass implements Insertable<OfflineMachine> {
     String? id,
     String? companyId,
     String? registrationNumber,
-    String? brand,
-    String? model,
+    Value<String?> brand = const Value.absent(),
+    Value<String?> model = const Value.absent(),
     String? status,
     Value<double?> hourMeter = const Value.absent(),
     Value<DateTime?> updatedAt = const Value.absent(),
@@ -2042,8 +2049,8 @@ class OfflineMachine extends DataClass implements Insertable<OfflineMachine> {
     id: id ?? this.id,
     companyId: companyId ?? this.companyId,
     registrationNumber: registrationNumber ?? this.registrationNumber,
-    brand: brand ?? this.brand,
-    model: model ?? this.model,
+    brand: brand.present ? brand.value : this.brand,
+    model: model.present ? model.value : this.model,
     status: status ?? this.status,
     hourMeter: hourMeter.present ? hourMeter.value : this.hourMeter,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
@@ -2107,8 +2114,8 @@ class MachinesCompanion extends UpdateCompanion<OfflineMachine> {
   final Value<String> id;
   final Value<String> companyId;
   final Value<String> registrationNumber;
-  final Value<String> brand;
-  final Value<String> model;
+  final Value<String?> brand;
+  final Value<String?> model;
   final Value<String> status;
   final Value<double?> hourMeter;
   final Value<DateTime?> updatedAt;
@@ -2128,8 +2135,8 @@ class MachinesCompanion extends UpdateCompanion<OfflineMachine> {
     required String id,
     required String companyId,
     required String registrationNumber,
-    required String brand,
-    required String model,
+    this.brand = const Value.absent(),
+    this.model = const Value.absent(),
     required String status,
     this.hourMeter = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -2137,8 +2144,6 @@ class MachinesCompanion extends UpdateCompanion<OfflineMachine> {
   }) : id = Value(id),
        companyId = Value(companyId),
        registrationNumber = Value(registrationNumber),
-       brand = Value(brand),
-       model = Value(model),
        status = Value(status);
   static Insertable<OfflineMachine> custom({
     Expression<String>? id,
@@ -2168,8 +2173,8 @@ class MachinesCompanion extends UpdateCompanion<OfflineMachine> {
     Value<String>? id,
     Value<String>? companyId,
     Value<String>? registrationNumber,
-    Value<String>? brand,
-    Value<String>? model,
+    Value<String?>? brand,
+    Value<String?>? model,
     Value<String>? status,
     Value<double?>? hourMeter,
     Value<DateTime?>? updatedAt,
@@ -2264,14 +2269,16 @@ class $DriversTable extends Drivers
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  static const VerificationMeta _employeeIdMeta = const VerificationMeta(
+    'employeeId',
+  );
   @override
-  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
-    'user_id',
+  late final GeneratedColumn<String> employeeId = GeneratedColumn<String>(
+    'employee_id',
     aliasedName,
-    true,
+    false,
     type: DriftSqlType.string,
-    requiredDuringInsert: false,
+    requiredDuringInsert: true,
   );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
@@ -2289,19 +2296,21 @@ class $DriversTable extends Drivers
   late final GeneratedColumn<String> mobileNumber = GeneratedColumn<String>(
     'mobile_number',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
-  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  static const VerificationMeta _availabilityStatusMeta =
+      const VerificationMeta('availabilityStatus');
   @override
-  late final GeneratedColumn<String> status = GeneratedColumn<String>(
-    'status',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
+  late final GeneratedColumn<String> availabilityStatus =
+      GeneratedColumn<String>(
+        'availability_status',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -2317,10 +2326,10 @@ class $DriversTable extends Drivers
   List<GeneratedColumn> get $columns => [
     id,
     companyId,
-    userId,
+    employeeId,
     name,
     mobileNumber,
-    status,
+    availabilityStatus,
     updatedAt,
   ];
   @override
@@ -2348,11 +2357,13 @@ class $DriversTable extends Drivers
     } else if (isInserting) {
       context.missing(_companyIdMeta);
     }
-    if (data.containsKey('user_id')) {
+    if (data.containsKey('employee_id')) {
       context.handle(
-        _userIdMeta,
-        userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
+        _employeeIdMeta,
+        employeeId.isAcceptableOrUnknown(data['employee_id']!, _employeeIdMeta),
       );
+    } else if (isInserting) {
+      context.missing(_employeeIdMeta);
     }
     if (data.containsKey('name')) {
       context.handle(
@@ -2370,16 +2381,17 @@ class $DriversTable extends Drivers
           _mobileNumberMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_mobileNumberMeta);
     }
-    if (data.containsKey('status')) {
+    if (data.containsKey('availability_status')) {
       context.handle(
-        _statusMeta,
-        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+        _availabilityStatusMeta,
+        availabilityStatus.isAcceptableOrUnknown(
+          data['availability_status']!,
+          _availabilityStatusMeta,
+        ),
       );
     } else if (isInserting) {
-      context.missing(_statusMeta);
+      context.missing(_availabilityStatusMeta);
     }
     if (data.containsKey('updated_at')) {
       context.handle(
@@ -2404,10 +2416,10 @@ class $DriversTable extends Drivers
         DriftSqlType.string,
         data['${effectivePrefix}company_id'],
       )!,
-      userId: attachedDatabase.typeMapping.read(
+      employeeId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}user_id'],
-      ),
+        data['${effectivePrefix}employee_id'],
+      )!,
       name: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}name'],
@@ -2415,10 +2427,10 @@ class $DriversTable extends Drivers
       mobileNumber: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}mobile_number'],
-      )!,
-      status: attachedDatabase.typeMapping.read(
+      ),
+      availabilityStatus: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}status'],
+        data['${effectivePrefix}availability_status'],
       )!,
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -2436,18 +2448,18 @@ class $DriversTable extends Drivers
 class OfflineDriver extends DataClass implements Insertable<OfflineDriver> {
   final String id;
   final String companyId;
-  final String? userId;
+  final String employeeId;
   final String name;
-  final String mobileNumber;
-  final String status;
+  final String? mobileNumber;
+  final String availabilityStatus;
   final DateTime? updatedAt;
   const OfflineDriver({
     required this.id,
     required this.companyId,
-    this.userId,
+    required this.employeeId,
     required this.name,
-    required this.mobileNumber,
-    required this.status,
+    this.mobileNumber,
+    required this.availabilityStatus,
     this.updatedAt,
   });
   @override
@@ -2455,12 +2467,12 @@ class OfflineDriver extends DataClass implements Insertable<OfflineDriver> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['company_id'] = Variable<String>(companyId);
-    if (!nullToAbsent || userId != null) {
-      map['user_id'] = Variable<String>(userId);
-    }
+    map['employee_id'] = Variable<String>(employeeId);
     map['name'] = Variable<String>(name);
-    map['mobile_number'] = Variable<String>(mobileNumber);
-    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || mobileNumber != null) {
+      map['mobile_number'] = Variable<String>(mobileNumber);
+    }
+    map['availability_status'] = Variable<String>(availabilityStatus);
     if (!nullToAbsent || updatedAt != null) {
       map['updated_at'] = Variable<DateTime>(updatedAt);
     }
@@ -2471,12 +2483,12 @@ class OfflineDriver extends DataClass implements Insertable<OfflineDriver> {
     return DriversCompanion(
       id: Value(id),
       companyId: Value(companyId),
-      userId: userId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(userId),
+      employeeId: Value(employeeId),
       name: Value(name),
-      mobileNumber: Value(mobileNumber),
-      status: Value(status),
+      mobileNumber: mobileNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mobileNumber),
+      availabilityStatus: Value(availabilityStatus),
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(updatedAt),
@@ -2491,10 +2503,12 @@ class OfflineDriver extends DataClass implements Insertable<OfflineDriver> {
     return OfflineDriver(
       id: serializer.fromJson<String>(json['id']),
       companyId: serializer.fromJson<String>(json['companyId']),
-      userId: serializer.fromJson<String?>(json['userId']),
+      employeeId: serializer.fromJson<String>(json['employeeId']),
       name: serializer.fromJson<String>(json['name']),
-      mobileNumber: serializer.fromJson<String>(json['mobileNumber']),
-      status: serializer.fromJson<String>(json['status']),
+      mobileNumber: serializer.fromJson<String?>(json['mobileNumber']),
+      availabilityStatus: serializer.fromJson<String>(
+        json['availabilityStatus'],
+      ),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
     );
   }
@@ -2504,10 +2518,10 @@ class OfflineDriver extends DataClass implements Insertable<OfflineDriver> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'companyId': serializer.toJson<String>(companyId),
-      'userId': serializer.toJson<String?>(userId),
+      'employeeId': serializer.toJson<String>(employeeId),
       'name': serializer.toJson<String>(name),
-      'mobileNumber': serializer.toJson<String>(mobileNumber),
-      'status': serializer.toJson<String>(status),
+      'mobileNumber': serializer.toJson<String?>(mobileNumber),
+      'availabilityStatus': serializer.toJson<String>(availabilityStatus),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
     };
   }
@@ -2515,30 +2529,34 @@ class OfflineDriver extends DataClass implements Insertable<OfflineDriver> {
   OfflineDriver copyWith({
     String? id,
     String? companyId,
-    Value<String?> userId = const Value.absent(),
+    String? employeeId,
     String? name,
-    String? mobileNumber,
-    String? status,
+    Value<String?> mobileNumber = const Value.absent(),
+    String? availabilityStatus,
     Value<DateTime?> updatedAt = const Value.absent(),
   }) => OfflineDriver(
     id: id ?? this.id,
     companyId: companyId ?? this.companyId,
-    userId: userId.present ? userId.value : this.userId,
+    employeeId: employeeId ?? this.employeeId,
     name: name ?? this.name,
-    mobileNumber: mobileNumber ?? this.mobileNumber,
-    status: status ?? this.status,
+    mobileNumber: mobileNumber.present ? mobileNumber.value : this.mobileNumber,
+    availabilityStatus: availabilityStatus ?? this.availabilityStatus,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
   );
   OfflineDriver copyWithCompanion(DriversCompanion data) {
     return OfflineDriver(
       id: data.id.present ? data.id.value : this.id,
       companyId: data.companyId.present ? data.companyId.value : this.companyId,
-      userId: data.userId.present ? data.userId.value : this.userId,
+      employeeId: data.employeeId.present
+          ? data.employeeId.value
+          : this.employeeId,
       name: data.name.present ? data.name.value : this.name,
       mobileNumber: data.mobileNumber.present
           ? data.mobileNumber.value
           : this.mobileNumber,
-      status: data.status.present ? data.status.value : this.status,
+      availabilityStatus: data.availabilityStatus.present
+          ? data.availabilityStatus.value
+          : this.availabilityStatus,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
@@ -2548,81 +2566,88 @@ class OfflineDriver extends DataClass implements Insertable<OfflineDriver> {
     return (StringBuffer('OfflineDriver(')
           ..write('id: $id, ')
           ..write('companyId: $companyId, ')
-          ..write('userId: $userId, ')
+          ..write('employeeId: $employeeId, ')
           ..write('name: $name, ')
           ..write('mobileNumber: $mobileNumber, ')
-          ..write('status: $status, ')
+          ..write('availabilityStatus: $availabilityStatus, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, companyId, userId, name, mobileNumber, status, updatedAt);
+  int get hashCode => Object.hash(
+    id,
+    companyId,
+    employeeId,
+    name,
+    mobileNumber,
+    availabilityStatus,
+    updatedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is OfflineDriver &&
           other.id == this.id &&
           other.companyId == this.companyId &&
-          other.userId == this.userId &&
+          other.employeeId == this.employeeId &&
           other.name == this.name &&
           other.mobileNumber == this.mobileNumber &&
-          other.status == this.status &&
+          other.availabilityStatus == this.availabilityStatus &&
           other.updatedAt == this.updatedAt);
 }
 
 class DriversCompanion extends UpdateCompanion<OfflineDriver> {
   final Value<String> id;
   final Value<String> companyId;
-  final Value<String?> userId;
+  final Value<String> employeeId;
   final Value<String> name;
-  final Value<String> mobileNumber;
-  final Value<String> status;
+  final Value<String?> mobileNumber;
+  final Value<String> availabilityStatus;
   final Value<DateTime?> updatedAt;
   final Value<int> rowid;
   const DriversCompanion({
     this.id = const Value.absent(),
     this.companyId = const Value.absent(),
-    this.userId = const Value.absent(),
+    this.employeeId = const Value.absent(),
     this.name = const Value.absent(),
     this.mobileNumber = const Value.absent(),
-    this.status = const Value.absent(),
+    this.availabilityStatus = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DriversCompanion.insert({
     required String id,
     required String companyId,
-    this.userId = const Value.absent(),
+    required String employeeId,
     required String name,
-    required String mobileNumber,
-    required String status,
+    this.mobileNumber = const Value.absent(),
+    required String availabilityStatus,
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        companyId = Value(companyId),
+       employeeId = Value(employeeId),
        name = Value(name),
-       mobileNumber = Value(mobileNumber),
-       status = Value(status);
+       availabilityStatus = Value(availabilityStatus);
   static Insertable<OfflineDriver> custom({
     Expression<String>? id,
     Expression<String>? companyId,
-    Expression<String>? userId,
+    Expression<String>? employeeId,
     Expression<String>? name,
     Expression<String>? mobileNumber,
-    Expression<String>? status,
+    Expression<String>? availabilityStatus,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (companyId != null) 'company_id': companyId,
-      if (userId != null) 'user_id': userId,
+      if (employeeId != null) 'employee_id': employeeId,
       if (name != null) 'name': name,
       if (mobileNumber != null) 'mobile_number': mobileNumber,
-      if (status != null) 'status': status,
+      if (availabilityStatus != null) 'availability_status': availabilityStatus,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2631,20 +2656,20 @@ class DriversCompanion extends UpdateCompanion<OfflineDriver> {
   DriversCompanion copyWith({
     Value<String>? id,
     Value<String>? companyId,
-    Value<String?>? userId,
+    Value<String>? employeeId,
     Value<String>? name,
-    Value<String>? mobileNumber,
-    Value<String>? status,
+    Value<String?>? mobileNumber,
+    Value<String>? availabilityStatus,
     Value<DateTime?>? updatedAt,
     Value<int>? rowid,
   }) {
     return DriversCompanion(
       id: id ?? this.id,
       companyId: companyId ?? this.companyId,
-      userId: userId ?? this.userId,
+      employeeId: employeeId ?? this.employeeId,
       name: name ?? this.name,
       mobileNumber: mobileNumber ?? this.mobileNumber,
-      status: status ?? this.status,
+      availabilityStatus: availabilityStatus ?? this.availabilityStatus,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -2659,8 +2684,8 @@ class DriversCompanion extends UpdateCompanion<OfflineDriver> {
     if (companyId.present) {
       map['company_id'] = Variable<String>(companyId.value);
     }
-    if (userId.present) {
-      map['user_id'] = Variable<String>(userId.value);
+    if (employeeId.present) {
+      map['employee_id'] = Variable<String>(employeeId.value);
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
@@ -2668,8 +2693,8 @@ class DriversCompanion extends UpdateCompanion<OfflineDriver> {
     if (mobileNumber.present) {
       map['mobile_number'] = Variable<String>(mobileNumber.value);
     }
-    if (status.present) {
-      map['status'] = Variable<String>(status.value);
+    if (availabilityStatus.present) {
+      map['availability_status'] = Variable<String>(availabilityStatus.value);
     }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
@@ -2685,10 +2710,10 @@ class DriversCompanion extends UpdateCompanion<OfflineDriver> {
     return (StringBuffer('DriversCompanion(')
           ..write('id: $id, ')
           ..write('companyId: $companyId, ')
-          ..write('userId: $userId, ')
+          ..write('employeeId: $employeeId, ')
           ..write('name: $name, ')
           ..write('mobileNumber: $mobileNumber, ')
-          ..write('status: $status, ')
+          ..write('availabilityStatus: $availabilityStatus, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -2738,9 +2763,9 @@ class $CustomersTable extends Customers
   late final GeneratedColumn<String> mobileNumber = GeneratedColumn<String>(
     'mobile_number',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _villageIdMeta = const VerificationMeta(
     'villageId',
@@ -2814,8 +2839,6 @@ class $CustomersTable extends Customers
           _mobileNumberMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_mobileNumberMeta);
     }
     if (data.containsKey('village_id')) {
       context.handle(
@@ -2855,7 +2878,7 @@ class $CustomersTable extends Customers
       mobileNumber: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}mobile_number'],
-      )!,
+      ),
       villageId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}village_id'],
@@ -2877,14 +2900,14 @@ class OfflineCustomer extends DataClass implements Insertable<OfflineCustomer> {
   final String id;
   final String companyId;
   final String name;
-  final String mobileNumber;
+  final String? mobileNumber;
   final String villageId;
   final DateTime? updatedAt;
   const OfflineCustomer({
     required this.id,
     required this.companyId,
     required this.name,
-    required this.mobileNumber,
+    this.mobileNumber,
     required this.villageId,
     this.updatedAt,
   });
@@ -2894,7 +2917,9 @@ class OfflineCustomer extends DataClass implements Insertable<OfflineCustomer> {
     map['id'] = Variable<String>(id);
     map['company_id'] = Variable<String>(companyId);
     map['name'] = Variable<String>(name);
-    map['mobile_number'] = Variable<String>(mobileNumber);
+    if (!nullToAbsent || mobileNumber != null) {
+      map['mobile_number'] = Variable<String>(mobileNumber);
+    }
     map['village_id'] = Variable<String>(villageId);
     if (!nullToAbsent || updatedAt != null) {
       map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -2907,7 +2932,9 @@ class OfflineCustomer extends DataClass implements Insertable<OfflineCustomer> {
       id: Value(id),
       companyId: Value(companyId),
       name: Value(name),
-      mobileNumber: Value(mobileNumber),
+      mobileNumber: mobileNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mobileNumber),
       villageId: Value(villageId),
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
@@ -2924,7 +2951,7 @@ class OfflineCustomer extends DataClass implements Insertable<OfflineCustomer> {
       id: serializer.fromJson<String>(json['id']),
       companyId: serializer.fromJson<String>(json['companyId']),
       name: serializer.fromJson<String>(json['name']),
-      mobileNumber: serializer.fromJson<String>(json['mobileNumber']),
+      mobileNumber: serializer.fromJson<String?>(json['mobileNumber']),
       villageId: serializer.fromJson<String>(json['villageId']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
     );
@@ -2936,7 +2963,7 @@ class OfflineCustomer extends DataClass implements Insertable<OfflineCustomer> {
       'id': serializer.toJson<String>(id),
       'companyId': serializer.toJson<String>(companyId),
       'name': serializer.toJson<String>(name),
-      'mobileNumber': serializer.toJson<String>(mobileNumber),
+      'mobileNumber': serializer.toJson<String?>(mobileNumber),
       'villageId': serializer.toJson<String>(villageId),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
     };
@@ -2946,14 +2973,14 @@ class OfflineCustomer extends DataClass implements Insertable<OfflineCustomer> {
     String? id,
     String? companyId,
     String? name,
-    String? mobileNumber,
+    Value<String?> mobileNumber = const Value.absent(),
     String? villageId,
     Value<DateTime?> updatedAt = const Value.absent(),
   }) => OfflineCustomer(
     id: id ?? this.id,
     companyId: companyId ?? this.companyId,
     name: name ?? this.name,
-    mobileNumber: mobileNumber ?? this.mobileNumber,
+    mobileNumber: mobileNumber.present ? mobileNumber.value : this.mobileNumber,
     villageId: villageId ?? this.villageId,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
   );
@@ -3002,7 +3029,7 @@ class CustomersCompanion extends UpdateCompanion<OfflineCustomer> {
   final Value<String> id;
   final Value<String> companyId;
   final Value<String> name;
-  final Value<String> mobileNumber;
+  final Value<String?> mobileNumber;
   final Value<String> villageId;
   final Value<DateTime?> updatedAt;
   final Value<int> rowid;
@@ -3019,14 +3046,13 @@ class CustomersCompanion extends UpdateCompanion<OfflineCustomer> {
     required String id,
     required String companyId,
     required String name,
-    required String mobileNumber,
+    this.mobileNumber = const Value.absent(),
     required String villageId,
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        companyId = Value(companyId),
        name = Value(name),
-       mobileNumber = Value(mobileNumber),
        villageId = Value(villageId);
   static Insertable<OfflineCustomer> custom({
     Expression<String>? id,
@@ -3052,7 +3078,7 @@ class CustomersCompanion extends UpdateCompanion<OfflineCustomer> {
     Value<String>? id,
     Value<String>? companyId,
     Value<String>? name,
-    Value<String>? mobileNumber,
+    Value<String?>? mobileNumber,
     Value<String>? villageId,
     Value<DateTime?>? updatedAt,
     Value<int>? rowid,
@@ -3915,7 +3941,7 @@ typedef $$BookingsTableCreateCompanionBuilder = BookingsCompanion Function({
   Value<DateTime?> scheduledDate,
   Value<double?> estimatedHours,
   Value<double?> estimatedAcres,
-  required String pricingMethodId,
+  Value<String?> pricingMethodId,
   required String status,
   Value<String?> notes,
   Value<bool> isSynced,
@@ -3933,7 +3959,7 @@ typedef $$BookingsTableUpdateCompanionBuilder = BookingsCompanion Function({
   Value<DateTime?> scheduledDate,
   Value<double?> estimatedHours,
   Value<double?> estimatedAcres,
-  Value<String> pricingMethodId,
+  Value<String?> pricingMethodId,
   Value<String> status,
   Value<String?> notes,
   Value<bool> isSynced,
@@ -4219,7 +4245,7 @@ class $$BookingsTableTableManager
                 Value<DateTime?> scheduledDate = const Value.absent(),
                 Value<double?> estimatedHours = const Value.absent(),
                 Value<double?> estimatedAcres = const Value.absent(),
-                Value<String> pricingMethodId = const Value.absent(),
+                Value<String?> pricingMethodId = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
@@ -4255,7 +4281,7 @@ class $$BookingsTableTableManager
                 Value<DateTime?> scheduledDate = const Value.absent(),
                 Value<double?> estimatedHours = const Value.absent(),
                 Value<double?> estimatedAcres = const Value.absent(),
-                required String pricingMethodId,
+                Value<String?> pricingMethodId = const Value.absent(),
                 required String status,
                 Value<String?> notes = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
@@ -4677,8 +4703,8 @@ typedef $$MachinesTableCreateCompanionBuilder = MachinesCompanion Function({
   required String id,
   required String companyId,
   required String registrationNumber,
-  required String brand,
-  required String model,
+  Value<String?> brand,
+  Value<String?> model,
   required String status,
   Value<double?> hourMeter,
   Value<DateTime?> updatedAt,
@@ -4688,8 +4714,8 @@ typedef $$MachinesTableUpdateCompanionBuilder = MachinesCompanion Function({
   Value<String> id,
   Value<String> companyId,
   Value<String> registrationNumber,
-  Value<String> brand,
-  Value<String> model,
+  Value<String?> brand,
+  Value<String?> model,
   Value<String> status,
   Value<double?> hourMeter,
   Value<DateTime?> updatedAt,
@@ -4866,8 +4892,8 @@ class $$MachinesTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> companyId = const Value.absent(),
                 Value<String> registrationNumber = const Value.absent(),
-                Value<String> brand = const Value.absent(),
-                Value<String> model = const Value.absent(),
+                Value<String?> brand = const Value.absent(),
+                Value<String?> model = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<double?> hourMeter = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
@@ -4888,8 +4914,8 @@ class $$MachinesTableTableManager
                 required String id,
                 required String companyId,
                 required String registrationNumber,
-                required String brand,
-                required String model,
+                Value<String?> brand = const Value.absent(),
+                Value<String?> model = const Value.absent(),
                 required String status,
                 Value<double?> hourMeter = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
@@ -4933,20 +4959,20 @@ typedef $$MachinesTableProcessedTableManager =
 typedef $$DriversTableCreateCompanionBuilder = DriversCompanion Function({
   required String id,
   required String companyId,
-  Value<String?> userId,
+  required String employeeId,
   required String name,
-  required String mobileNumber,
-  required String status,
+  Value<String?> mobileNumber,
+  required String availabilityStatus,
   Value<DateTime?> updatedAt,
   Value<int> rowid,
 });
 typedef $$DriversTableUpdateCompanionBuilder = DriversCompanion Function({
   Value<String> id,
   Value<String> companyId,
-  Value<String?> userId,
+  Value<String> employeeId,
   Value<String> name,
-  Value<String> mobileNumber,
-  Value<String> status,
+  Value<String?> mobileNumber,
+  Value<String> availabilityStatus,
   Value<DateTime?> updatedAt,
   Value<int> rowid,
 });
@@ -4970,8 +4996,8 @@ class $$DriversTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get userId => $composableBuilder(
-    column: $table.userId,
+  ColumnFilters<String> get employeeId => $composableBuilder(
+    column: $table.employeeId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4985,8 +5011,8 @@ class $$DriversTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get status => $composableBuilder(
-    column: $table.status,
+  ColumnFilters<String> get availabilityStatus => $composableBuilder(
+    column: $table.availabilityStatus,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5015,8 +5041,8 @@ class $$DriversTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get userId => $composableBuilder(
-    column: $table.userId,
+  ColumnOrderings<String> get employeeId => $composableBuilder(
+    column: $table.employeeId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -5030,8 +5056,8 @@ class $$DriversTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get status => $composableBuilder(
-    column: $table.status,
+  ColumnOrderings<String> get availabilityStatus => $composableBuilder(
+    column: $table.availabilityStatus,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -5056,8 +5082,10 @@ class $$DriversTableAnnotationComposer
   GeneratedColumn<String> get companyId =>
       $composableBuilder(column: $table.companyId, builder: (column) => column);
 
-  GeneratedColumn<String> get userId =>
-      $composableBuilder(column: $table.userId, builder: (column) => column);
+  GeneratedColumn<String> get employeeId => $composableBuilder(
+    column: $table.employeeId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
@@ -5067,8 +5095,10 @@ class $$DriversTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get status =>
-      $composableBuilder(column: $table.status, builder: (column) => column);
+  GeneratedColumn<String> get availabilityStatus => $composableBuilder(
+    column: $table.availabilityStatus,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -5107,19 +5137,19 @@ class $$DriversTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> companyId = const Value.absent(),
-                Value<String?> userId = const Value.absent(),
+                Value<String> employeeId = const Value.absent(),
                 Value<String> name = const Value.absent(),
-                Value<String> mobileNumber = const Value.absent(),
-                Value<String> status = const Value.absent(),
+                Value<String?> mobileNumber = const Value.absent(),
+                Value<String> availabilityStatus = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DriversCompanion(
                 id: id,
                 companyId: companyId,
-                userId: userId,
+                employeeId: employeeId,
                 name: name,
                 mobileNumber: mobileNumber,
-                status: status,
+                availabilityStatus: availabilityStatus,
                 updatedAt: updatedAt,
                 rowid: rowid,
               ),
@@ -5127,19 +5157,19 @@ class $$DriversTableTableManager
               ({
                 required String id,
                 required String companyId,
-                Value<String?> userId = const Value.absent(),
+                required String employeeId,
                 required String name,
-                required String mobileNumber,
-                required String status,
+                Value<String?> mobileNumber = const Value.absent(),
+                required String availabilityStatus,
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DriversCompanion.insert(
                 id: id,
                 companyId: companyId,
-                userId: userId,
+                employeeId: employeeId,
                 name: name,
                 mobileNumber: mobileNumber,
-                status: status,
+                availabilityStatus: availabilityStatus,
                 updatedAt: updatedAt,
                 rowid: rowid,
               ),
@@ -5172,7 +5202,7 @@ typedef $$CustomersTableCreateCompanionBuilder = CustomersCompanion Function({
   required String id,
   required String companyId,
   required String name,
-  required String mobileNumber,
+  Value<String?> mobileNumber,
   required String villageId,
   Value<DateTime?> updatedAt,
   Value<int> rowid,
@@ -5181,7 +5211,7 @@ typedef $$CustomersTableUpdateCompanionBuilder = CustomersCompanion Function({
   Value<String> id,
   Value<String> companyId,
   Value<String> name,
-  Value<String> mobileNumber,
+  Value<String?> mobileNumber,
   Value<String> villageId,
   Value<DateTime?> updatedAt,
   Value<int> rowid,
@@ -5331,7 +5361,7 @@ class $$CustomersTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> companyId = const Value.absent(),
                 Value<String> name = const Value.absent(),
-                Value<String> mobileNumber = const Value.absent(),
+                Value<String?> mobileNumber = const Value.absent(),
                 Value<String> villageId = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -5349,7 +5379,7 @@ class $$CustomersTableTableManager
                 required String id,
                 required String companyId,
                 required String name,
-                required String mobileNumber,
+                Value<String?> mobileNumber = const Value.absent(),
                 required String villageId,
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),

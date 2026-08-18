@@ -5,6 +5,7 @@ import '../../../core/providers/session_provider.dart';
 import '../../../core/repositories/auth_repository.dart';
 import '../../../core/repositories/job_repository.dart';
 import '../../../core/database/database.dart';
+import '../../../core/widgets/app_drawer.dart';
 
 final jobsListProvider = FutureProvider<List<OfflineJob>>((ref) async {
   final repository = ref.watch(jobRepositoryProvider);
@@ -19,32 +20,28 @@ class JobListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final jobsAsync = ref.watch(jobsListProvider);
     final user = ref.watch(currentUserProvider);
-    // Owner/Manager reach this screen from the Dashboard; for a Driver this
-    // *is* their home screen (no dashboard to go back to).
-    final showBackToDashboard = user == null || user.isOwnerOrManager;
+    // Owner/Manager get the full module drawer (Jobs is one of several
+    // screens for them); Driver has no other screens, so no drawer or back
+    // arrow — this Job List *is* their whole home.
+    final isOwnerOrManager = user?.isOwnerOrManager ?? false;
 
     return Scaffold(
+      drawer: isOwnerOrManager ? const AppDrawer(currentRoute: '/jobs') : null,
       appBar: AppBar(
         title: const Text('My Jobs'),
-        leading: showBackToDashboard
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => context.go('/dashboard'),
-              )
-            : null,
-        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => ref.invalidate(jobsListProvider),
           ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await ref.read(authRepositoryProvider).logout();
-              if (context.mounted) context.go('/login');
-            },
-          ),
+          if (!isOwnerOrManager)
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: () async {
+                await ref.read(authRepositoryProvider).logout();
+                if (context.mounted) context.go('/login');
+              },
+            ),
         ],
       ),
       body: jobsAsync.when(
