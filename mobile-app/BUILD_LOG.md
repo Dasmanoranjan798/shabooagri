@@ -106,3 +106,18 @@ Fixed by adding a "Set Pricing" dialog to `job_detail_screen.dart` (pricing-meth
 - Traced `updateBookingSchema`'s `.omit({machineId, driverId, pricingMethodId, rate})` precisely before deciding to call the assign-machine/assign-driver endpoints separately on Edit, rather than assuming they could go in the same PATCH body (they'd have been silently dropped by the schema if I had).
 
 ---
+
+## Stage 5: Payments — Receive Payment + Void
+
+**Built:**
+- "Receive Payment" button on Payment Detail (Owner/Manager, hidden once balance is 0 or invoice is voided) — dialog pre-filled with the full balance due, Payment Method dropdown (`CASH`/`UPI`/`BANK_TRANSFER`/`CREDIT`, exact enum from the backend, not "Cash/UPI/Bank Transfer/Cheque" as I'd initially assumed from the audit summary — verified against `payment.validators.ts` directly), optional reference number, optional notes. Partial payments work naturally (amount just needs to be > 0, no requirement to equal the full balance).
+- "Void Invoice" button, Owner-only (`isOwner` check), mandatory reason field (button disabled until non-empty) — matches `voidSchema`'s `min(1)` requirement exactly, and the audit's "mandatory reason" note for void actions specifically (distinct from Job's optional cancel reason).
+- Both actions refresh the invoice detail and the Payments list on success.
+
+**Self-test:**
+- `flutter analyze`: 0 errors.
+- `flutter test`: passes.
+- Live-curled `POST /invoices/:id/payments` and `POST /invoices/:id/void` — both 401.
+- Caught my own assumption error before shipping: initially wrote the void-status check as `status == 'VOID' || status == 'VOIDED'`, then checked the actual `InvoiceStatus` Prisma enum (`UNPAID | PARTIALLY_PAID | PAID | VOIDED`) and removed the non-existent `'VOID'` branch — a real instance of the "don't guess enum values" discipline the user asked for, caught before commit, not after.
+
+---
