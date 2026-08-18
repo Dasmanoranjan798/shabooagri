@@ -27,7 +27,7 @@ export const DownloadAppPage: React.FC = () => {
               SA
             </div>
             <h1 style={{ fontSize: "2.4rem", fontWeight: 800, lineHeight: 1.15, marginBottom: 16 }}>
-              ShabooAgri Driver App
+              ShabooAgri Mobile App
             </h1>
             <div
               style={{
@@ -52,7 +52,7 @@ export const DownloadAppPage: React.FC = () => {
             </p>
             <div style={{ display: "flex", justifyContent: "center" }}>
               <a
-                href="/downloads/shabooagri-preview.apk"
+                href="/downloads/shabooagri-v0.2.0.apk"
                 download
                 className="pf-btn pf-btn-primary"
                 style={{
@@ -93,7 +93,7 @@ export const DownloadAppPage: React.FC = () => {
                 }}
               >
                 <Info size={24} color="var(--color-primary)" />
-                What's New in v0.1.0-preview
+                What's New in v0.2.0-preview
               </h2>
               <ul
                 style={{
@@ -105,9 +105,11 @@ export const DownloadAppPage: React.FC = () => {
                   gap: 8,
                 }}
               >
-                <li>Core Field Workflow interface</li>
-                <li>Offline job state management (Start/Pause/Stop)</li>
-                <li>Background sync queue integration</li>
+                <li>Company Setup step — connect this device to your company on first launch</li>
+                <li>Real sign-in with your email/phone and password (no more mock login)</li>
+                <li>Each role now lands on its own home screen: Owner/Manager, Driver, or Farmer</li>
+                <li>Dashboard and job data now pulled live from the server, not placeholder numbers</li>
+                <li>Sessions stay signed in — access refreshes automatically in the background</li>
               </ul>
               <div
                 style={{
