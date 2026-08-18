@@ -215,17 +215,19 @@ async function runSecurityAuditTests() {
     machineId: machineB.id,
     driverId: driverB.id,
     scheduledDate: new Date("2026-08-10") as any,
+    workDescription: "Test field work",
     pricingMethodId: pricingMethodB.id,
     rate: 500,
     estimatedHours: 4,
   });
 
-  await bookingService.updateStatus(companyB.id, bookingB.id, "ACCEPTED");
-  await bookingService.updateStatus(companyB.id, bookingB.id, "ON_THE_WAY");
+  // Job Card exists the instant the booking above was created — no
+  // status-transition dance needed anymore.
   const jobB = await prisma.job.findFirstOrThrow({ where: { companyId: companyB.id, bookingId: bookingB.id } });
 
   await jobService.start(companyB.id, jobB.id, authOwnerB, {});
-  await jobService.complete(companyB.id, jobB.id, authOwnerB, { actualHours: 4 });
+  await jobService.stop(companyB.id, jobB.id, authOwnerB, { actualHours: 4 });
+  await jobService.submit(companyB.id, jobB.id, authOwnerB, {});
   const invoiceB = await prisma.invoice.findFirstOrThrow({ where: { companyId: companyB.id, bookingId: bookingB.id } });
 
   const scheduleB = await maintenanceService.createSchedule(companyB.id, {

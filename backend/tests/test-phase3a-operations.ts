@@ -175,14 +175,13 @@ async function runPhase3ATests() {
     machineId: machine.id,
     driverId: hourlyDriver.id,
     scheduledDate: new Date(),
+    workDescription: "Test field work",
     pricingMethodId: perHourPM.id,
     rate: 500,
   });
   console.log(" Booking created by Manager:", booking.bookingNumber);
 
-  // Transition PENDING -> ACCEPTED -> ON_THE_WAY to initialize job
-  await bookingService.updateStatus(company.id, booking.id, "ACCEPTED");
-  await bookingService.updateStatus(company.id, booking.id, "ON_THE_WAY");
+  // Job Card exists the instant the booking above was created.
   let job = await jobService.list(company.id, authManager).then((list) => list.find((j) => j.bookingId === booking.id));
   if (!job) throw new Error("Job was not initialized for booking!");
   console.log(" Job initialized with status NOT_STARTED");
@@ -204,15 +203,15 @@ async function runPhase3ATests() {
   if (job.status !== "WORKING") throw new Error("Manager failed to resume job!");
   console.log(" Manager resumed job.");
 
-  // Manager completes job with 2.5 actual hours worked & 2 acres
+  // Manager stops job with 2.5 actual hours worked, then submits with 2 acres
   const endTime = new Date(now);
-  job = await jobService.complete(company.id, job.id, authManager, {
-    endTime,
-    actualHours: 2.5,
+  job = await jobService.stop(company.id, job.id, authManager, { endTime, actualHours: 2.5 });
+  if (job.status !== "STOPPED") throw new Error("Manager failed to stop job!");
+  job = await jobService.submit(company.id, job.id, authManager, {
     completedAcres: 2.0,
     notes: "Field harvesting complete",
   });
-  if (job.status !== "COMPLETED") throw new Error("Manager failed to complete job!");
+  if (job.status !== "COMPLETED") throw new Error("Manager failed to submit job!");
   if (Number(job.actualHours) !== 2.5) throw new Error(`Expected actualHours 2.5, got ${job.actualHours}`);
   console.log(" Manager completed job. Worked duration:", job.actualHours, "hrs.");
 
@@ -300,10 +299,10 @@ async function runPhase3ATests() {
   // TEST 4: Security & Access Control
   console.log("\n[TEST 4] Testing Security & Permission Scoping...");
 
-  // Farmer attempts to complete a job -> Should be rejected
+  // Farmer attempts to submit a job -> Should be rejected
   try {
-    await jobService.complete(company.id, job.id, authFarmer, { notes: "Unauthorized farmer edit" });
-    throw new Error("SECURITY FAILURE: Farmer was allowed to complete a job!");
+    await jobService.submit(company.id, job.id, authFarmer, { notes: "Unauthorized farmer edit" });
+    throw new Error("SECURITY FAILURE: Farmer was allowed to submit a job!");
   } catch (err: any) {
     if (err.message.includes("SECURITY FAILURE")) throw err;
     console.log(" Farmer job modification correctly rejected with 403 Forbidden / Not Assigned.");

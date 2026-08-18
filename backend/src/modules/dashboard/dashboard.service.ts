@@ -168,6 +168,11 @@ function mapJobRow(row: Awaited<ReturnType<typeof dashboardRepository.findJobsFo
   return {
     jobId: row.id,
     jobStatus: row.status,
+    // Mirrors job.service.ts's withReadiness — the same "Ready to
+    // Start"/"Awaiting Machine" signal the Job Cards page uses, so this
+    // table doesn't fall back to showing the (mostly frozen at PENDING
+    // now) raw booking status for a card that hasn't started yet.
+    isReadyToStart: !!row.booking.machine && !!row.booking.driver,
     startTime: row.startTime?.toISOString() ?? null,
     endTime: row.endTime?.toISOString() ?? null,
     actualHours: row.actualHours != null ? Number(row.actualHours) : null,

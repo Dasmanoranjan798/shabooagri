@@ -1,15 +1,38 @@
 # Jobs module
 
+> **Rebuilt 2026-08-17/18** to the Booking → Job Card → Stop → Submit
+> flow (business-owner-approved mockup). This document describes the
+> *current* architecture. The **"What was tested" section at the bottom is
+> unchanged from the original build and reflects testing performed at
+> that time, prior to the 2026-08-17/18 workflow rebuild** — kept for
+> historical record, not as a claim that today's code has been
+> re-verified against it.
+
 ## Purpose
 
-§7/§8.4's execution layer: once a machine and driver are literally en
-route, a Job tracks the actual field work — start/pause/resume/complete,
-running time, completed acres, fuel used, photos, notes. This is
-deliberately a separate table from Booking (§7's note explaining why):
-Booking is the commercial arrangement (who/what/when/how priced); Job is
-what actually happened on the ground, and is what Payments/Invoices will
-bill against once that module exists — actual figures, not the Booking's
+A Job tracks the actual field work behind a Booking: start/pause/resume/
+stop/submit, running time, completed acres, fuel used, photos, notes.
+Deliberately a separate table from Booking — Booking is the commercial
+arrangement (who/what/when); Job is what actually happened on the
+ground, and is what Payments/Invoices bill against — actual figures, not
 estimates.
+
+A Job Card now exists from the moment its Booking is saved (see the
+Bookings module's README) — there is no "dispatch" stage it waits for.
+Its card shows "Ready to Start" once `machineId`/`driverId` are both set,
+"Awaiting Machine" until then; pricing is deliberately *not* part of that
+signal — it's picked on the Live Job screen itself, right before Start
+(`assignPricing`, in the Bookings module), so gating the card badge on it
+would make "Ready to Start" unreachable.
+
+The old single `complete()` action is gone, split into two distinct
+steps matching the mockup's two separate confirmations:
+- **`stop()`**: `WORKING`/`PAUSED` → `STOPPED`. Freezes `endTime`/
+  `actualHours`. No invoice yet — this is "the machine has physically
+  stopped," not "the paperwork is done."
+- **`submit()`**: `STOPPED`-only → `COMPLETED`. Runs the mandatory
+  photo/fuel-log checks, generates the invoice, and is the actual point
+  of no return — once submitted, only the Owner can edit the job.
 
 ## Architecture
 
@@ -22,83 +45,79 @@ job.routes.ts → job.controller.ts → job.service.ts → job.repository.ts (Jo
 
 `job.service.ts` never imports `fuel.repository.ts` directly — fuel
 entries go through `fuel.service.ts`, the same cross-module-via-service
-rule as every other module. See `modules/fuel/README.md` for why Fuel has
-no routes of its own yet.
+rule as every other module.
 
-`shared/access/callerScope.ts` is new shared infrastructure, extracted
-from `booking.service.ts` in this same round of work: both Bookings and
-Jobs need the identical "is this caller company-wide, a specific driver,
-or a specific customer" resolution, so a second consumer was the signal
-to stop duplicating it (§3).
+`shared/access/callerScope.ts` is shared infrastructure: both Bookings
+and Jobs need the identical "is this caller company-wide, a specific
+driver, or a specific customer" resolution.
 
 ## Database relationships
 
 Owns: `jobs`, `job_status_log`, `job_photos`. References (via FK, not
-owned): `bookings` (1:1 — `jobs.booking_id` is unique), `machines`,
-`drivers`, `users` (as the one who changed status / uploaded a photo).
-Related but owned by the Fuel module: `job_fuel_entries`.
+owned): `bookings` (1:1 — `jobs.booking_id` is unique), `machines`
+(nullable), `drivers` (nullable), `users` (as the one who changed status
+/ uploaded a photo). Related but owned by the Fuel module:
+`job_fuel_entries`.
 
 ## Business rules encoded here
 
-- **A Job is created exactly once, automatically, when a Booking
-  transitions to `ON_THE_WAY`** — not via any client-facing "create job"
-  endpoint (there isn't one). This is `booking.service.ts`'s
-  `updateStatus()` calling `jobService.createForBooking()`, documented
-  there. Why `ON_THE_WAY` specifically: §7 step 5 is "machine travels to
-  location," and Job's schema requires both `machineId` and `driverId` to
-  be non-null — that's only guaranteed true once a booking has actually
-  reached the point of being dispatched. `updateStatus()` now rejects the
-  `ON_THE_WAY` transition itself with a 400 if either is still unassigned,
-  so a booking can't claim to be "on the way" with nothing assigned to
-  send.
-- **Status is action-driven, not an arbitrary PATCH.** Unlike Booking's
-  single `PATCH .../status` accepting any target status (validated
-  against a transition table), Jobs exposes one endpoint per action —
-  `start`, `pause`, `resume`, `complete` — because each does more than
-  flip a status: `start` sets `startTime`; `pause`/`resume` do the paused-
-  time accounting below; `complete` computes `actualHours`. Each endpoint
-  checks its own required starting status (`start` requires
-  `NOT_STARTED`; `pause` requires `WORKING`; `resume` requires `PAUSED`;
-  `complete` requires `WORKING` or `PAUSED`) rather than a shared
-  transition table, and `COMPLETED` is terminal — no endpoint can act on
-  a completed job.
+- **A Job is created exactly once, automatically, the instant its
+  Booking is saved** — not via any client-facing "create job" endpoint
+  (there isn't one), and no longer gated on any dispatch status. This is
+  `booking.service.ts`'s `create()` calling `jobService.createForBooking()`.
+  `machineId`/`driverId` are nullable on the Job (as on the Booking) —
+  a card can exist "Awaiting Machine" with nothing assigned yet.
+- **`machineId`/`driverId` stay in sync with the Booking while the Job
+  hasn't started.** `jobService.syncAssignmentForBooking()`, called from
+  `booking.service.ts`'s `assignMachine`/`assignDriver`, mirrors a
+  post-creation assignment onto the (still `NOT_STARTED`) Job row.
+  No-ops once the job has actually started, so a later reassignment on
+  the booking never retroactively rewrites a job already in progress.
+- **Status is action-driven, not an arbitrary PATCH.** Jobs exposes one
+  endpoint per action — `start`, `pause`, `resume`, `stop`, `submit` —
+  because each does more than flip a status: `start` sets `startTime`
+  (and rejects if machine/driver/pricing aren't all set yet); `pause`/
+  `resume` do the paused-time accounting below; `stop` computes
+  `actualHours`; `submit` runs the completion checks and creates the
+  invoice. Each endpoint checks its own required starting status
+  (`start` requires `NOT_STARTED`; `pause` requires `WORKING`; `resume`
+  requires `PAUSED`; `stop` requires `WORKING` or `PAUSED`; `submit`
+  requires `STOPPED`) rather than a shared transition table, and
+  `COMPLETED` is terminal for the lifecycle actions (though see `cancel`
+  below, which can still act on it).
+- **`resume` now requires a reason — `note` is mandatory, not optional.**
+  Enforced by `resumeJobSchema` (`z.string().trim().min(1)`), stored via
+  the existing `jobStatusLogRepository.create(..., note)` call (no schema
+  change needed — the column already existed, optional, for `pause`).
+  `pause` itself still takes an optional note.
 - **Pause/resume timing math reads `job_status_log`, not just
   `jobs.total_paused_duration_sec` in isolation.** On `resume` (or on
-  `complete` while currently `PAUSED`), the service looks up the most
+  `stop` while currently `PAUSED`), the service looks up the most
   recent `job_status_log` row with `status = PAUSED` for this job, computes
   `now - that row's changedAt`, and adds it to the running
-  `totalPausedDurationSec` total. `job_status_log` is the append-only
-  record of when every transition happened; `jobs.total_paused_duration_sec`
-  is a maintained running total, not independently recomputed from
-  scratch elsewhere.
-- **`actualHours` auto-computes on `complete`, but can be overridden.**
+  `totalPausedDurationSec` total.
+- **`actualHours` auto-computes on `stop`, but can be overridden.**
   Default: `(endTime - startTime - totalPausedDurationSec)` in hours,
   rounded to 2 decimals. An explicit `actualHours` in the request body
-  wins instead — the Manager-records-after-the-fact flow (§7's note) may
-  not use live start/pause/complete timestamps at all and just wants to
-  type in the real number.
+  wins instead.
 - **`fuelUsedLitres` is always derived, never directly settable.**
-  `POST /jobs/:id/fuel-entries` adds a row to `job_fuel_entries` (via
-  `fuel.service.ts`) and then recomputes (not increments) the job's cached
-  total from all entries, so a corrected/deleted entry can't leave the
-  cached total silently wrong. `PATCH /jobs/:id` deliberately excludes
-  `fuelUsedLitres` from what it accepts.
+  `POST /jobs/:id/fuel-entries` adds a row to `job_fuel_entries` and then
+  recomputes (not increments) the job's cached total from all entries.
+- **`cancel()` accepts `STOPPED` as a source status, alongside
+  `NOT_STARTED`/`WORKING`/`PAUSED`/`COMPLETED`.** A job frozen at Stop
+  but blocked from Submit (e.g. a missing required photo) still needs an
+  escape hatch. `COMPLETED` remains cancellable too, for the same reason
+  as before: void the payment, then cancel the (completed) job.
 - **Read access is ownership-scoped, exactly like Bookings**: Owner/Manager
   (`operations.view`) see every job in the company; a Driver sees only
   jobs assigned to them; a Farmer sees only jobs whose Booking is on their
-  own Customer record (via a shallow `booking: true` include —
-  Job→Booking's own scalar columns, not a second hop into Booking's
-  `manager`/`creator` User relations, so this can't reintroduce the
-  password/PIN hash leak fixed in the Bookings module). Out-of-scope
-  access 404s, not 403s.
+  own Customer record. Out-of-scope access 404s, not 403s. List/get
+  responses also carry a computed `isReadyToStart` (see Purpose above).
 - **Write access is `job.update_status` PLUS an ownership check the
-  permission itself doesn't express.** The route gate blocks Farmer
-  entirely (0 permissions, same as everywhere else). Among the roles that
-  DO hold `job.update_status` (Owner, Manager, Driver), Owner/Manager can
-  act on any job in the company; a Driver can only act on the job(s)
-  assigned to their own Driver profile — checked the same data-driven way
-  as read-scoping (does `operations.view` apply, else does a Driver-
-  profile link match), never a hardcoded role-key check.
+  permission itself doesn't express.** Among the roles that hold
+  `job.update_status` (Owner, Manager, Driver), Owner/Manager can act on
+  any job in the company; a Driver can only act on the job(s) assigned to
+  their own Driver profile.
 
 ## API endpoints
 
@@ -112,24 +131,22 @@ Related but owned by the Fuel module: `job_fuel_entries`.
 | POST | `/jobs/:id/start` | `job.update_status` + own-job check for Driver |
 | POST | `/jobs/:id/pause` | `job.update_status` + own-job check for Driver |
 | POST | `/jobs/:id/resume` | `job.update_status` + own-job check for Driver |
-| POST | `/jobs/:id/complete` | `job.update_status` + own-job check for Driver |
+| POST | `/jobs/:id/stop` | `job.update_status` + own-job check for Driver |
+| POST | `/jobs/:id/submit` | `job.update_status` + own-job check for Driver |
+| POST | `/jobs/:id/cancel` | `job.cancel` (Owner-only) |
 | POST | `/jobs/:id/fuel-entries` | `job.update_status` + own-job check for Driver |
 | POST | `/jobs/:id/photos` | `job.update_status` + own-job check for Driver |
 
-No `POST /jobs` — see "Business rules encoded here."
+No `POST /jobs` — see "Business rules encoded here." There is no longer a
+`POST /jobs/:id/complete` — it split into `stop` + `submit` above.
 
 ## Permissions required
 
 `job.update_status` was already seeded to Owner (via Owner's full set),
-Manager, and Driver before this module existed, with a description —
-`"Record job execution progress (start/pause/complete, hours, acres,
-fuel)"` — that already answered the "can a Driver set completed_acres and
-fuel, or only status marks" question this task asked to confirm: yes, by
-the permission's own existing seeded description, not a new judgment
-call. The judgment call this module DOES add is the ownership scoping
+Manager, and Driver before this module existed. The ownership scoping
 layer on top (a Driver's copy of this permission only reaches their own
-job) — Farmer's total exclusion needed no new decision, they hold 0
-permissions already.
+job) is this module's own addition; Farmer's total exclusion needed no
+new decision — they hold 0 permissions.
 
 ## Configuration
 
@@ -140,27 +157,34 @@ None.
 - **Photos are local disk, same Phase 1 stub as Booking attachments** —
   `backend/uploads/job-photos/<companyId>/<jobId>/`, served via
   `express.static`, same access trade-off documented in the Bookings
-  README (reachable by anyone with the URL). `job.upload.ts` mirrors
-  `booking.upload.ts` rather than sharing one uploader module — the
-  overlap is three lines of multer config, not enough to justify coupling
-  two otherwise-independent modules together this early.
+  README (reachable by anyone with the URL).
 - **A Driver's `job.update_status` also covers photos and fuel entries**,
-  not just status/hours/acres — the seeded permission description lists
-  "hours, acres, fuel" but not photos explicitly. §8.4's live job screen
-  puts "Add Photo" on the same screen as the other quick actions a driver
-  uses live from the field, so treating it as covered by the same
-  permission (with the same ownership scoping) follows the evident intent
-  of that screen. Flagged in case that reading turns out to be wrong.
-- **Completing a job does not touch the Booking's own status field.**
-  Booking still has its own `WORKING`/`COMPLETED` statuses, set via its
-  own `PATCH .../status` endpoint, independent of the Job's lifecycle.
-  Nothing currently auto-syncs "Job completed" → "Booking completed" —
-  that's a real gap worth closing (likely by having
-  `booking.service.updateStatus` and `job.service.complete` agree on who
-  drives the other, or a light sync step), deliberately left alone here to
-  keep this module's scope to what was asked.
+  not just status/hours/acres, and — since the rebuild — the booking's
+  `assignPricing` endpoint too (in the Bookings module, but gated on this
+  same permission deliberately, so a Driver can complete the whole
+  Start-gating pricing step from the Live Job screen without needing a
+  Manager/Owner).
+- **`stop()` does not touch the Booking's status; `submit()` does.**
+  Booking's own status only moves to `WORKING` (on `start()`) and
+  `COMPLETED`/`CANCELLED` (on `submit()`/`cancel()`) — there's no
+  intermediate "booking is stopped" state, since Booking.status was
+  always a coarser signal than the Job's own lifecycle even before the
+  rebuild.
 
 ## What was tested
+
+> **Historical — reflects testing performed at the time of the original
+> build, prior to the 2026-08-17/18 workflow rebuild.** The scenario
+> below describing `ON_THE_WAY` triggering job creation, and any mention
+> of a single `complete` action, describe behavior that has since been
+> removed/replaced by immediate Job Card creation and the stop/submit
+> split respectively. Kept as a record of what was verified then, not as
+> current-state documentation — see the sections above for what's
+> actually true today. Stages 1–7 of the rebuild itself were verified by
+> code-tracing/reasoning through each call path end to end (no live
+> browser session was available), not by re-running this kind of live
+> HTTP test pass — a real manual walkthrough against a live browser
+> session is still outstanding.
 
 Run live against the dev server + Postgres: Owner, Manager, a Driver
 assigned to two jobs, a second Driver assigned to neither (isolation
@@ -209,8 +233,7 @@ check), and a Farmer whose Customer record owns both underlying bookings.
   shallow `booking: true` include exposes only Booking's own scalar
   columns (`customerId`, `managerId`, etc. as raw ids) — no nested
   `manager` object and no `passwordHash`/`pinHash` anywhere in the
-  response, verifying the fix from the Bookings module isn't
-  reintroduced by Job's own include.
+  response.
 
 All synthetic users, master data, bookings, jobs, fuel entries, photos,
 and uploaded files were deleted afterward (the pilot company's booking

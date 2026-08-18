@@ -63,6 +63,7 @@ export interface InvoiceSummary {
 export interface JobRow {
   jobId: string;
   jobStatus: string;
+  isReadyToStart: boolean;
   startTime: string | null;
   endTime: string | null;
   actualHours: number | null;

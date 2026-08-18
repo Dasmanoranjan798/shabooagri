@@ -1,12 +1,37 @@
 # Bookings module
 
+> **Rebuilt 2026-08-17/18** to the Booking → Job Card → Stop → Submit
+> flow (business-owner-approved mockup). This document describes the
+> *current* architecture. The dispatch-status pipeline
+> (Pending → Accepted → On the way → Working → Completed) it replaces is
+> gone from the code; where this doc still needs to mention it, it's
+> called out explicitly as history, not current behavior. The
+> **"What was tested" section at the bottom is unchanged from the original
+> build and reflects testing performed at that time, prior to the
+> 2026-08-17/18 workflow rebuild** — it is kept for historical record, not
+> as a claim that today's code has been re-verified against it.
+
 ## Purpose
 
-The core §7/§8.1 workflow: a Manager books a customer's job against a
-village/machine/driver/pricing method, then moves it through
-Pending → Accepted → On the way → Working → Completed (or Cancelled) as
-work actually happens. This is the record Jobs (execution) and Invoices
-(billing) will both hang off of once those modules exist.
+A Manager books a customer's job with the minimum needed to get it on the
+schedule: Farmer, Village, and a free-text description of the work needed
+(`workDescription`). Machine and driver are optional at this point —
+assign now or later. Pricing is **not** entered here at all; it's decided
+live, on the Live Job screen, right before the work actually starts (see
+the Jobs module's README).
+
+Saving a Booking immediately creates its Job Card (`jobService.createForBooking`,
+called from `create()` below) — there is no separate "convert to job"
+step and no dispatch-status walk to get there. The card shows
+"Ready to Start" once a machine and driver are both assigned, "Awaiting
+Machine" until then. `booking.status` (the old `BookingStatus` enum) still
+exists in the schema and is still synced to `WORKING`/`COMPLETED`/
+`CANCELLED` as a side effect of the linked Job's own lifecycle actions
+(see `job.service.ts`), but nothing in the app writes `PENDING` →
+`ACCEPTED` → `ON_THE_WAY` anymore, and nothing reads `booking.status` as
+the primary source of truth for what stage a booking is at — the Job
+Card's own status (and, before it starts, `isReadyToStart`) is that
+source of truth everywhere in the UI now.
 
 ## Architecture
 
@@ -14,24 +39,32 @@ work actually happens. This is the record Jobs (execution) and Invoices
 booking.routes.ts → booking.controller.ts → booking.service.ts → booking.repository.ts (Booking) / bookingAttachment.repository.ts (BookingAttachment)
 ```
 
-`booking.service.ts` is the busiest service in the codebase so far — it
+`booking.service.ts` is the busiest service in the codebase — it
 cross-validates against six other modules' own services (Customers,
 Villages, Machines, Drivers, Pricing Methods, Auth) and never queries
-their tables directly, same pattern as every module before it.
+their tables directly, same pattern as every module before it. It also
+calls `jobService.createForBooking()` on every create, and
+`jobService.syncAssignmentForBooking()` on every machine/driver
+assignment (keeping a not-yet-started Job Card's own `machineId`/
+`driverId` in sync with later booking-level assignment — without it, a
+card assigned after creation could never flip from "Awaiting Machine" to
+"Ready to Start").
 
-`shared/pricing/pricing-calculator.ts` is new shared infrastructure: the
-single function that turns `(pricing_method.unit, rate, quantity)` into an
-amount. Booking calls it here to derive a display-only `estimatedAmount`
-on every read; Invoices will call the same function later against actual
-job hours/acres for the real invoiced amount. Neither module reimplements
-the multiplication.
+`shared/pricing/pricing-calculator.ts` is shared infrastructure: the
+single function that turns `(pricing_method.unit, rate, quantity)` into
+an amount. Booking calls it here to derive a display-only
+`estimatedAmount` on every read (now usually `null` — see "Important
+assumptions"); the Jobs module's Live Job screen mirrors the same
+function client-side (`frontend/src/lib/pricing.ts`) for its live price
+display, and Payments calls the backend original again for the real
+invoiced amount. No module reimplements the multiplication.
 
 ## Database relationships
 
 Owns: `bookings`, `booking_attachments`. References (via FK, not owned):
 `customers`, `villages`, `machines` (nullable), `drivers` (nullable),
-`users` (as manager and as creator), `pricing_methods`. Referenced by (not
-owned, not built yet): `jobs.booking_id`, `invoices.booking_id`.
+`users` (as manager and as creator), `pricing_methods` (nullable — see
+below). Referenced by (not owned): `jobs.booking_id`, `invoices.booking_id`.
 
 ## Business rules encoded here
 
@@ -40,33 +73,47 @@ owned, not built yet): `jobs.booking_id`, `invoices.booking_id`.
   (`companies.next_booking_number`) that is only ever incremented, never
   recomputed from the bookings table — a hard-deleted booking's number is
   never reassigned (see "Important assumptions").
-- **Machine/Driver nullable at creation** (§8.1 schema note): a booking
-  can be created before either is decided, then assigned later via the
-  dedicated assign-machine / assign-driver endpoints.
+- **Machine/Driver nullable at creation**: a booking can be created
+  before either is decided, then assigned later via the dedicated
+  assign-machine / assign-driver endpoints — which also propagate to the
+  already-created Job Card while it's still `NOT_STARTED` (see
+  Architecture above).
+- **Pricing method/rate nullable at creation, set via a dedicated
+  endpoint**: `pricingMethodId`/`rate` are optional on create and
+  excluded from the general `PATCH /bookings/:id` update — they're set
+  through `PATCH /bookings/:id/pricing` (`assignPricing`), called from
+  the Live Job screen right before Start. That endpoint is gated by
+  `job.update_status`, not `booking.edit` — deliberately, so a Driver can
+  perform this step too, not just Owner/Manager.
+- **`workDescription` is required at creation, separate from `notes`**:
+  a short free-text description of the work needed, shown on the Job
+  Cards list and the Live Job header. `notes` keeps its original meaning
+  (job-execution notes, general instructions) and stays optional.
 - **Manager defaults to the creator**: if `managerId` is omitted on
   create, it's set to the authenticated caller. An explicit `managerId` is
   still accepted (and validated as an existing user in the company) so an
   Owner can create a booking on a Manager's behalf.
 - **Cross-module validation, not re-querying**: `customerId` → Customers'
-  `getById`; `villageId` → Villages' `getById`; `machineId`/`driverId` (if
-  present) → Machines'/Drivers' `getById`; `managerId` → Auth's
-  `getUserForCompany`; `pricingMethodId` → Pricing Methods' `getById`
-  (also confirms the method is still active). Any bad reference is a clean
+  `getById`; `villageId` → Villages' `getById`; `machineId`/`driverId`/
+  `pricingMethodId` (if present) → their owning module's `getById`;
+  `managerId` → Auth's `getUserForCompany`. Any bad reference is a clean
   404 from the owning module, not a raw DB error.
-- **Status transitions are a graph, not a free-for-all**: encoded in
-  `ALLOWED_TRANSITIONS` in `booking.service.ts` —
-  `PENDING → ACCEPTED|CANCELLED`, `ACCEPTED → ON_THE_WAY|CANCELLED`,
-  `ON_THE_WAY → WORKING|CANCELLED`, `WORKING → COMPLETED|CANCELLED`;
-  `COMPLETED` and `CANCELLED` are terminal. An invalid jump (e.g. Pending
-  straight to Completed) is a 400, not a DB constraint.
-- **Estimated amount is computed, never stored**: derived on every read
-  from `rate` + `pricingMethod.unit` + `estimatedHours`/`estimatedAcres`
-  via the shared pricing-calculator. For `hour`/`acre` methods the
-  matching estimated field is the quantity; for `minute`, `estimatedHours`
-  is converted to minutes (there's no separate estimated-minutes field in
-  the schema — see "Important assumptions"); flat-rate methods
-  (`per_job`/`minimum_charge`/`custom`) ignore quantity entirely and the
-  amount is just the rate.
+- **No booking-level status-transition endpoint anymore.** The old
+  `PATCH /bookings/:id/status` and its `ALLOWED_TRANSITIONS` graph are
+  gone. `booking.status` is now only ever written as a side effect of the
+  linked Job's own actions (`start()`/`submit()`/`cancel()` in
+  `job.service.ts`) — there is no direct client-facing way to move a
+  booking's status on its own.
+- **Estimated amount is computed, never stored, and usually `null` now.**
+  Derived on every read from `rate` + `pricingMethod.unit` +
+  `estimatedHours`/`estimatedAcres` via the shared pricing-calculator —
+  same mechanism as before the rebuild — but since pricing isn't set
+  until the Live Job screen and the current booking form no longer
+  collects `estimatedHours`/`estimatedAcres` at all, this resolves to
+  `null` for essentially every new booking. Kept rather than removed
+  because the after-the-fact manual-entry flow (`createManualEntryJob`)
+  still sets pricing/hours/acres directly at creation, where this is
+  still meaningful.
 - **Read access is ownership-scoped, not permission-gated**: unlike the
   master-data modules, `GET /bookings` and `GET /bookings/:id` carry no
   `requirePermission` — every role can call them, but `booking.service.ts`
@@ -76,9 +123,7 @@ owned, not built yet): `jobs.booking_id`, `invoices.booking_id`.
   bookings where they're the customer; anyone with neither a Driver nor
   Customer record linked to their user account sees an empty list. A
   booking outside the caller's scope 404s on direct fetch rather than
-  403ing, so its existence isn't leaked. This is the "ownership-scoped
-  query" the Customers module's README flagged as the intended design for
-  Farmer's own-record access — implemented here now that Bookings exists.
+  403ing, so its existence isn't leaked.
 
 ## API endpoints
 
@@ -89,36 +134,31 @@ owned, not built yet): `jobs.booking_id`, `invoices.booking_id`.
 | GET | `/bookings/:id/attachments` | Same scoping as `GET /bookings/:id` |
 | POST | `/bookings` | `booking.create` |
 | PATCH | `/bookings/:id` | `booking.edit` |
-| PATCH | `/bookings/:id/status` | `booking.edit` |
 | PATCH | `/bookings/:id/machine` | `machine.assign` |
 | PATCH | `/bookings/:id/driver` | `driver.assign` |
+| PATCH | `/bookings/:id/pricing` | `job.update_status` (not `booking.edit` — see above) |
 | DELETE | `/bookings/:id` | `booking.delete` |
 | POST | `/bookings/:id/attachments` | `booking.edit` |
 
 ## Permissions required
 
 `booking.create` and `booking.edit` were already seeded to Manager (and
-Owner, via Owner's full set) before this module existed — confirmed, not
-newly added. `booking.delete` remains Owner-only (a hard removal of the
-record, distinct from cancelling — see below). `machine.assign` and
-`driver.assign` were also already seeded to Manager/Owner and are used
-here for the first time, exactly matching their seeded descriptions
-("Assign a machine/driver to a booking").
+Owner, via Owner's full set) before this module existed. `booking.delete`
+remains Owner-only (a hard removal of the record, distinct from
+cancelling — see below). `machine.assign` and `driver.assign` are also
+Manager/Owner. `PATCH /bookings/:id/pricing` deliberately reuses
+`job.update_status` (Owner/Manager/Driver) instead of `booking.edit` —
+it's conceptually the first step of the Live Job screen, not a general
+booking edit, and a Driver operating that screen needs to be able to do
+it.
 
 **Delete vs. Cancel**: `DELETE /bookings/:id` (gated by `booking.delete`,
 Owner-only) is a hard removal — for correcting a mistake, not for a job
-that didn't happen. Cancelling a real booking is a status transition to
-`CANCELLED` (gated by `booking.edit`, Owner/Manager), which keeps the
-record for history/reporting.
-
-**Status transitions are Manager/Owner-only for now, not
-`job.update_status`**: §7 describes a Driver optionally logging their own
-field progress directly, but that's the Jobs module's live-execution
-screen (§8.4, not yet built) recording start/pause/complete against a
-`Job` row, not this module's booking-level status. A Driver's own
-`job.update_status` permission will connect to the Jobs module once it
-exists; it does not currently grant any write access here. Flagged for
-re-confirmation once Jobs is built.
+that didn't happen. There is no direct booking-level cancel action
+anymore — cancelling a real booking means cancelling its Job
+(`POST /jobs/:id/cancel`, Owner-only via `job.cancel`), which syncs
+`booking.status` to `CANCELLED` as a side effect and keeps both records
+for history.
 
 ## Configuration
 
@@ -130,28 +170,25 @@ None.
   count of the bookings table.** An earlier version counted existing
   bookings and used `count + 1`, which meant a hard-deleted booking's
   number could be reassigned to the next booking created — confirmed by
-  testing, then fixed before anything was built on top of Bookings (real
-  trust risk once invoices/receipts/driver messages reference the
-  number, not a cosmetic issue). The fix:
+  testing, then fixed before anything was built on top of Bookings.
   `companies.next_booking_number` (migration
   `20260808052323_add_company_next_booking_number`) is incremented
   atomically (`SET next_booking_number = next_booking_number + 1
   RETURNING next_booking_number`) on every booking creation and never
   decremented, recomputed, or read from the bookings table — so a number
-  is claimed exactly once, ever, regardless of later deletes. The
-  increment is a single UPDATE statement, so Postgres's normal row lock
-  on the company row serializes concurrent creates without needing an
-  explicit transaction; verified with 5 simultaneous booking creations
-  producing 5 distinct, gapless numbers. Also re-verified the original
-  bug is gone: create → hard-delete → create again now produces a new,
-  never-before-used number.
-- **Per-minute pricing derives its quantity from `estimatedHours × 60`.**
-  The schema (matching §8.1's field list exactly) has `estimatedHours` and
-  `estimatedAcres`, no separate `estimatedMinutes`. Rather than add a
-  field the spec doesn't list, `per_minute` bookings reuse `estimatedHours`
-  converted to minutes. Flagged for review — if per-minute bookings turn
-  out to need finer-grained input than "estimated hours," this is the
-  place to revisit.
+  is claimed exactly once, ever, regardless of later deletes.
+- **`estimatedHours`/`estimatedAcres` still exist in the schema and API
+  but are no longer collected by the primary booking-creation UI.** They
+  remain accepted (optional) on `createBookingSchema` for API
+  flexibility and for the manual-entry flow, but the standard booking
+  form (`BookingFormModal.tsx`) doesn't expose them — per-minute pricing's
+  `estimatedHours × 60` derivation (below) is accordingly close to dead
+  code on the normal create path now, though still exercised by manual
+  entries.
+- **Per-minute pricing derives its quantity from `estimatedHours × 60`,
+  where an estimate exists at all.** The schema has `estimatedHours` and
+  `estimatedAcres`, no separate `estimatedMinutes`. Flagged for review if
+  this ever needs finer-grained input than "estimated hours."
 - **Booking attachments are local disk, not object storage** (per the
   explicit go-ahead to keep Phase 1 storage simple). Files land in
   `backend/uploads/booking-attachments/<companyId>/<bookingId>/` and are
@@ -159,22 +196,29 @@ None.
   `/uploads/booking-attachments/...` — reachable by anyone with the URL,
   not just an authenticated request. Acceptable for a single pilot company
   testing internally; revisit (signed URLs, or real object storage) before
-  wider rollout. `booking.upload.ts` is the only file that would need to
-  change to swap this out later.
+  wider rollout.
 - **Creating a booking with a `machineId`/`driverId` already set does not
   additionally require `machine.assign`/`driver.assign`.** Creation is one
   action gated by `booking.create` alone; those two permissions gate the
   dedicated *post-creation* assign/reassign endpoints. In the current
   seed both roles that can create bookings (Owner, Manager) also hold
   `machine.assign`/`driver.assign`, so this doesn't currently create a
-  gap in practice — flagged in case a future role split changes that.
+  gap in practice.
 - **`managerId` is validated as "an existing user in the company," not as
-  "a user holding the Manager role specifically."** §8.1 lists Manager as
-  a booking field without stating that constraint, and enforcing it would
-  block an Owner from being recorded as a booking's manager in a small
-  operation. Revisit if that turns out to be wrong.
+  "a user holding the Manager role specifically."** Enforcing the latter
+  would block an Owner from being recorded as a booking's manager in a
+  small operation.
 
 ## What was tested
+
+> **Historical — reflects testing performed at the time of the original
+> build, prior to the 2026-08-17/18 workflow rebuild.** Several of the
+> scenarios below (status transitions, the `PATCH .../status` endpoint,
+> `ON_THE_WAY` triggering job creation) describe behavior that has since
+> been removed. This section is kept as a record of what was verified
+> then, not as current-state documentation — see the sections above for
+> what's actually true today, and the Jobs module README for the new
+> flow's own testing note.
 
 Run live against the dev server + Postgres (4 fresh role tokens: Owner,
 Manager, a Driver with a linked Employee+Driver profile, a Farmer with a

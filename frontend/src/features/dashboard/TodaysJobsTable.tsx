@@ -10,6 +10,19 @@ interface TodaysJobsTableProps {
   isMobile?: boolean;
 }
 
+// Mirrors the Job Cards page: a NOT_STARTED card shows readiness
+// (isReadyToStart), not the raw booking status, which now sits frozen at
+// PENDING for most bookings under the new flow.
+function displayStatusLabel(job: JobRow): string {
+  if (job.jobStatus !== "NOT_STARTED") return job.jobStatus;
+  return job.isReadyToStart ? "READY TO START" : "AWAITING MACHINE";
+}
+
+function displayStatusVariant(job: JobRow) {
+  if (job.jobStatus !== "NOT_STARTED") return getStatusBadgeVariant(job.jobStatus);
+  return job.isReadyToStart ? "success" : "warning";
+}
+
 export const TodaysJobsTable: React.FC<TodaysJobsTableProps> = ({ jobs, isMobile = false }) => {
   const customerTerm = getTerm("customer");
   const machineTerm = getTerm("machine");
@@ -30,13 +43,12 @@ export const TodaysJobsTable: React.FC<TodaysJobsTableProps> = ({ jobs, isMobile
     return (
       <div className="sa-mobile-job-list">
         {jobs.map((job) => {
-          const displayStatus = job.jobStatus !== "NOT_STARTED" ? job.jobStatus : job.bookingStatus;
           return (
             <div key={job.jobId} className="sa-mobile-job-card">
               <div className="sa-job-card-header">
                 <div className="sa-job-booking-num">{job.bookingNumber}</div>
-                <Badge variant={getStatusBadgeVariant(displayStatus)} size="sm">
-                  {displayStatus}
+                <Badge variant={displayStatusVariant(job)} size="sm">
+                  {displayStatusLabel(job)}
                 </Badge>
               </div>
 
@@ -97,7 +109,6 @@ export const TodaysJobsTable: React.FC<TodaysJobsTableProps> = ({ jobs, isMobile
         </thead>
         <tbody>
           {jobs.map((job) => {
-            const displayStatus = job.jobStatus !== "NOT_STARTED" ? job.jobStatus : job.bookingStatus;
             return (
               <tr key={job.jobId}>
                 <td className="sa-td-bold">{job.bookingNumber}</td>
@@ -119,8 +130,8 @@ export const TodaysJobsTable: React.FC<TodaysJobsTableProps> = ({ jobs, isMobile
                 </td>
                 <td>{job.driver ? job.driver.name : <span className="sa-text-muted">Unassigned</span>}</td>
                 <td>
-                  <Badge variant={getStatusBadgeVariant(displayStatus)} size="sm">
-                    {displayStatus}
+                  <Badge variant={displayStatusVariant(job)} size="sm">
+                    {displayStatusLabel(job)}
                   </Badge>
                 </td>
                 <td>

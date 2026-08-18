@@ -103,7 +103,7 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
             icon={<UserCheck size={20} />}
           />
           <KpiCard
-            title="Jobs Completed"
+            title="Job Cards Completed"
             value={kpis.jobsCompleted.current}
             subtitle="Completed today"
             delta={kpis.jobsCompleted}
@@ -116,9 +116,9 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
       <div className="sa-dashboard-layout">
         {/* Left Column (Primary Workflows & Line Chart) */}
         <div className="sa-dash-col-main">
-          {/* Today's Jobs Table */}
+          {/* Today's Job Cards Table */}
           <Card
-            title="Today's Jobs"
+            title="Today's Job Cards"
             subtitle="Scheduled equipment operations for today"
             action={
               canViewOperations ? (

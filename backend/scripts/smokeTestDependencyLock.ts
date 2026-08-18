@@ -94,6 +94,7 @@ async function main() {
     driverId: driver.id,
     managerId: ownerUser.id,
     scheduledDate: new Date(),
+    workDescription: "Smoke test field work",
     pricingMethodId: pricingMethod.id,
     rate: 500,
   } as any);
@@ -103,26 +104,26 @@ async function main() {
     "booking",
   );
 
-  console.log("\n=== Rule 3: booking delete/cancel blocked by linked Job ===");
-  await bookingService.updateStatus(companyId, booking.id, "ACCEPTED");
-  await bookingService.updateStatus(companyId, booking.id, "ON_THE_WAY");
+  console.log("\n=== Rule 3: booking delete blocked by linked Job ===");
+  // Job Card exists the instant the booking above was created — no
+  // status-transition dance needed anymore. (The old "booking cancel
+  // blocked while an active job is linked" check is gone along with it —
+  // there's no direct booking-cancel action anymore, only
+  // job.service.cancel(), which syncs the booking's status as a side
+  // effect, so that specific guard is no longer reachable code.)
   const job = await jobService.findLinkedForBooking(companyId, booking.id);
-  check("Job auto-created when booking went ON_THE_WAY", !!job, job);
+  check("Job auto-created immediately on booking save", !!job, job);
 
   await expectRejects(
     "booking.service.remove() blocked while an unvoided job is linked",
     () => bookingService.remove(companyId, booking.id),
     "job exists",
   );
-  await expectRejects(
-    "booking.service.updateStatus(CANCELLED) blocked while an active job is linked",
-    () => bookingService.updateStatus(companyId, booking.id, "CANCELLED"),
-    "active job",
-  );
 
   console.log("\n=== Rule 1 & 2: payment void + job cancel guard ===");
   await jobService.start(companyId, job!.id, owner, {});
-  await jobService.complete(companyId, job!.id, owner, { actualHours: 2 });
+  await jobService.stop(companyId, job!.id, owner, { actualHours: 2 });
+  await jobService.submit(companyId, job!.id, owner, {});
   const invoice = await paymentService.getInvoiceById(
     companyId,
     (await prisma.invoice.findFirstOrThrow({ where: { companyId, bookingId: booking.id } })).id,

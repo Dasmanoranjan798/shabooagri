@@ -58,7 +58,7 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({ summary }) => 
             delta={kpis.todayRevenue}
           />
           <KpiCard
-            title="Today's Jobs"
+            title="Today's Job Cards"
             value={kpis.jobsCompleted.current}
             icon={<CheckCircle2 size={18} />}
             subtitle={`${summary.todaysJobs.length} scheduled`}
@@ -117,9 +117,9 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({ summary }) => 
         </button>
       </div>
 
-      {/* Today's Jobs List Section */}
+      {/* Today's Job Cards List Section */}
       <Card
-        title="Today's Jobs"
+        title="Today's Job Cards"
         subtitle={`${summary.todaysJobs.length} active assignments`}
         action={
           canViewOperations ? (
