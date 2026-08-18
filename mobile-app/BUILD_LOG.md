@@ -192,3 +192,17 @@ Fixed by adding a "Set Pricing" dialog to `job_detail_screen.dart` (pricing-meth
 ## All 9 stages complete — proceeding to final regression pass.
 
 ---
+
+## Final regression pass (across everything built this session, not just Stage 9)
+
+- Bumped version to **0.4.0+4** (from 0.3.0+3), consistent with the versioning discipline used all session (bump before building the artifact that will carry it, so the compiled app's own update-check constant matches).
+- **Comprehensive live endpoint sweep**: re-curled all **61** distinct endpoint paths used across all 9 stages (Jobs ×10, Dashboard ×3, Villages/Machines/Drivers/Customers ×17+1, Bookings ×7, Payments ×2, Employees ×6, Expenses ×5, Maintenance ×9, Fuel ×1) against `pilot.shabooagri.com` in one pass — all 61 returned 401 (auth-gated, real, no typos in any route path across the whole session's work).
+- `flutter analyze`: 0 errors, 2 harmless cosmetic info-lints (both pre-existing style suggestions, not bugs).
+- `flutter test`: passes.
+- Re-verified the Stage-1 `INTERNET`/`CAMERA` permission fix survived every subsequent stage's dependency additions (image_picker, pdf, printing, share_plus) by inspecting the actual final merged release manifest — confirmed present, plus correct auto-merged provider/receiver entries for each new plugin (image_picker's FileProvider, printing's PrintFileProvider, share_plus's ShareFileProvider + PendingIntent receiver). No plugin silently dropped or conflicted with the earlier fix.
+- Confirmed role-gating (`isOwnerOrManager` / `roleSystemKey == 'owner'`) is present in every new screen that needs it; Driver's Job List and Farmer's home screen were untouched this session except for Job Detail's shared action logic, which already correctly restricts Cancel/fuel/photo/note actions to Owner/Manager only (Driver only ever sees Start/Pause/Stop/Submit, matching the website's own `DriverJobActions` scope).
+- Final release build: `flutter build apk --release --split-per-abi` — arm64-v8a **22.0 MB** (up from 19.4 MB at the end of the previous session, from the added `pdf`/`printing`/`image_picker`/`share_plus` native code — still ~87% smaller than the original 159 MB debug build the user first tested).
+- **Not built or run this session**: no automated widget/integration tests beyond the one pre-existing smoke test (App boots to Company Setup) — every stage's self-test was `flutter analyze` + `flutter test` + live endpoint verification + manual source cross-referencing against backend validators, not new automated test coverage. Flagging this honestly as a gap, not silently claiming test coverage that doesn't exist.
+- Minor non-blocking build warning noticed in the final build log: `share_plus` still applies the legacy Kotlin Gradle Plugin path (a deprecation warning from Flutter's tooling, not an error) — noted for a future dependency bump, doesn't affect this build's correctness.
+
+---
