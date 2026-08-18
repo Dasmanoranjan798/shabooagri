@@ -16,6 +16,7 @@ import '../../features/employees/presentation/employee_list_screen.dart';
 import '../../features/expenses/presentation/expense_form_screen.dart';
 import '../../features/expenses/presentation/expense_list_screen.dart';
 import '../../features/farmer/presentation/farmer_home_screen.dart';
+import '../../features/fuel/presentation/fuel_screen.dart';
 import '../../features/jobs/presentation/job_list_screen.dart';
 import '../../features/jobs/presentation/job_detail_screen.dart';
 import '../../features/machines/presentation/machine_detail_screen.dart';
@@ -26,6 +27,7 @@ import '../../features/maintenance/presentation/maintenance_schedules_screen.dar
 import '../../features/maintenance/presentation/maintenance_screen.dart';
 import '../../features/payments/presentation/payment_detail_screen.dart';
 import '../../features/payments/presentation/payment_list_screen.dart';
+import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/setup/presentation/setup_screen.dart';
 import '../../features/villages/presentation/village_list_screen.dart';
 import '../../features/villages/presentation/village_form_screen.dart';
@@ -215,6 +217,14 @@ GoRouter buildAppRouter(String initialLocation) {
       GoRoute(
         path: '/farmer',
         builder: (context, state) => const FarmerHomeScreen(),
+      ),
+      GoRoute(
+        path: '/fuel',
+        builder: (context, state) => const FuelScreen(),
+      ),
+      GoRoute(
+        path: '/reports',
+        builder: (context, state) => const ReportsScreen(),
       ),
     ],
   );

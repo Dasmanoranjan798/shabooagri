@@ -32,6 +32,8 @@ class AppDrawer extends ConsumerWidget {
     _DrawerItem('Employees', Icons.groups, '/employees'),
     _DrawerItem('Expenses', Icons.money_off, '/expenses'),
     _DrawerItem('Maintenance', Icons.build, '/maintenance'),
+    _DrawerItem('Fuel', Icons.local_gas_station, '/fuel'),
+    _DrawerItem('Reports', Icons.bar_chart, '/reports'),
   ];
 
   @override

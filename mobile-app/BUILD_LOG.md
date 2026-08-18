@@ -168,3 +168,27 @@ Fixed by adding a "Set Pricing" dialog to `job_detail_screen.dart` (pricing-meth
 - Cross-checked every field against `maintenance.validators.ts`'s `createScheduleSchema`/`createRecordSchema` and the repository's actual `include` shape for nested `machine`/`schedule` relations, not guessed.
 
 ---
+
+## Stage 9: Reports export/print + Fuel view
+
+**Built:**
+- `fuel_screen.dart` — read-only, confirmed (not assumed) against `fuel.routes.ts`'s own comment that this is a read-only view; the real write path is only via a Job's own fuel-logging (Stage 1's Add Fuel). No standalone create form exists on the website either, so none built here.
+- `reports_screen.dart` — reuses `/dashboard/summary` + `/dashboard/income` (confirmed in the parity audit: the website's own Reports page is a re-presentation of Dashboard's data, not a separate aggregation engine), with a range selector (7d/30d/90d/12m). The genuinely new work: **real PDF export** via `pdf`+`printing` (generates an actual PDF with KPI and income tables, handed to the OS share sheet — user can save, print, or send it) and **CSV export** via `share_plus`.
+- Added `pdf`, `printing`, `share_plus` packages plus "Fuel" and "Reports" to the nav drawer.
+
+**Deviation, disclosed:** the website exports `.xls` (XML Spreadsheet format) via `exportUtils.ts`. Mobile exports real CSV instead of replicating that exact format — same underlying tabular data, opens in Excel/Sheets fine, but not byte-identical to the website's file. Chose this over adding a heavier `.xlsx`-writing dependency for a stage the plan itself flagged as uncertain-size; genuinely working, not a stub.
+
+**Two real bugs caught by `flutter analyze`, fixed before commit:**
+1. `share_plus: ^10.1.4` resolved to a version whose actual API is the older static `Share.share(text, subject:)`, not the `SharePlus.instance.share(ShareParams(...))` API I wrote from memory of a newer version — analyzer caught `Undefined name 'SharePlus'` immediately; fixed by reading the installed package's actual source (`~/.pub-cache/.../share_plus-10.1.4/lib/share_plus.dart`) rather than guessing again.
+2. `pw.Table.fromTextArray` is deprecated in the resolved `pdf` package version in favor of `pw.TableHelper.fromTextArray` — fixed before shipping rather than leaving a deprecation warning in a Play-Store-bound build.
+
+**Self-test:**
+- `flutter analyze`: 0 errors.
+- `flutter test`: passes.
+- Live-curled `GET /fuel/entries` and `GET /dashboard/income?range=7d` — both 401.
+
+---
+
+## All 9 stages complete — proceeding to final regression pass.
+
+---
