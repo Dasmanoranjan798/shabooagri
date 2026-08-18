@@ -42,3 +42,18 @@ This is exactly the class of bug the user asked to be re-checked for (schema dri
 - Also not built in this stage, disclosed: no in-app listing of existing fuel entries/photos on a job (only adding new ones) — the website's `JobExecutionModal` shows a running list; mobile only adds, doesn't display what's already logged. Low-risk omission (data is still real and visible in Payments/Reports), noted for a future pass if wanted.
 
 ---
+
+## Stage 2: Dashboard real KPIs
+
+**Built:**
+- `lib/features/dashboard/data/dashboard_summary.dart` — models mirroring `GET /dashboard/summary`'s exact response shape (field-for-field from `dashboard.service.ts`, not guessed).
+- Rewrote `dashboard_screen.dart`: 6 real KPI cards (Today's Revenue, This Month, Pending Collection, Machines Working, Drivers Active, Jobs Completed, each with the real day-over-day delta the backend computes), Today's Job Cards list (tappable → Job Detail), Pending Payments list (tappable → the existing Payment Detail screen from the previous session). Replaces the old client-side "count locally-synced jobs" placeholder entirely — zero backend work needed, exactly as the audit predicted.
+
+**Deviation, disclosed:** the website's Dashboard also has an Income Overview line chart, a Machine Status donut chart, and a Fuel Consumption bar chart (from `/dashboard/income` and `/dashboard/fuel`). Built the KPI numbers and both list sections (higher information value per screen space on a phone), but skipped the chart widgets themselves for this stage — charting is a real, separate UI investment on mobile and the plan sized this stage as fast/small on the assumption it was mostly backend-reuse. Numbers behind the charts are real and available (`machinesWorking.working/activeUsable` etc. already surfaced), just not plotted as line/bar/donut visuals yet. Flagging rather than silently shipping a "done" that isn't full visual parity.
+
+**Self-test:**
+- `flutter analyze`: 0 errors.
+- Live-curled `/dashboard/summary`, `/dashboard/income?range=30d`, `/dashboard/fuel?range=30d` against `pilot.shabooagri.com` — all 401 (auth-gated), confirming real, correctly-pathed endpoints.
+- Cross-checked every parsed field name against the actual `getSummary()`/`buildDelta()`/`mapJobRow()` backend source, not the website's TS types (backend is the ground truth for JSON keys).
+
+---
