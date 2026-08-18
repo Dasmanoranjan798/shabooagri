@@ -105,6 +105,11 @@ model License {
   expiryDate     DateTime?     @map("expiry_date")
   status         LicenseStatus @default(ACTIVE)
   renewalCount   Int           @default(0) @map("renewal_count")
+  
+  // Dedicated secret key for device activation, distinctly separate from
+  // the internal primary key id. Can be regenerated without breaking relations.
+  activationKey  String        @unique @default(dbgenerated("gen_random_uuid()")) @map("activation_key") @db.Uuid
+  
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
 

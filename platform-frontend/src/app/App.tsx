@@ -15,6 +15,7 @@ import { ContactPage } from "../features/marketing/ContactPage";
 import { TermsOfServicePage } from "../features/legal/TermsOfServicePage";
 import { PrivacyPolicyPage } from "../features/legal/PrivacyPolicyPage";
 import { RefundPolicyPage } from "../features/legal/RefundPolicyPage";
+import { DownloadAppPage } from "../features/marketing/DownloadAppPage";
 
 export function App() {
   return (
@@ -36,6 +37,7 @@ export function App() {
           <Route path="/terms" element={<TermsOfServicePage />} />
           <Route path="/privacy" element={<PrivacyPolicyPage />} />
           <Route path="/refund-policy" element={<RefundPolicyPage />} />
+          <Route path="/app" element={<DownloadAppPage />} />
         </Routes>
       </PlatformAuthProvider>
     </BrowserRouter>

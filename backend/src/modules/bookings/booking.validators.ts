@@ -19,6 +19,7 @@ const timeOfDaySchema = z
 // pricing on the Live Job screen right before Start (dedicated
 // assign-pricing endpoint below), not at booking time.
 export const createBookingSchema = z.object({
+  id: z.string().uuid().optional(),
   customerId: z.string().uuid(),
   villageId: z.string().uuid(),
   location: z.string().optional(),

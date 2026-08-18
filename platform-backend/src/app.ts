@@ -27,6 +27,14 @@ app.get("/health", async (_req, res) => {
   }
 });
 
+app.get("/api/app-version", (_req, res) => {
+  res.status(200).json({
+    version: "0.1.0",
+    downloadUrl: "https://shabooagri.com/app",
+    mandatory: false
+  });
+});
+
 app.use("/auth", authRouter);
 app.use("/payments", paymentRouter);
 app.use("/provisioning", provisioningRouter);

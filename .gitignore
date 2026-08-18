@@ -19,3 +19,6 @@ logs/
 backups/
 tmp/
 .DS_Store
+
+# Mobile App
+platform-frontend/public/downloads/*.apk
