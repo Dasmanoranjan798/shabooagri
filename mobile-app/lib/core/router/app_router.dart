@@ -11,6 +11,7 @@ import '../../features/drivers/presentation/driver_detail_screen.dart';
 import '../../features/drivers/presentation/driver_form_screen.dart';
 import '../../features/drivers/presentation/driver_list_screen.dart';
 import '../../features/employees/presentation/employee_detail_screen.dart';
+import '../../features/employees/presentation/employee_form_screen.dart';
 import '../../features/employees/presentation/employee_list_screen.dart';
 import '../../features/farmer/presentation/farmer_home_screen.dart';
 import '../../features/jobs/presentation/job_list_screen.dart';
@@ -161,8 +162,16 @@ GoRouter buildAppRouter(String initialLocation) {
         builder: (context, state) => const EmployeeListScreen(),
         routes: [
           GoRoute(
+            path: 'new',
+            builder: (context, state) => const EmployeeFormScreen(),
+          ),
+          GoRoute(
             path: ':id',
             builder: (context, state) => EmployeeDetailScreen(employeeId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: ':id/edit',
+            builder: (context, state) => EmployeeFormScreen(employeeId: state.pathParameters['id']!),
           ),
         ],
       ),

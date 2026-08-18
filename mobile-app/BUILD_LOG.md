@@ -121,3 +121,19 @@ Fixed by adding a "Set Pricing" dialog to `job_detail_screen.dart` (pricing-meth
 - Caught my own assumption error before shipping: initially wrote the void-status check as `status == 'VOID' || status == 'VOIDED'`, then checked the actual `InvoiceStatus` Prisma enum (`UNPAID | PARTIALLY_PAID | PAID | VOIDED`) and removed the non-existent `'VOID'` branch — a real instance of the "don't guess enum values" discipline the user asked for, caught before commit, not after.
 
 ---
+
+## Stage 6: Employees full create/edit + invite
+
+**Built:**
+- `employee_form_screen.dart` — name, role title, phone, employment status, compensation type with the matching conditional rate field (`hourlyRate`/`monthlySalary`/`yearlySalary`, only the one matching the selected type is sent), joined-date handling. Fields from `createEmployeeSchema`/`updateEmployeeSchema`.
+- "Send ShabooAgri Login Invite" toggle, shown only when there's no existing linked user account (`employee.userId == null`) — matches the website's exact `canSendInvite` condition. Reveals Account Role dropdown (`GET /rbac/roles`) + email/phone fields, fires `POST /team/invites` with the just-created/edited `employeeId` after the Employee record itself saves successfully.
+- Disclosed the same real limitation the website itself has in the UI text: "SMS delivery not yet connected" on the invite-phone field, rather than implying it works.
+- Kebab (Edit/Delete) + FAB, same pattern as Stages 3–5.
+
+**Self-test:**
+- `flutter analyze`: 0 errors (2 cosmetic info-lints, same harmless class as Stage 1's).
+- `flutter test`: passes.
+- Live-curled all 6 endpoints (`GET/POST /employees`, `PATCH/DELETE /employees/:id`, `GET /rbac/roles`, `POST /team/invites`) — all 401.
+- Confirmed `POST /team/invites` lives under `/team`, not `/employees` — easy to have guessed wrong given it's triggered from the Employee form; checked `staffInvite.routes.ts`'s actual mount path in `app.ts` rather than assuming.
+
+---

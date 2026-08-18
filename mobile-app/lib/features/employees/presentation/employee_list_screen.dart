@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/providers/session_provider.dart';
 import '../../../core/widgets/app_drawer.dart';
+import '../../../core/widgets/confirm_delete.dart';
 
 /// No offline table exists for Employees either (same Stage 2 gap as
 /// Payments) — this is back-office admin data with little offline field
@@ -36,6 +38,9 @@ class EmployeeListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final employeesAsync = ref.watch(employeesListProvider);
+    final user = ref.watch(currentUserProvider);
+    final canManage = user?.isOwnerOrManager ?? false;
+    final canDelete = user?.roleSystemKey == 'owner';
 
     return Scaffold(
       drawer: const AppDrawer(currentRoute: '/employees'),
@@ -48,6 +53,9 @@ class EmployeeListScreen extends ConsumerWidget {
           ),
         ],
       ),
+      floatingActionButton: canManage
+          ? FloatingActionButton(onPressed: () => context.go('/employees/new'), child: const Icon(Icons.add))
+          : null,
       body: employeesAsync.when(
         data: (employees) {
           if (employees.isEmpty) {
@@ -62,8 +70,34 @@ class EmployeeListScreen extends ConsumerWidget {
                 child: ListTile(
                   title: Text(employee.name),
                   subtitle: Text(employee.roleTitle ?? employee.employmentStatus),
-                  trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.go('/employees/${employee.id}'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (canManage || canDelete)
+                        PopupMenuButton<String>(
+                          onSelected: (action) async {
+                            if (action == 'edit') {
+                              context.go('/employees/${employee.id}/edit');
+                            } else if (action == 'delete') {
+                              final dio = ref.read(apiClientProvider);
+                              await confirmAndDelete(
+                                context: context,
+                                entityLabel: employee.name,
+                                onDelete: () => dio.delete('/employees/${employee.id}'),
+                                onSuccess: () => ref.invalidate(employeesListProvider),
+                              );
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            if (canManage) const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                            if (canDelete)
+                              const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
+                          ],
+                        ),
+                      const Icon(Icons.chevron_right),
+                    ],
+                  ),
                 ),
               );
             },
