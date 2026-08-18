@@ -35,6 +35,6 @@ export function getStatusBadgeVariant(status: string): BadgeVariant {
   if (s === "PENDING" || s === "PARTIALLY_PAID" || s === "REPAIR" || s === "PAUSED") return "warning";
   if (s === "CANCELLED" || s === "UNPAID" || s === "INACTIVE" || s === "OFFLINE" || s === "VOIDED") return "danger";
   if (s === "AVAILABLE" || s === "ACCEPTED") return "info";
-  if (s === "ON THE WAY" || s === "ON_THE_WAY") return "purple";
+  if (s === "STOPPED" || s === "ON THE WAY" || s === "ON_THE_WAY") return "purple";
   return "neutral";
 }

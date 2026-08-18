@@ -1,15 +1,15 @@
 import type { LoginResponse, User } from "../types/auth";
 import type { DashboardSummaryResponse, IncomeSeriesResponse, FuelSeriesResponse, TimeRange } from "../types/dashboard";
 import type {
+  AssignPricingPayload,
   Booking,
   BookingAttachment,
-  BookingStatus,
   CreateBookingPayload,
   PricingMethodOption,
   UpdateBookingPayload,
   VillageOption,
 } from "../types/booking";
-import type { Job, JobFuelEntry, JobPhoto, CompleteJobPayload, UpdateJobPayload } from "../types/job";
+import type { Job, JobFuelEntry, JobPhoto, StopJobPayload, SubmitJobPayload, UpdateJobPayload } from "../types/job";
 import type { Machine, MachineType, CreateMachinePayload, UpdateMachinePayload } from "../types/machine";
 import type { Driver, CreateDriverPayload, UpdateDriverPayload } from "../types/driver";
 import type { Customer, CreateCustomerPayload, UpdateCustomerPayload } from "../types/customer";
@@ -320,14 +320,16 @@ export const api = {
     return res.json();
   },
 
-  async updateBookingStatus(id: string, status: BookingStatus): Promise<Booking> {
-    const res = await fetchWithAuth(`/bookings/${id}/status`, {
+  // Called from the Live Job screen right before Start — pricing is picked
+  // there, not at booking creation.
+  async assignBookingPricing(id: string, payload: AssignPricingPayload): Promise<Booking> {
+    const res = await fetchWithAuth(`/bookings/${id}/pricing`, {
       method: "PATCH",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: "Invalid status transition" }));
-      throw new ApiError(res.status, (err.error || err.message) || "Failed to update status");
+      const err = await res.json().catch(() => ({ message: "Failed to set pricing" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to set pricing");
     }
     return res.json();
   },
@@ -752,14 +754,29 @@ export const api = {
     return res.json();
   },
 
-  async completeJob(id: string, payload: CompleteJobPayload = {}): Promise<Job> {
-    const res = await fetchWithAuth(`/jobs/${id}/complete`, {
+  // Stop freezes the clock (WORKING/PAUSED -> STOPPED) — no invoice yet.
+  async stopJob(id: string, payload: StopJobPayload = {}): Promise<Job> {
+    const res = await fetchWithAuth(`/jobs/${id}/stop`, {
       method: "POST",
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: "Failed to complete job" }));
-      throw new ApiError(res.status, (err.error || err.message) || "Failed to complete job");
+      const err = await res.json().catch(() => ({ message: "Failed to stop job" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to stop job");
+    }
+    return res.json();
+  },
+
+  // Submit is the second, distinct confirmation — only legal from STOPPED.
+  // Locks the job to Owner-only edits and generates its invoice.
+  async submitJob(id: string, payload: SubmitJobPayload = {}): Promise<Job> {
+    const res = await fetchWithAuth(`/jobs/${id}/submit`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to submit job" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to submit job");
     }
     return res.json();
   },

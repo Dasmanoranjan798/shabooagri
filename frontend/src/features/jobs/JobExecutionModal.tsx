@@ -1,30 +1,41 @@
 import { useEffect, useState } from "react";
 import type { Job, JobFuelEntry, JobPhoto } from "../../types/job";
+import type { PricingMethodOption } from "../../types/booking";
 import type { CompanyProfile } from "../../types/settings";
+import type { PricingUnit } from "../../lib/pricing";
+import { calculateAmount } from "../../lib/pricing";
 import { api } from "../../lib/api";
 import { formatCurrency } from "../../lib/theme";
 import { getTerm } from "../../lib/terminology";
 import { notifyDataRefresh, subscribeDataRefresh } from "../../lib/dataRefreshBus";
 import { useTaskDraft, useTaskTray, type TaskContentComponent } from "../../context/TaskTrayContext";
-import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
+import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
-import { Camera, Fuel, Truck, StickyNote, X } from "lucide-react";
+import { Camera, Fuel, StickyNote, X } from "lucide-react";
 
 // Migrated onto the shared task-tray system (Pass 2, Batch 3) — see
 // BookingFormModal.tsx for the full explanation of the new contract. The
-// 4 quick-action sub-dialogs (Fuel/Photo/Note/Complete) that used to be
-// separate <Modal> popups stacked on top of this one are now inline
-// sections toggled by `draft.activeSubDialog`, part of the SAME task —
-// this is what "travels together" means: minimizing the Job Execution
-// task and resuming it later brings back whichever sub-dialog was open
-// and whatever the user had half-typed into it, because that state lives
-// in the task's draft, not local component state. The one exception is
-// the picked photo File object (`photoFile`) — File instances can't be
+// quick-action sub-dialogs (Fuel/Photo/Note) and the new Stop/Submit/
+// Resume-reason overlays are all inline sections toggled by
+// `draft.activeSubDialog`, part of the SAME task — minimizing the Job
+// Execution task and resuming it later brings back whichever overlay was
+// open and whatever the user had half-typed into it, because that state
+// lives in the task's draft, not local component state. The one exception
+// is the picked photo File object (`photoFile`) — File instances can't be
 // JSON-serialized into the draft/localStorage, so it's kept as local
 // ephemeral state and is the one thing NOT preserved across a minimize
 // while the photo sub-dialog is open; re-selecting the file after resume
 // is an acceptable small gap, not a bug.
+//
+// Stage 5 rebuild (Booking -> Job Card -> Invoice flow): the old single
+// "Complete Job" action is gone, replaced by Stop (freezes the clock,
+// counter keeps ticking underneath the confirm dialog until Yes is
+// pressed) followed by a separate Submit confirmation (the actual point of
+// no return — generates the invoice, locks the job to Owner-only edits).
+// Resuming from Paused now requires a reason first. Starting requires
+// pricing to already be set on the booking — picked here, right before
+// Start, not at booking time.
 
 export interface JobExecutionInitProps {
   jobId: string;
@@ -35,7 +46,7 @@ export interface JobExecutionInitProps {
   canCancel?: boolean;
 }
 
-type SubDialog = null | "fuel" | "photo" | "note" | "complete";
+type SubDialog = null | "fuel" | "photo" | "note" | "resumeReason" | "stopConfirm" | "submitConfirm";
 
 export interface JobExecutionDraft {
   activeSubDialog: SubDialog;
@@ -43,9 +54,10 @@ export interface JobExecutionDraft {
   fuelCost: string;
   photoCaption: string;
   noteText: string;
-  completeAcres: string;
-  completeHours: string;
-  completeNotes: string;
+  resumeReason: string;
+  submitAcres: string;
+  pricingMethodId: string;
+  pricingRate: string;
 }
 
 export function defaultJobExecutionDraft(): JobExecutionDraft {
@@ -55,10 +67,56 @@ export function defaultJobExecutionDraft(): JobExecutionDraft {
     fuelCost: "",
     photoCaption: "",
     noteText: "",
-    completeAcres: "",
-    completeHours: "",
-    completeNotes: "",
+    resumeReason: "",
+    submitAcres: "",
+    pricingMethodId: "",
+    pricingRate: "",
   };
+}
+
+const RESUME_REASON_QUICK_OPTIONS = ["Machine breakdown", "Lunch break", "Rain"];
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+// Live ticking estimate while WORKING/PAUSED — mirrors the backend's
+// calculateAmount, but only for the units a running clock can price
+// (hour/minute/flat). Acre-priced jobs can't be estimated from elapsed
+// time, so this returns null for those (the UI shows the rate instead).
+function computeLiveAmount(unit: PricingUnit, rate: number, elapsedSec: number): number | null {
+  if (unit === null) return round2(rate);
+  if (unit === "hour") return round2(rate * (elapsedSec / 3600));
+  if (unit === "minute") return round2(rate * (elapsedSec / 60));
+  return null;
+}
+
+// Final amount once actual values exist (STOPPED/COMPLETED) — same
+// formula the backend's invoice generation uses, mirrored here so the
+// completion screen's Total matches the invoice exactly.
+function computeFinalAmount(job: Job): number | null {
+  const pm = job.booking.pricingMethod;
+  if (!pm || job.booking.rate == null) return null;
+  const rate = job.booking.rate;
+  if (pm.unit === null) return round2(rate);
+  if (pm.unit === "hour") return job.actualHours != null ? calculateAmount({ unit: "hour", rate, quantity: job.actualHours }) : null;
+  if (pm.unit === "minute") return job.actualHours != null ? calculateAmount({ unit: "minute", rate, quantity: job.actualHours * 60 }) : null;
+  if (pm.unit === "acre") return job.completedAcres != null ? calculateAmount({ unit: "acre", rate, quantity: job.completedAcres }) : null;
+  return null;
+}
+
+function formatHms(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
+function formatDurationWords(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  return `${h}h ${m}m ${s}s`;
 }
 
 export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
@@ -72,12 +130,12 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
 
   const customerTerm = getTerm("customer");
   const villageTerm = getTerm("village");
-  const driverTerm = getTerm("driver");
 
   const [job, setJob] = useState<Job | null>(null);
   const [fuelEntries, setFuelEntries] = useState<JobFuelEntry[]>([]);
   const [photos, setPhotos] = useState<JobPhoto[]>([]);
   const [company, setCompany] = useState<CompanyProfile | null>(null);
+  const [pricingMethods, setPricingMethods] = useState<PricingMethodOption[]>([]);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
 
   const [elapsedSec, setElapsedSec] = useState<number>(0);
@@ -102,17 +160,19 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
     let cancelled = false;
     async function loadAll() {
       try {
-        const [j, fList, pList, comp] = await Promise.all([
+        const [j, fList, pList, comp, pmList] = await Promise.all([
           api.getJobById(jobId),
           api.listJobFuelEntries(jobId),
           api.listJobPhotos(jobId),
           api.getCompanyProfile().catch(() => null),
+          api.listPricingMethods().catch(() => []),
         ]);
         if (cancelled) return;
         setJob(j);
         setFuelEntries(fList);
         setPhotos(pList);
         setCompany(comp);
+        setPricingMethods(pmList);
         setDraft((prev) => (prev.noteText ? {} : { noteText: j.notes || "" }));
       } catch (err: any) {
         if (!cancelled) setError(err.message || "Failed to load job");
@@ -128,7 +188,12 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
   // Stay in sync with other surfaces (e.g. the row list) changing this job.
   useEffect(() => subscribeDataRefresh("jobs", loadJob), [jobId]);
 
-  // Calculate live running time every 1s when WORKING
+  // Calculate live running time every 1s while WORKING. Deliberately does
+  // NOT special-case PAUSED — the interval simply stops updating elapsedSec
+  // when status leaves WORKING, so the last value computed just before a
+  // pause naturally stays frozen without a separate formula (and without
+  // drifting from wall-clock time the way recomputing from Date.now()
+  // during a pause would).
   useEffect(() => {
     if (!job || job.status !== "WORKING" || !job.startTime) {
       return;
@@ -163,27 +228,18 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
     return <div style={{ padding: "1.5rem" }}>{error || "Loading job…"}</div>;
   }
 
-  // Format running time as HH:MM:SS or Xh Ym
-  const formatRunningTime = (): string => {
-    if (job.status === "NOT_STARTED") return "00:00:00";
-    if (job.status === "COMPLETED") {
-      if (job.actualHours != null) return `${job.actualHours} hrs`;
-      return "Completed";
-    }
+  // STOPPED/COMPLETED show the authoritative frozen duration from the
+  // job record (actualHours) rather than the client's ticking estimate —
+  // this is exactly what the invoice was/will be generated from.
+  const displaySec =
+    job.status === "STOPPED" || job.status === "COMPLETED"
+      ? Math.round((job.actualHours || 0) * 3600)
+      : elapsedSec;
 
-    let sec = elapsedSec;
-    if (job.status === "PAUSED" && job.startTime) {
-      const startMs = new Date(job.startTime).getTime();
-      const endMs = job.endTime ? new Date(job.endTime).getTime() : Date.now();
-      const pausedMs = (job.totalPausedDurationSec || 0) * 1000;
-      sec = Math.max(0, Math.floor((endMs - startMs - pausedMs) / 1000));
-    }
-
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
-    const s = sec % 60;
-    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  };
+  const pricingUnit = (job.booking.pricingMethod?.unit ?? null) as PricingUnit;
+  const hasPricing = !!job.booking.pricingMethod && job.booking.rate != null;
+  const liveAmount = hasPricing ? computeLiveAmount(pricingUnit, job.booking.rate!, displaySec) : null;
+  const finalAmount = computeFinalAmount(job);
 
   const handleStart = async () => {
     setIsSubmitting(true);
@@ -213,11 +269,13 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
     }
   };
 
-  const handleResume = async () => {
+  const handleConfirmResume = async () => {
+    if (!draft.resumeReason.trim()) return;
     setIsSubmitting(true);
     setError(null);
     try {
-      await api.resumeJob(job.id);
+      await api.resumeJob(job.id, draft.resumeReason.trim());
+      setDraft({ activeSubDialog: null, resumeReason: "" });
       notifyDataRefresh("jobs");
       await loadJob();
     } catch (err: any) {
@@ -227,21 +285,53 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
     }
   };
 
-  const handleCompleteSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleConfirmStop = async () => {
     setIsSubmitting(true);
     setError(null);
     try {
-      await api.completeJob(job.id, {
-        actualHours: draft.completeHours ? parseFloat(draft.completeHours) : undefined,
-        completedAcres: draft.completeAcres ? parseFloat(draft.completeAcres) : undefined,
-        notes: draft.completeNotes || undefined,
-      });
+      await api.stopJob(job.id, {});
       setDraft({ activeSubDialog: null });
       notifyDataRefresh("jobs");
       await loadJob();
     } catch (err: any) {
-      setError(err.message || "Failed to complete job");
+      setError(err.message || "Failed to stop job");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleConfirmSubmit = async () => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const payload: { completedAcres?: number } = {};
+      if (pricingUnit === "acre") {
+        payload.completedAcres = parseFloat(draft.submitAcres);
+      }
+      await api.submitJob(job.id, payload);
+      setDraft({ activeSubDialog: null, submitAcres: "" });
+      notifyDataRefresh("jobs");
+      await loadJob();
+    } catch (err: any) {
+      setError(err.message || "Failed to submit job");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSavePricing = async () => {
+    if (!draft.pricingMethodId || !draft.pricingRate) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await api.assignBookingPricing(job.bookingId, {
+        pricingMethodId: draft.pricingMethodId,
+        rate: parseFloat(draft.pricingRate),
+      });
+      notifyDataRefresh("jobs");
+      await loadJob();
+    } catch (err: any) {
+      setError(err.message || "Failed to set pricing");
     } finally {
       setIsSubmitting(false);
     }
@@ -310,8 +400,25 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
 
   const customerName = job.booking.customer?.name || customerTerm;
   const villageName = job.booking.village?.name || job.booking.customer?.village?.name || villageTerm;
-  const machineReg = job.machine.registrationNumber;
-  const driverName = job.driver.employee.name;
+  const workOrMachine = job.booking.workDescription || job.machine?.registrationNumber || "Not assigned yet";
+  const startedAtLabel = job.startTime
+    ? new Date(job.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : null;
+
+  const renderStatusPill = () => {
+    if (job.status === "WORKING") {
+      return (
+        <span className="sa-live-status-pill">
+          <span className="sa-live-pulse-dot" />Working
+        </span>
+      );
+    }
+    if (job.status === "PAUSED") return <span className="sa-live-status-pill is-paused">Paused</span>;
+    if (job.status === "STOPPED") return <span className="sa-live-status-pill is-stopped">Stopped</span>;
+    if (job.status === "COMPLETED") return <Badge variant="success">Completed</Badge>;
+    if (job.status === "CANCELLED") return <Badge variant="danger">Cancelled</Badge>;
+    return <Badge variant="warning">Not Started</Badge>;
+  };
 
   // Inline sub-dialog panel — replaces the old separate stacked <Modal>s.
   // Rendered as an overlay within this task's own content area so it
@@ -440,75 +547,98 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
       );
     }
 
-    if (draft.activeSubDialog === "complete") {
+    // Reason is required before the counter is allowed to resume — quick
+    // picks fill the same field a free-text edit would, so either path
+    // ends up as one non-empty string logged to this resume's status log.
+    if (draft.activeSubDialog === "resumeReason") {
       return (
         <div className="sa-job-subdialog-overlay">
           <div className="sa-job-subdialog">
             <div className="sa-job-subdialog-header">
-              <h4>Complete Job Execution</h4>
+              <h4>Why the delay?</h4>
               <button type="button" className="sa-icon-action" onClick={() => setDraft({ activeSubDialog: null })}>
                 <X size={16} />
               </button>
             </div>
-            <form onSubmit={handleCompleteSubmit} className="sa-booking-form">
-              {company?.requireJobPhoto && photos.length === 0 && (
-                <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: "6px", padding: "10px 12px", fontSize: "0.85rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                  <Camera size={18} />
-                  <span>A completion photo is required before completing this job. Please upload a photo first.</span>
-                </div>
-              )}
-              {company?.requireJobFuelLog && fuelEntries.length === 0 && (
-                <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: "6px", padding: "10px 12px", fontSize: "0.85rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                  <Fuel size={18} />
-                  <span>A fuel-log entry is required before completing this job. Please log fuel first.</span>
-                </div>
-              )}
-
-              <Input
-                label="Completed Acres"
-                type="number"
-                min="0"
-                step="0.1"
-                value={draft.completeAcres}
-                onChange={(e) => setDraft({ completeAcres: e.target.value })}
-                placeholder="e.g. 4.5"
-              />
-              <Input
-                label="Manual Actual Hours (Optional override)"
-                type="number"
-                min="0"
-                step="0.1"
-                value={draft.completeHours}
-                onChange={(e) => setDraft({ completeHours: e.target.value })}
-                placeholder="Leave blank for auto-computed timer hours"
-              />
-              <div className="sa-input-group">
-                <label className="sa-input-label">Final Completion Notes</label>
-                <textarea
-                  className="sa-input sa-textarea"
-                  rows={2}
-                  value={draft.completeNotes}
-                  onChange={(e) => setDraft({ completeNotes: e.target.value })}
-                  placeholder="Summary of work done..."
-                />
-              </div>
-              <div className="sa-form-actions">
-                <Button type="button" variant="secondary" onClick={() => setDraft({ activeSubDialog: null })}>
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="success"
-                  isLoading={isSubmitting}
-                  disabled={
-                    (!!company?.requireJobPhoto && photos.length === 0) ||
-                    (!!company?.requireJobFuelLog && fuelEntries.length === 0)
-                  }
+            <div className="sa-resume-reason-chips">
+              {RESUME_REASON_QUICK_OPTIONS.map((opt) => (
+                <button
+                  type="button"
+                  key={opt}
+                  className={`sa-segmented-btn ${draft.resumeReason === opt ? "is-active" : ""}`}
+                  onClick={() => setDraft({ resumeReason: opt })}
                 >
-                  Confirm & Complete Job
-                </Button>
-              </div>
-            </form>
+                  {opt}
+                </button>
+              ))}
+            </div>
+            <Input
+              label="Reason to Resume *"
+              value={draft.resumeReason}
+              onChange={(e) => setDraft({ resumeReason: e.target.value })}
+              placeholder="Or type a custom reason"
+            />
+            <div className="sa-form-actions">
+              <Button type="button" variant="secondary" onClick={() => setDraft({ activeSubDialog: null })}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                isLoading={isSubmitting}
+                disabled={!draft.resumeReason.trim()}
+                onClick={handleConfirmResume}
+              >
+                Confirm &amp; Resume
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (draft.activeSubDialog === "stopConfirm") {
+      return (
+        <div className="sa-job-subdialog-overlay">
+          <div className="sa-job-subdialog sa-confirm-dialog is-warn">
+            <div className="sa-confirm-icon">⚠️</div>
+            <h3>Stop this job?</h3>
+            <p>
+              The work will be marked as finished. Make sure the machine has actually stopped working in the
+              field.
+            </p>
+            <div className="sa-btn-row-half">
+              <Button type="button" variant="secondary" onClick={() => setDraft({ activeSubDialog: null })}>
+                No, Continue
+              </Button>
+              <Button type="button" variant="warning" isLoading={isSubmitting} onClick={handleConfirmStop}>
+                Yes, Stop
+              </Button>
+            </div>
+            <div className="sa-confirm-stillrunning">⏱ Counter keeps running until you confirm</div>
+          </div>
+        </div>
+      );
+    }
+
+    if (draft.activeSubDialog === "submitConfirm") {
+      return (
+        <div className="sa-job-subdialog-overlay">
+          <div className="sa-job-subdialog sa-confirm-dialog is-danger">
+            <div className="sa-confirm-icon">🔒</div>
+            <h3>Submit this job?</h3>
+            <p>
+              Once submitted, this job <b>cannot be changed</b> by a Manager or Driver. Only the Owner can edit
+              it after this point.
+            </p>
+            <div className="sa-btn-row-half">
+              <Button type="button" variant="secondary" onClick={() => setDraft({ activeSubDialog: null })}>
+                No, Wait
+              </Button>
+              <Button type="button" variant="danger" isLoading={isSubmitting} onClick={handleConfirmSubmit}>
+                Yes, Submit
+              </Button>
+            </div>
           </div>
         </div>
       );
@@ -517,108 +647,163 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
     return null;
   };
 
+  const missingPhoto = !!company?.requireJobPhoto && photos.length === 0;
+  const missingFuel = !!company?.requireJobFuelLog && fuelEntries.length === 0;
+  const missingAcres = pricingUnit === "acre" && !draft.submitAcres;
+
   return (
     <div className="sa-job-execution-body" style={{ padding: "1.5rem", position: "relative" }}>
-      <div className="sa-modal-booking-title" style={{ marginBottom: "1rem" }}>
-        <span>Job Execution #{job.booking.bookingNumber}</span>
-        <Badge variant={getStatusBadgeVariant(job.status)}>{job.status.replace(/_/g, " ")}</Badge>
+      <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
+        Booking {job.booking.bookingNumber}
       </div>
 
       {error && <div className="sa-alert sa-alert-danger">{error}</div>}
 
-      {/* §11.6 Header Banner: Machine + Customer + Village + Driver */}
+      {/* Header: Farmer + status pill, Village/machine/start-time meta */}
       <div className="sa-field-header-card">
-        <div className="sa-field-machine">
-          <span className="sa-field-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-            <Truck size={28} color="var(--color-primary)" />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem" }}>
+          <h3 style={{ margin: 0 }}>{customerName}</h3>
+          {renderStatusPill()}
+        </div>
+        <span className="sa-field-sub">
+          {villageName} · {workOrMachine}
+          {startedAtLabel && job.status !== "NOT_STARTED" ? ` · Started ${startedAtLabel}` : ""}
+        </span>
+      </div>
+
+      {/* Live / final counter */}
+      {job.status !== "NOT_STARTED" && job.status !== "CANCELLED" && (
+        <div className="sa-timer-left" style={{ width: "100%" }}>
+          <span className="sa-timer-label">
+            {job.status === "STOPPED" || job.status === "COMPLETED" ? "FINAL TIME — LOCKED" : "ELAPSED TIME"}
           </span>
+          <div className="sa-timer-clock">{formatHms(displaySec)}</div>
+        </div>
+      )}
+
+      {/* Live price display — Per Hour is the primary case; acre-priced
+          jobs can't be estimated from a running clock, so they show the
+          rate instead of a live-updating amount. */}
+      {hasPricing && (job.status === "WORKING" || job.status === "PAUSED") && (
+        <div className="sa-price-live">
           <div>
-            <h3>{machineReg}</h3>
-            <span className="sa-field-sub">
-              {job.machine.brand} {job.machine.model}
-            </span>
+            <div className="sa-price-amt">
+              {liveAmount != null ? formatCurrency(liveAmount) : formatCurrency(job.booking.rate!)}
+            </div>
+            <div className="sa-price-method">
+              {job.booking.pricingMethod!.label}
+              {pricingUnit ? ` · ${formatCurrency(job.booking.rate!)}/${pricingUnit}` : ""}
+              {liveAmount != null ? " — updates live" : ""}
+            </div>
           </div>
         </div>
+      )}
 
-        <div className="sa-field-info-grid">
-          <div className="sa-finfo-item">
-            <span className="sa-finfo-label"> {customerTerm}:</span>
-            <span className="sa-finfo-val">{customerName}</span>
+      {/* Primary Field Action Bar */}
+      <div className="sa-job-workflow-actions" style={{ flexDirection: "column", alignItems: "stretch", gap: "0.75rem" }}>
+        {job.status === "NOT_STARTED" && (!job.machineId || !job.driverId) && (
+          <div className="sa-alert sa-alert-info">
+            This job still needs a machine and driver assigned — go back to Job Cards to assign them.
           </div>
-          <div className="sa-finfo-item">
-            <span className="sa-finfo-label"> Location:</span>
-            <span className="sa-finfo-val">{villageName}</span>
-          </div>
-          <div className="sa-finfo-item">
-            <span className="sa-finfo-label"> {driverTerm}:</span>
-            <span className="sa-finfo-val">{driverName}</span>
-          </div>
-        </div>
-      </div>
+        )}
 
-      {/* Live Running Time & Timer Card */}
-      <div className="sa-timer-card">
-        <div className="sa-timer-left">
-          <span className="sa-timer-label">LIVE RUNNING TIME</span>
-          <div className="sa-timer-clock">{formatRunningTime()}</div>
-          {job.startTime && (
-            <span className="sa-timer-start">
-              Started at: {new Date(job.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            </span>
-          )}
-        </div>
-
-        <div className="sa-timer-right">
-          <div className="sa-stat-box">
-            <span className="sa-stat-num">
-              {job.fuelUsedLitres != null ? `${job.fuelUsedLitres} L` : "0 L"}
-            </span>
-            <span className="sa-stat-lbl">Fuel Consumed</span>
+        {job.status === "NOT_STARTED" && job.machineId && job.driverId && !hasPricing && (
+          <div className="sa-input-group">
+            <label className="sa-input-label">Set Pricing Before Starting *</label>
+            <div className="sa-segmented-control">
+              {pricingMethods.map((pm) => (
+                <button
+                  type="button"
+                  key={pm.id}
+                  className={`sa-segmented-btn ${draft.pricingMethodId === pm.id ? "is-active" : ""}`}
+                  onClick={() => setDraft({ pricingMethodId: pm.id })}
+                >
+                  {pm.label}
+                </button>
+              ))}
+            </div>
+            <Input
+              label="Rate (₹) *"
+              type="number"
+              min="0"
+              step="0.01"
+              value={draft.pricingRate}
+              onChange={(e) => setDraft({ pricingRate: e.target.value })}
+            />
+            <Button
+              type="button"
+              variant="primary"
+              className="sa-action-main-btn"
+              isLoading={isSubmitting}
+              disabled={!draft.pricingMethodId || !draft.pricingRate}
+              onClick={handleSavePricing}
+            >
+              Save Pricing
+            </Button>
           </div>
-          <div className="sa-stat-box">
-            <span className="sa-stat-num">
-              {job.completedAcres != null ? `${job.completedAcres} ac` : "0 ac"}
-            </span>
-            <span className="sa-stat-lbl">Acres Completed</span>
-          </div>
-        </div>
-      </div>
+        )}
 
-      {/* Primary Field Action Bar (§11.6) */}
-      <div className="sa-job-workflow-actions">
-        {job.status === "NOT_STARTED" && (
+        {job.status === "NOT_STARTED" && job.machineId && job.driverId && hasPricing && (
           <Button variant="primary" size="lg" className="sa-action-main-btn" isLoading={isSubmitting} onClick={handleStart}>
             ▶ Start Job
           </Button>
         )}
 
-        {job.status === "WORKING" && (
-          <div className="sa-action-btn-group">
-            <Button variant="warning" size="lg" isLoading={isSubmitting} onClick={handlePause}>
-              ⏸ Pause Job
+        {(job.status === "WORKING" || job.status === "PAUSED") && (
+          <div className="sa-btn-row-half">
+            <Button
+              variant={job.status === "WORKING" ? "warning" : "primary"}
+              size="lg"
+              isLoading={isSubmitting}
+              onClick={job.status === "WORKING" ? handlePause : () => setDraft({ activeSubDialog: "resumeReason" })}
+            >
+              {job.status === "WORKING" ? "⏸ Pause" : "▶ Start"}
             </Button>
-            <Button variant="success" size="lg" isLoading={isSubmitting} onClick={() => setDraft({ activeSubDialog: "complete" })}>
-              Complete Job
+            <Button
+              variant="danger"
+              size="lg"
+              isLoading={isSubmitting}
+              onClick={() => setDraft({ activeSubDialog: "stopConfirm" })}
+            >
+              ⏹ Stop
             </Button>
           </div>
         )}
 
-        {job.status === "PAUSED" && (
-          <div className="sa-action-btn-group">
-            <Button variant="primary" size="lg" isLoading={isSubmitting} onClick={handleResume}>
-              ▶ Resume Job
+        {job.status === "STOPPED" && (
+          <>
+            {pricingUnit === "acre" && (
+              <Input
+                label="Completed Acres *"
+                type="number"
+                min="0"
+                step="0.1"
+                value={draft.submitAcres}
+                onChange={(e) => setDraft({ submitAcres: e.target.value })}
+                placeholder="e.g. 4.5"
+              />
+            )}
+            {missingPhoto && (
+              <div className="sa-alert sa-alert-danger" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Camera size={16} /> A completion photo is required before submitting this job.
+              </div>
+            )}
+            {missingFuel && (
+              <div className="sa-alert sa-alert-danger" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Fuel size={16} /> A fuel-log entry is required before submitting this job.
+              </div>
+            )}
+            <Button
+              variant="danger"
+              size="lg"
+              className="sa-action-main-btn"
+              isLoading={isSubmitting}
+              disabled={missingPhoto || missingFuel || missingAcres}
+              onClick={() => setDraft({ activeSubDialog: "submitConfirm" })}
+            >
+              Submit
             </Button>
-            <Button variant="success" size="lg" isLoading={isSubmitting} onClick={() => setDraft({ activeSubDialog: "complete" })}>
-              Complete Job
-            </Button>
-          </div>
-        )}
-
-        {job.status === "COMPLETED" && (
-          <div className="sa-alert sa-alert-success" style={{ textAlign: "center", width: "100%" }}>
-            Job Completed ({job.actualHours != null ? `${job.actualHours} hrs` : ""}
-            {job.completedAcres != null ? ` • ${job.completedAcres} acres` : ""})
-          </div>
+          </>
         )}
 
         {job.status === "CANCELLED" && (
@@ -628,16 +813,53 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
         )}
       </div>
 
+      {/* Completion screen */}
+      {job.status === "COMPLETED" && (
+        <div className="sa-field-info-grid">
+          <div className="sa-finfo-item">
+            <span className="sa-finfo-label">{customerTerm}</span>
+            <span className="sa-finfo-val">{customerName}</span>
+          </div>
+          <div className="sa-finfo-item">
+            <span className="sa-finfo-label">{villageTerm}</span>
+            <span className="sa-finfo-val">{villageName}</span>
+          </div>
+          <div className="sa-finfo-item">
+            <span className="sa-finfo-label">Duration</span>
+            <span className="sa-finfo-val">{formatDurationWords(displaySec)}</span>
+          </div>
+          <div className="sa-finfo-item">
+            <span className="sa-finfo-label">Rate</span>
+            <span className="sa-finfo-val">
+              {hasPricing ? `${formatCurrency(job.booking.rate!)}${pricingUnit ? `/${pricingUnit}` : ""}` : "—"}
+            </span>
+          </div>
+          <div className="sa-finfo-item" style={{ gridColumn: "1 / -1" }}>
+            <span className="sa-finfo-label">Total</span>
+            <span className="sa-finfo-val sa-amount-bold">
+              {finalAmount != null ? formatCurrency(finalAmount) : "—"}
+            </span>
+          </div>
+        </div>
+      )}
+      {job.status === "COMPLETED" && (
+        <div className="sa-notes-section">
+          <p className="sa-notes-text" style={{ fontSize: "0.8rem" }}>
+            This is now locked. Only the <b>Owner</b> can edit or void it — Manager/Driver view only from here.
+          </p>
+        </div>
+      )}
+
       {canCancel && job.status !== "CANCELLED" && (
-        <div style={{ marginTop: "0.75rem" }}>
+        <div style={{ marginTop: "0.25rem" }}>
           <Button variant="danger" size="sm" onClick={handleCancel}>
             Cancel Job
           </Button>
         </div>
       )}
 
-      {/* Quick Action Icon Buttons (§11.6) */}
-      {job.status !== "COMPLETED" && (
+      {/* Quick Action Icon Buttons */}
+      {["WORKING", "PAUSED", "STOPPED"].includes(job.status) && (
         <div className="sa-quick-field-actions">
           <button className="sa-qaction-item" onClick={() => setDraft({ activeSubDialog: "fuel" })}>
             <span className="sa-qaction-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>

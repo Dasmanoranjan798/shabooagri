@@ -281,3 +281,109 @@
   color: var(--color-text);
   margin-bottom: 0.75rem;
 }
+
+/* Live Job screen (§ Booking -> Job Card -> Invoice rebuild) */
+.sa-live-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #22a04a;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.sa-live-status-pill.is-paused,
+.sa-live-status-pill.is-stopped {
+  background: #f0a800;
+  color: #3a2c00;
+}
+
+.sa-live-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: sa-live-pulse 1.4s infinite;
+}
+
+@keyframes sa-live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.sa-price-live {
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-hover);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sa-price-live .sa-price-amt {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--color-primary-dark);
+}
+
+.sa-price-live .sa-price-method {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.sa-btn-row-half {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.sa-btn-row-half > button {
+  flex: 1;
+}
+
+.sa-confirm-dialog {
+  text-align: center;
+}
+
+.sa-confirm-dialog .sa-confirm-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+  font-size: 24px;
+}
+
+.sa-confirm-dialog.is-warn .sa-confirm-icon { background: #fef3d9; }
+.sa-confirm-dialog.is-danger .sa-confirm-icon { background: #fbe7e7; }
+
+.sa-confirm-dialog h3 { margin: 0 0 8px; font-size: 1.05rem; }
+.sa-confirm-dialog p {
+  margin: 0 0 20px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.sa-confirm-stillrunning {
+  font-size: 0.72rem;
+  color: var(--color-primary-dark);
+  background: var(--color-primary-light);
+  border-radius: 8px;
+  padding: 8px;
+  margin-top: 14px;
+}
+
+.sa-resume-reason-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}

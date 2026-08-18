@@ -1,4 +1,4 @@
-export type JobStatus = "NOT_STARTED" | "WORKING" | "PAUSED" | "COMPLETED" | "CANCELLED";
+export type JobStatus = "NOT_STARTED" | "WORKING" | "PAUSED" | "STOPPED" | "COMPLETED" | "CANCELLED";
 export type JobExecutionMode = "LIVE" | "MANUAL";
 
 export interface JobFuelEntry {
@@ -23,9 +23,16 @@ export interface Job {
   id: string;
   companyId: string;
   bookingId: string;
-  machineId: string;
-  driverId: string;
+  // Nullable — a Job Card is created the instant a Booking is saved, often
+  // before a machine/driver is decided. See isReadyToStart below for the
+  // "Ready to Start" / "Awaiting Machine" card badge this drives.
+  machineId: string | null;
+  driverId: string | null;
   status: JobStatus;
+  // Computed server-side (job.service.ts's withReadiness) from
+  // machineId/driverId only — deliberately NOT from pricing, since pricing
+  // is picked on the Live Job screen itself, after a card is tapped.
+  isReadyToStart?: boolean;
   executionMode?: JobExecutionMode;
   startTime: string | null;
   endTime: string | null;
@@ -43,8 +50,10 @@ export interface Job {
     villageId: string;
     scheduledDate: string;
     scheduledTime: string | null;
-    rate: number;
-    pricingMethod: { id: string; key: string; label: string; unit: string | null };
+    workDescription: string | null;
+    // Null until assigned on the Live Job screen right before Start.
+    rate: number | null;
+    pricingMethod: { id: string; key: string; label: string; unit: string | null } | null;
     location?: string | null;
     customer?: { id: string; name: string; village?: { id: string; name: string } };
     village?: { id: string; name: string };
@@ -54,18 +63,21 @@ export interface Job {
     registrationNumber: string;
     brand: string | null;
     model: string | null;
-  };
+  } | null;
   driver: {
     id: string;
     employee: { id: string; name: string };
-  };
+  } | null;
   fuelEntries?: JobFuelEntry[];
   photos?: JobPhoto[];
 }
 
-export interface CompleteJobPayload {
+export interface StopJobPayload {
   endTime?: string;
   actualHours?: number;
+}
+
+export interface SubmitJobPayload {
   completedAcres?: number;
   notes?: string;
 }
