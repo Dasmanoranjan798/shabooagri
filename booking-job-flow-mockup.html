@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShabooAgri — Booking → Job Flow</title>
+<style>
+  :root{
+    --green-900:#0f3d24;
+    --green-700:#166534;
+    --green-600:#1a7a3d;
+    --green-500:#22a04a;
+    --green-100:#e6f5ea;
+    --amber-500:#f0a800;
+    --amber-100:#fef3d9;
+    --red-500:#d64545;
+    --red-100:#fbe7e7;
+    --ink-900:#14201a;
+    --ink-600:#4b5b52;
+    --ink-400:#8a978f;
+    --line:#dde5df;
+    --bg:#f4f8f5;
+    --card:#ffffff;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:var(--bg);
+    color:var(--ink-900);
+  }
+  .topbar{
+    background:var(--green-900);
+    color:#fff;
+    padding:18px 24px;
+    text-align:center;
+  }
+  .topbar h1{margin:0;font-size:20px;font-weight:700;}
+  .topbar p{margin:4px 0 0;font-size:13px;color:#b9d9c4;}
+
+  .tabs{
+    display:flex;
+    overflow-x:auto;
+    gap:8px;
+    padding:14px 16px;
+    background:#fff;
+    border-bottom:1px solid var(--line);
+    position:sticky;
+    top:0;
+    z-index:10;
+  }
+  .tab{
+    flex:0 0 auto;
+    padding:9px 16px;
+    border-radius:20px;
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--ink-600);
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .tab.active{
+    background:var(--green-600);
+    border-color:var(--green-600);
+    color:#fff;
+  }
+
+  .stage{display:none;padding:20px 16px 60px;max-width:480px;margin:0 auto;}
+  .stage.active{display:block;}
+
+  .phone-note{
+    font-size:12px;
+    color:var(--ink-400);
+    text-align:center;
+    margin-bottom:18px;
+    line-height:1.5;
+  }
+
+  .card{
+    background:var(--card);
+    border-radius:16px;
+    border:1px solid var(--line);
+    padding:20px;
+    margin-bottom:16px;
+    box-shadow:0 1px 3px rgba(15,61,36,0.05);
+  }
+  .card h2{margin:0 0 4px;font-size:18px;}
+  .card .sub{color:var(--ink-600);font-size:13px;margin:0 0 16px;line-height:1.5;}
+
+  label{display:block;font-size:12px;font-weight:700;color:var(--ink-600);letter-spacing:.03em;text-transform:uppercase;margin:14px 0 6px;}
+  .field{
+    padding:13px 14px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:#fafcfa;
+    font-size:15px;
+    color:var(--ink-400);
+  }
+  .field.filled{color:var(--ink-900);}
+
+  .btn{
+    width:100%;
+    padding:15px;
+    border-radius:12px;
+    border:none;
+    font-size:15px;
+    font-weight:700;
+    cursor:pointer;
+    margin-top:6px;
+  }
+  .btn-primary{background:var(--green-600);color:#fff;}
+  .btn-outline{background:#fff;border:1.5px solid var(--line);color:var(--ink-600);}
+
+  .note-box{
+    background:var(--green-100);
+    border:1px solid #bfe3cb;
+    border-radius:10px;
+    padding:12px 14px;
+    font-size:12.5px;
+    color:var(--green-900);
+    line-height:1.6;
+    margin-top:14px;
+  }
+  .note-box b{color:var(--green-700);}
+
+  /* job card list */
+  .jobcard{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:15px;
+    margin-bottom:12px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .jobcard .info b{display:block;font-size:15px;margin-bottom:3px;}
+  .jobcard .info span{font-size:12.5px;color:var(--ink-600);}
+  .badge{
+    font-size:11px;
+    font-weight:700;
+    padding:4px 10px;
+    border-radius:20px;
+  }
+  .badge.pending{background:var(--amber-100);color:#a06a00;}
+  .badge.ready{background:var(--green-100);color:var(--green-700);}
+
+  /* live job screen */
+  .live-header{
+    background:var(--green-900);
+    color:#fff;
+    border-radius:16px;
+    padding:20px;
+    margin-bottom:16px;
+  }
+  .live-header .row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+  .live-header b{font-size:16px;}
+  .status-pill{
+    font-size:11px;
+    font-weight:700;
+    padding:4px 10px;
+    border-radius:20px;
+    background:var(--green-500);
+  }
+  .status-pill.paused{background:var(--amber-500);color:#3a2c00;}
+  .live-header .meta{font-size:12.5px;color:#c7ddcd;margin-top:6px;}
+
+  .counter-box{
+    text-align:center;
+    padding:28px 0 22px;
+  }
+  .counter-box .time{
+    font-size:44px;
+    font-weight:800;
+    letter-spacing:.02em;
+    color:var(--ink-900);
+    font-variant-numeric:tabular-nums;
+  }
+  .counter-box .label{font-size:12px;color:var(--ink-600);margin-top:4px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;}
+  .pulse{
+    display:inline-block;
+    width:8px;height:8px;border-radius:50%;
+    background:var(--green-500);
+    margin-right:6px;
+    animation:pulse 1.4s infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+  .price-live{
+    background:var(--green-100);
+    border:1px solid #bfe3cb;
+    border-radius:12px;
+    padding:14px 16px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:18px;
+  }
+  .price-live .amt{font-size:22px;font-weight:800;color:var(--green-700);}
+  .price-live .method{font-size:11px;color:var(--ink-600);}
+
+  .btnrow{display:flex;gap:10px;}
+  .btn-half{flex:1;padding:16px;border-radius:12px;border:none;font-size:15px;font-weight:700;cursor:pointer;}
+  .btn-pause{background:var(--amber-500);color:#3a2c00;}
+  .btn-start{background:var(--green-600);color:#fff;}
+  .btn-stop{background:#fff;border:1.5px solid var(--red-500);color:var(--red-500);}
+  .btn-submit{background:var(--red-500);color:#fff;}
+
+  /* modal overlay */
+  .overlay{
+    position:fixed;inset:0;
+    background:rgba(15,32,26,0.55);
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;
+    z-index:50;
+  }
+  .modal{
+    background:#fff;
+    border-radius:16px;
+    padding:24px 22px;
+    max-width:340px;
+    width:100%;
+    text-align:center;
+  }
+  .modal .icon{
+    width:52px;height:52px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 14px;
+    font-size:24px;
+  }
+  .modal.warn .icon{background:var(--amber-100);}
+  .modal.danger .icon{background:var(--red-100);}
+  .modal h3{margin:0 0 8px;font-size:17px;}
+  .modal p{margin:0 0 20px;font-size:13.5px;color:var(--ink-600);line-height:1.6;}
+  .modal .row2{display:flex;gap:10px;}
+  .modal .row2 button{flex:1;padding:13px;border-radius:10px;font-weight:700;font-size:14px;border:none;cursor:pointer;}
+  .modal .no{background:#f1f4f2;color:var(--ink-600);}
+  .modal .yes-warn{background:var(--amber-500);color:#3a2c00;}
+  .modal .yes-danger{background:var(--red-500);color:#fff;}
+  .modal .stillrunning{font-size:11.5px;color:var(--green-700);background:var(--green-100);border-radius:8px;padding:8px;margin-top:14px;}
+
+  .flow-arrow{
+    text-align:center;
+    color:var(--ink-400);
+    font-size:22px;
+    margin:-4px 0 10px;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Booking → Job Card → Invoice</h1>
+  <p>One continuous journey — tap through each stage below</p>
+</div>
+
+<div class="tabs" id="tabs">
+  <div class="tab active" data-stage="1">1. Create Booking</div>
+  <div class="tab" data-stage="2">2. Job Cards List</div>
+  <div class="tab" data-stage="3">3. Live Job (Running)</div>
+  <div class="tab" data-stage="4">4. Tap Stop</div>
+  <div class="tab" data-stage="5">5. Tap Submit</div>
+  <div class="tab" data-stage="6">6. Done → Invoice</div>
+</div>
+
+<!-- STAGE 1: Booking -->
+<div class="stage active" id="s1">
+  <p class="phone-note">Farmer asks for work. Manager creates the card fast — minimal fields only.</p>
+  <div class="card">
+    <h2>New Booking</h2>
+    <p class="sub">Just enough to get this on the schedule. Exact hours and price are not needed yet.</p>
+
+    <label>Farmer</label>
+    <div class="field filled">Sanjay Behera</div>
+
+    <label>Village</label>
+    <div class="field filled">Badagada</div>
+
+    <label>Work Needed</label>
+    <div class="field filled">Rotavator — 1 acre field</div>
+
+    <label>Machine (optional)</label>
+    <div class="field">-- Assign later if unsure --</div>
+
+    <button class="btn btn-primary">Create Booking</button>
+
+    <div class="note-box">
+      <b>What happens next:</b> this Booking saves instantly and appears as a <b>Job Card</b> — no separate step to "convert" it. Pricing is decided later, live, once work actually starts.
+    </div>
+  </div>
+</div>
+
+<!-- STAGE 2: Job Cards List -->
+<div class="stage" id="s2">
+  <p class="phone-note">The Booking is now sitting here as a Job Card, ready to be picked up by whoever starts the work.</p>
+  <div class="card">
+    <h2>Job Cards</h2>
+    <p class="sub">Today · 3 waiting</p>
+
+    <div class="jobcard">
+      <div class="info">
+        <b>Sanjay Behera</b>
+        <span>Badagada · Rotavator · 1 acre</span>
+      </div>
+      <span class="badge ready">Ready to Start</span>
+    </div>
+
+    <div class="jobcard">
+      <div class="info">
+        <b>Nand Kishore</b>
+        <span>Nuagaon · Harvester</span>
+      </div>
+      <span class="badge pending">Awaiting Machine</span>
+    </div>
+
+    <div class="jobcard">
+      <div class="info">
+        <b>Prakash Sahu</b>
+        <span>Tangi · Tractor 02</span>
+      </div>
+      <span class="badge ready">Ready to Start</span>
+    </div>
+
+    <div class="note-box">
+      Tapping <b>Sanjay Behera's</b> card opens the live job screen, where the actual work begins.
+    </div>
+  </div>
+</div>
+
+<!-- STAGE 3: Live running -->
+<div class="stage" id="s3">
+  <p class="phone-note">Manager tapped <b>Start</b>. The counter is now live, and price is calculating in real time.</p>
+  <div class="live-header">
+    <div class="row">
+      <b>Sanjay Behera</b>
+      <span class="status-pill"><span class="pulse"></span>Working</span>
+    </div>
+    <div class="meta">Badagada · Rotavator · Started 8:02 AM</div>
+  </div>
+
+  <div class="counter-box">
+    <div class="time">00:42:17</div>
+    <div class="label">Elapsed Time</div>
+  </div>
+
+  <div class="price-live">
+    <div>
+      <div class="amt">₹704</div>
+      <div class="method">Per Hour · ₹1,000/hr — updates live</div>
+    </div>
+    <div style="font-size:22px;">₹</div>
+  </div>
+
+  <div class="btnrow">
+    <button class="btn-half btn-pause">⏸ Pause</button>
+    <button class="btn-half btn-stop">⏹ Stop</button>
+  </div>
+
+  <div class="note-box">
+    Pause/Resume is <b>one button</b> that flips label. Stop is a <b>separate</b> button for ending the job entirely.
+  </div>
+</div>
+
+<!-- STAGE 4: Stop confirm -->
+<div class="stage" id="s4">
+  <p class="phone-note">He tapped <b>Stop</b>. A confirmation appears immediately — the counter does not stop yet.</p>
+  <div class="live-header">
+    <div class="row">
+      <b>Sanjay Behera</b>
+      <span class="status-pill"><span class="pulse"></span>Still Working</span>
+    </div>
+    <div class="meta">Counter is still running underneath</div>
+  </div>
+  <div class="counter-box">
+    <div class="time">01:15:03</div>
+    <div class="label">Still counting...</div>
+  </div>
+
+  <div class="modal warn" style="margin:0 auto;">
+    <div class="icon">⚠️</div>
+    <h3>Stop this job?</h3>
+    <p>The work will be marked as finished. Make sure the machine has actually stopped working in the field.</p>
+    <div class="row2">
+      <button class="no">No, Continue</button>
+      <button class="yes-warn">Yes, Stop</button>
+    </div>
+    <div class="stillrunning">⏱ Counter keeps running until you confirm</div>
+  </div>
+</div>
+
+<!-- STAGE 5: Submit confirm -->
+<div class="stage" id="s5">
+  <p class="phone-note">Stop was confirmed. Counter has ended. Button now shows <b>Submit</b>. Tapping it asks a stronger warning.</p>
+  <div class="live-header">
+    <div class="row">
+      <b>Sanjay Behera</b>
+      <span class="status-pill paused">Stopped</span>
+    </div>
+    <div class="meta">Final duration: 1h 15m 03s</div>
+  </div>
+  <div class="counter-box">
+    <div class="time">01:15:03</div>
+    <div class="label">Final Time — Locked</div>
+  </div>
+
+  <div class="modal danger" style="margin:0 auto;">
+    <div class="icon">🔒</div>
+    <h3>Submit this job?</h3>
+    <p>Once submitted, this job <b>cannot be changed</b> by a Manager or Driver. Only the Owner can edit it after this point.</p>
+    <div class="row2">
+      <button class="no">No, Wait</button>
+      <button class="yes-danger">Yes, Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- STAGE 6: Done -->
+<div class="stage" id="s6">
+  <p class="phone-note">Submitted. Job is complete and locked. Invoice was generated automatically — no extra step.</p>
+  <div class="card" style="text-align:center;">
+    <div style="width:56px;height:56px;border-radius:50%;background:var(--green-100);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:26px;">✅</div>
+    <h2>Job Completed</h2>
+    <p class="sub">Invoice generated automatically from the recorded time.</p>
+
+    <div style="text-align:left;background:#fafcfa;border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:10px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>Customer</span><b>Sanjay Behera</b></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>Village</span><b>Badagada</b></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>Duration</span><b>1h 15m 03s</b></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>Rate</span><b>₹1,000/hr</b></div>
+      <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid var(--line);"><span>Total</span><b style="color:var(--green-700);font-size:17px;">₹1,251</b></div>
+    </div>
+
+    <div class="note-box">
+      This is now locked. Only the <b>Owner</b> can edit or void it — Manager/Driver view only from here.
+    </div>
+  </div>
+</div>
+
+<script>
+  const tabs = document.querySelectorAll('.tab');
+  const stages = document.querySelectorAll('.stage');
+  tabs.forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      tabs.forEach(t=>t.classList.remove('active'));
+      stages.forEach(s=>s.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('s'+tab.dataset.stage).classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>
