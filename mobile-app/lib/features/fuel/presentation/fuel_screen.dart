@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart' show Share;
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_drawer.dart';
+import '../../machines/presentation/machine_list_screen.dart';
 
 class FuelEntry {
   final String machineRegistration;
@@ -19,9 +21,24 @@ class FuelEntry {
         recordedByName = (json['recorder'] as Map<String, dynamic>?)?['fullName'] as String? ?? 'Unknown';
 }
 
+class FuelFilter {
+  final String? machineId;
+  final DateTime? fromDate;
+  final DateTime? toDate;
+
+  const FuelFilter({this.machineId, this.fromDate, this.toDate});
+}
+
+final fuelFilterProvider = StateProvider<FuelFilter>((ref) => const FuelFilter());
+
 final fuelEntriesProvider = FutureProvider<List<FuelEntry>>((ref) async {
   final dio = ref.watch(apiClientProvider);
-  final response = await dio.get('/fuel/entries');
+  final filter = ref.watch(fuelFilterProvider);
+  final response = await dio.get('/fuel/entries', queryParameters: {
+    if (filter.machineId != null) 'machineId': filter.machineId,
+    if (filter.fromDate != null) 'from': filter.fromDate!.toIso8601String().split('T').first,
+    if (filter.toDate != null) 'to': filter.toDate!.toIso8601String().split('T').first,
+  });
   return (response.data as List<dynamic>).map((j) => FuelEntry.fromJson(j as Map<String, dynamic>)).toList();
 });
 
@@ -34,51 +51,137 @@ final fuelEntriesProvider = FutureProvider<List<FuelEntry>>((ref) async {
 class FuelScreen extends ConsumerWidget {
   const FuelScreen({super.key});
 
+  Future<void> _exportCsv(List<FuelEntry> entries) async {
+    final buffer = StringBuffer('Date,Machine,Litres,Cost,Recorded By\n');
+    for (final e in entries) {
+      buffer.writeln(
+          '${e.recordedAt.split('T').first},${e.machineRegistration},${e.litres.toStringAsFixed(2)},${e.cost?.toStringAsFixed(2) ?? ''},${e.recordedByName}');
+    }
+    await Share.share(buffer.toString(), subject: 'ShabooAgri Fuel Log Export');
+  }
+
+  Future<void> _pickDateRange(BuildContext context, WidgetRef ref, FuelFilter current) async {
+    final range = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime.now().subtract(const Duration(days: 365 * 3)),
+      lastDate: DateTime.now(),
+      initialDateRange:
+          current.fromDate != null && current.toDate != null ? DateTimeRange(start: current.fromDate!, end: current.toDate!) : null,
+    );
+    if (range != null) {
+      ref.read(fuelFilterProvider.notifier).state = FuelFilter(machineId: current.machineId, fromDate: range.start, toDate: range.end);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final entriesAsync = ref.watch(fuelEntriesProvider);
+    final filter = ref.watch(fuelFilterProvider);
+    final machinesAsync = ref.watch(machinesListProvider);
 
     return Scaffold(
       drawer: const AppDrawer(currentRoute: '/fuel'),
       appBar: AppBar(
         title: const Text('Fuel Log'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.ios_share),
+            tooltip: 'Export CSV',
+            onPressed: () => entriesAsync.whenData(_exportCsv),
+          ),
           IconButton(icon: const Icon(Icons.refresh), onPressed: () => ref.invalidate(fuelEntriesProvider)),
         ],
       ),
-      body: entriesAsync.when(
-        data: (entries) {
-          if (entries.isEmpty) return const Center(child: Text('No fuel entries found.'));
-          final totalLitres = entries.fold<double>(0, (sum, e) => sum + e.litres);
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text('Total: ${totalLitres.toStringAsFixed(1)} L across ${entries.length} entries',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: entries.length,
-                  itemBuilder: (context, index) {
-                    final entry = entries[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: ListTile(
-                        title: Text('${entry.machineRegistration} · ${entry.litres.toStringAsFixed(1)} L'),
-                        subtitle: Text('${entry.recordedAt.split('T').first} · ${entry.recordedByName}'),
-                        trailing: entry.cost != null ? Text('₹${entry.cost!.toStringAsFixed(0)}') : null,
-                      ),
-                    );
-                  },
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: machinesAsync.when(
+                    data: (machines) => DropdownButtonFormField<String>(
+                      initialValue: filter.machineId,
+                      decoration: const InputDecoration(labelText: 'Machine', border: OutlineInputBorder(), isDense: true),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('All Machines')),
+                        ...machines.map((m) => DropdownMenuItem(value: m.id, child: Text(m.registrationNumber))),
+                      ],
+                      onChanged: (value) => ref.read(fuelFilterProvider.notifier).state =
+                          FuelFilter(machineId: value, fromDate: filter.fromDate, toDate: filter.toDate),
+                    ),
+                    loading: () => const LinearProgressIndicator(),
+                    error: (e, s) => const SizedBox.shrink(),
+                  ),
                 ),
-              ),
-            ],
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: ${apiErrorMessage(error)}')),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.date_range),
+                  tooltip: 'Date range',
+                  onPressed: () => _pickDateRange(context, ref, filter),
+                ),
+                if (filter.machineId != null || filter.fromDate != null)
+                  IconButton(
+                    icon: const Icon(Icons.clear),
+                    tooltip: 'Clear filters',
+                    onPressed: () => ref.read(fuelFilterProvider.notifier).state = const FuelFilter(),
+                  ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: entriesAsync.when(
+              data: (entries) {
+                if (entries.isEmpty) return const Center(child: Text('No fuel entries found.'));
+                final totalLitres = entries.fold<double>(0, (sum, e) => sum + e.litres);
+                final totalCost = entries.fold<double>(0, (sum, e) => sum + (e.cost ?? 0));
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _kpi('Total Entries', '${entries.length}'),
+                          _kpi('Total Litres', '${totalLitres.toStringAsFixed(1)} L'),
+                          _kpi('Total Cost', '₹${totalCost.toStringAsFixed(0)}'),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: entries.length,
+                        itemBuilder: (context, index) {
+                          final entry = entries[index];
+                          return Card(
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: ListTile(
+                              title: Text('${entry.machineRegistration} · ${entry.litres.toStringAsFixed(1)} L'),
+                              subtitle: Text('${entry.recordedAt.split('T').first} · ${entry.recordedByName}'),
+                              trailing: entry.cost != null ? Text('₹${entry.cost!.toStringAsFixed(0)}') : null,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(child: Text('Error: ${apiErrorMessage(error)}')),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _kpi(String label, String value) {
+    return Column(
+      children: [
+        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+      ],
     );
   }
 }

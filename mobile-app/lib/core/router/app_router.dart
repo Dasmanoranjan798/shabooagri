@@ -13,6 +13,7 @@ import '../../features/drivers/presentation/driver_list_screen.dart';
 import '../../features/employees/presentation/employee_detail_screen.dart';
 import '../../features/employees/presentation/employee_form_screen.dart';
 import '../../features/employees/presentation/employee_list_screen.dart';
+import '../../features/expenses/presentation/expense_detail_screen.dart';
 import '../../features/expenses/presentation/expense_form_screen.dart';
 import '../../features/expenses/presentation/expense_list_screen.dart';
 import '../../features/farmer/presentation/farmer_home_screen.dart';
@@ -207,6 +208,10 @@ GoRouter buildAppRouter(String initialLocation) {
           GoRoute(
             path: 'new',
             builder: (context, state) => const ExpenseFormScreen(),
+          ),
+          GoRoute(
+            path: ':id',
+            builder: (context, state) => ExpenseDetailScreen(expenseId: state.pathParameters['id']!),
           ),
           GoRoute(
             path: ':id/edit',

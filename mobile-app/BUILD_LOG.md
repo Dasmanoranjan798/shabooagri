@@ -243,3 +243,16 @@ Second autonomous run, started after the exhaustive screen-by-screen inventory. 
 - Cross-checked every new field against the real backend validators/schema before writing parsing code (e.g. confirmed `Company.serviceAlertHours`/`insuranceAlertDays`/`licenseAlertDays` defaults are 50/30/30 directly from `schema.prisma`, not assumed from the website's UI copy; confirmed `scheduledTime` round-trips as a full ISO datetime anchored to an epoch date since the backend stores it as a Postgres `TIME` column, and handled that explicitly rather than naively parsing it as a real calendar date).
 
 ---
+
+## Checkpoint 2: Expenses (Detail + KPIs/filters/search/export) and Fuel (filters/export/KPI)
+
+**Expenses** — Added the entire missing Detail screen (Amount, Category, Linked Machine, Recorded By, Date, Description) and wired the list row's `onTap`, which previously did nothing. Rebuilt the List with 4 KPI cards (Total Outflow, Machinery Expenses, General Operations, Expense Entries — machinery/general split computed client-side from whether each expense has a linked machine, matching the website's own `TrendingDown`/`Wrench`/`Briefcase` card logic), dynamic category filter chips (from `GET /expenses/categories`, with live counts), search box, and CSV export (same disclosed `.xls`→CSV deviation as Reports).
+
+**Fuel** — Added machine filter dropdown and date-range picker (`GET /fuel/entries?machineId=&from=&to=`, confirmed exact query param names — `from`/`to`, not `fromDate`/`toDate` — directly from `fuel.controller.ts` rather than assuming they matched the repository function's own internal parameter names), a "Clear filters" action, CSV export, and the missing Total Cost KPI (Total Entries/Total Litres were already there).
+
+**Self-test:**
+- `flutter analyze`: 0 errors.
+- `flutter test`: passes.
+- Live-curled `GET /fuel/entries?from=...&to=...` and `GET /expenses/:id` — both 401, confirming the query params and route are real.
+
+---

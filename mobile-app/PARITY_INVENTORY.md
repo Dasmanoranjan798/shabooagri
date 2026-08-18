@@ -179,11 +179,10 @@ Produced by reading the entire website source (`frontend/src`) file by file — 
 
 ### List (`/expenses`)
 **Website:** 4 KPI cards (Total Outflow, Machinery Expenses, General Operations, Expense Entries count). Category filter tabs (dynamic, per category, with counts). Search box. Export Excel. Inline Edit/Delete icon buttons per row.
-**Mobile:** 🟡 Partial, more limited than logged before. Has list with category/amount/date/description, FAB create, kebab Edit/Delete. **Missing: all 4 KPI cards, category filter tabs, search box, Export Excel** — none of this was previously disclosed.
+**Mobile:** ✅ Full. 4 KPI cards, dynamic category filter chips, search box, CSV export (disclosed .xls→CSV deviation) all added.
 
 ### Detail
-**Website:** Expense Amount, Category, Linked Machine, Recorded By, Description & Remarks, Delete, Edit.
-**Mobile:** 🔴 **Not Started — no Expense Detail screen exists at all.** Tapping a row in the mobile list does nothing (no `onTap` wired); this was not previously identified.
+**Mobile:** ✅ Full. New screen built — Amount, Category, Linked Machine, Recorded By, Date, Description all present. Row tap now wired.
 
 ### Create/Edit Form
 **Website:** Category*, Amount*, Linked Machine (optional), Expense Date, Description.
@@ -194,7 +193,7 @@ Produced by reading the entire website source (`frontend/src`) file by file — 
 ## FUEL (`/fuel`) — read-only on both sides
 
 **Website:** Machine filter, From/To Date filters, Apply/Clear, **Export Excel**. Summary KPIs: Total Entries, Total Litres, Total Cost.
-**Mobile:** 🟡 Partial, more limited than logged before. Has a plain list with a single combined "Total: X L across N entries" line. **Missing: machine filter, date-range filter, Export Excel, and a separate Total Cost KPI** — none of this was previously disclosed (Stage 9's build log described this screen's scope loosely; the filters/export were never actually built).
+**Mobile:** ✅ Full. Machine filter, date-range picker, Clear action, CSV export, and Total Cost KPI all added.
 
 ---
 
