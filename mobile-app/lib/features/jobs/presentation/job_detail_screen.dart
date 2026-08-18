@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/widgets/info_row.dart';
@@ -65,6 +66,33 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
   Future<void> _handleStart() async {
     final repo = ref.read(jobActionsRepositoryProvider);
     await _runAction(() => repo.start(widget.jobId));
+  }
+
+  /// A booking is created with pricing unset (matches the backend: it's
+  /// deliberately picked "right before Start", not at booking time), so
+  /// this has to run before Start becomes possible — `start()` 400s
+  /// server-side ("Set a pricing method and rate before starting this
+  /// job") without it.
+  Future<void> _handleSetPricing(String bookingId) async {
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => const _SetPricingDialog(),
+    );
+    if (result == null) return;
+    final pricingMethodId = result['pricingMethodId'];
+    final rate = double.tryParse(result['rate'] ?? '');
+    if (pricingMethodId == null || rate == null || rate < 0) return;
+
+    setState(() => _acting = true);
+    try {
+      final dio = ref.read(apiClientProvider);
+      await dio.patch('/bookings/$bookingId/pricing', data: {'pricingMethodId': pricingMethodId, 'rate': rate});
+      _refresh();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+    } finally {
+      if (mounted) setState(() => _acting = false);
+    }
   }
 
   Future<void> _handlePause() async {
@@ -393,6 +421,9 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
   Widget _buildActionButtons(JobDetail job, bool isOwnerOrManager, bool isOwner) {
     switch (job.status) {
       case 'NOT_STARTED':
+        if (job.rate == null) {
+          return _primaryButton('Set Pricing', Colors.blue, _acting ? null : () => _handleSetPricing(job.bookingId));
+        }
         return _primaryButton('▶ Start', Colors.green, _acting ? null : _handleStart);
       case 'WORKING':
         return Column(children: [
@@ -454,6 +485,68 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     );
   }
 }
+
+class _SetPricingDialog extends ConsumerStatefulWidget {
+  const _SetPricingDialog();
+
+  @override
+  ConsumerState<_SetPricingDialog> createState() => _SetPricingDialogState();
+}
+
+class _SetPricingDialogState extends ConsumerState<_SetPricingDialog> {
+  final _rateController = TextEditingController();
+  String? _pricingMethodId;
+
+  @override
+  void dispose() {
+    _rateController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final methodsAsync = ref.watch(_pricingMethodsProvider);
+    return AlertDialog(
+      title: const Text('Set Pricing'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          methodsAsync.when(
+            data: (methods) => DropdownButtonFormField<String>(
+              initialValue: _pricingMethodId,
+              decoration: const InputDecoration(labelText: 'Pricing Method *', border: OutlineInputBorder()),
+              items: methods.map((m) => DropdownMenuItem(value: m['id'] as String, child: Text(m['label'] as String))).toList(),
+              onChanged: (value) => setState(() => _pricingMethodId = value),
+            ),
+            loading: () => const LinearProgressIndicator(),
+            error: (e, s) => Text('Could not load pricing methods: ${apiErrorMessage(e)}'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _rateController,
+            decoration: const InputDecoration(labelText: 'Rate *', border: OutlineInputBorder(), prefixText: '₹ '),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        ElevatedButton(
+          onPressed: _pricingMethodId == null
+              ? null
+              : () => Navigator.pop(context, {'pricingMethodId': _pricingMethodId!, 'rate': _rateController.text}),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
+final _pricingMethodsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final dio = ref.watch(apiClientProvider);
+  final response = await dio.get('/pricing-methods');
+  return (response.data as List<dynamic>).cast<Map<String, dynamic>>();
+});
 
 class _AddFuelDialog extends StatefulWidget {
   const _AddFuelDialog();

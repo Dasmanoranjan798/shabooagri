@@ -4,6 +4,7 @@
 /// machine/driver relations needed for the live price calculation.
 class JobDetail {
   final String id;
+  final String bookingId;
   final String status;
   final DateTime? startTime;
   final DateTime? endTime;
@@ -23,6 +24,7 @@ class JobDetail {
 
   JobDetail({
     required this.id,
+    required this.bookingId,
     required this.status,
     required this.startTime,
     required this.endTime,
@@ -52,6 +54,7 @@ class JobDetail {
 
     return JobDetail(
       id: json['id'] as String,
+      bookingId: json['bookingId'] as String,
       status: json['status'] as String,
       startTime: json['startTime'] == null ? null : DateTime.parse(json['startTime'] as String),
       endTime: json['endTime'] == null ? null : DateTime.parse(json['endTime'] as String),

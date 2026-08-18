@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/bookings/presentation/booking_detail_screen.dart';
+import '../../features/bookings/presentation/booking_form_screen.dart';
 import '../../features/bookings/presentation/booking_list_screen.dart';
 import '../../features/customers/presentation/customer_detail_screen.dart';
 import '../../features/customers/presentation/customer_form_screen.dart';
@@ -61,8 +62,16 @@ GoRouter buildAppRouter(String initialLocation) {
         builder: (context, state) => const BookingListScreen(),
         routes: [
           GoRoute(
+            path: 'new',
+            builder: (context, state) => const BookingFormScreen(),
+          ),
+          GoRoute(
             path: ':id',
             builder: (context, state) => BookingDetailScreen(bookingId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: ':id/edit',
+            builder: (context, state) => BookingFormScreen(bookingId: state.pathParameters['id']!),
           ),
         ],
       ),

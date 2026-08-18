@@ -80,3 +80,29 @@ This is exactly the class of bug the user asked to be re-checked for (schema dri
 - Cross-checked every request-body field against the real `createXSchema`/`updateXSchema` Zod validators (not the frontend's TS types) — e.g. confirmed `Driver.availabilityStatus` enum is exactly `AVAILABLE | ON_JOB | OFF_DUTY` (not the placeholder values the original Stage 2 offline table comment guessed), confirmed `Machine.brand`/`model` are optional strings matching the nullable-column fix from the previous session.
 
 ---
+
+## Retroactive Stage 1 gap fix: pricing assignment
+
+While reading `booking.validators.ts` for Stage 4, found that pricing (`pricingMethodId`/`rate`) is deliberately left unset at booking creation and only assigned "right before Start" via a dedicated `PATCH /bookings/:id/pricing` endpoint (gated by `job.update_status`, not `booking.edit` — it's part of the Job flow, not booking editing). Stage 1's Job Detail screen never built this step. Left as-is, **the Start button I shipped in Stage 1 would 400 on essentially every real booking** (`"Set a pricing method and rate before starting this job"`), since pricing is optional/unset by default.
+
+Fixed by adding a "Set Pricing" dialog to `job_detail_screen.dart` (pricing-method dropdown from `GET /pricing-methods` + rate field), shown instead of the Start button whenever `job.rate == null` on a NOT_STARTED job. Verified live: `GET /pricing-methods` and `PATCH /bookings/:id/pricing` both 401 (real, auth-gated). This is exactly the category of self-test the user asked for — caught by re-reading backend validators while building a *later* stage, not by re-testing Stage 1 in isolation. Flagging that Stage 1 needs re-verification against this fix in the final regression pass, not just trusted as already-done.
+
+---
+
+## Stage 4: Bookings full create/edit/cancel
+
+**Built:**
+- `booking_form_screen.dart` — full Create/Edit form: customer, village, work description, scheduled date (date picker), location, estimated hours/acres, machine (optional dropdown), driver (optional dropdown), notes. Fields read directly from `createBookingSchema`/`updateBookingSchema`.
+- On Edit, machine/driver assignment goes through their own dedicated endpoints (`PATCH /bookings/:id/machine`, `.../driver`) separately from the main booking PATCH — matches the backend's real separation (`updateBookingSchema` explicitly omits machine/driver; only `machine.assign`/`driver.assign` permissions can change them).
+- Kebab menu (Edit/Delete) + FAB on the Bookings list, same pattern as Stage 3.
+- "Cancel a booking" is **not** a separate feature — confirmed in the parity audit that `assertBookingDeletable` blocks hard-delete the instant a Job exists (which happens immediately on booking creation), redirecting to "cancel the job instead." Stage 1's Job Cancel action (Owner-only) already *is* the real cancel path. Booking's own Delete kebab action is still wired (for the rare case no Job exists), and will correctly surface that exact redirect message via the shared `confirmAndDelete` dependency-guard handling if someone tries it on a booking that already has a job.
+
+**Deviation, disclosed:** the website's Booking form also has inline "quick-create a new Farmer" and "quick-create a new Village" sub-forms directly inside the Booking dialog. Mobile requires creating those first via their own screens (already built in Stage 3), then selecting them here — more taps, same real data, no separate scope decision needed since Stage 3 already covers full Customer/Village creation.
+
+**Self-test:**
+- `flutter analyze`: 0 errors.
+- `flutter test`: passes.
+- Live-curled all 6 new/changed endpoint paths (`GET/POST /bookings`, `PATCH /bookings/:id`, `PATCH /bookings/:id/machine`, `PATCH /bookings/:id/driver`, `DELETE /bookings/:id`) — all 401, none 404.
+- Traced `updateBookingSchema`'s `.omit({machineId, driverId, pricingMethodId, rate})` precisely before deciding to call the assign-machine/assign-driver endpoints separately on Edit, rather than assuming they could go in the same PATCH body (they'd have been silently dropped by the schema if I had).
+
+---
