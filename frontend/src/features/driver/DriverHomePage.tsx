@@ -9,6 +9,7 @@ import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { getTerm } from "../../lib/terminology";
 import { fmtDate } from "../../lib/format";
+import { DriverJobActions } from "./DriverJobActions";
 
 function fmtTime(d: string | null) {
  if (!d) return "—";
@@ -20,6 +21,7 @@ function statusLabel(s: Job["status"]): string {
  case "NOT_STARTED": return "Not Started";
  case "WORKING": return "Working";
  case "PAUSED": return "Paused";
+ case "STOPPED": return "Stopped";
  case "COMPLETED": return "Completed";
  default: return s;
  }
@@ -55,16 +57,7 @@ interface JobCardProps {
 }
 
 const TodayJobCard: React.FC<JobCardProps> = ({ job, onAction }) => {
- const [acting, setActing] = useState(false);
- const [err, setErr] = useState<string | null>(null);
  const elapsed = useElapsedSec(job.startTime, job.totalPausedDurationSec, job.status === "WORKING");
-
- const doAction = async (fn: () => Promise<Job>) => {
- setActing(true); setErr(null);
- try { await fn(); onAction(); }
- catch (e: any) { setErr(e.message || "Action failed"); }
- finally { setActing(false); }
- };
 
  const machineTerm = getTerm("machine");
  const isToday = job.booking.scheduledDate === new Date().toISOString().slice(0, 10);
@@ -87,8 +80,8 @@ const TodayJobCard: React.FC<JobCardProps> = ({ job, onAction }) => {
  <div className="sa-driver-job-meta-item">
  <div className="sa-driver-job-meta-label">{machineTerm}</div>
  <div className="sa-driver-job-meta-value">
- {job.machine.registrationNumber}
- {(job.machine.brand || job.machine.model) && (
+ {job.machine ? job.machine.registrationNumber : "Not assigned yet"}
+ {job.machine && (job.machine.brand || job.machine.model) && (
  <div className="sa-driver-job-meta-sub">
  {[job.machine.brand, job.machine.model].filter(Boolean).join(" ")}
  </div>
@@ -127,8 +120,6 @@ const TodayJobCard: React.FC<JobCardProps> = ({ job, onAction }) => {
  )}
  </div>
 
- {err && <div className="sa-driver-job-err"> {err}</div>}
-
  <div className="sa-driver-job-actions">
  <a
  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.booking.location || village)}`}
@@ -144,55 +135,9 @@ const TodayJobCard: React.FC<JobCardProps> = ({ job, onAction }) => {
  >
  Navigate
  </a>
- {job.status === "NOT_STARTED" && (
- <button
- className="sa-driver-action-btn sa-driver-action-btn--start"
- onClick={() => doAction(() => api.startJob(job.id))}
- disabled={acting}
- >
- {acting ? <Spinner size="sm" /> : "▶ Start Job"}
- </button>
- )}
- {job.status === "WORKING" && (
- <>
- <button
- className="sa-driver-action-btn sa-driver-action-btn--pause"
- onClick={() => doAction(() => api.pauseJob(job.id))}
- disabled={acting}
- >
- {acting ? <Spinner size="sm" /> : "⏸ Pause"}
- </button>
- <button
- className="sa-driver-action-btn sa-driver-action-btn--complete"
- onClick={() => doAction(() => api.completeJob(job.id, {}))}
- disabled={acting}
- >
- {acting ? <Spinner size="sm" /> : "Complete"}
- </button>
- </>
- )}
- {job.status === "PAUSED" && (
- <>
- <button
- className="sa-driver-action-btn sa-driver-action-btn--start"
- onClick={() => doAction(() => api.resumeJob(job.id))}
- disabled={acting}
- >
- {acting ? <Spinner size="sm" /> : "▶ Resume"}
- </button>
- <button
- className="sa-driver-action-btn sa-driver-action-btn--complete"
- onClick={() => doAction(() => api.completeJob(job.id, {}))}
- disabled={acting}
- >
- {acting ? <Spinner size="sm" /> : "Complete"}
- </button>
- </>
- )}
- {job.status === "COMPLETED" && (
- <div className="sa-driver-job-done"> Job Completed</div>
- )}
  </div>
+
+ <DriverJobActions job={job} onUpdated={onAction} />
  </div>
  );
 };
@@ -222,7 +167,7 @@ export const DriverHomePage: React.FC = () => {
 
  const today = new Date().toISOString().slice(0, 10);
  const todayJobs = jobs.filter((j) => j.booking.scheduledDate === today && j.status !== "COMPLETED");
- const activeJob = todayJobs.find((j) => j.status === "WORKING" || j.status === "PAUSED") ?? todayJobs[0] ?? null;
+ const activeJob = todayJobs.find((j) => ["WORKING", "PAUSED", "STOPPED"].includes(j.status)) ?? todayJobs[0] ?? null;
  const upcomingJobs = jobs.filter((j) => j.booking.scheduledDate > today);
 
  const dateStr = new Date().toLocaleDateString("en-IN", {
@@ -256,7 +201,7 @@ export const DriverHomePage: React.FC = () => {
  <div className="sa-driver-empty-card">
  <div style={{ fontSize: "2.5rem", marginBottom: "8px" }}></div>
  <div style={{ fontWeight: 600, marginBottom: "4px" }}>No Active Job Today</div>
- <div style={{ fontSize: "0.85rem", opacity: 0.8 }}>Check the Jobs tab for your schedule.</div>
+ <div style={{ fontSize: "0.85rem", opacity: 0.8 }}>Check the Job Cards tab for your schedule.</div>
  </div>
  )}
 
@@ -279,7 +224,7 @@ export const DriverHomePage: React.FC = () => {
  {/* All jobs shortcut */}
  <div style={{ display: "flex", justifyContent: "center", marginTop: "4px" }}>
  <Link to="/driver/jobs" className="sa-btn sa-btn-secondary" style={{ width: "100%", textAlign: "center" }}>
- View All Jobs →
+ View All Job Cards →
  </Link>
  </div>
  </>

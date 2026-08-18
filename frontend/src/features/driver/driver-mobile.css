@@ -391,3 +391,11 @@
   color: var(--color-text);
   line-height: 1.5;
 }
+
+/* DriverJobActions.tsx's Stop/Submit/resume-reason overlays (reused from
+   jobs.css's .sa-job-subdialog-overlay) — the Driver app has no positioned
+   task-tray container to constrain them to, so pin them to the real
+   viewport instead of scrolling away with the page. */
+.sa-driver-page .sa-job-subdialog-overlay {
+  position: fixed;
+}

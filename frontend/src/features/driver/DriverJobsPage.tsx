@@ -12,6 +12,7 @@ function statusLabel(s: Job["status"]): string {
  case "NOT_STARTED": return "Not Started";
  case "WORKING": return "Working";
  case "PAUSED": return "Paused";
+ case "STOPPED": return "Stopped";
  case "COMPLETED": return "Completed";
  default: return s;
  }
@@ -48,17 +49,18 @@ export const DriverJobsPage: React.FC = () => {
 
  const today = new Date().toISOString().slice(0, 10);
 
+ // STOPPED counts as active — the driver still owns getting it Submitted.
  const filtered = jobs.filter((j) => {
  if (filter === "ALL") return true;
  if (filter === "COMPLETED") return j.status === "COMPLETED";
- if (filter === "ACTIVE") return (j.status === "WORKING" || j.status === "PAUSED") || j.booking.scheduledDate === today;
+ if (filter === "ACTIVE") return ["WORKING", "PAUSED", "STOPPED"].includes(j.status) || j.booking.scheduledDate === today;
  if (filter === "UPCOMING") return j.booking.scheduledDate > today && j.status === "NOT_STARTED";
  return true;
  });
 
  return (
  <div className="sa-driver-page">
- <div className="sa-driver-section-title"> My Jobs</div>
+ <div className="sa-driver-section-title"> My Job Cards</div>
 
  {/* Filter tabs */}
  <div className="sa-driver-filter-row">
@@ -72,7 +74,7 @@ export const DriverJobsPage: React.FC = () => {
  {opt.value !== "ALL" && (
  <span className="sa-driver-filter-count">
  {opt.value === "ACTIVE"
- ? jobs.filter((j) => j.status === "WORKING" || j.status === "PAUSED" || j.booking.scheduledDate === today).length
+ ? jobs.filter((j) => ["WORKING", "PAUSED", "STOPPED"].includes(j.status) || j.booking.scheduledDate === today).length
  : opt.value === "COMPLETED"
  ? jobs.filter((j) => j.status === "COMPLETED").length
  : jobs.filter((j) => j.booking.scheduledDate > today && j.status === "NOT_STARTED").length}
@@ -108,8 +110,9 @@ export const DriverJobsPage: React.FC = () => {
  {village} &nbsp;·&nbsp; {fmtDateRelative(job.booking.scheduledDate)}
  </div>
  <div className="sa-driver-job-row-machine">
- {job.machine.registrationNumber}
- {(job.machine.brand || job.machine.model) ? ` (${[job.machine.brand, job.machine.model].filter(Boolean).join(" ")})` : ""}
+ {job.machine
+ ? `${job.machine.registrationNumber}${(job.machine.brand || job.machine.model) ? ` (${[job.machine.brand, job.machine.model].filter(Boolean).join(" ")})` : ""}`
+ : "Not assigned yet"}
  </div>
  </div>
  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>

@@ -7,6 +7,7 @@ import { Badge, getStatusBadgeVariant } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { getTerm } from "../../lib/terminology";
 import { fmtDate } from "../../lib/format";
+import { DriverJobActions } from "./DriverJobActions";
 
 function fmtTime(d: string | null) {
  if (!d) return "—";
@@ -18,6 +19,7 @@ function statusLabel(s: Job["status"]): string {
  case "NOT_STARTED": return "Not Started";
  case "WORKING": return "Working";
  case "PAUSED": return "Paused";
+ case "STOPPED": return "Stopped";
  case "COMPLETED": return "Completed";
  default: return s;
  }
@@ -53,8 +55,6 @@ export const DriverJobDetailPage: React.FC = () => {
  const [job, setJob] = useState<Job | null>(null);
  const [isLoading, setIsLoading] = useState(true);
  const [error, setError] = useState<string | null>(null);
- const [acting, setActing] = useState(false);
- const [actionErr, setActionErr] = useState<string | null>(null);
 
  const load = useCallback(async () => {
  if (!id) return;
@@ -77,19 +77,6 @@ export const DriverJobDetailPage: React.FC = () => {
  job?.status === "WORKING",
  );
 
- const doAction = async (fn: () => Promise<Job>) => {
- setActing(true);
- setActionErr(null);
- try {
- const updated = await fn();
- setJob(updated);
- } catch (e: any) {
- setActionErr(e.message || "Action failed");
- } finally {
- setActing(false);
- }
- };
-
  if (isLoading) return <div className="sa-loading-state"><Spinner /><span>Loading job…</span></div>;
  if (error || !job) return (
  <div className="sa-driver-page">
@@ -110,7 +97,7 @@ export const DriverJobDetailPage: React.FC = () => {
  className="sa-driver-back-btn"
  onClick={() => navigate("/driver/jobs")}
  >
- ← Back to Jobs
+ ← Back to Job Cards
  </button>
 
  {/* Status header */}
@@ -134,7 +121,7 @@ export const DriverJobDetailPage: React.FC = () => {
  <div className="sa-driver-detail-grid">
  {[
  { label: "Date", value: fmtDate(job.booking.scheduledDate, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) },
- { label: machineTerm, value: `${job.machine.registrationNumber}${job.machine.brand ? ` — ${job.machine.brand}` : ""}` },
+ { label: machineTerm, value: job.machine ? `${job.machine.registrationNumber}${job.machine.brand ? ` — ${job.machine.brand}` : ""}` : "Not assigned yet" },
  { label: "Start Time", value: fmtTime(job.startTime) },
  { label: "End Time", value: fmtTime(job.endTime) },
  { label: "Acres Completed", value: job.completedAcres != null ? `${job.completedAcres} ac` : "—" },
@@ -156,8 +143,6 @@ export const DriverJobDetailPage: React.FC = () => {
  )}
 
  {/* Actions */}
- {actionErr && <div className="sa-driver-job-err"> {actionErr}</div>}
-
  <div className="sa-driver-job-actions">
  <a
  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.booking.location || village)}`}
@@ -173,57 +158,9 @@ export const DriverJobDetailPage: React.FC = () => {
  >
  Navigate
  </a>
- {job.status === "NOT_STARTED" && (
- <button
- className="sa-driver-action-btn sa-driver-action-btn--start"
- onClick={() => doAction(() => api.startJob(job.id))}
- disabled={acting}
- >
- {acting ? <Spinner size="sm" /> : "▶ Start Job"}
- </button>
- )}
- {job.status === "WORKING" && (
- <>
- <button
- className="sa-driver-action-btn sa-driver-action-btn--pause"
- onClick={() => doAction(() => api.pauseJob(job.id))}
- disabled={acting}
- >
- {acting ? <Spinner size="sm" /> : "⏸ Pause"}
- </button>
- <button
- className="sa-driver-action-btn sa-driver-action-btn--complete"
- onClick={() => doAction(() => api.completeJob(job.id, {}))}
- disabled={acting}
- >
- {acting ? <Spinner size="sm" /> : "Complete Job"}
- </button>
- </>
- )}
- {job.status === "PAUSED" && (
- <>
- <button
- className="sa-driver-action-btn sa-driver-action-btn--start"
- onClick={() => doAction(() => api.resumeJob(job.id))}
- disabled={acting}
- >
- {acting ? <Spinner size="sm" /> : "▶ Resume"}
- </button>
- <button
- className="sa-driver-action-btn sa-driver-action-btn--complete"
- onClick={() => doAction(() => api.completeJob(job.id, {}))}
- disabled={acting}
- >
- {acting ? <Spinner size="sm" /> : "Complete Job"}
- </button>
- </>
- )}
- {job.status === "COMPLETED" && (
- <div className="sa-driver-job-done" style={{ fontSize: "1.1rem", padding: "16px 0" }}>
- Job Completed
  </div>
- )}
- </div>
+
+ <DriverJobActions job={job} onUpdated={setJob} />
  </div>
  );
 };
