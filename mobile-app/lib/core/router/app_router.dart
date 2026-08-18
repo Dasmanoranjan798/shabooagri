@@ -21,6 +21,9 @@ import '../../features/jobs/presentation/job_detail_screen.dart';
 import '../../features/machines/presentation/machine_detail_screen.dart';
 import '../../features/machines/presentation/machine_form_screen.dart';
 import '../../features/machines/presentation/machine_list_screen.dart';
+import '../../features/maintenance/presentation/maintenance_record_form_screen.dart';
+import '../../features/maintenance/presentation/maintenance_schedules_screen.dart';
+import '../../features/maintenance/presentation/maintenance_screen.dart';
 import '../../features/payments/presentation/payment_detail_screen.dart';
 import '../../features/payments/presentation/payment_list_screen.dart';
 import '../../features/setup/presentation/setup_screen.dart';
@@ -174,6 +177,24 @@ GoRouter buildAppRouter(String initialLocation) {
           GoRoute(
             path: ':id/edit',
             builder: (context, state) => EmployeeFormScreen(employeeId: state.pathParameters['id']!),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/maintenance',
+        builder: (context, state) => const MaintenanceScreen(),
+        routes: [
+          GoRoute(
+            path: 'schedules',
+            builder: (context, state) => const MaintenanceSchedulesScreen(),
+          ),
+          GoRoute(
+            path: 'records/new',
+            builder: (context, state) => const MaintenanceRecordFormScreen(),
+          ),
+          GoRoute(
+            path: 'records/:id/edit',
+            builder: (context, state) => MaintenanceRecordFormScreen(recordId: state.pathParameters['id']!),
           ),
         ],
       ),

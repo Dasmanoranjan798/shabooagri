@@ -150,3 +150,21 @@ Fixed by adding a "Set Pricing" dialog to `job_detail_screen.dart` (pricing-meth
 - Live-curled all 5 endpoints (`GET /expenses/categories`, `GET/POST /expenses`, `PATCH/DELETE /expenses/:id`) — all 401.
 
 ---
+
+## Stage 8: Maintenance module (Schedules + Records + Alerts)
+
+**Built:**
+- `maintenance_screen.dart` — real-time Service Alerts banner (`GET /maintenance/alerts`, the existing engine, unchanged — status OVERDUE/DUE_SOON/HEALTHY, only non-healthy shown) + Service Records list, matching `MaintenancePage.tsx`.
+- `maintenance_record_form_screen.dart` — "Log Service Record" flow: machine, service date, hour meter at service, cost, performed-by, description. Matches `MaintenanceLogModal.tsx`'s fields.
+- `maintenance_schedules_screen.dart` — reachable via an AppBar icon rather than the main screen (kept the primary screen focused on Alerts+Records, matching how the website itself treats schedules as secondary config vs. records as the frequent action). Simple in-dialog create/edit (3 real fields: interval hours, interval days, description) rather than a full-screen form — proportionate to the actual field count, same judgment call as Villages in Stage 3.
+- Added "Maintenance" to the nav drawer.
+
+**Real bug caught and fixed before shipping, not after:** the Schedules dialog's machine dropdown initially read `ref.read(machinesListProvider)` once at dialog-open time — if that provider hadn't resolved yet (e.g. user navigates straight to Schedules without visiting Machines first), the dropdown would silently render with zero options and no loading indicator, a real "looks broken, isn't obviously why" bug. Fixed by wrapping the dropdown in a `Consumer` that `ref.watch()`s the provider reactively inside the dialog, with proper loading/error states — same category of async-data-in-a-dialog mistake as the earlier `_SetPricingDialog`, caught this time before commit by re-reading my own code rather than after.
+
+**Self-test:**
+- `flutter analyze`: 0 errors.
+- `flutter test`: passes.
+- Live-curled all 9 endpoints (Schedules × GET/POST/PATCH/DELETE, Records × GET/POST/PATCH/DELETE, Alerts × GET) — all 401.
+- Cross-checked every field against `maintenance.validators.ts`'s `createScheduleSchema`/`createRecordSchema` and the repository's actual `include` shape for nested `machine`/`schedule` relations, not guessed.
+
+---
