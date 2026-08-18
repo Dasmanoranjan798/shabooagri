@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart' show Share;
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/widgets/info_row.dart';
+import '../data/receipt.dart';
 import 'payment_list_screen.dart';
 
-final invoiceDetailProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
+final receiptProvider = FutureProvider.family<Receipt, String>((ref, id) async {
   final dio = ref.watch(apiClientProvider);
-  final response = await dio.get('/invoices/$id');
-  return response.data as Map<String, dynamic>;
+  final response = await dio.get('/invoices/$id/receipt');
+  return Receipt.fromJson(response.data as Map<String, dynamic>);
 });
 
 const _paymentMethods = ['CASH', 'UPI', 'BANK_TRANSFER', 'CREDIT'];
@@ -28,7 +33,7 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
   bool _acting = false;
 
   void _refresh() {
-    ref.invalidate(invoiceDetailProvider(widget.invoiceId));
+    ref.invalidate(receiptProvider(widget.invoiceId));
     ref.invalidate(invoicesListProvider);
   }
 
@@ -59,13 +64,13 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
     }
   }
 
-  Future<void> _handleVoid() async {
+  Future<String?> _promptVoidReason(String title) {
     final reasonController = TextEditingController();
-    final reason = await showDialog<String>(
+    return showDialog<String>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Void this invoice?'),
+          title: Text(title),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,8 +96,11 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
         ),
       ),
     );
-    if (reason == null) return;
+  }
 
+  Future<void> _handleVoidInvoice() async {
+    final reason = await _promptVoidReason('Void this invoice?');
+    if (reason == null) return;
     setState(() => _acting = true);
     try {
       final dio = ref.read(apiClientProvider);
@@ -105,9 +113,93 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
     }
   }
 
+  Future<void> _handleVoidPayment(String paymentId) async {
+    final reason = await _promptVoidReason('Void this payment?');
+    if (reason == null) return;
+    setState(() => _acting = true);
+    try {
+      final dio = ref.read(apiClientProvider);
+      await dio.post('/payments/$paymentId/void', data: {'reason': reason});
+      _refresh();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+    } finally {
+      if (mounted) setState(() => _acting = false);
+    }
+  }
+
+  Future<void> _exportPdf(Receipt receipt) async {
+    final inv = receipt.invoice;
+    final doc = pw.Document();
+    doc.addPage(
+      pw.Page(
+        build: (context) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(receipt.company['name'] as String? ?? 'ShabooAgri', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+            if (receipt.company['address'] != null) pw.Text(receipt.company['address'] as String),
+            if (receipt.company['gstin'] != null) pw.Text('GSTIN: ${receipt.company['gstin']}'),
+            pw.SizedBox(height: 16),
+            pw.Text('Invoice #${inv['invoiceNumber']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+            pw.Text('Date: ${(inv['invoiceDate'] as String).split('T').first}'),
+            pw.SizedBox(height: 12),
+            pw.Text('Bill To: ${receipt.customer['name']}'),
+            pw.Text('Village: ${receipt.customer['village']}'),
+            pw.SizedBox(height: 16),
+            pw.TableHelper.fromTextArray(headers: [
+              'Total Amount',
+              'Paid Amount',
+              'Balance Due',
+            ], data: [
+              [
+                '₹${(inv['totalAmount'] as num).toStringAsFixed(2)}',
+                '₹${(inv['paidAmount'] as num).toStringAsFixed(2)}',
+                '₹${(inv['balanceAmount'] as num).toStringAsFixed(2)}',
+              ]
+            ]),
+            pw.SizedBox(height: 16),
+            if (receipt.payments.isNotEmpty) ...[
+              pw.Text('Payment History', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              pw.TableHelper.fromTextArray(
+                headers: ['Date', 'Method', 'Amount', 'Status'],
+                data: receipt.payments
+                    .map((p) => [
+                          p.receivedAt.split('T').first,
+                          p.paymentMethod,
+                          '₹${p.amount.toStringAsFixed(2)}',
+                          p.voided ? 'Voided' : 'Active',
+                        ])
+                    .toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+    await Printing.sharePdf(bytes: await doc.save(), filename: 'invoice-${inv['invoiceNumber']}.pdf');
+  }
+
+  Future<void> _exportCsv(Receipt receipt) async {
+    final inv = receipt.invoice;
+    final buffer = StringBuffer('Invoice Number,Customer,Date,Total Amount,Paid Amount,Balance Due,Status\n');
+    buffer.writeln(
+        '${inv['invoiceNumber']},${receipt.customer['name']},${(inv['invoiceDate'] as String).split('T').first},${inv['totalAmount']},${inv['paidAmount']},${inv['balanceAmount']},${inv['status']}');
+    await Share.share(buffer.toString(), subject: 'Invoice ${inv['invoiceNumber']}');
+  }
+
+  Future<void> _shareWhatsApp(Receipt receipt) async {
+    final inv = receipt.invoice;
+    final companyName = receipt.company['name'] as String? ?? 'ShabooAgri';
+    final message = Uri.encodeComponent(
+        'Hello ${receipt.customer['name']},\n\nHere is your invoice summary from $companyName:\n\nInvoice: #${inv['invoiceNumber']}\nTotal Amount: ₹${inv['totalAmount']}\nAmount Paid: ₹${inv['paidAmount']}\nBalance Due: ₹${inv['balanceAmount']}\nStatus: ${inv['status']}\n\nThank you for choosing $companyName!');
+    final phone = (receipt.customer['phone'] as String?)?.replaceAll(RegExp(r'\D'), '');
+    final uri = Uri.parse('https://wa.me/${phone ?? ''}?text=$message');
+    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final invoiceAsync = ref.watch(invoiceDetailProvider(widget.invoiceId));
+    final receiptAsync = ref.watch(receiptProvider(widget.invoiceId));
     final user = ref.watch(currentUserProvider);
     final canReceivePayment = user?.isOwnerOrManager ?? false;
     final isOwner = user?.roleSystemKey == 'owner';
@@ -119,22 +211,81 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/payments'),
         ),
+        actions: receiptAsync.maybeWhen(
+          data: (receipt) => [
+            IconButton(icon: const Icon(Icons.picture_as_pdf), tooltip: 'Print / PDF', onPressed: () => _exportPdf(receipt)),
+            IconButton(icon: const Icon(Icons.ios_share), tooltip: 'Export CSV', onPressed: () => _exportCsv(receipt)),
+            IconButton(icon: const Icon(Icons.chat), tooltip: 'Share WhatsApp', onPressed: () => _shareWhatsApp(receipt)),
+          ],
+          orElse: () => const [],
+        ),
       ),
-      body: invoiceAsync.when(
-        data: (invoice) {
-          final balance = (invoice['balanceAmount'] as num).toDouble();
-          final status = invoice['status'] as String;
+      body: receiptAsync.when(
+        data: (receipt) {
+          final inv = receipt.invoice;
+          final balance = (inv['balanceAmount'] as num).toDouble();
+          final status = inv['status'] as String;
           final isVoided = status == 'VOIDED';
+          final isGstApplicable = inv['isGstApplicable'] as bool? ?? false;
+
           return Padding(
             padding: const EdgeInsets.all(16.0),
             child: ListView(
               children: [
-                InfoRow('Invoice Number', invoice['invoiceNumber'] as String),
+                Text(receipt.company['name'] as String? ?? 'ShabooAgri',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                if (receipt.company['address'] != null) Text(receipt.company['address'] as String, style: const TextStyle(color: Colors.grey)),
+                if (receipt.company['gstin'] != null) Text('GSTIN: ${receipt.company['gstin']}', style: const TextStyle(color: Colors.grey)),
+                const Divider(height: 32),
+                InfoRow('Invoice Number', inv['invoiceNumber'] as String),
                 InfoRow('Status', status),
-                InfoRow('Invoice Date', (invoice['invoiceDate'] as String).split('T').first),
-                InfoRow('Total Amount', '₹${(invoice['totalAmount'] as num).toStringAsFixed(2)}'),
-                InfoRow('Paid Amount', '₹${(invoice['paidAmount'] as num).toStringAsFixed(2)}'),
+                InfoRow('Invoice Date', (inv['invoiceDate'] as String).split('T').first),
+                InfoRow('Customer', receipt.customer['name'] as String),
+                InfoRow('Village', receipt.customer['village'] as String? ?? '—'),
+                if (receipt.service['machine'] != null)
+                  InfoRow('Machine', (receipt.service['machine'] as Map<String, dynamic>)['registrationNumber'] as String),
+                if (receipt.service['driver'] != null)
+                  InfoRow('Driver', (receipt.service['driver'] as Map<String, dynamic>)['name'] as String),
+                const Divider(height: 32),
+                const Text('Billing Summary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 8),
+                InfoRow('Taxable Value', '₹${(inv['subtotalAmount'] as num).toStringAsFixed(2)}'),
+                if (isGstApplicable) ...[
+                  if ((inv['cgstAmount'] as num) > 0) InfoRow('CGST', '₹${(inv['cgstAmount'] as num).toStringAsFixed(2)}'),
+                  if ((inv['sgstAmount'] as num) > 0) InfoRow('SGST', '₹${(inv['sgstAmount'] as num).toStringAsFixed(2)}'),
+                  if ((inv['igstAmount'] as num) > 0) InfoRow('IGST', '₹${(inv['igstAmount'] as num).toStringAsFixed(2)}'),
+                ],
+                InfoRow('Total Amount', '₹${(inv['totalAmount'] as num).toStringAsFixed(2)}'),
+                InfoRow('Amount Received', '₹${(inv['paidAmount'] as num).toStringAsFixed(2)}'),
                 InfoRow('Balance Due', '₹${balance.toStringAsFixed(2)}'),
+                if (receipt.company['bankName'] != null || receipt.company['upiId'] != null) ...[
+                  const Divider(height: 32),
+                  const Text('Bank & Payment Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 8),
+                  if (receipt.company['bankName'] != null) InfoRow('Bank Name', receipt.company['bankName'] as String),
+                  if (receipt.company['accountNumber'] != null) InfoRow('Account No', receipt.company['accountNumber'] as String),
+                  if (receipt.company['ifscCode'] != null) InfoRow('IFSC Code', receipt.company['ifscCode'] as String),
+                  if (receipt.company['upiId'] != null) InfoRow('UPI ID', receipt.company['upiId'] as String),
+                ],
+                if (receipt.payments.isNotEmpty) ...[
+                  const Divider(height: 32),
+                  const Text('Payment Collections History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 8),
+                  ...receipt.payments.map((p) => Card(
+                        child: ListTile(
+                          title: Text('₹${p.amount.toStringAsFixed(2)} · ${p.paymentMethod}',
+                              style: TextStyle(decoration: p.voided ? TextDecoration.lineThrough : null)),
+                          subtitle: Text(
+                              '${p.receivedAt.split('T').first} · ${p.receivedBy}${p.voided ? ' · Voided${p.voidReason != null ? ': ${p.voidReason}' : ''}' : ''}'),
+                          trailing: isOwner && !p.voided
+                              ? TextButton(
+                                  onPressed: _acting ? null : () => _handleVoidPayment(p.id),
+                                  child: const Text('Void', style: TextStyle(color: Colors.red)),
+                                )
+                              : null,
+                        ),
+                      )),
+                ],
                 const SizedBox(height: 24),
                 if (canReceivePayment && balance > 0 && !isVoided)
                   ElevatedButton.icon(
@@ -148,7 +299,7 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
                   OutlinedButton.icon(
                     icon: const Icon(Icons.block, color: Colors.red),
                     label: const Text('Void Invoice', style: TextStyle(color: Colors.red)),
-                    onPressed: _acting ? null : _handleVoid,
+                    onPressed: _acting ? null : _handleVoidInvoice,
                   ),
                 ],
               ],

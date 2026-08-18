@@ -256,3 +256,23 @@ Second autonomous run, started after the exhaustive screen-by-screen inventory. 
 - Live-curled `GET /fuel/entries?from=...&to=...` and `GET /expenses/:id` — both 401, confirming the query params and route are real.
 
 ---
+
+## Checkpoint 3: Payments module — the largest single gap, closed
+
+Discovered a much better data source than expected: the backend has a purpose-built `GET /invoices/:id/receipt` endpoint (`payment.service.ts`'s `getReceipt()`) that server-side joins company + invoice + customer + service/job + full payment history into one response — the website's `ReceiptModal.tsx` reads from this same endpoint rather than assembling it from separate calls. Used it directly instead of re-deriving company info client-side, which is both simpler and guaranteed consistent with what the website itself shows.
+
+**List** — Added: 5 KPI cards (Total Invoices, Total Receivables, Total Collected, Outstanding Balance, Advance Balance), status filter tabs (All/Unpaid/Partially Paid/Paid/Voided with live counts), search box, direct-from-row "Receive" button, CSV export, and the **entire Customer Advances section** (`GET /payments/advances`, balance computed as `amount - appliedAmount` matching the website's own column logic).
+
+**New: Record Advance screen** (`POST /payments/advances`) — customer, amount, payment method (segmented buttons matching the website's chip style), reference, notes.
+
+**New: New Invoice screen** (`POST /invoices` — confirmed this is genuinely `POST /invoices`, not `/invoices/manual` as the name might suggest, directly from `payment.routes.ts` before writing the call) — customer, amount, description, optional due date.
+
+**Detail → full Receipt view** — rebuilt entirely on the receipt endpoint: company header (name/address/GSTIN), full GST breakdown (CGST/SGST/IGST, conditionally shown only when >0, matching the website), Bank/UPI payment details block (conditionally shown only when configured), **Payment Collections History** with per-payment display (voided rows struck through with their reason shown) and **per-payment Void** (Owner-only, mandatory reason — this specific gap, "only whole-invoice void existed," is now closed), and three real exports: **Print/PDF** (via `pdf`+`printing`, same pattern as Reports), **CSV**, and **Share via WhatsApp** (`wa.me` deep link with the same message template text as the website's `ReceiptModal.tsx`, verified from source, not paraphrased).
+
+**Self-test:**
+- `flutter analyze`: 0 errors.
+- `flutter test`: passes.
+- Live-curled all 5 new/changed endpoints (`GET /invoices/:id/receipt`, `GET`+`POST /payments/advances`, `POST /invoices`, `POST /payments/:id/void`) — all 401, none 404.
+- Confirmed the exact WhatsApp message template text against `ReceiptModal.tsx` source rather than approximating it, since this is customer-facing text that should match what the business already sends from the website.
+
+---

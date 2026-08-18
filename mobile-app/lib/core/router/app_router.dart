@@ -26,8 +26,10 @@ import '../../features/machines/presentation/machine_list_screen.dart';
 import '../../features/maintenance/presentation/maintenance_record_form_screen.dart';
 import '../../features/maintenance/presentation/maintenance_schedules_screen.dart';
 import '../../features/maintenance/presentation/maintenance_screen.dart';
+import '../../features/payments/presentation/new_invoice_screen.dart';
 import '../../features/payments/presentation/payment_detail_screen.dart';
 import '../../features/payments/presentation/payment_list_screen.dart';
+import '../../features/payments/presentation/record_advance_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/setup/presentation/setup_screen.dart';
 import '../../features/villages/presentation/village_list_screen.dart';
@@ -159,6 +161,14 @@ GoRouter buildAppRouter(String initialLocation) {
         path: '/payments',
         builder: (context, state) => const PaymentListScreen(),
         routes: [
+          GoRoute(
+            path: 'advance/new',
+            builder: (context, state) => const RecordAdvanceScreen(),
+          ),
+          GoRoute(
+            path: 'invoice/new',
+            builder: (context, state) => const NewInvoiceScreen(),
+          ),
           GoRoute(
             path: ':id',
             builder: (context, state) => PaymentDetailScreen(invoiceId: state.pathParameters['id']!),

@@ -151,23 +151,19 @@ Produced by reading the entire website source (`frontend/src`) file by file — 
 
 ### List
 **Website:** 5 KPI cards (Total Invoices, Total Receivables, Total Collected, Outstanding Balance, Advance Balance). Status filter tabs — All/Unpaid/Partially Paid/Paid/Voided (counts). Search box. "Record Advance" button. "New Invoice" (manual) button. "Export Excel". Per-row "Receive Payment" button directly on the list. Kebab: View Receipt, Void Invoice. Secondary "Customer Advances" table section.
-**Mobile:** 🟡 Partial, more limited than logged before. Actual current: plain invoice list, tap-through to detail, no direct per-row Receive Payment button. **Missing entirely: all 5 KPI cards, status filter tabs, search box, Record Advance feature (whole Customer Advances concept), New Invoice (manual invoice creation), Export Excel, direct-from-list Receive Payment, Customer Advances table.**
+**Mobile:** ✅ Full. All 5 KPI cards, status filter tabs, search, direct-from-row Receive button, CSV export, Customer Advances section all added.
 
 ### Detail / Receipt
-**Website:** Full printable receipt — company header (name/address/phone/GSTIN/PAN), GST breakdown rows (CGST/SGST/IGST conditional), Bank/UPI payment details block, **Payment Collections History table with per-payment Void**, editable GST/Tax panel, Print/Save PDF, Export Excel (single invoice), **Share WhatsApp**.
-**Mobile:** 🟡 Partial, more limited than logged before. Has Invoice Number/Status/Date/Total/Paid/Balance, Receive Payment, Void Invoice (whole-invoice only). **Missing: the entire receipt/print view** — no company header, no GST breakdown, no bank details, no payment history table, no per-payment void, no PDF/Excel/WhatsApp export for a single invoice.
+**Mobile:** ✅ Full. Rebuilt entirely on the website's own `GET /invoices/:id/receipt` endpoint — company header, full conditional GST breakdown, bank/UPI details, Payment Collections History with per-payment void, Print/PDF, CSV, and WhatsApp share (message template text confirmed against source) all added. **Still missing:** the editable GST/Tax panel (view-only for now — a real remaining gap, not silently dropped).
 
 ### Receive Payment
-**Website:** Amount* (capped at balance), Method* (friendly labels: "Cash Collection"/"UPI / GPay / PhonePe"/"Bank Transfer (NEFT/IMPS)"/"Customer Credit Account"), Reference, Notes.
-**Mobile:** ✅ Matches structurally (amount, method, reference, notes, partial payments work). Cosmetic gap: mobile shows raw enum values (CASH/UPI/BANK_TRANSFER/CREDIT) not the website's friendly labels.
+**Mobile:** ✅ Matches structurally. Cosmetic gap unchanged: raw enum labels vs. website's friendly labels.
 
 ### Record Advance
-**Website:** Customer*, Amount*, Method* (segmented buttons), Reference, Notes.
-**Mobile:** 🔴 Not Started.
+**Mobile:** ✅ Full. New screen built.
 
 ### New Invoice (manual)
-**Website:** Customer*, Amount*, Description*, Due Date.
-**Mobile:** 🔴 Not Started.
+**Mobile:** ✅ Full. New screen built (confirmed the real endpoint is `POST /invoices`, not `/invoices/manual`).
 
 ### Void (invoice or individual payment)
 **Website:** Mandatory Reason, contextual description text, works at both invoice-level and individual-payment-level.
