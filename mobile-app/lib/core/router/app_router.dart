@@ -3,9 +3,11 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/bookings/presentation/booking_detail_screen.dart';
 import '../../features/bookings/presentation/booking_list_screen.dart';
 import '../../features/customers/presentation/customer_detail_screen.dart';
+import '../../features/customers/presentation/customer_form_screen.dart';
 import '../../features/customers/presentation/customer_list_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/drivers/presentation/driver_detail_screen.dart';
+import '../../features/drivers/presentation/driver_form_screen.dart';
 import '../../features/drivers/presentation/driver_list_screen.dart';
 import '../../features/employees/presentation/employee_detail_screen.dart';
 import '../../features/employees/presentation/employee_list_screen.dart';
@@ -13,11 +15,13 @@ import '../../features/farmer/presentation/farmer_home_screen.dart';
 import '../../features/jobs/presentation/job_list_screen.dart';
 import '../../features/jobs/presentation/job_detail_screen.dart';
 import '../../features/machines/presentation/machine_detail_screen.dart';
+import '../../features/machines/presentation/machine_form_screen.dart';
 import '../../features/machines/presentation/machine_list_screen.dart';
 import '../../features/payments/presentation/payment_detail_screen.dart';
 import '../../features/payments/presentation/payment_list_screen.dart';
 import '../../features/setup/presentation/setup_screen.dart';
 import '../../features/villages/presentation/village_list_screen.dart';
+import '../../features/villages/presentation/village_form_screen.dart';
 
 /// Built once at startup (see main.dart) after resolving where this device
 /// should land: `/setup` if no company slug is persisted yet, `/login` if a
@@ -67,8 +71,16 @@ GoRouter buildAppRouter(String initialLocation) {
         builder: (context, state) => const MachineListScreen(),
         routes: [
           GoRoute(
+            path: 'new',
+            builder: (context, state) => const MachineFormScreen(),
+          ),
+          GoRoute(
             path: ':id',
             builder: (context, state) => MachineDetailScreen(machineId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: ':id/edit',
+            builder: (context, state) => MachineFormScreen(machineId: state.pathParameters['id']!),
           ),
         ],
       ),
@@ -77,8 +89,16 @@ GoRouter buildAppRouter(String initialLocation) {
         builder: (context, state) => const DriverListScreen(),
         routes: [
           GoRoute(
+            path: 'new',
+            builder: (context, state) => const DriverFormScreen(),
+          ),
+          GoRoute(
             path: ':id',
             builder: (context, state) => DriverDetailScreen(driverId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: ':id/edit',
+            builder: (context, state) => DriverFormScreen(driverId: state.pathParameters['id']!),
           ),
         ],
       ),
@@ -87,14 +107,35 @@ GoRouter buildAppRouter(String initialLocation) {
         builder: (context, state) => const CustomerListScreen(),
         routes: [
           GoRoute(
+            path: 'new',
+            builder: (context, state) => const CustomerFormScreen(),
+          ),
+          GoRoute(
             path: ':id',
             builder: (context, state) => CustomerDetailScreen(customerId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: ':id/edit',
+            builder: (context, state) => CustomerFormScreen(customerId: state.pathParameters['id']!),
           ),
         ],
       ),
       GoRoute(
         path: '/villages',
         builder: (context, state) => const VillageListScreen(),
+        routes: [
+          GoRoute(
+            path: 'new',
+            builder: (context, state) => const VillageFormScreen(),
+          ),
+          GoRoute(
+            path: ':id/edit',
+            builder: (context, state) => VillageFormScreen(
+              villageId: state.pathParameters['id']!,
+              initialName: state.extra as String?,
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: '/payments',

@@ -57,3 +57,26 @@ This is exactly the class of bug the user asked to be re-checked for (schema dri
 - Cross-checked every parsed field name against the actual `getSummary()`/`buildDelta()`/`mapJobRow()` backend source, not the website's TS types (backend is the ground truth for JSON keys).
 
 ---
+
+## Stage 3: Villages/Machines/Drivers/Customers full CRUD
+
+**Built, all four entities:**
+- Create/Edit form screens (`village_form_screen.dart`, `machine_form_screen.dart`, `driver_form_screen.dart`, `customer_form_screen.dart`), fields read directly from each backend Zod validator (`createXSchema`), not guessed.
+- Kebab (⋮) menu on every list row: **Edit** gated to Owner/Manager (`isOwnerOrManager`), **Delete** gated to Owner only (`roleSystemKey == 'owner'`) — mirrors the real `*.manage` vs `*.delete` permission split confirmed in the parity audit. Server still enforces the real permission regardless of client-side gating (defense in depth, not the only check).
+- FAB "+" on each list screen (Owner/Manager only) to create.
+- `lib/core/widgets/confirm_delete.dart` — shared confirm-then-delete flow that surfaces the backend's real dependency-guard 409 message (e.g. "Cannot delete this machine — N bookings reference it.") in a dialog, same reactive pattern the website uses via `alert()`, just in a proper dialog.
+- Edit screens for Machine/Driver/Customer fetch the full live record via `GET /:id` rather than prefilling from the (partial) local offline cache — avoids showing stale or incomplete data in the form.
+
+**Deviations, disclosed:**
+- **Machine form**: built the core fields (type, registration, brand/model, status, hour meter) but not insurance number/expiry or the service-schedule fields (next-service-due hours, last-service date/hour-meter) — those belong to Maintenance data and will get proper UI in Stage 8, not duplicated here.
+- **Driver form**: only supports linking to an *existing* Employee (dropdown), not the website's second mode of creating a brand-new Employee inline — that requires the Employee create form, which doesn't exist yet until Stage 6. Sequencing gap, not a missing feature; will naturally close once Stage 6 lands.
+- **Customer form**: built the core fields (name, village, phone, address, GST toggle+GSTIN, notes) but not the website's optional "send Farmer portal invite" sub-flow — treated as a distinct feature from core Customer data, same reasoning as Employees' invite flow being its own stage (6).
+- Village/Customer forms reuse the "quick-create a new Village inline" *data* (both can pick from the full live Villages list) but not the website's inline quick-create-village-from-within-the-form widget — user creates a Village first via the Villages screen, then picks it. Slightly more taps, same end state, real data throughout.
+
+**Self-test:**
+- `flutter analyze`: 0 errors (found and fixed one real bracket-mismatch bug caught by analyze during the Machine form's refactor to fetch live data for Edit — not shipped).
+- `flutter test`: passes.
+- Live-curled all 17 new endpoint paths (Villages/Machines/Drivers/Customers × GET/POST/PATCH/DELETE, plus `/machine-types`) against `pilot.shabooagri.com` — all 401, none 404.
+- Cross-checked every request-body field against the real `createXSchema`/`updateXSchema` Zod validators (not the frontend's TS types) — e.g. confirmed `Driver.availabilityStatus` enum is exactly `AVAILABLE | ON_JOB | OFF_DUTY` (not the placeholder values the original Stage 2 offline table comment guessed), confirmed `Machine.brand`/`model` are optional strings matching the nullable-column fix from the previous session.
+
+---
