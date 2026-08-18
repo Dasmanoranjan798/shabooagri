@@ -6,11 +6,9 @@ import type {
   CustomerOption,
   DriverOption,
   MachineOption,
-  PricingMethodOption,
   VillageOption,
 } from "../../types/booking";
 import { api } from "../../lib/api";
-import { formatCurrency } from "../../lib/theme";
 import { getTerm } from "../../lib/terminology";
 import { notifyDataRefresh } from "../../lib/dataRefreshBus";
 import { useTaskDraft, type TaskContentComponent } from "../../context/TaskTrayContext";
@@ -39,10 +37,7 @@ export interface BookingFormDraft {
   driverId: string;
   scheduledDate: string;
   scheduledTime: string;
-  pricingMethodId: string;
-  rate: string;
-  estimatedHours: string;
-  estimatedAcres: string;
+  workDescription: string;
   notes: string;
   // Inline quick-create/rename sub-forms — genuine typed-but-unsaved user
   // input, so they're part of the draft too, not just the "real" fields.
@@ -77,10 +72,7 @@ export function defaultBookingDraft(bookingToEdit: Booking | null): BookingFormD
       driverId: bookingToEdit.driverId || "",
       scheduledDate: bookingToEdit.scheduledDate.slice(0, 10),
       scheduledTime: bookingToEdit.scheduledTime ? bookingToEdit.scheduledTime.slice(11, 16) || "09:00" : "09:00",
-      pricingMethodId: bookingToEdit.pricingMethodId,
-      rate: bookingToEdit.rate.toString(),
-      estimatedHours: bookingToEdit.estimatedHours != null ? bookingToEdit.estimatedHours.toString() : "",
-      estimatedAcres: bookingToEdit.estimatedAcres != null ? bookingToEdit.estimatedAcres.toString() : "",
+      workDescription: bookingToEdit.workDescription || "",
       notes: bookingToEdit.notes || "",
     };
   }
@@ -92,10 +84,7 @@ export function defaultBookingDraft(bookingToEdit: Booking | null): BookingFormD
     driverId: "",
     scheduledDate: new Date().toISOString().slice(0, 10),
     scheduledTime: "09:00",
-    pricingMethodId: "",
-    rate: "500",
-    estimatedHours: "2",
-    estimatedAcres: "",
+    workDescription: "",
     notes: "",
   };
 }
@@ -116,7 +105,6 @@ export const BookingFormTask: TaskContentComponent<BookingFormInitProps> = ({ ta
   const [villages, setVillages] = useState<VillageOption[]>([]);
   const [machines, setMachines] = useState<MachineOption[]>([]);
   const [drivers, setDrivers] = useState<DriverOption[]>([]);
-  const [pricingMethods, setPricingMethods] = useState<PricingMethodOption[]>([]);
 
   const [isLoadingOptions, setIsLoadingOptions] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -128,23 +116,16 @@ export const BookingFormTask: TaskContentComponent<BookingFormInitProps> = ({ ta
     async function loadOptions() {
       setIsLoadingOptions(true);
       try {
-        const [cList, vList, mList, dList, pList] = await Promise.all([
+        const [cList, vList, mList, dList] = await Promise.all([
           api.listCustomers(),
           api.listVillages(),
           api.listMachines(),
           api.listDrivers(),
-          api.listPricingMethods(),
         ]);
         setCustomers(cList);
         setVillages(vList);
         setMachines(mList);
         setDrivers(dList);
-        setPricingMethods(pList);
-
-        if (!bookingToEdit && pList.length > 0) {
-          const perHour = pList.find((p) => p.key === "per_hour") || pList[0];
-          setDraft((prev) => (prev.pricingMethodId ? {} : { pricingMethodId: perHour.id }));
-        }
       } catch (err: any) {
         console.error("Failed to load options:", err);
       } finally {
@@ -221,23 +202,6 @@ export const BookingFormTask: TaskContentComponent<BookingFormInitProps> = ({ ta
     }
   };
 
-  const selectedPricingMethod = pricingMethods.find((p) => p.id === draft.pricingMethodId);
-
-  const calcEstimate = (): number | null => {
-    const r = parseFloat(draft.rate);
-    if (isNaN(r) || r <= 0) return null;
-    if (!selectedPricingMethod) return r;
-
-    const unit = selectedPricingMethod.unit;
-    const hours = parseFloat(draft.estimatedHours);
-    const acres = parseFloat(draft.estimatedAcres);
-
-    if (unit === "hour") return !isNaN(hours) ? r * hours : null;
-    if (unit === "minute") return !isNaN(hours) ? r * hours * 60 : null;
-    if (unit === "acre") return !isNaN(acres) ? r * acres : null;
-    return r;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -288,8 +252,8 @@ export const BookingFormTask: TaskContentComponent<BookingFormInitProps> = ({ ta
       return;
     }
 
-    if (!draft.pricingMethodId) {
-      setError("Please select a pricing method");
+    if (!draft.workDescription.trim()) {
+      setError("Please describe the work needed");
       setIsSubmitting(false);
       return;
     }
@@ -301,10 +265,7 @@ export const BookingFormTask: TaskContentComponent<BookingFormInitProps> = ({ ta
           villageId: activeVillageId,
           scheduledDate: draft.scheduledDate,
           scheduledTime: draft.scheduledTime ? `${draft.scheduledTime}:00` : undefined,
-          pricingMethodId: draft.pricingMethodId,
-          rate: parseFloat(draft.rate),
-          estimatedHours: draft.estimatedHours ? parseFloat(draft.estimatedHours) : undefined,
-          estimatedAcres: draft.estimatedAcres ? parseFloat(draft.estimatedAcres) : undefined,
+          workDescription: draft.workDescription.trim(),
           notes: draft.notes || undefined,
         });
 
@@ -322,10 +283,7 @@ export const BookingFormTask: TaskContentComponent<BookingFormInitProps> = ({ ta
           driverId: draft.driverId || undefined,
           scheduledDate: draft.scheduledDate,
           scheduledTime: draft.scheduledTime ? `${draft.scheduledTime}:00` : undefined,
-          pricingMethodId: draft.pricingMethodId,
-          rate: parseFloat(draft.rate),
-          estimatedHours: draft.estimatedHours ? parseFloat(draft.estimatedHours) : undefined,
-          estimatedAcres: draft.estimatedAcres ? parseFloat(draft.estimatedAcres) : undefined,
+          workDescription: draft.workDescription.trim(),
           notes: draft.notes || undefined,
         };
         await api.createBooking(payload);
@@ -339,8 +297,6 @@ export const BookingFormTask: TaskContentComponent<BookingFormInitProps> = ({ ta
       setIsSubmitting(false);
     }
   };
-
-  const estimatedTotal = calcEstimate();
 
   return (
     <form onSubmit={handleSubmit} className="sa-booking-form" style={{ padding: "1.5rem" }}>
@@ -504,66 +460,23 @@ export const BookingFormTask: TaskContentComponent<BookingFormInitProps> = ({ ta
         />
       </div>
 
-      {/* 6. Pricing Method Selector */}
+      {/* 6. Work Needed */}
       <div className="sa-input-group">
-        <label className="sa-input-label">Pricing Method *</label>
-        <div className="sa-segmented-control">
-          {pricingMethods.map((pm) => (
-            <button
-              type="button"
-              key={pm.id}
-              className={`sa-segmented-btn ${draft.pricingMethodId === pm.id ? "is-active" : ""}`}
-              onClick={() => setDraft({ pricingMethodId: pm.id })}
-            >
-              {pm.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 7. Rate & Quantity Input */}
-      <div className="sa-form-grid-2">
-        <Input
-          label="Rate (₹) *"
-          type="number"
-          min="0"
-          step="0.01"
-          value={draft.rate}
-          onChange={(e) => setDraft({ rate: e.target.value })}
+        <label className="sa-input-label">Work Needed *</label>
+        <textarea
+          className="sa-input sa-textarea"
+          rows={2}
+          value={draft.workDescription}
+          onChange={(e) => setDraft({ workDescription: e.target.value })}
+          placeholder="e.g. Rotavator — 1 acre field"
           required
         />
-
-        {selectedPricingMethod?.unit === "acre" ? (
-          <Input
-            label="Estimated Acres"
-            type="number"
-            min="0"
-            step="0.1"
-            value={draft.estimatedAcres}
-            onChange={(e) => setDraft({ estimatedAcres: e.target.value })}
-            placeholder="e.g. 5"
-          />
-        ) : (
-          <Input
-            label="Estimated Hours"
-            type="number"
-            min="0"
-            step="0.5"
-            value={draft.estimatedHours}
-            onChange={(e) => setDraft({ estimatedHours: e.target.value })}
-            placeholder="e.g. 2.5"
-          />
-        )}
+        <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", margin: "4px 0 0" }}>
+          Just enough to get this on the schedule — exact hours and price aren't needed yet. Pricing is decided live, once work actually starts.
+        </p>
       </div>
 
-      {estimatedTotal != null && (
-        <div className="sa-estimate-banner">
-          <span>Estimated Total Amount:</span>
-          <strong>{formatCurrency(estimatedTotal)}</strong>
-        </div>
-      )}
-
-      {/* 8. Notes */}
+      {/* 7. Notes */}
       <div className="sa-input-group">
         <label className="sa-input-label">Notes (Optional)</label>
         <textarea

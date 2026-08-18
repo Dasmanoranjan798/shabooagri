@@ -81,7 +81,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
   const navItems: NavItem[] = [
     { key: "dashboard", label: "Dashboard", path: "/", icon: <LayoutDashboard size={18} />, permission: "dashboard.view" },
     { key: "bookings", label: bookingTerm, path: "/bookings", icon: <Calendar size={18} />, permission: "operations.view" },
-    { key: "jobs", label: "Jobs", path: "/jobs", icon: <Tractor size={18} />, permission: "operations.view" },
+    { key: "jobs", label: "Job Cards", path: "/jobs", icon: <Tractor size={18} />, permission: "operations.view" },
     { key: "customers", label: customerTerm, path: "/customers", icon: <Users size={18} />, permission: "operations.view" },
     { key: "villages", label: "Villages", path: "/villages", icon: <MapPin size={18} />, permission: "operations.view" },
     { key: "machines", label: machineTerm, path: "/machines", icon: <Truck size={18} />, permission: "operations.view" },
@@ -321,7 +321,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
           </Link>
           <Link to="/jobs" className={`sa-bottom-item ${location.pathname === "/jobs" ? "is-active" : ""}`}>
             <span className="sa-bottom-icon" style={{ display: "inline-flex", alignItems: "center" }}><Tractor size={20} /></span>
-            <span className="sa-bottom-label">Jobs</span>
+            <span className="sa-bottom-label">Job Cards</span>
           </Link>
           <Link to="/machines" className={`sa-bottom-item ${location.pathname === "/machines" ? "is-active" : ""}`}>
             <span className="sa-bottom-icon" style={{ display: "inline-flex", alignItems: "center" }}><Truck size={20} /></span>

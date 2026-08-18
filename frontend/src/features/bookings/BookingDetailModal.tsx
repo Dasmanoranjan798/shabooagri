@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Play, X, User, MapPin, Calendar, Clock, Tag, Banknote } from "lucide-react";
-import type { Booking, BookingAttachment, BookingStatus, DriverOption, MachineOption } from "../../types/booking";
+import { User, MapPin, Calendar, Clock, Tag, Banknote, ClipboardList } from "lucide-react";
+import type { Booking, BookingAttachment, DriverOption, MachineOption } from "../../types/booking";
 import { api } from "../../lib/api";
 import { formatCurrency } from "../../lib/theme";
 import { getTerm } from "../../lib/terminology";
@@ -35,7 +35,6 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
   const [selectedDriverId, setSelectedDriverId] = useState<string>("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
 
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState<boolean>(false);
   const [isAssigningMachine, setIsAssigningMachine] = useState<boolean>(false);
   const [isAssigningDriver, setIsAssigningDriver] = useState<boolean>(false);
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -67,19 +66,6 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
   }, [isOpen, booking]);
 
   if (!booking) return null;
-
-  const handleStatusChange = async (nextStatus: BookingStatus) => {
-    setIsUpdatingStatus(true);
-    setError(null);
-    try {
-      await api.updateBookingStatus(booking.id, nextStatus);
-      onUpdate();
-    } catch (err: any) {
-      setError(err.message || "Failed to update booking status");
-    } finally {
-      setIsUpdatingStatus(false);
-    }
-  };
 
   const handleMachineAssign = async () => {
     setIsAssigningMachine(true);
@@ -125,18 +111,6 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
     }
   };
 
-  // Determine allowed legal status transitions graph
-  const getNextStatusOptions = (status: BookingStatus): { next: BookingStatus; label: string }[] => {
-    if (status === "PENDING") return [{ next: "ACCEPTED", label: "Accept Booking" }];
-    if (status === "ACCEPTED") return [{ next: "ON_THE_WAY", label: "On the Way" }];
-    if (status === "ON_THE_WAY") return [{ next: "WORKING", label: "Start Working" }];
-    if (status === "WORKING") return [{ next: "COMPLETED", label: "Mark Completed" }];
-    return [];
-  };
-
-  const canCancel = !["COMPLETED", "CANCELLED"].includes(booking.status);
-  const nextOptions = getNextStatusOptions(booking.status);
-
   return (
     <Modal
       isOpen={isOpen}
@@ -154,35 +128,13 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
       <div className="sa-booking-detail-body">
         {error && <div className="sa-alert sa-alert-danger">{error}</div>}
 
-        {/* Status Transition Action Bar */}
-        {(nextOptions.length > 0 || canCancel) && (
-          <div className="sa-status-action-bar">
-            <span className="sa-action-bar-label">Next Workflow Action:</span>
-            <div className="sa-action-bar-buttons">
-              {nextOptions.map((opt) => (
-                <Button
-                  key={opt.next}
-                  variant="primary"
-                  size="sm"
-                  isLoading={isUpdatingStatus}
-                  onClick={() => handleStatusChange(opt.next)}
-                  style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
-                >
-                  <Play size={14} /> {opt.label}
-                </Button>
-              ))}
-              {canCancel && (
-                <Button
-                  variant="danger"
-                  size="sm"
-                  isLoading={isUpdatingStatus}
-                  onClick={() => handleStatusChange("CANCELLED")}
-                  style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
-                >
-                  <X size={14} /> Cancel Booking
-                </Button>
-              )}
-            </div>
+        {/* Work Needed */}
+        {booking.workDescription && (
+          <div className="sa-notes-section">
+            <h4 style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+              <ClipboardList size={14} /> Work Needed
+            </h4>
+            <p className="sa-notes-text">{booking.workDescription}</p>
           </div>
         )}
 
@@ -223,7 +175,9 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
               <Tag size={14} /> Rate & Method
             </span>
             <span className="sa-detail-val">
-              {formatCurrency(booking.rate)} / {booking.pricingMethod.label}
+              {booking.pricingMethod && booking.rate != null
+                ? `${formatCurrency(booking.rate)} / ${booking.pricingMethod.label}`
+                : "Not set yet — assigned when work starts"}
             </span>
           </div>
 

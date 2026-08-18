@@ -30,16 +30,6 @@ import { useTaskTray } from "../../context/TaskTrayContext";
 import { subscribeDataRefresh } from "../../lib/dataRefreshBus";
 import { BookingDetailModal } from "./BookingDetailModal";
 
-const STATUS_FILTERS: Array<{ label: string; value: string }> = [
-  { label: "All", value: "ALL" },
-  { label: "Pending", value: "PENDING" },
-  { label: "Accepted", value: "ACCEPTED" },
-  { label: "On the way", value: "ON_THE_WAY" },
-  { label: "Working", value: "WORKING" },
-  { label: "Completed", value: "COMPLETED" },
-  { label: "Cancelled", value: "CANCELLED" },
-];
-
 export const BookingsPage: React.FC = () => {
   const { roleKey, hasPermission } = useAuth();
   const customerTerm = getTerm("customer");
@@ -49,7 +39,6 @@ export const BookingsPage: React.FC = () => {
   const bookingTerm = getTerm("booking", true);
 
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [activeFilter, setActiveFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -134,9 +123,11 @@ export const BookingsPage: React.FC = () => {
     }
   };
 
-  // Filter bookings by status tab & search query
+  // Filter bookings by search query. No status filter tabs — the old
+  // Pending/Accepted/On the way/Working pipeline is gone (see Job Cards
+  // page for the live operational view); Bookings is now just the record
+  // of what was scheduled.
   const filteredBookings = bookings.filter((b) => {
-    if (activeFilter !== "ALL" && b.status !== activeFilter) return false;
     if (!searchQuery.trim()) return true;
 
     const q = searchQuery.toLowerCase();
@@ -200,27 +191,8 @@ export const BookingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Tabs & Search Bar */}
+      {/* Search Bar */}
       <div className="sa-toolbar">
-        <div className="sa-filter-tabs">
-          {STATUS_FILTERS.map((tab) => (
-            <button
-              key={tab.value}
-              className={`sa-tab-btn ${activeFilter === tab.value ? "is-active" : ""}`}
-              onClick={() => setActiveFilter(tab.value)}
-            >
-              {tab.label}
-              {tab.value === "ALL" ? (
-                <span className="sa-tab-count">({bookings.length})</span>
-              ) : (
-                <span className="sa-tab-count">
-                  ({bookings.filter((b) => b.status === tab.value).length})
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-
         <div className="sa-toolbar-search">
           <input
             type="text"
@@ -258,8 +230,8 @@ export const BookingsPage: React.FC = () => {
             </span>
             <h3>No {bookingTerm} Found</h3>
             <p>
-              {searchQuery || activeFilter !== "ALL"
-                ? "No booking records match the selected filter criteria."
+              {searchQuery
+                ? "No booking records match your search."
                 : `No ${bookingTerm.toLowerCase()} created yet.`}
             </p>
             {canCreate && (
@@ -325,7 +297,9 @@ export const BookingsPage: React.FC = () => {
                             {b.estimatedAmount != null ? formatCurrency(b.estimatedAmount) : "N/A"}
                           </div>
                           <div className="sa-cell-sub">
-                            {formatCurrency(b.rate)} / {b.pricingMethod.label}
+                            {b.pricingMethod && b.rate != null
+                              ? `${formatCurrency(b.rate)} / ${b.pricingMethod.label}`
+                              : "Pricing not set yet"}
                           </div>
                         </td>
                         <td>
@@ -409,7 +383,11 @@ export const BookingsPage: React.FC = () => {
                         <Banknote size={14} /> Amount:
                       </span>
                       <span className="sa-bcard-val sa-amount-bold">
-                        {b.estimatedAmount != null ? formatCurrency(b.estimatedAmount) : formatCurrency(b.rate)}
+                        {b.estimatedAmount != null
+                          ? formatCurrency(b.estimatedAmount)
+                          : b.rate != null
+                            ? formatCurrency(b.rate)
+                            : "Not set yet"}
                       </span>
                     </div>
                   </div>

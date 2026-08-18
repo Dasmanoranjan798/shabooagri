@@ -27,10 +27,13 @@ export interface Booking {
   scheduledTime: string | null;
   estimatedHours: number | null;
   estimatedAcres: number | null;
-  pricingMethodId: string;
-  rate: number;
+  // Pricing is assigned on the Live Job screen right before Start, not at
+  // booking time — null on every freshly created booking.
+  pricingMethodId: string | null;
+  rate: number | null;
   estimatedAmount: number | null;
   status: BookingStatus;
+  workDescription: string | null;
   notes: string | null;
   createdBy: string;
   createdAt: string;
@@ -53,7 +56,7 @@ export interface Booking {
     employee: { name: string; phone?: string | null };
   } | null;
   manager: { id: string; fullName: string };
-  pricingMethod: { id: string; key: string; label: string; unit: string | null };
+  pricingMethod: { id: string; key: string; label: string; unit: string | null } | null;
   attachments?: BookingAttachment[];
 }
 
@@ -102,11 +105,13 @@ export interface CreateBookingPayload {
   scheduledTime?: string;
   estimatedHours?: number;
   estimatedAcres?: number;
-  pricingMethodId: string;
-  rate: number;
+  workDescription: string;
   notes?: string;
 }
 
+// Deliberately excludes pricingMethodId/rate — assigned via the dedicated
+// assignBookingPricing call below (the Live Job screen's pre-Start step),
+// not a general booking-edit field.
 export interface UpdateBookingPayload {
   customerId?: string;
   villageId?: string;
@@ -115,7 +120,11 @@ export interface UpdateBookingPayload {
   scheduledTime?: string;
   estimatedHours?: number;
   estimatedAcres?: number;
-  pricingMethodId?: string;
-  rate?: number;
+  workDescription?: string;
   notes?: string;
+}
+
+export interface AssignPricingPayload {
+  pricingMethodId: string;
+  rate: number;
 }

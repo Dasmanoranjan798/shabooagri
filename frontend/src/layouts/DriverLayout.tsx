@@ -10,7 +10,7 @@ interface DriverLayoutProps {
 
 const DRIVER_NAV = [
   { key: "home", label: "Home", icon: <Home size={20} />, path: "/driver" },
-  { key: "jobs", label: "Jobs", icon: <Tractor size={20} />, path: "/driver/jobs" },
+  { key: "jobs", label: "Job Cards", icon: <Tractor size={20} />, path: "/driver/jobs" },
   { key: "profile", label: "Profile", icon: <User size={20} />, path: "/driver/profile" },
 ];
 

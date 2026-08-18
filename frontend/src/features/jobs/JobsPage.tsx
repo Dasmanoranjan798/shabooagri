@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { AlertTriangle, Tractor, PlayCircle, XCircle } from "lucide-react";
 import "./jobs.css";
 import type { Job } from "../../types/job";
+import type { Booking } from "../../types/booking";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { getTerm } from "../../lib/terminology";
@@ -14,29 +15,67 @@ import { defaultJobExecutionDraft } from "./JobExecutionModal";
 import { defaultManualJobEntryDraft } from "./ManualJobEntryModal";
 import { useTaskTray } from "../../context/TaskTrayContext";
 import { subscribeDataRefresh } from "../../lib/dataRefreshBus";
+import { BookingDetailModal } from "../bookings/BookingDetailModal";
 
-const JOB_STATUS_FILTERS: Array<{ label: string; value: string }> = [
+// Awaiting/Ready only apply to NOT_STARTED cards (derived from
+// job.isReadyToStart, not job.status itself — see types/job.ts). Once a
+// card has actually started, its real JobStatus badge takes over.
+type CardFilter = "ALL" | "AWAITING_MACHINE" | "READY" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+
+const CARD_FILTERS: Array<{ label: string; value: CardFilter }> = [
  { label: "All", value: "ALL" },
- { label: "Not Started", value: "NOT_STARTED" },
- { label: "Working", value: "WORKING" },
- { label: "Paused", value: "PAUSED" },
+ { label: "Awaiting Machine", value: "AWAITING_MACHINE" },
+ { label: "Ready to Start", value: "READY" },
+ { label: "In Progress", value: "IN_PROGRESS" },
  { label: "Completed", value: "COMPLETED" },
  { label: "Cancelled", value: "CANCELLED" },
 ];
+
+function matchesCardFilter(j: Job, filter: CardFilter): boolean {
+ if (filter === "ALL") return true;
+ if (filter === "AWAITING_MACHINE") return j.status === "NOT_STARTED" && !j.isReadyToStart;
+ if (filter === "READY") return j.status === "NOT_STARTED" && !!j.isReadyToStart;
+ if (filter === "IN_PROGRESS") return j.status === "WORKING" || j.status === "PAUSED" || j.status === "STOPPED";
+ return j.status === filter;
+}
+
+// NOT_STARTED cards show the Ready to Start / Awaiting Machine badge
+// (derived from isReadyToStart, not job.status — see types/job.ts);
+// everything past that point shows its real JobStatus.
+function renderCardBadge(j: Job) {
+ if (j.status === "NOT_STARTED") {
+ return j.isReadyToStart ? (
+ <Badge variant="success" size="sm">Ready to Start</Badge>
+ ) : (
+ <Badge variant="warning" size="sm">Awaiting Machine</Badge>
+ );
+ }
+ return (
+ <Badge variant={getStatusBadgeVariant(j.status)} size="sm">
+ {j.status.replace(/_/g, " ")}
+ </Badge>
+ );
+}
 
 export const JobsPage: React.FC = () => {
  const { roleKey, hasPermission } = useAuth();
  const customerTerm = getTerm("customer");
  const villageTerm = getTerm("village");
  const machineTerm = getTerm("machine");
- const driverTerm = getTerm("driver");
 
  const [jobs, setJobs] = useState<Job[]>([]);
- const [activeFilter, setActiveFilter] = useState<string>("ALL");
+ const [activeFilter, setActiveFilter] = useState<CardFilter>("ALL");
  const [searchQuery, setSearchQuery] = useState<string>("");
 
  const [isLoading, setIsLoading] = useState<boolean>(true);
  const [error, setError] = useState<string | null>(null);
+
+ // "Awaiting Machine" cards open the Booking's assignment UI (reusing
+ // BookingDetailModal — it already has the machine/driver SearchableSelect
+ // + Assign flow) instead of the Live Job screen, which isn't reachable
+ // until a machine/driver exist.
+ const [assignBooking, setAssignBooking] = useState<Booking | null>(null);
+ const [isAssignOpen, setIsAssignOpen] = useState<boolean>(false);
 
  const taskTray = useTaskTray();
 
@@ -65,10 +104,47 @@ export const JobsPage: React.FC = () => {
  const handleOpenExecution = (job: Job) => {
  taskTray.open({
  type: "job-execution",
- title: `Job Execution #${job.booking.bookingNumber}`,
+ title: `Job Card #${job.booking.bookingNumber}`,
  initProps: { jobId: job.id, bookingNumber: job.booking.bookingNumber, canCancel },
  defaultDraft: defaultJobExecutionDraft(),
  });
+ };
+
+ // A NOT_STARTED card with no machine/driver yet can't open the Live Job
+ // screen (start() itself would reject it) — route to assignment instead.
+ const handleOpenAssignment = async (job: Job) => {
+ setError(null);
+ try {
+ const booking = await api.getBookingById(job.bookingId);
+ setAssignBooking(booking);
+ setIsAssignOpen(true);
+ } catch (err: any) {
+ setError(err.message || "Failed to load booking");
+ }
+ };
+
+ // Refreshes both the jobs list (so the badge can flip to "Ready to
+ // Start") and the modal's own booking prop (so it doesn't keep showing
+ // the pre-assignment machine/driver once saved) — same pattern
+ // BookingsPage uses for its own detail modal.
+ const handleAssignmentUpdate = async () => {
+ await loadJobs();
+ if (assignBooking) {
+ try {
+ const refreshed = await api.getBookingById(assignBooking.id);
+ setAssignBooking(refreshed);
+ } catch {
+ // Non-fatal — the jobs list still refreshed above.
+ }
+ }
+ };
+
+ const handleCardClick = (job: Job) => {
+ if (job.status === "NOT_STARTED" && !job.isReadyToStart) {
+ handleOpenAssignment(job);
+ } else {
+ handleOpenExecution(job);
+ }
  };
 
  const handleOpenManualEntry = () => {
@@ -89,24 +165,26 @@ export const JobsPage: React.FC = () => {
  });
  };
 
- // Filter jobs by status tab & search query
+ // Filter jobs by card status tab & search query
  const filteredJobs = jobs.filter((j) => {
- if (activeFilter !== "ALL" && j.status !== activeFilter) return false;
+ if (!matchesCardFilter(j, activeFilter)) return false;
  if (!searchQuery.trim()) return true;
 
  const q = searchQuery.toLowerCase();
  const cName = j.booking.customer?.name || "";
  const vName = j.booking.village?.name || j.booking.customer?.village?.name || "";
- const mReg = j.machine.registrationNumber;
- const dName = j.driver.employee.name;
+ const mReg = j.machine?.registrationNumber || "";
+ const dName = j.driver?.employee.name || "";
  const bNum = j.booking.bookingNumber;
+ const work = j.booking.workDescription || "";
 
  return (
  bNum.toLowerCase().includes(q) ||
  cName.toLowerCase().includes(q) ||
  vName.toLowerCase().includes(q) ||
  mReg.toLowerCase().includes(q) ||
- dName.toLowerCase().includes(q)
+ dName.toLowerCase().includes(q) ||
+ work.toLowerCase().includes(q)
  );
  });
 
@@ -115,7 +193,7 @@ export const JobsPage: React.FC = () => {
  {/* Page Header */}
  <div className="sa-page-header">
  <div className="sa-page-header-text">
- <h2>Jobs Execution</h2>
+ <h2>Job Cards</h2>
  <p>Live field operations, equipment tracking, fuel & progress logging</p>
  </div>
  <div className="sa-page-header-actions">
@@ -128,20 +206,16 @@ export const JobsPage: React.FC = () => {
  {/* Filter Tabs & Search Bar */}
  <div className="sa-toolbar">
  <div className="sa-filter-tabs">
- {JOB_STATUS_FILTERS.map((tab) => (
+ {CARD_FILTERS.map((tab) => (
  <button
  key={tab.value}
  className={`sa-tab-btn ${activeFilter === tab.value ? "is-active" : ""}`}
  onClick={() => setActiveFilter(tab.value)}
  >
  {tab.label}
- {tab.value === "ALL" ? (
- <span className="sa-tab-count">({jobs.length})</span>
- ) : (
  <span className="sa-tab-count">
- ({jobs.filter((j) => j.status === tab.value).length})
+ ({tab.value === "ALL" ? jobs.length : jobs.filter((j) => matchesCardFilter(j, tab.value)).length})
  </span>
- )}
  </button>
  ))}
  </div>
@@ -181,11 +255,11 @@ export const JobsPage: React.FC = () => {
  <span className="sa-empty-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
  <Tractor size={32} color="var(--color-text-muted)" />
  </span>
- <h3>No Jobs Found</h3>
+ <h3>No Job Cards Found</h3>
  <p>
  {searchQuery || activeFilter !== "ALL"
- ? "No job records match the selected filter criteria."
- : "No active dispatch jobs created yet. Jobs are automatically generated when a Booking transitions to 'On the way'."}
+ ? "No job cards match the selected filter criteria."
+ : "No Job Cards yet — saving a Booking creates one automatically."}
  </p>
  </div>
  </Card>
@@ -198,13 +272,10 @@ export const JobsPage: React.FC = () => {
  <table className="sa-table">
  <thead>
  <tr>
- <th>Booking #</th>
- <th>{customerTerm} & {villageTerm}</th>
- <th>{machineTerm}</th>
- <th>{driverTerm}</th>
+ <th>{customerTerm}</th>
+ <th>{villageTerm}</th>
+ <th>{machineTerm} / Work</th>
  <th>Status</th>
- <th>Hours / Acres</th>
- <th>Fuel Used</th>
  <th>Action</th>
  </tr>
  </thead>
@@ -212,49 +283,27 @@ export const JobsPage: React.FC = () => {
  {filteredJobs.map((j) => {
  const cName = j.booking.customer?.name || customerTerm;
  const vName = j.booking.village?.name || j.booking.customer?.village?.name || villageTerm;
+ const workOrMachine = j.booking.workDescription || j.machine?.registrationNumber || "No machine assigned yet";
  return (
  <tr
  key={j.id}
- onClick={() => handleOpenExecution(j)}
+ onClick={() => handleCardClick(j)}
  className="sa-clickable-row"
  >
- <td className="sa-td-bold">{j.booking.bookingNumber}</td>
+ <td className="sa-td-bold">{cName}</td>
+ <td>{vName}</td>
  <td>
- <div className="sa-cell-title">{cName}</div>
- <div className="sa-cell-sub">{vName}</div>
- </td>
- <td>
- <div className="sa-cell-title">{j.machine.registrationNumber}</div>
- <div className="sa-cell-sub">
- {j.machine.brand} {j.machine.model}
- </div>
- </td>
- <td>
- <div className="sa-cell-title">{j.driver.employee.name}</div>
- </td>
- <td>
- <Badge variant={getStatusBadgeVariant(j.status)} size="sm">
- {j.status.replace(/_/g, " ")}
- </Badge>
- </td>
- <td>
- <div className="sa-cell-title">
- {j.actualHours != null ? `${j.actualHours} hrs` : "In Progress"}
- </div>
- {j.completedAcres != null && (
- <div className="sa-cell-sub">{j.completedAcres} acres</div>
+ <div className="sa-cell-title">{workOrMachine}</div>
+ {j.machine && j.booking.workDescription && (
+ <div className="sa-cell-sub">{j.machine.registrationNumber}</div>
  )}
  </td>
- <td>
- <span className="sa-td-bold" style={{ color: "#d97706" }}>
- {j.fuelUsedLitres != null ? `${j.fuelUsedLitres} L` : "0 L"}
- </span>
- </td>
+ <td>{renderCardBadge(j)}</td>
  <td>
  <div className="sa-table-actions" onClick={(e) => e.stopPropagation()}>
  <ActionMenu
  items={[
- { key: "execute", label: "Execute / View", icon: <PlayCircle size={15} />, onClick: () => handleOpenExecution(j) },
+ { key: "execute", label: "Open", icon: <PlayCircle size={15} />, onClick: () => handleCardClick(j) },
  {
  key: "cancel",
  label: "Cancel Job",
@@ -276,47 +325,27 @@ export const JobsPage: React.FC = () => {
  </Card>
  </div>
 
- {/* Mobile Card List View (§11.6) */}
+ {/* Mobile Card List View */}
  <div className="sa-mobile-only">
  <div className="sa-mobile-booking-list">
  {filteredJobs.map((j) => {
  const cName = j.booking.customer?.name || customerTerm;
  const vName = j.booking.village?.name || j.booking.customer?.village?.name || villageTerm;
+ const workOrMachine = j.booking.workDescription || j.machine?.registrationNumber || "No machine assigned yet";
  return (
  <div
  key={j.id}
  className="sa-mobile-booking-card"
- onClick={() => handleOpenExecution(j)}
+ onClick={() => handleCardClick(j)}
  >
  <div className="sa-booking-card-top">
- <div className="sa-booking-num"> {j.machine.registrationNumber}</div>
- <Badge variant={getStatusBadgeVariant(j.status)} size="sm">
- {j.status.replace(/_/g, " ")}
- </Badge>
+ <div className="sa-booking-num">{cName}</div>
+ {renderCardBadge(j)}
  </div>
 
  <div className="sa-booking-card-main">
  <div className="sa-bcard-row">
- <span className="sa-bcard-label">Booking:</span>
- <span className="sa-bcard-val">{j.booking.bookingNumber}</span>
- </div>
-
- <div className="sa-bcard-row">
- <span className="sa-bcard-label"> {customerTerm}:</span>
- <span className="sa-bcard-val">{cName} ({vName})</span>
- </div>
-
- <div className="sa-bcard-row">
- <span className="sa-bcard-label"> {driverTerm}:</span>
- <span className="sa-bcard-val">{j.driver.employee.name}</span>
- </div>
-
- <div className="sa-bcard-row">
- <span className="sa-bcard-label"> Fuel / Acres:</span>
- <span className="sa-bcard-val sa-amount-bold" style={{ color: "#1b7a3e" }}>
- {j.fuelUsedLitres != null ? `${j.fuelUsedLitres} L` : "0 L"}
- {j.completedAcres != null ? ` • ${j.completedAcres} ac` : ""}
- </span>
+ <span className="sa-bcard-val">{vName} · {workOrMachine}</span>
  </div>
  </div>
  </div>
@@ -327,6 +356,12 @@ export const JobsPage: React.FC = () => {
  </>
  )}
 
+ <BookingDetailModal
+ isOpen={isAssignOpen}
+ onClose={() => setIsAssignOpen(false)}
+ booking={assignBooking}
+ onUpdate={handleAssignmentUpdate}
+ />
  </div>
  );
 };

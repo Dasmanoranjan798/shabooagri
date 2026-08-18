@@ -147,7 +147,7 @@ export const ReportsPage: React.FC = () => {
  { label: "Today's Revenue", value: fmtCurrency(kpis.todayRevenue.current), delta: kpis.todayRevenue.deltaPercent },
  { label: "This Month Revenue", value: fmtCurrency(kpis.monthRevenue.current), delta: kpis.monthRevenue.deltaPercent },
  { label: "Pending Collection", value: fmtCurrency(kpis.pendingCollection.current), delta: null },
- { label: "Jobs Completed", value: `${kpis.jobsCompleted.current}`, delta: kpis.jobsCompleted.deltaPercent },
+ { label: "Job Cards Completed", value: `${kpis.jobsCompleted.current}`, delta: kpis.jobsCompleted.deltaPercent },
  { label: "Drivers Active", value: `${kpis.driversActive.current}`, delta: kpis.driversActive.deltaPercent },
  {
  label: "Machines Working",
