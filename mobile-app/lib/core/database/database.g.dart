@@ -932,9 +932,9 @@ class $JobsTable extends Jobs with TableInfo<$JobsTable, OfflineJob> {
   late final GeneratedColumn<String> machineId = GeneratedColumn<String>(
     'machine_id',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _driverIdMeta = const VerificationMeta(
     'driverId',
@@ -943,9 +943,9 @@ class $JobsTable extends Jobs with TableInfo<$JobsTable, OfflineJob> {
   late final GeneratedColumn<String> driverId = GeneratedColumn<String>(
     'driver_id',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _startTimeMeta = const VerificationMeta(
     'startTime',
@@ -1103,16 +1103,12 @@ class $JobsTable extends Jobs with TableInfo<$JobsTable, OfflineJob> {
         _machineIdMeta,
         machineId.isAcceptableOrUnknown(data['machine_id']!, _machineIdMeta),
       );
-    } else if (isInserting) {
-      context.missing(_machineIdMeta);
     }
     if (data.containsKey('driver_id')) {
       context.handle(
         _driverIdMeta,
         driverId.isAcceptableOrUnknown(data['driver_id']!, _driverIdMeta),
       );
-    } else if (isInserting) {
-      context.missing(_driverIdMeta);
     }
     if (data.containsKey('start_time')) {
       context.handle(
@@ -1206,11 +1202,11 @@ class $JobsTable extends Jobs with TableInfo<$JobsTable, OfflineJob> {
       machineId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}machine_id'],
-      )!,
+      ),
       driverId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}driver_id'],
-      )!,
+      ),
       startTime: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}start_time'],
@@ -1260,8 +1256,8 @@ class OfflineJob extends DataClass implements Insertable<OfflineJob> {
   final String id;
   final String companyId;
   final String bookingId;
-  final String machineId;
-  final String driverId;
+  final String? machineId;
+  final String? driverId;
   final DateTime? startTime;
   final DateTime? endTime;
   final int totalPausedDurationSec;
@@ -1275,8 +1271,8 @@ class OfflineJob extends DataClass implements Insertable<OfflineJob> {
     required this.id,
     required this.companyId,
     required this.bookingId,
-    required this.machineId,
-    required this.driverId,
+    this.machineId,
+    this.driverId,
     this.startTime,
     this.endTime,
     required this.totalPausedDurationSec,
@@ -1293,8 +1289,12 @@ class OfflineJob extends DataClass implements Insertable<OfflineJob> {
     map['id'] = Variable<String>(id);
     map['company_id'] = Variable<String>(companyId);
     map['booking_id'] = Variable<String>(bookingId);
-    map['machine_id'] = Variable<String>(machineId);
-    map['driver_id'] = Variable<String>(driverId);
+    if (!nullToAbsent || machineId != null) {
+      map['machine_id'] = Variable<String>(machineId);
+    }
+    if (!nullToAbsent || driverId != null) {
+      map['driver_id'] = Variable<String>(driverId);
+    }
     if (!nullToAbsent || startTime != null) {
       map['start_time'] = Variable<DateTime>(startTime);
     }
@@ -1324,8 +1324,12 @@ class OfflineJob extends DataClass implements Insertable<OfflineJob> {
       id: Value(id),
       companyId: Value(companyId),
       bookingId: Value(bookingId),
-      machineId: Value(machineId),
-      driverId: Value(driverId),
+      machineId: machineId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(machineId),
+      driverId: driverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(driverId),
       startTime: startTime == null && nullToAbsent
           ? const Value.absent()
           : Value(startTime),
@@ -1359,8 +1363,8 @@ class OfflineJob extends DataClass implements Insertable<OfflineJob> {
       id: serializer.fromJson<String>(json['id']),
       companyId: serializer.fromJson<String>(json['companyId']),
       bookingId: serializer.fromJson<String>(json['bookingId']),
-      machineId: serializer.fromJson<String>(json['machineId']),
-      driverId: serializer.fromJson<String>(json['driverId']),
+      machineId: serializer.fromJson<String?>(json['machineId']),
+      driverId: serializer.fromJson<String?>(json['driverId']),
       startTime: serializer.fromJson<DateTime?>(json['startTime']),
       endTime: serializer.fromJson<DateTime?>(json['endTime']),
       totalPausedDurationSec: serializer.fromJson<int>(
@@ -1381,8 +1385,8 @@ class OfflineJob extends DataClass implements Insertable<OfflineJob> {
       'id': serializer.toJson<String>(id),
       'companyId': serializer.toJson<String>(companyId),
       'bookingId': serializer.toJson<String>(bookingId),
-      'machineId': serializer.toJson<String>(machineId),
-      'driverId': serializer.toJson<String>(driverId),
+      'machineId': serializer.toJson<String?>(machineId),
+      'driverId': serializer.toJson<String?>(driverId),
       'startTime': serializer.toJson<DateTime?>(startTime),
       'endTime': serializer.toJson<DateTime?>(endTime),
       'totalPausedDurationSec': serializer.toJson<int>(totalPausedDurationSec),
@@ -1399,8 +1403,8 @@ class OfflineJob extends DataClass implements Insertable<OfflineJob> {
     String? id,
     String? companyId,
     String? bookingId,
-    String? machineId,
-    String? driverId,
+    Value<String?> machineId = const Value.absent(),
+    Value<String?> driverId = const Value.absent(),
     Value<DateTime?> startTime = const Value.absent(),
     Value<DateTime?> endTime = const Value.absent(),
     int? totalPausedDurationSec,
@@ -1414,8 +1418,8 @@ class OfflineJob extends DataClass implements Insertable<OfflineJob> {
     id: id ?? this.id,
     companyId: companyId ?? this.companyId,
     bookingId: bookingId ?? this.bookingId,
-    machineId: machineId ?? this.machineId,
-    driverId: driverId ?? this.driverId,
+    machineId: machineId.present ? machineId.value : this.machineId,
+    driverId: driverId.present ? driverId.value : this.driverId,
     startTime: startTime.present ? startTime.value : this.startTime,
     endTime: endTime.present ? endTime.value : this.endTime,
     totalPausedDurationSec:
@@ -1520,8 +1524,8 @@ class JobsCompanion extends UpdateCompanion<OfflineJob> {
   final Value<String> id;
   final Value<String> companyId;
   final Value<String> bookingId;
-  final Value<String> machineId;
-  final Value<String> driverId;
+  final Value<String?> machineId;
+  final Value<String?> driverId;
   final Value<DateTime?> startTime;
   final Value<DateTime?> endTime;
   final Value<int> totalPausedDurationSec;
@@ -1553,8 +1557,8 @@ class JobsCompanion extends UpdateCompanion<OfflineJob> {
     required String id,
     required String companyId,
     required String bookingId,
-    required String machineId,
-    required String driverId,
+    this.machineId = const Value.absent(),
+    this.driverId = const Value.absent(),
     this.startTime = const Value.absent(),
     this.endTime = const Value.absent(),
     this.totalPausedDurationSec = const Value.absent(),
@@ -1568,8 +1572,6 @@ class JobsCompanion extends UpdateCompanion<OfflineJob> {
   }) : id = Value(id),
        companyId = Value(companyId),
        bookingId = Value(bookingId),
-       machineId = Value(machineId),
-       driverId = Value(driverId),
        status = Value(status);
   static Insertable<OfflineJob> custom({
     Expression<String>? id,
@@ -1612,8 +1614,8 @@ class JobsCompanion extends UpdateCompanion<OfflineJob> {
     Value<String>? id,
     Value<String>? companyId,
     Value<String>? bookingId,
-    Value<String>? machineId,
-    Value<String>? driverId,
+    Value<String?>? machineId,
+    Value<String?>? driverId,
     Value<DateTime?>? startTime,
     Value<DateTime?>? endTime,
     Value<int>? totalPausedDurationSec,
@@ -4306,8 +4308,8 @@ typedef $$JobsTableCreateCompanionBuilder = JobsCompanion Function({
   required String id,
   required String companyId,
   required String bookingId,
-  required String machineId,
-  required String driverId,
+  Value<String?> machineId,
+  Value<String?> driverId,
   Value<DateTime?> startTime,
   Value<DateTime?> endTime,
   Value<int> totalPausedDurationSec,
@@ -4323,8 +4325,8 @@ typedef $$JobsTableUpdateCompanionBuilder = JobsCompanion Function({
   Value<String> id,
   Value<String> companyId,
   Value<String> bookingId,
-  Value<String> machineId,
-  Value<String> driverId,
+  Value<String?> machineId,
+  Value<String?> driverId,
   Value<DateTime?> startTime,
   Value<DateTime?> endTime,
   Value<int> totalPausedDurationSec,
@@ -4586,8 +4588,8 @@ class $$JobsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> companyId = const Value.absent(),
                 Value<String> bookingId = const Value.absent(),
-                Value<String> machineId = const Value.absent(),
-                Value<String> driverId = const Value.absent(),
+                Value<String?> machineId = const Value.absent(),
+                Value<String?> driverId = const Value.absent(),
                 Value<DateTime?> startTime = const Value.absent(),
                 Value<DateTime?> endTime = const Value.absent(),
                 Value<int> totalPausedDurationSec = const Value.absent(),
@@ -4620,8 +4622,8 @@ class $$JobsTableTableManager
                 required String id,
                 required String companyId,
                 required String bookingId,
-                required String machineId,
-                required String driverId,
+                Value<String?> machineId = const Value.absent(),
+                Value<String?> driverId = const Value.absent(),
                 Value<DateTime?> startTime = const Value.absent(),
                 Value<DateTime?> endTime = const Value.absent(),
                 Value<int> totalPausedDurationSec = const Value.absent(),

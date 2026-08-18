@@ -27,8 +27,10 @@ class Jobs extends Table {
   TextColumn get id => text()();
   TextColumn get companyId => text()();
   TextColumn get bookingId => text()();
-  TextColumn get machineId => text()();
-  TextColumn get driverId => text()();
+  // Nullable to match the backend's Job-Card rework: a job exists as soon
+  // as its booking is saved, before a machine/driver may be assigned yet.
+  TextColumn get machineId => text().nullable()();
+  TextColumn get driverId => text().nullable()();
   DateTimeColumn get startTime => dateTime().nullable()();
   DateTimeColumn get endTime => dateTime().nullable()();
   IntColumn get totalPausedDurationSec => integer().withDefault(const Constant(0))();

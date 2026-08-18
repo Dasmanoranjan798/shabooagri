@@ -2,6 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/network_provider.dart';
+import '../../../core/providers/session_provider.dart';
+import '../../../core/repositories/auth_repository.dart';
+import '../../../core/repositories/job_repository.dart';
+import '../../../core/database/database.dart';
+
+/// Owner/Manager home. `GET /jobs` is already scoped server-side to the
+/// whole company for these roles (vs. a Driver's own jobs only), so the
+/// same repository call used by the Driver's job list produces the right
+/// company-wide counts here.
+final dashboardJobsProvider = FutureProvider<List<OfflineJob>>((ref) async {
+  final repository = ref.watch(jobRepositoryProvider);
+  await repository.refreshFromApi();
+  return repository.getJobs();
+});
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -10,37 +24,57 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final networkStatusAsync = ref.watch(networkStatusProvider);
     final isOnline = networkStatusAsync.valueOrNull ?? false;
+    final jobsAsync = ref.watch(dashboardJobsProvider);
+    final user = ref.watch(currentUserProvider);
+
+    final activeCount = jobsAsync.valueOrNull?.where((j) => j.status == 'WORKING' || j.status == 'PAUSED').length;
+    final completedCount = jobsAsync.valueOrNull?.where((j) => j.status == 'COMPLETED').length;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard'),
+        title: Text(user?.fullName ?? 'Dashboard'),
         actions: [
           Icon(
             isOnline ? Icons.cloud_done : Icons.cloud_off,
             color: isOnline ? Colors.green : Colors.red,
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await ref.read(authRepositoryProvider).logout();
+              if (context.mounted) context.go('/login');
+            },
+          ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(dashboardJobsProvider),
+        child: ListView(
+          padding: const EdgeInsets.all(16.0),
           children: [
-            const Card(
+            Card(
               child: Padding(
-                padding: EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    Text('Today\'s Overview', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _StatWidget(title: 'Active Jobs', value: '2'),
-                        _StatWidget(title: 'Completed', value: '4'),
-                      ],
-                    ),
+                    const Text('Job Overview', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    if (jobsAsync.isLoading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: CircularProgressIndicator(),
+                      )
+                    else if (jobsAsync.hasError)
+                      const Text('Could not load job data.', style: TextStyle(color: Colors.red))
+                    else
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _StatWidget(title: 'Active Jobs', value: '${activeCount ?? 0}'),
+                          _StatWidget(title: 'Completed', value: '${completedCount ?? 0}'),
+                        ],
+                      ),
                   ],
                 ),
               ),
@@ -54,19 +88,6 @@ class DashboardScreen extends ConsumerWidget {
               ),
               onPressed: () {
                 context.go('/jobs');
-              },
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.history),
-              label: const Text('SYNC HISTORY', style: TextStyle(fontSize: 16)),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                backgroundColor: Colors.grey.shade200,
-                foregroundColor: Colors.black87,
-              ),
-              onPressed: () {
-                // Future sync history screen
               },
             ),
           ],
