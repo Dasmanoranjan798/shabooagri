@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-const String _currentAppVersion = '0.2.0';
+const String _currentAppVersion = '0.3.0';
 
 final updateServiceProvider = Provider<UpdateService>((ref) {
   final dio = Dio(BaseOptions(
