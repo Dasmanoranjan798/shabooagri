@@ -17,7 +17,7 @@ import type {
 
 type JobWithRelations = Job & {
   booking: Booking & {
-    pricingMethod: PricingMethod;
+    pricingMethod: PricingMethod | null;
   };
 };
 
@@ -44,6 +44,13 @@ export async function createInvoiceForCompletedJob(
   const existing = await invoiceRepository.findByBookingIdScoped(companyId, job.bookingId, tx);
   if (existing) {
     return existing;
+  }
+
+  // start()'s precondition guarantees pricing was set before a job could
+  // ever begin, so a job reaching COMPLETED always has one — this is just
+  // making that guarantee legible to the type checker.
+  if (!job.booking.pricingMethod || job.booking.rate == null) {
+    throw new AppError(400, "This job's booking has no pricing method or rate set");
   }
 
   const unit = job.booking.pricingMethod.unit as PricingUnit;
@@ -465,8 +472,8 @@ export async function getReceipt(companyId: string, invoiceId: string, user: Aut
                 name: invoice.booking.driver.employee.name,
               }
             : null,
-          pricingMethod: invoice.booking.pricingMethod.label,
-          rate: Number(invoice.booking.rate),
+          pricingMethod: invoice.booking.pricingMethod?.label ?? null,
+          rate: invoice.booking.rate != null ? Number(invoice.booking.rate) : null,
           actualHours: job?.actualHours ? Number(job.actualHours) : null,
           completedAcres: job?.completedAcres ? Number(job.completedAcres) : null,
           fuelUsedLitres: job?.fuelUsedLitres ? Number(job.fuelUsedLitres) : null,

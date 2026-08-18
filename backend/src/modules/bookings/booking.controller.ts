@@ -5,9 +5,9 @@ import * as bookingService from "./booking.service";
 import {
   assignDriverSchema,
   assignMachineSchema,
+  assignPricingSchema,
   createBookingSchema,
   updateBookingSchema,
-  updateBookingStatusSchema,
 } from "./booking.validators";
 
 export async function list(req: Request, res: Response) {
@@ -36,13 +36,6 @@ export async function updateDetails(req: Request, res: Response) {
   res.status(200).json(booking);
 }
 
-export async function updateStatus(req: Request, res: Response) {
-  const user = requireUser(req);
-  const { status } = updateBookingStatusSchema.parse(req.body);
-  const booking = await bookingService.updateStatus(user.companyId, req.params.id, status);
-  res.status(200).json(booking);
-}
-
 export async function assignMachine(req: Request, res: Response) {
   const user = requireUser(req);
   const { machineId } = assignMachineSchema.parse(req.body);
@@ -54,6 +47,13 @@ export async function assignDriver(req: Request, res: Response) {
   const user = requireUser(req);
   const { driverId } = assignDriverSchema.parse(req.body);
   const booking = await bookingService.assignDriver(user.companyId, req.params.id, driverId);
+  res.status(200).json(booking);
+}
+
+export async function assignPricing(req: Request, res: Response) {
+  const user = requireUser(req);
+  const { pricingMethodId, rate } = assignPricingSchema.parse(req.body);
+  const booking = await bookingService.assignPricing(user.companyId, req.params.id, pricingMethodId, rate);
   res.status(200).json(booking);
 }
 

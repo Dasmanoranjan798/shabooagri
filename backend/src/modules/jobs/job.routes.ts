@@ -19,14 +19,20 @@ jobRouter.get("/:id/fuel-entries", asyncHandler(jobController.listFuelEntries));
 jobRouter.get("/:id/photos", asyncHandler(jobController.listPhotos));
 
 // No POST / — a Job is only ever created internally by booking.service.ts
-// when a Booking moves to ON_THE_WAY. Every write below is gated by
+// the instant a Booking is saved. Every write below is gated by
 // job.update_status; job.service.ts additionally enforces that a Driver
 // (unlike Owner/Manager) may only act on their own assigned job.
 jobRouter.patch("/:id", requirePermission("job.update_status"), asyncHandler(jobController.updateDetails));
 jobRouter.post("/:id/start", requirePermission("job.update_status"), asyncHandler(jobController.start));
 jobRouter.post("/:id/pause", requirePermission("job.update_status"), asyncHandler(jobController.pause));
 jobRouter.post("/:id/resume", requirePermission("job.update_status"), asyncHandler(jobController.resume));
-jobRouter.post("/:id/complete", requirePermission("job.update_status"), asyncHandler(jobController.complete));
+// Stop freezes the clock (WORKING/PAUSED -> STOPPED); Submit is the
+// separate, second confirmation that actually completes the job
+// (STOPPED -> COMPLETED) and generates its invoice. Kept as two distinct
+// routes/permissions-checks (not one "complete" endpoint) to match the
+// two separate confirmation dialogs on the Live Job screen.
+jobRouter.post("/:id/stop", requirePermission("job.update_status"), asyncHandler(jobController.stop));
+jobRouter.post("/:id/submit", requirePermission("job.update_status"), asyncHandler(jobController.submit));
 // Owner-only (§ dependency-locked deletion, Rule 2 & 5) — distinct from
 // job.update_status, which Driver/Manager also hold for the normal
 // start/pause/complete lifecycle. Cancelling is a rarer, corrective

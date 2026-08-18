@@ -30,26 +30,14 @@ export function assertNoBookingReferences(entityLabel: string, bookingCount: num
 // ON DELETE RESTRICT foreign key — cancelling a Job never removes its row
 // (only marks it CANCELLED, keeping the record for history), so a
 // Booking can never be hard-deleted once ANY Job exists for it, cancelled
-// or not. The real fix is the CANCELLED status-transition path below, not
-// delete — this message says so rather than implying deleting becomes
-// possible once the job is cancelled.
+// or not. There is no direct booking-cancel action anymore — a Booking's
+// status only moves to CANCELLED as a side effect of cancelling its Job
+// (job.service.ts's cancel()) — so that's the real fix, not delete.
 export function assertBookingDeletable(hasAnyLinkedJob: boolean): void {
   if (hasAnyLinkedJob) {
     throw new AppError(
       409,
-      "Cannot delete this booking — a job exists for it and is kept for history. Cancel the booking instead of deleting it.",
-    );
-  }
-}
-
-// Rule 3, cancel path: a Booking cannot transition to CANCELLED while a
-// non-cancelled Job is linked to it — this one genuinely unblocks once
-// the Job itself is cancelled, no FK involved.
-export function assertBookingCancellable(hasActiveLinkedJob: boolean): void {
-  if (hasActiveLinkedJob) {
-    throw new AppError(
-      409,
-      "Cannot cancel this booking — an active job is linked to it. Cancel the job first.",
+      "Cannot delete this booking — a job exists for it and is kept for history. Cancel the job instead of deleting the booking.",
     );
   }
 }

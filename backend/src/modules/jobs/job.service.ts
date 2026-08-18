@@ -16,15 +16,21 @@ import * as machineService from "../machines/machine.service";
 import * as pricingMethodService from "../pricing-methods/pricingMethod.service";
 import * as villageService from "../villages/village.service";
 import * as settingsRepo from "../settings/settings.repository";
-import type { CompleteJobInput, CreateManualJobInput, PauseJobInput, ResumeJobInput, StartJobInput, UpdateJobInput } from "./job.validators";
+import type { CreateManualJobInput, PauseJobInput, ResumeJobInput, StartJobInput, StopJobInput, SubmitJobInput, UpdateJobInput } from "./job.validators";
 
-// Called only from booking.service.ts when a Booking moves to ON_THE_WAY —
-// there is no client-facing "create job" endpoint. Idempotent: if a Job
-// somehow already exists for this booking (the 1:1 FK would reject a
-// second row anyway), return the existing one instead of erroring, so a
-// defensive re-check never breaks the booking status transition it's
-// embedded in.
-export async function createForBooking(companyId: string, bookingId: string, machineId: string, driverId: string) {
+// Called from booking.service.ts's create() the instant a Booking is
+// saved — there is no separate "convert to job" step or client-facing
+// "create job" endpoint. machineId/driverId may be null (booking saved
+// before a machine is decided); see withReadiness below for how that
+// becomes the "Ready to Start" / "Awaiting Machine" card badge. Idempotent:
+// if a Job somehow already exists for this booking (the 1:1 FK would
+// reject a second row anyway), return the existing one instead of erroring.
+export async function createForBooking(
+  companyId: string,
+  bookingId: string,
+  machineId: string | null,
+  driverId: string | null,
+) {
   const existing = await jobRepository.findByBookingIdScoped(companyId, bookingId);
   if (existing) {
     return existing;
@@ -32,14 +38,44 @@ export async function createForBooking(companyId: string, bookingId: string, mac
   return jobRepository.create(companyId, bookingId, machineId, driverId);
 }
 
+// Called from booking.service.ts's assignMachine/assignDriver — a booking
+// is often saved before a machine/driver is decided, then assigned
+// afterward via those endpoints. Keeps the (still NOT_STARTED) Job Card's
+// own machineId/driverId in sync so it can flip from "Awaiting Machine" to
+// "Ready to Start". Once a job has actually started, its machine/driver
+// are frozen — reassigning the booking's machine mid-job must not
+// retroactively rewrite what's already in progress, so this is a no-op
+// for any job past NOT_STARTED.
+export async function syncAssignmentForBooking(
+  companyId: string,
+  bookingId: string,
+  data: { machineId?: string | null; driverId?: string | null },
+) {
+  const job = await jobRepository.findByBookingIdScoped(companyId, bookingId);
+  if (!job || job.status !== "NOT_STARTED") return;
+  await jobRepository.updateScopedWithRelations(companyId, job.id, data);
+}
+
+// Job Cards list badge: "Ready to Start" once both machine and driver are
+// assigned, "Awaiting Machine" until then. Pricing is deliberately NOT
+// part of this — pricing is picked on the Live Job screen itself, right
+// before Start (see start()'s own precondition below), so gating the list
+// badge on it would make "Ready to Start" unreachable.
+function withReadiness<T extends { machineId: string | null; driverId: string | null }>(job: T) {
+  return { ...job, isReadyToStart: !!job.machineId && !!job.driverId };
+}
+
 export async function list(companyId: string, user: AuthenticatedUser) {
   const scope = await resolveCallerScope(companyId, user);
-  if (scope.kind === "company") return jobRepository.findAllForCompany(companyId);
-  if (scope.kind === "driver") return jobRepository.findAllForCompany(companyId, { driverId: scope.driverId });
-  if (scope.kind === "customer") {
-    return jobRepository.findAllForCompany(companyId, { bookingCustomerId: scope.customerId });
-  }
-  return [];
+  const jobs =
+    scope.kind === "company"
+      ? await jobRepository.findAllForCompany(companyId)
+      : scope.kind === "driver"
+        ? await jobRepository.findAllForCompany(companyId, { driverId: scope.driverId })
+        : scope.kind === "customer"
+          ? await jobRepository.findAllForCompany(companyId, { bookingCustomerId: scope.customerId })
+          : [];
+  return jobs.map(withReadiness);
 }
 
 export async function getById(companyId: string, id: string, user: AuthenticatedUser) {
@@ -57,7 +93,7 @@ export async function getById(companyId: string, id: string, user: Authenticated
   if (!isVisible) {
     throw new AppError(404, "Job not found"); // don't leak existence out of scope
   }
-  return job;
+  return withReadiness(job);
 }
 
 // The route already gates on job.update_status (only Owner/Manager/Driver
@@ -67,7 +103,7 @@ export async function getById(companyId: string, id: string, user: Authenticated
 // on all of them. Resolved the same data-driven way as read-scoping
 // (operations.view vs. an actual Driver-profile link), not a role-key
 // check.
-async function assertCanWriteJob(companyId: string, job: { driverId: string }, user: AuthenticatedUser) {
+async function assertCanWriteJob(companyId: string, job: { driverId: string | null }, user: AuthenticatedUser) {
   const scope = await resolveCallerScope(companyId, user);
   if (scope.kind === "company") return;
   if (scope.kind === "driver" && job.driverId === scope.driverId) return;
@@ -99,6 +135,16 @@ export async function start(companyId: string, id: string, user: AuthenticatedUs
   if (!job) throw new AppError(404, "Job not found");
   await assertCanWriteJob(companyId, job, user);
   assertStatus(job, ["NOT_STARTED"], "start");
+
+  // "Ready to Start" on the card only means machine+driver are assigned —
+  // pricing is picked right here on the Live Job screen, so it's not part
+  // of that badge, but Start genuinely cannot proceed without it.
+  if (!job.machineId || !job.driverId) {
+    throw new AppError(400, "Assign a machine and driver before starting this job");
+  }
+  if (!job.booking.pricingMethodId || job.booking.rate == null) {
+    throw new AppError(400, "Set a pricing method and rate before starting this job");
+  }
 
   const startTime = input.startTime ?? new Date();
   const updated = await jobRepository.updateScopedWithRelations(companyId, id, { status: "WORKING", startTime });
@@ -133,26 +179,16 @@ export async function resume(companyId: string, id: string, user: AuthenticatedU
   return updated;
 }
 
-export async function complete(companyId: string, id: string, user: AuthenticatedUser, input: CompleteJobInput) {
+// Stop freezes the clock (endTime/actualHours computed the same way
+// complete() used to) but does NOT touch acres/notes/invoice — those wait
+// for submit() below. The counter itself keeps running client-side through
+// the Stop-confirm dialog; this endpoint is only ever called once that
+// confirmation is accepted, which is what actually freezes it.
+export async function stop(companyId: string, id: string, user: AuthenticatedUser, input: StopJobInput) {
   const job = await jobRepository.findByIdScopedWithRelations(companyId, id);
   if (!job) throw new AppError(404, "Job not found");
   await assertCanWriteJob(companyId, job, user);
-  assertStatus(job, ["WORKING", "PAUSED"], "complete");
-
-  // Phase C: Backend Enforcement of Mandatory Job Completion Rules
-  const company = await settingsRepo.findCompanyById(companyId);
-  if (company?.requireJobPhoto) {
-    const photos = await jobPhotoRepository.findAllForJob(companyId, id);
-    if (photos.length === 0) {
-      throw new AppError(400, "A completion photo is required before completing this job");
-    }
-  }
-  if (company?.requireJobFuelLog) {
-    const fuelEntries = await fuelService.listForJob(companyId, id);
-    if (fuelEntries.length === 0) {
-      throw new AppError(400, "A fuel-log entry is required before completing this job");
-    }
-  }
+  assertStatus(job, ["WORKING", "PAUSED"], "stop");
 
   // Close out an in-progress pause before computing hours, or the final
   // pause segment would silently count as worked time.
@@ -166,6 +202,41 @@ export async function complete(companyId: string, id: string, user: Authenticate
   // WORKING/PAUSED, both unreachable without start() having run first.
   const actualHours = input.actualHours ?? computeActualHours(job.startTime!, endTime, totalPausedDurationSec);
 
+  const updated = await jobRepository.updateScopedWithRelations(companyId, id, {
+    status: "STOPPED",
+    endTime,
+    totalPausedDurationSec,
+    actualHours,
+  });
+  await jobStatusLogRepository.create(companyId, id, "STOPPED", user.id);
+  return updated;
+}
+
+// Only legal from STOPPED (a second, distinct confirmation from Stop on
+// the client). This is the point of no return for a Manager/Driver — the
+// job becomes COMPLETED, locked to Owner-only edits, and its invoice is
+// generated from the duration Stop already recorded.
+export async function submit(companyId: string, id: string, user: AuthenticatedUser, input: SubmitJobInput) {
+  const job = await jobRepository.findByIdScopedWithRelations(companyId, id);
+  if (!job) throw new AppError(404, "Job not found");
+  await assertCanWriteJob(companyId, job, user);
+  assertStatus(job, ["STOPPED"], "submit");
+
+  // Phase C: Backend Enforcement of Mandatory Job Completion Rules
+  const company = await settingsRepo.findCompanyById(companyId);
+  if (company?.requireJobPhoto) {
+    const photos = await jobPhotoRepository.findAllForJob(companyId, id);
+    if (photos.length === 0) {
+      throw new AppError(400, "A completion photo is required before submitting this job");
+    }
+  }
+  if (company?.requireJobFuelLog) {
+    const fuelEntries = await fuelService.listForJob(companyId, id);
+    if (fuelEntries.length === 0) {
+      throw new AppError(400, "A fuel-log entry is required before submitting this job");
+    }
+  }
+
   // Job update, booking update, status-log write, and invoice creation must
   // all succeed together — without this, a failure partway through (e.g.
   // invoice creation) could leave the job COMPLETED with no invoice ever
@@ -176,9 +247,6 @@ export async function complete(companyId: string, id: string, user: Authenticate
       id,
       {
         status: "COMPLETED",
-        endTime,
-        totalPausedDurationSec,
-        actualHours,
         ...(input.completedAcres !== undefined ? { completedAcres: input.completedAcres } : {}),
         ...(input.notes !== undefined ? { notes: input.notes } : {}),
       },
@@ -201,17 +269,19 @@ export async function complete(companyId: string, id: string, user: Authenticate
 // written in one transaction, same as complete() does for COMPLETED.
 //
 // COMPLETED is deliberately included as a cancellable source status, not
-// just NOT_STARTED/WORKING/PAUSED — an Invoice (and therefore a Payment)
-// is only ever created via createInvoiceForCompletedJob, which only runs
-// once a Job reaches COMPLETED. Excluding COMPLETED here would make the
-// payment-guard below unreachable: nothing would ever have a linked
-// payment left to block on. The real scenario this rule protects is
+// just NOT_STARTED/WORKING/PAUSED/STOPPED — an Invoice (and therefore a
+// Payment) is only ever created via createInvoiceForCompletedJob, which
+// only runs once a Job reaches COMPLETED. Excluding COMPLETED here would
+// make the payment-guard below unreachable: nothing would ever have a
+// linked payment left to block on. The real scenario this rule protects is
 // exactly "job was completed, invoice/payment generated, now needs
-// reversing" — void the payment, then cancel the (completed) job.
+// reversing" — void the payment, then cancel the (completed) job. STOPPED
+// is included too — a job frozen but not yet submitted (e.g. blocked on a
+// missing required photo/fuel log) still needs a way out.
 export async function cancel(companyId: string, id: string, user: AuthenticatedUser, reason?: string) {
   const job = await jobRepository.findByIdScopedWithRelations(companyId, id);
   if (!job) throw new AppError(404, "Job not found");
-  assertStatus(job, ["NOT_STARTED", "WORKING", "PAUSED", "COMPLETED"], "cancel");
+  assertStatus(job, ["NOT_STARTED", "WORKING", "PAUSED", "STOPPED", "COMPLETED"], "cancel");
 
   const paymentCount = await paymentService.countNonVoidedPaymentsForBooking(companyId, job.bookingId);
   assertNoNonVoidedPayments(paymentCount);
@@ -229,41 +299,6 @@ export async function cancel(companyId: string, id: string, user: AuthenticatedU
 // letting a Booking be deleted or transitioned to CANCELLED.
 export async function findLinkedForBooking(companyId: string, bookingId: string) {
   return jobRepository.findByBookingIdScoped(companyId, bookingId);
-}
-
-export async function completeForBooking(companyId: string, bookingId: string) {
-  const existingJob = await jobRepository.findByBookingIdScoped(companyId, bookingId);
-  if (!existingJob || existingJob.status === "COMPLETED") return;
-
-  let totalPausedDurationSec = existingJob.totalPausedDurationSec;
-  if (existingJob.status === "PAUSED") {
-    totalPausedDurationSec += await currentPauseDurationSec(companyId, existingJob.id);
-  }
-
-  const endTime = new Date();
-  const startTime = existingJob.startTime ?? endTime;
-  const actualHours = computeActualHours(startTime, endTime, totalPausedDurationSec);
-
-  // Same reasoning as complete() above: job update and invoice creation
-  // must succeed together, not as two independent sequential writes.
-  await prisma.$transaction(async (tx) => {
-    const updated = await jobRepository.updateScopedWithRelations(
-      companyId,
-      existingJob.id,
-      {
-        status: "COMPLETED",
-        startTime,
-        endTime,
-        totalPausedDurationSec,
-        actualHours,
-      },
-      tx,
-    );
-
-    if (updated) {
-      await paymentService.createInvoiceForCompletedJob(companyId, updated, tx);
-    }
-  });
 }
 
 export async function updateDetails(companyId: string, id: string, user: AuthenticatedUser, input: UpdateJobInput) {
@@ -295,6 +330,9 @@ export async function addFuelEntry(
   const job = await jobRepository.findByIdScoped(companyId, id);
   if (!job) throw new AppError(404, "Job not found");
   await assertCanWriteJob(companyId, job, user);
+  // start()'s precondition guarantees machineId is set on any job that has
+  // actually begun work, which is the only time a fuel entry makes sense.
+  if (!job.machineId) throw new AppError(400, "This job has no machine assigned yet");
 
   const entry = await fuelService.addEntry(companyId, id, job.machineId, user.id, litres, cost);
   // fuel_used_litres is a cached total — job_fuel_entries is the source of

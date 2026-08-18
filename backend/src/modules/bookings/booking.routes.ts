@@ -20,13 +20,20 @@ bookingRouter.get("/:id/attachments", asyncHandler(bookingController.listAttachm
 
 bookingRouter.post("/", requirePermission("booking.create"), asyncHandler(bookingController.create));
 bookingRouter.patch("/:id", requirePermission("booking.edit"), asyncHandler(bookingController.updateDetails));
-bookingRouter.patch("/:id/status", requirePermission("booking.edit"), asyncHandler(bookingController.updateStatus));
 bookingRouter.patch(
   "/:id/machine",
   requirePermission("machine.assign"),
   asyncHandler(bookingController.assignMachine),
 );
 bookingRouter.patch("/:id/driver", requirePermission("driver.assign"), asyncHandler(bookingController.assignDriver));
+// Gated by job.update_status (not booking.edit) — this is the Live Job
+// screen's pre-Start pricing step, which Driver also performs, not a
+// general booking-edit action.
+bookingRouter.patch(
+  "/:id/pricing",
+  requirePermission("job.update_status"),
+  asyncHandler(bookingController.assignPricing),
+);
 bookingRouter.delete("/:id", requirePermission("booking.delete"), asyncHandler(bookingController.remove));
 
 bookingRouter.post(

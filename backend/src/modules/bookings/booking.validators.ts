@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-export const bookingStatusSchema = z.enum(["PENDING", "ACCEPTED", "ON_THE_WAY", "WORKING", "COMPLETED", "CANCELLED"]);
-
 // HH:mm or HH:mm:ss — stored as a Postgres TIME column (date part ignored),
 // so we anchor it to a fixed epoch date before handing it to Prisma.
 const timeOfDaySchema = z
@@ -9,11 +7,17 @@ const timeOfDaySchema = z
   .regex(/^\d{2}:\d{2}(:\d{2})?$/, "Expected HH:mm or HH:mm:ss")
   .transform((value) => new Date(`1970-01-01T${value.length === 5 ? `${value}:00` : value}.000Z`));
 
-// Machine and Driver are nullable at creation (§8.1 schema note) — a
-// booking can be made before a machine/driver is decided, and assigned
-// later via the dedicated assign-machine/assign-driver endpoints. They ARE
-// still accepted here so a booking can be created fully-formed in one call
-// when the caller already knows both.
+// Machine and Driver are nullable at creation — a booking is saved with
+// just Farmer/Village/Work description, machine/driver decided later via
+// the dedicated assign-machine/assign-driver endpoints (or up front here,
+// if the caller already knows both). Saving a booking always creates its
+// Job Card immediately (see booking.service.ts's create()) — the card
+// shows "Ready to Start" once machine+driver are set, "Awaiting Machine"
+// until then.
+//
+// pricingMethodId/rate are likewise optional here: the job-card flow picks
+// pricing on the Live Job screen right before Start (dedicated
+// assign-pricing endpoint below), not at booking time.
 export const createBookingSchema = z.object({
   customerId: z.string().uuid(),
   villageId: z.string().uuid(),
@@ -26,20 +30,20 @@ export const createBookingSchema = z.object({
   scheduledTime: timeOfDaySchema.optional(),
   estimatedHours: z.coerce.number().nonnegative().optional(),
   estimatedAcres: z.coerce.number().nonnegative().optional(),
-  pricingMethodId: z.string().uuid(),
-  rate: z.coerce.number().nonnegative(),
+  workDescription: z.string().trim().min(1, "Work needed is required"),
+  pricingMethodId: z.string().uuid().optional(),
+  rate: z.coerce.number().nonnegative().optional(),
   notes: z.string().optional(),
 });
 
 // Deliberately excludes machineId/driverId (dedicated assign-machine /
 // assign-driver endpoints, gated by machine.assign / driver.assign) and
-// status (dedicated status-transition endpoint, which validates the
-// transition graph rather than accepting an arbitrary status value here).
-export const updateBookingSchema = createBookingSchema.omit({ machineId: true, driverId: true }).partial();
-
-export const updateBookingStatusSchema = z.object({
-  status: bookingStatusSchema,
-});
+// pricingMethodId/rate (dedicated assign-pricing endpoint below, gated by
+// job.update_status since it's part of the Live Job screen's pre-Start
+// step, not a booking-edit action).
+export const updateBookingSchema = createBookingSchema
+  .omit({ machineId: true, driverId: true, pricingMethodId: true, rate: true })
+  .partial();
 
 export const assignMachineSchema = z.object({
   machineId: z.string().uuid().nullable(),
@@ -49,8 +53,13 @@ export const assignDriverSchema = z.object({
   driverId: z.string().uuid().nullable(),
 });
 
+export const assignPricingSchema = z.object({
+  pricingMethodId: z.string().uuid(),
+  rate: z.coerce.number().nonnegative(),
+});
+
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 export type UpdateBookingInput = z.infer<typeof updateBookingSchema>;
-export type UpdateBookingStatusInput = z.infer<typeof updateBookingStatusSchema>;
 export type AssignMachineInput = z.infer<typeof assignMachineSchema>;
 export type AssignDriverInput = z.infer<typeof assignDriverSchema>;
+export type AssignPricingInput = z.infer<typeof assignPricingSchema>;

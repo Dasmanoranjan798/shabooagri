@@ -1,4 +1,4 @@
-import type { Booking, BookingStatus } from "@prisma/client";
+import type { Booking } from "@prisma/client";
 import * as authService from "../auth/auth.service";
 import type { AuthenticatedUser } from "../auth/auth.types";
 import * as customerService from "../customers/customer.service";
@@ -9,28 +9,14 @@ import * as pricingMethodService from "../pricing-methods/pricingMethod.service"
 import * as villageService from "../villages/village.service";
 import { resolveCallerScope } from "../../shared/access/callerScope";
 import { AppError } from "../../shared/errors/AppError";
-import { assertBookingCancellable, assertBookingDeletable } from "../../shared/utils/dependencyGuard";
+import { assertBookingDeletable } from "../../shared/utils/dependencyGuard";
 import { calculateAmount, type PricingUnit } from "../../shared/pricing/pricing-calculator";
 import * as bookingAttachmentRepository from "./bookingAttachment.repository";
 import * as bookingRepository from "./booking.repository";
 import type { CreateBookingInput, UpdateBookingInput } from "./booking.validators";
 
-// §7 workflow order. A status can only move forward along this graph, or
-// sideways into CANCELLED — never skip a step (e.g. Pending -> Completed)
-// and never leave a terminal state. Encoded here, not in the DB, so the
-// rule can gain nuance later (e.g. requiring a reason on cancel) without a
-// migration.
-const ALLOWED_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
-  PENDING: ["ACCEPTED", "CANCELLED"],
-  ACCEPTED: ["ON_THE_WAY", "CANCELLED"],
-  ON_THE_WAY: ["WORKING", "CANCELLED"],
-  WORKING: ["COMPLETED", "CANCELLED"],
-  COMPLETED: [],
-  CANCELLED: [],
-};
-
 type BookingWithRelations = Booking & {
-  pricingMethod: { unit: string | null };
+  pricingMethod: { unit: string | null } | null;
 };
 
 // Booking has no stored amount column (only rate + pricingMethodId +
@@ -49,6 +35,11 @@ function resolveEstimatedQuantity(
 }
 
 function withEstimatedAmount<T extends BookingWithRelations>(booking: T) {
+  // Pricing is now assigned on the Live Job screen right before Start, not
+  // at booking time — most new bookings have no pricingMethod/rate yet.
+  if (!booking.pricingMethod || booking.rate == null) {
+    return { ...booking, estimatedAmount: null as number | null };
+  }
   const unit = booking.pricingMethod.unit as PricingUnit;
   const quantity = resolveEstimatedQuantity(unit, booking.estimatedHours, booking.estimatedAcres);
   let estimatedAmount: number | null;
@@ -151,7 +142,7 @@ export async function create(companyId: string, creatorId: string, input: Create
   await Promise.all([
     customerService.getById(companyId, input.customerId),
     villageService.getById(companyId, input.villageId),
-    pricingMethodService.getById(companyId, input.pricingMethodId),
+    input.pricingMethodId ? pricingMethodService.getById(companyId, input.pricingMethodId) : Promise.resolve(),
     authService.getUserForCompany(companyId, managerId),
     input.machineId ? assertMachineExists(companyId, input.machineId) : Promise.resolve(),
     input.driverId ? assertDriverExists(companyId, input.driverId) : Promise.resolve(),
@@ -176,11 +167,17 @@ export async function create(companyId: string, creatorId: string, input: Create
     scheduledTime: input.scheduledTime,
     estimatedHours: input.estimatedHours,
     estimatedAcres: input.estimatedAcres,
+    workDescription: input.workDescription,
     pricingMethodId: input.pricingMethodId,
     rate: input.rate,
     notes: input.notes,
     createdBy: creatorId,
   });
+
+  // Saving a booking creates its Job Card immediately — no separate
+  // "convert to job" step. Machine/driver may still be null (card shows
+  // "Awaiting Machine" until assigned).
+  await jobService.createForBooking(companyId, booking.id, input.machineId ?? null, input.driverId ?? null);
 
   return withEstimatedAmount(booking);
 }
@@ -189,7 +186,6 @@ export async function updateDetails(companyId: string, id: string, input: Update
   await Promise.all([
     input.customerId ? customerService.getById(companyId, input.customerId) : Promise.resolve(),
     input.villageId ? villageService.getById(companyId, input.villageId) : Promise.resolve(),
-    input.pricingMethodId ? pricingMethodService.getById(companyId, input.pricingMethodId) : Promise.resolve(),
     input.managerId ? authService.getUserForCompany(companyId, input.managerId) : Promise.resolve(),
   ]);
 
@@ -217,46 +213,6 @@ export async function updateDetails(companyId: string, id: string, input: Update
   return withEstimatedAmount(updated);
 }
 
-export async function updateStatus(companyId: string, id: string, nextStatus: BookingStatus) {
-  const booking = await bookingRepository.findByIdScopedWithRelations(companyId, id);
-  if (!booking) {
-    throw new AppError(404, "Booking not found");
-  }
-
-  const allowedNextStatuses = ALLOWED_TRANSITIONS[booking.status];
-  if (!allowedNextStatuses.includes(nextStatus)) {
-    throw new AppError(400, `Cannot transition a booking from ${booking.status} to ${nextStatus}`);
-  }
-
-  // Rule 3 (§ dependency-locked deletion).
-  if (nextStatus === "CANCELLED") {
-    const linkedJob = await jobService.findLinkedForBooking(companyId, id);
-    assertBookingCancellable(!!linkedJob && linkedJob.status !== "CANCELLED");
-  }
-
-  // §7 step 5 ("machine travels to location") is the point a Job — which
-  // requires both machineId and driverId to be non-null per its schema —
-  // can meaningfully exist. Rather than create it silently incomplete,
-  // reject the transition itself if either is still unassigned; this also
-  // gives a booking's own "on the way" status real meaning (there IS a
-  // machine+driver en route, not just a status label).
-  if (nextStatus === "ON_THE_WAY" && (!booking.machineId || !booking.driverId)) {
-    throw new AppError(400, "A booking needs both a machine and a driver assigned before it can go on the way");
-  }
-
-  const updated = await bookingRepository.updateScopedWithRelations(companyId, id, { status: nextStatus });
-
-  if (nextStatus === "ON_THE_WAY") {
-    await jobService.createForBooking(companyId, id, updated!.machineId!, updated!.driverId!);
-  }
-
-  if (nextStatus === "COMPLETED") {
-    await jobService.completeForBooking(companyId, id);
-  }
-
-  return withEstimatedAmount(updated!);
-}
-
 export async function assignMachine(companyId: string, id: string, machineId: string | null) {
   if (machineId) {
     await assertMachineExists(companyId, machineId);
@@ -274,6 +230,10 @@ export async function assignMachine(companyId: string, id: string, machineId: st
   if (!updated) {
     throw new AppError(404, "Booking not found");
   }
+  // Keeps a not-yet-started Job Card's own machineId in sync — a booking is
+  // often saved before a machine is decided, then assigned here afterward.
+  // Without this, "Awaiting Machine" could never flip to "Ready to Start".
+  await jobService.syncAssignmentForBooking(companyId, id, { machineId });
   return withEstimatedAmount(updated);
 }
 
@@ -291,6 +251,20 @@ export async function assignDriver(companyId: string, id: string, driverId: stri
     });
   }
   const updated = await bookingRepository.updateScopedWithRelations(companyId, id, { driverId });
+  if (!updated) {
+    throw new AppError(404, "Booking not found");
+  }
+  await jobService.syncAssignmentForBooking(companyId, id, { driverId });
+  return withEstimatedAmount(updated);
+}
+
+// Called from the Live Job screen right before Start — pricing is picked
+// there, not at booking creation (see createBookingSchema's comment).
+// Whatever is set here is what drives the live price display and the
+// invoice generated on Submit.
+export async function assignPricing(companyId: string, id: string, pricingMethodId: string, rate: number) {
+  await pricingMethodService.getById(companyId, pricingMethodId);
+  const updated = await bookingRepository.updateScopedWithRelations(companyId, id, { pricingMethodId, rate });
   if (!updated) {
     throw new AppError(404, "Booking not found");
   }

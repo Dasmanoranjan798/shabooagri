@@ -6,11 +6,12 @@ import {
   addFuelEntrySchema,
   addJobPhotoSchema,
   cancelJobSchema,
-  completeJobSchema,
   createManualJobSchema,
   pauseJobSchema,
   resumeJobSchema,
   startJobSchema,
+  stopJobSchema,
+  submitJobSchema,
   updateJobSchema,
 } from "./job.validators";
 
@@ -54,10 +55,17 @@ export async function resume(req: Request, res: Response) {
   res.status(200).json(job);
 }
 
-export async function complete(req: Request, res: Response) {
+export async function stop(req: Request, res: Response) {
   const user = requireUser(req);
-  const input = completeJobSchema.parse(req.body);
-  const job = await jobService.complete(user.companyId, req.params.id, user, input);
+  const input = stopJobSchema.parse(req.body);
+  const job = await jobService.stop(user.companyId, req.params.id, user, input);
+  res.status(200).json(job);
+}
+
+export async function submit(req: Request, res: Response) {
+  const user = requireUser(req);
+  const input = submitJobSchema.parse(req.body);
+  const job = await jobService.submit(user.companyId, req.params.id, user, input);
   res.status(200).json(job);
 }
 

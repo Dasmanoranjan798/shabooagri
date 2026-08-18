@@ -63,7 +63,7 @@ export function findByBookingIdScoped(companyId: string, bookingId: string) {
   return prisma.job.findFirst({ where: { companyId, bookingId } });
 }
 
-export function create(companyId: string, bookingId: string, machineId: string, driverId: string) {
+export function create(companyId: string, bookingId: string, machineId: string | null, driverId: string | null) {
   return prisma.job.create({
     data: { companyId, bookingId, machineId, driverId, executionMode: "LIVE" },
     include: includeRelations,
