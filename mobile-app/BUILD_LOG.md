@@ -137,3 +137,16 @@ Fixed by adding a "Set Pricing" dialog to `job_detail_screen.dart` (pricing-meth
 - Confirmed `POST /team/invites` lives under `/team`, not `/employees` — easy to have guessed wrong given it's triggered from the Employee form; checked `staffInvite.routes.ts`'s actual mount path in `app.ts` rather than assuming.
 
 ---
+
+## Stage 7: Expenses module (entirely new)
+
+**Built:** full new module, live-only (no offline table — same reasoning as Payments/Employees: back-office record-keeping, not field-critical). List (category, amount, date, description), Create/Edit form (category dropdown from `GET /expenses/categories`, amount, optional machine dropdown, optional description, date picker), Delete via kebab. Added "Expenses" to the nav drawer.
+
+**Correctly caught a permission-pattern exception before building, not after:** every other entity so far splits Edit (`*.manage`, Manager-accessible) from Delete (separate Owner-only `*.delete` permission). Checked `expense.routes.ts` directly before assuming Expenses followed the same split — it doesn't; Delete is gated by the same `expense.manage` as Create/Edit, no separate `expense.delete` exists in the permission list. Built the kebab menu with Edit+Delete both under the single `canManage` (Owner or Manager) check, not the two-tier `canManage`/`canDelete` pattern used everywhere else. Documented this exception directly in the source comment, not just here, so a future reader doesn't "fix" it to match the other modules incorrectly.
+
+**Self-test:**
+- `flutter analyze`: 0 errors.
+- `flutter test`: passes.
+- Live-curled all 5 endpoints (`GET /expenses/categories`, `GET/POST /expenses`, `PATCH/DELETE /expenses/:id`) — all 401.
+
+---
