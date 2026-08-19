@@ -72,7 +72,7 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
       _joinedDate = DateTime.parse(employee['joinedDate'] as String);
     }
     final rate = employee['hourlyRate'] ?? employee['monthlySalary'] ?? employee['yearlySalary'];
-    _rateController.text = (rate as num?)?.toString() ?? '';
+    _rateController.text = rate != null ? double.tryParse(rate.toString())?.toString() ?? '' : '';
   }
 
   Future<void> _pickJoinedDate() async {
