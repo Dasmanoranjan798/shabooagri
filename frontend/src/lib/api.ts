@@ -75,7 +75,13 @@ async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Re
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  let response = await fetch(url, { ...options, headers });
+  const finalOptions: RequestInit = {
+    ...options,
+    headers,
+    cache: options.cache || "no-store",
+  };
+
+  let response = await fetch(url, finalOptions);
 
   // Handle 401 token refresh if refresh token exists
   if (response.status === 401) {
