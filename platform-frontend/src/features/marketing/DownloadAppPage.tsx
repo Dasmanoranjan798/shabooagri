@@ -46,27 +46,67 @@ export const DownloadAppPage: React.FC = () => {
               <AlertTriangle size={18} />
               Preview / Test Version
             </div>
-            <p style={{ fontSize: "1.1rem", color: "var(--color-text-muted)", marginBottom: 32 }}>
-              Take the power of ShabooAgri to the field. Manage jobs, sync offline data, and complete workflows
-              directly from your Android device.
+            <p style={{ color: "var(--color-text-muted)", marginBottom: 32 }}>
+              ShabooAgri is one unified application for all your devices. Manage your farm operations seamlessly across mobile and desktop.
             </p>
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              <a
-                href="/downloads/shabooagri-v0.4.5.apk"
-                download="shabooagri-v0.4.5.apk"
-                className="pf-btn pf-btn-primary"
-                style={{
-                  textDecoration: "none",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  fontSize: "1.1rem",
-                  padding: "14px 32px",
-                }}
-              >
-                <Download size={22} />
-                Download for Android
-              </a>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+              {/* Android */}
+              <div>
+                <h3 style={{ margin: "0 0 16px 0", display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
+                  <Smartphone size={20} />
+                  Android
+                </h3>
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <a
+                    href="/downloads/shabooagri-v0.5.0.apk"
+                    download="shabooagri-v0.5.0.apk"
+                    className="pf-btn pf-btn-primary"
+                    style={{
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <Download size={20} />
+                    Download APK (v0.5.0)
+                  </a>
+                </div>
+              </div>
+
+              {/* iOS */}
+              <div>
+                <h3 style={{ margin: "0 0 16px 0", display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
+                  <Smartphone size={20} />
+                  iPhone / iPad
+                </h3>
+                <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem", margin: 0 }}>
+                  <em>v0.5.0 submission pending. Will be available via TestFlight / App Store.</em>
+                </p>
+              </div>
+
+              {/* Windows */}
+              <div>
+                <h3 style={{ margin: "0 0 16px 0", display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
+                  <Monitor size={20} />
+                  Windows
+                </h3>
+                <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem", margin: 0 }}>
+                  <em>v0.5.0 release artifact pending Windows host compilation.</em>
+                </p>
+              </div>
+
+              {/* macOS */}
+              <div>
+                <h3 style={{ margin: "0 0 16px 0", display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
+                  <Monitor size={20} />
+                  macOS
+                </h3>
+                <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem", margin: 0 }}>
+                  <em>v0.5.0 release artifact pending macOS host compilation.</em>
+                </p>
+              </div>
             </div>
           </section>
 
@@ -93,7 +133,7 @@ export const DownloadAppPage: React.FC = () => {
                 }}
               >
                 <Info size={24} color="var(--color-primary)" />
-                What's New in v0.4.5
+                What's New in v0.5.0
               </h2>
               <ul
                 style={{
@@ -105,10 +145,13 @@ export const DownloadAppPage: React.FC = () => {
                   gap: 8,
                 }}
               >
-                <li><strong>Fixed</strong> Machine creation validation error.</li>
-                <li><strong>Fixed</strong> Dashboard authentication and session issue. App now properly restores sessions and prompts login if your token naturally expires.</li>
-                <li><strong>Added</strong> quick + Create Machine Type action directly from the Machine form.</li>
-                <li>Safely parse Decimal salary strings in employee form.</li>
+                <li><strong>NEW</strong> Windows application (pending artifact compilation)</li>
+                <li><strong>NEW</strong> macOS application (pending artifact compilation)</li>
+                <li><strong>NEW</strong> iOS application (pending store submission)</li>
+                <li><strong>IMPROVED</strong> Responsive desktop layouts</li>
+                <li><strong>IMPROVED</strong> Cross-platform local storage and sync architecture</li>
+                <li><strong>FIXED</strong> Machine creation validation</li>
+                <li><strong>FIXED</strong> Dashboard authentication/session handling</li>
               </ul>
               <div
                 style={{
