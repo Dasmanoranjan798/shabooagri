@@ -1,0 +1,95 @@
+name: ShabooAgri Flutter CI/CD
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+
+jobs:
+  test:
+    name: Analyze and Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: 'stable'
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  build_android:
+    name: Build Android APK
+    needs: test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+      - run: flutter pub get
+      - run: flutter build apk --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: mobile-app/build/app/outputs/flutter-apk/app-release.apk
+
+  build_windows:
+    name: Build Windows App
+    needs: test
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: mobile-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+      - run: flutter config --enable-windows-desktop
+      - run: flutter pub get
+      - run: flutter build windows --release
+      - run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath shabooagri-windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: mobile-app/shabooagri-windows.zip
+
+  build_macos_ios:
+    name: Build macOS and iOS
+    needs: test
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: mobile-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+      - run: flutter config --enable-macos-desktop --enable-ios
+      - run: flutter pub get
+      - name: Build macOS App
+        run: flutter build macos --release
+      - name: Zip macOS App
+        run: ditto -c -k --sequesterRsrc --keepParent build/macos/Build/Products/Release/shabooagri_mobile.app shabooagri-macos.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-release
+          path: mobile-app/shabooagri-macos.zip
+      - name: Build iOS Unsigned
+        run: flutter build ios --release --no-codesign
+      - name: Zip iOS Runner
+        run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphoneos/Runner.app shabooagri-ios-unsigned.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-release-unsigned
+          path: mobile-app/shabooagri-ios-unsigned.zip
