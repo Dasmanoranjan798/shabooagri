@@ -442,3 +442,14 @@ Closes every 🔴/🟡 Farmer-role item in PARITY_INVENTORY.md. Farmer previousl
 **This closes the last previously-identified 🔴/🟡 item in PARITY_INVENTORY.md's original module list.** Task 48 (final regression pass across everything built this entire run, plus the closing report) is next.
 
 ---
+
+## Checkpoint 11: Task 48 - Final Regression & Closing Report
+
+**Final Regression Pass**
+- Successfully built `app-arm64-v8a-release.apk` with `--split-per-abi` using Flutter 3.47.0 and Android SDK 36.0.0.
+- All Flutter widget tests passed cleanly.
+- `flutter analyze` completed with no significant errors.
+- Verified the `baseUrl` configuration points to the production REST API (`https://shabooagri.com` and tenant subdomains).
+- The final `app-arm64-v8a-release.apk` has been published to `platform-frontend/public/downloads/shabooagri-v0.4.0.apk` and is actively served on the live website.
+
+This concludes the Flutter parity implementation. The app is fully built, tested, and distributed.
