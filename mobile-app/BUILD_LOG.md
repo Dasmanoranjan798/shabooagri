@@ -399,3 +399,28 @@ Closes every 🔴/🟡 Farmer-role item in PARITY_INVENTORY.md. Farmer previousl
 **Needs real-device testing:** the full Farmer login → 4-tab navigation flow end-to-end against a real Farmer/Customer account with actual bookings and invoices (this environment has no such test login readily available to exercise); expand/collapse interaction feel on a real touchscreen; confirming the "Total" amount in an expanded booking card actually matches that booking's real generated invoice once completed.
 
 ---
+
+## Checkpoint 9: Dashboard — warning banner, quick actions, greeting, and a scope correction on the "missing charts" finding
+
+**Scope correction (read source before building, not after):** before touching any code, read `frontend/src/features/dashboard/MobileDashboard.tsx` directly rather than trusting the earlier audit's chart-gap finding at face value. Confirmed the website's own phone-width layout (`DashboardPage.tsx` picks `MobileDashboard` vs `DesktopDashboard` based on `window.innerWidth < 768`) has **zero charts** — the Income Overview line chart, Machine Status donut, and Fuel Consumption bar chart all belong to `DesktopDashboard.tsx` only. The original PARITY_INVENTORY finding had compared the Flutter app against the desktop layout, which is the wrong comparison target for a phone app. This is now corrected in PARITY_INVENTORY.md rather than spending the checkpoint building 3 charts nothing at phone width actually shows.
+
+**What MobileDashboard.tsx actually has that the Flutter Dashboard was missing (built this checkpoint):**
+- Greeting + date banner ("Hello, {first name}" + full date), added above the KPI grid.
+- 4-button Quick Actions row (New Booking / Collect Payment / New Customer / New Expense), routing to the same screens the website's buttons do. Not permission-gated per-button the way the website disables them for non-`operations.view` roles — unnecessary here since Dashboard is Owner/Manager-only in this app's routing (Driver/Farmer never land on `/dashboard` at all), unlike the website where every role can technically reach `/` and see disabled buttons.
+- "VIEW ALL INVOICES" button alongside the existing "VIEW ALL JOBS" (routes to `/payments`).
+
+**Operational Warning banner — the one part of `DashboardPage.tsx` shared by both layouts (rendered above `MobileDashboard`/`DesktopDashboard`, not inside either):**
+- New `_opsWarningCountsProvider` computes service/insurance/license warning counts by reusing the exact `machineServiceWarning()`/`expiryWarning()` helpers already built in `company_profile_provider.dart` for the Machines/Drivers list warning chips (Checkpoint-1-era infrastructure) and the already-live `machinesListProvider`/`driversListProvider` — zero new formula logic, exactly the DRY reuse `operationalWarnings.ts` itself exists to enable on the website.
+- New `DashboardStorage` (`local_storage.dart`) persists a "dismissed until" epoch-ms timestamp via the already-present `flutter_secure_storage`, mirroring the website's `localStorage`-based `OPS_WARNING_DISMISS_KEY` 24h dismissal exactly — deliberately reused the existing secure-storage wrapper rather than adding a new `shared_preferences` dependency for one small flag.
+- Banner shows per-category chips (Equipment Service Due Soon / Machine Document-Insurance Expiring / Driver License Expiring) with counts, dismiss (X) button, hidden entirely once dismissed or when all three counts are zero — matching the website's conditional render exactly.
+
+**Self-test:**
+- `flutter analyze`: clean — 0 errors (same 4 pre-existing style-only infos, untouched).
+- `flutter test`: passes.
+- Live-curled `GET /dashboard/summary`, `/machines`, `/drivers`, `/settings/profile` — all 401, all real (all four already-existing, reused endpoints — no new backend surface this checkpoint).
+
+**PARITY_INVENTORY.md updated:** DASHBOARD → ✅ Full, with the chart-scope correction documented inline so a future reader doesn't re-flag it.
+
+**Needs real-device testing:** the 24h dismiss actually surviving an app restart (secure-storage persistence, same category of thing flagged as needing device confirmation in earlier checkpoints); visual layout of the 4-button Quick Actions row and warning-banner chips at real phone widths (built and analyzed, never rendered).
+
+---

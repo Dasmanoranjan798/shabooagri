@@ -35,10 +35,10 @@ Produced by reading the entire website source (`frontend/src`) file by file — 
 **Website — both layouts:** Operational warning banner (dismissible 24h) surfacing Service Due / Insurance Expiring / License Expiring counts, computed client-side.
 **Website buttons:** "View All Jobs →", "View All Invoices →" (both permission-gated).
 
-**Mobile app:** 🟡 Partial.
+**Mobile app:** ✅ Full (corrected scope — see note below).
 - ✅ Has: 6 KPI cards (Today's Revenue, This Month, Pending Collection, Machines Working, Drivers Active, Jobs Completed) with correct delta logic. Today's Job Cards list with correct Ready-to-Start/Awaiting-Machine badge logic. Pending Payments list. "VIEW ALL JOBS" button.
-- 🔴 Missing entirely: Income Overview chart, Machine Status donut, Fuel Consumption chart (all three — same gap as before, now confirmed against literal website content). Greeting/date banner. 4-button Quick Actions row. Operational warning banner (Service/Insurance/License alerts) — **this is a real, previously-unflagged gap**, not disclosed in the build log.
-- No "View All Invoices" direct link (payments reachable via drawer only).
+- ✅ Added: Greeting/date banner, 4-button Quick Actions row (New Booking / Collect Payment / New Customer / New Expense), Operational Warning banner (Service Due / Insurance Expiring / License Expiring counts, reusing the exact `machineServiceWarning`/`expiryWarning` helpers already built for Machines/Drivers/Settings, dismissible 24h via a new `DashboardStorage`), "VIEW ALL INVOICES" button.
+- **Scope correction, made after reading source directly (not previously caught):** the original 🔴 finding for "Income Overview line chart, Machine Status donut, Fuel Consumption bar chart" compared the Flutter app against the website's **desktop** dashboard layout (`DesktopDashboard.tsx`). Reading `MobileDashboard.tsx` directly (the layout actually shown to a phone-width browser, i.e. the true comparison target for a phone app) confirms it has **zero charts** — only greeting/2×2 KPI grid/Quick Actions/Today's Job Cards. Charts are desktop-only. This is a genuine correction to the earlier audit, not a dropped requirement: the mobile app was never missing anything a phone-sized layout actually has.
 
 ---
 

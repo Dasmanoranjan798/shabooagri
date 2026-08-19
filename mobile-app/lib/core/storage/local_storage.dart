@@ -63,3 +63,21 @@ class AuthStorage {
     ]);
   }
 }
+
+/// Mirrors `DashboardPage.tsx`'s `OPS_WARNING_DISMISS_KEY` — the "Hide for
+/// 24 hours" dismissal is stored as an epoch-ms "dismissed until" timestamp,
+/// same mechanism as the website's `localStorage` key (device-local, not
+/// synced to the server; reused `flutter_secure_storage` rather than
+/// adding a new `shared_preferences` dependency for a single small flag).
+class DashboardStorage {
+  static const _opsWarningDismissedUntilKey = 'ops_warning_dismissed_until';
+
+  static Future<void> dismissOpsWarningFor24h() =>
+      _storage.write(key: _opsWarningDismissedUntilKey, value: (DateTime.now().millisecondsSinceEpoch + 24 * 60 * 60 * 1000).toString());
+
+  static Future<bool> isOpsWarningDismissed() async {
+    final raw = await _storage.read(key: _opsWarningDismissedUntilKey);
+    final dismissedUntil = int.tryParse(raw ?? '') ?? 0;
+    return DateTime.now().millisecondsSinceEpoch < dismissedUntil;
+  }
+}
