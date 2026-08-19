@@ -173,8 +173,8 @@ async function runFarmerPortalSecurityTest() {
     // to the specific rows this run created, never to companyId wholesale.
     // companyB is fully disposable (created solely for this run), so it's
     // safe to clear by companyId before dropping the company row itself.
-    if (bookingA) await prisma.booking.deleteMany({ where: { id: bookingA.id } });
-    if (bookingB) await prisma.booking.deleteMany({ where: { id: bookingB.id } });
+    if (bookingA) { await prisma.job.deleteMany({ where: { bookingId: bookingA.id } }); await prisma.booking.deleteMany({ where: { id: bookingA.id } }); }
+    if (bookingB) { await prisma.job.deleteMany({ where: { bookingId: bookingB.id } }); await prisma.booking.deleteMany({ where: { id: bookingB.id } }); }
     if (customerA) await prisma.customer.deleteMany({ where: { id: customerA.id } });
     if (customerB) await prisma.customer.deleteMany({ where: { id: customerB.id } });
     if (machineA) await prisma.machine.deleteMany({ where: { id: machineA.id } });

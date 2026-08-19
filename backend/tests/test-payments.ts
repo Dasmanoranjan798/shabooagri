@@ -150,7 +150,7 @@ async function runTests() {
   console.log(`  Created invoice: ${inv1.invoiceNumber}`);
 
   // Delete invoice 1
-  await invoiceRepository.deleteScoped(companyId, inv1.id);
+  await prisma.invoice.delete({ where: { id: inv1.id } });
   console.log(`  Deleted invoice ${inv1.invoiceNumber}`);
 
   // Create invoice 2 -> must NOT reuse inv1's number

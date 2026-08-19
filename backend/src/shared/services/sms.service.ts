@@ -40,7 +40,7 @@ export async function sendOtpSms(mobile: string, otpCode: string): Promise<boole
           numbers: cleanedMobile,
         }),
       });
-      const data = await response.json();
+      const data = (await response.json()) as any;
       console.log(`[SmsService][Fast2SMS] Response:`, data);
       return data?.return === true;
     }
@@ -58,7 +58,7 @@ export async function sendOtpSms(mobile: string, otpCode: string): Promise<boole
           otp: otpCode,
         }),
       });
-      const data = await response.json();
+      const data = (await response.json()) as any;
       console.log(`[SmsService][MSG91] Response:`, data);
       return data?.type === "success";
     }
@@ -83,7 +83,7 @@ export async function sendOtpSms(mobile: string, otpCode: string): Promise<boole
         },
         body: body.toString(),
       });
-      const data = await response.json();
+      const data = (await response.json()) as any;
       console.log(`[SmsService][Twilio] Response SID: ${data.sid}`);
       return !!data.sid;
     }
@@ -126,7 +126,7 @@ export async function sendStaffInviteSms(mobile: string, inviteLink: string, com
           numbers: cleanedMobile,
         }),
       });
-      const data = await response.json();
+      const data = (await response.json()) as any;
       return data?.return === true;
     }
 
@@ -146,7 +146,7 @@ export async function sendStaffInviteSms(mobile: string, inviteLink: string, com
         },
         body: body.toString(),
       });
-      const data = await response.json();
+      const data = (await response.json()) as any;
       return !!data.sid;
     }
 

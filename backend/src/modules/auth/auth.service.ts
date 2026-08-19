@@ -161,7 +161,7 @@ export async function register(input: RegisterInput, requestingUser?: Authentica
     if (!requestingUser) {
       throw new AppError(401, "Authentication required to register additional users");
     }
-    const allowed = requestingUser.isOwner || await rbacService.userHasPermission(requestingUser.roleId, REGISTER_USER_PERMISSION);
+    const allowed = await rbacService.userHasPermission(requestingUser.roleId, REGISTER_USER_PERMISSION);
     if (!allowed) {
       throw new AppError(403, `Missing required permission: ${REGISTER_USER_PERMISSION}`);
     }

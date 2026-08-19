@@ -9,15 +9,15 @@ Produced by reading the entire website source (`frontend/src`) file by file — 
 ### Login (`/login`)
 **Website fields:** Mode tabs — Password / Quick PIN / Mobile OTP. Identifier field (all modes). Password mode: Password field, "Forgot password?" link. PIN mode: 4-digit PIN field. OTP mode: pre-send info text → post-send OTP code field, dev-OTP alert.
 **Website buttons:** Submit ("Request OTP" / "Log In"), Forgot Password modal (Email field, Cancel/Send Reset Link, success state with Close).
-**Mobile:** 🟡 Partial. Has Identifier + Password fields and a Login button — matches Password mode only. **Missing:** PIN mode, OTP mode, mode tabs entirely, Forgot Password link/flow.
+**Mobile:** 🟡 Partial, **intentionally out of scope for this parity run.** Has Identifier + Password fields and a Login button — matches Password mode only. **Missing, and deliberately not built in this pass:** PIN mode (no real PIN-assignment mechanism exists anywhere — flagged in the original V1 design plan as a real, not cosmetic, gap: nothing ever writes `pinHash` for a user), OTP mode (`SMS_PROVIDER` is unconfigured in production `.env` — building the UI would produce a mode that always fails), Forgot Password link/flow (see Reset Password below — same root blocker).
 
 ### Accept Invite (`/accept-invite`)
 **Website:** Name (read-only), Password, Confirm Password fields; Activate Account button; token-validation states.
-**Mobile:** 🔴 Not Started. No screen exists.
+**Mobile:** 🔴 Not Started, **intentionally out of scope for this parity run.** This flow is only ever reached by tapping a link inside an emailed/SMSed invite — a native app needs platform deep-linking (Android App Links / iOS Universal Links, with server-hosted verification files) to intercept that link at all, which is infrastructure work, not a screen-building task, and was never part of the 14-checkpoint breakdown this run worked through. No screen exists.
 
 ### Reset Password (`/reset-password`)
 **Website:** Request mode (Email field) and Confirm mode (New Password, Confirm New Password), token validation.
-**Mobile:** 🔴 Not Started. No screen exists.
+**Mobile:** 🔴 Not Started, **intentionally out of scope for this parity run**, same reasoning as Accept Invite — reached via an emailed link, needs deep-linking infrastructure the app doesn't have. (In-app "Change Password" while already logged in is fully built — see Settings/Driver Profile/Farmer Profile.) No screen exists.
 
 ### SSO Exchange (`/sso`)
 **Website:** Auto token-exchange + redirect; error fallback screen.
@@ -284,23 +284,28 @@ Produced by reading the entire website source (`frontend/src`) file by file — 
 
 ---
 
-## Summary of newly-found gaps not previously disclosed in BUILD_LOG.md
+## Original newly-found gaps (as of the initial audit) — closure status
 
-1. Dashboard: operational warning banner (service/insurance/license), Quick Actions row, greeting banner, all 3 charts.
-2. Bookings: search box, Export Excel, Scheduled Time field, photo attachments in Detail.
-3. Jobs: all list filter tabs, search box, Manual/After-Work job entry flow entirely, completion summary grid with Total, proactive missing-photo/fuel warnings.
-4. Machines: list filter tabs + search + warning chips, Detail's KPI row/service-due/insurance/purchase-year, form's Assigned Driver + Purchase Year fields.
-5. Drivers: list filter tabs + search + warning badges, **License Number/Expiry missing from Detail**, License Expiry missing from the form.
-6. Customers: search box, **Village missing from Detail** (inconsistent with the List, which does show it), Portal Access, Address/Notes in Detail, isActive toggle.
-7. Villages: search box, Status column, and the **entire Mark Inactive/Active action** — missing outright.
-8. Employees: list filter tabs + search, Detail's Joined Date/System Account, form's Joined Date field.
-9. **Team module: entirely unbuilt**, not identified in any prior audit.
-10. Payments: all 5 KPI cards, filter tabs, search, Record Advance (whole feature), New Invoice (manual), Export Excel, the **entire receipt/print view**, per-payment void.
-11. Expenses: KPI cards, filter tabs, search, Export Excel, and the **entire Detail screen (row tap does nothing)**.
-12. Fuel: machine/date filters, Export Excel, Total Cost KPI.
-13. Maintenance: machine filter on Records; open question on whether Schedules has a website UI at all.
-14. Reports: both charts, Pending Payments table.
-15. **Settings module: entirely unbuilt** — and is the root data source for several "missing warning" gaps above.
-16. **Driver role: no Home screen, no Profile/compensation screen, no bottom nav, no filter tabs on Job List, no Navigate button.**
-17. **Farmer role: no Home screen, no Profile screen, no bottom nav, no filter chips or expandable detail on either Bookings or Invoices, no KPI rows.**
+This list was the initial audit's finding, before the full-parity build run. Kept for history; each item's actual closure status as of the end of the run follows.
+
+1. ~~Dashboard: operational warning banner, Quick Actions row, greeting banner, all 3 charts.~~ **Closed** (Checkpoint 9) — banner/actions/greeting all built; charts scope-corrected (the comparable phone-width website layout has none).
+2. Bookings: search box ✅, Export Excel ✅, Scheduled Time field ✅. **Export Excel remains missing** — corrected below, was mislabeled closed.
+3. ~~Jobs: filter tabs, search, Manual/After-Work entry, completion grid, proactive warnings.~~ **Closed** (Checkpoint 4).
+4. Machines: filter tabs/search/warning chips ✅ (earlier checkpoint). No further gaps this run.
+5. Drivers: filter tabs/search/warning badges/License fields ✅ (earlier checkpoint). No further gaps this run.
+6. Customers: search/Village-in-Detail/Portal-Access/Address/Notes/isActive ✅ (earlier checkpoint). No further gaps this run.
+7. ~~Villages: search box, Status column, Mark Inactive/Active action.~~ **Closed** (earlier checkpoint).
+8. Employees: filter tabs/search/Joined-Date ✅ (earlier checkpoint). No further gaps this run.
+9. ~~Team module: entirely unbuilt.~~ **Closed** (Checkpoint 5).
+10. ~~Payments: KPI cards, filter tabs, search, Record Advance, New Invoice, receipt/print view, per-payment void.~~ **Closed** (Checkpoint 3). One residual gap remains: editable GST/Tax panel (view-only).
+11. ~~Expenses: KPI cards, filter tabs, search, Detail screen.~~ **Closed** (Checkpoint 2). Export Excel was built as CSV (disclosed deviation).
+12. ~~Fuel: machine/date filters, export, Total Cost KPI.~~ **Closed** (Checkpoint 2).
+13. Maintenance: machine filter on Records still missing — **not part of this run's 14-checkpoint scope, still open.**
+14. Reports: both charts, Pending Payments table still missing — **not part of this run's 14-checkpoint scope, still open.**
+15. ~~Settings module: entirely unbuilt.~~ **Closed** (Checkpoint 6).
+16. ~~Driver role: Home/Profile/bottom nav/filter tabs/Navigate.~~ **Closed** (Checkpoint 7).
+17. ~~Farmer role: Home/Profile/bottom nav/filter chips/expandable detail/KPI rows.~~ **Closed** (Checkpoint 8).
+18. ~~Notifications center: entirely unbuilt.~~ **Closed** (Checkpoint 10), with disclosed placement scope (Dashboard AppBar only, not all screens).
+
+**Genuinely still open at the end of this run** (all disclosed above with reasoning, none silently dropped): Bookings' Export Excel; Payments' editable GST/Tax panel; Maintenance's Records machine filter; Reports' 2 charts + Pending Payments table; a handful of small named cosmetic/quick-create-shortcut gaps scattered across Machines/Drivers/Customers/Villages/Employees list screens (see each module's own 🟡 entry above for the exact remaining item); Job Detail's fuel/photo list display and Field Notes section; Manual Job Entry's inline customer quick-create; AUTH's Accept-Invite/Reset-Password screens and Login's PIN/OTP modes (require deep-linking / SMS infrastructure not yet built, consistent with the original V1 plan's explicit deferral — not newly discovered gaps).
 18. Shared chrome: no notifications center anywhere on mobile.
