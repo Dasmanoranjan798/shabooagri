@@ -8,7 +8,6 @@ import '../../../core/providers/session_provider.dart';
 import '../../../core/widgets/app_drawer.dart';
 import '../../../core/widgets/search_field.dart';
 import '../data/invoice_analysis.dart';
-import 'payment_filters.dart';
 import 'payment_list_screen_provider.dart';
 import 'widgets/payment_filters_dialog.dart';
 
@@ -169,7 +168,6 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                     i.villageName.toLowerCase().contains(_query))
                 .toList();
           }
-          final advanceBalance = advancesAsync.valueOrNull?.fold<double>(0, (s, a) => s + a.balance) ?? 0;
           
           bool hasFilter = filterState.toJson().isNotEmpty;
 

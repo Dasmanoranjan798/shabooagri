@@ -86,8 +86,8 @@ class _PaymentFiltersDialogState extends ConsumerState<PaymentFiltersDialog> {
               onSelected: (selected) {
                 setState(() {
                   final list = List<String>.from(_state.status);
-                  if (selected) list.add(s);
-                  else list.remove(s);
+                  if (selected) { list.add(s); }
+                  else { list.remove(s); }
                   _state = _state.copyWith(status: list);
                 });
               },
@@ -104,7 +104,7 @@ class _PaymentFiltersDialogState extends ConsumerState<PaymentFiltersDialog> {
       children: [
         const Text('Date Filter', style: TextStyle(fontWeight: FontWeight.bold)),
         DropdownButtonFormField<String>(
-          value: _state.dateField,
+          initialValue: _state.dateField,
           decoration: const InputDecoration(labelText: 'Date Field'),
           items: const [
             DropdownMenuItem(value: 'invoiceDate', child: Text('Invoice Date')),
