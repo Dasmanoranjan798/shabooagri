@@ -103,6 +103,50 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
     if (picked != null) setState(() => _insuranceExpiryDate = picked);
   }
 
+  Future<void> _createMachineType(String name) async {
+    final dio = ref.read(apiClientProvider);
+    try {
+      final res = await dio.post('/machine-types', data: {'name': name});
+      ref.invalidate(machineTypesProvider);
+      setState(() {
+        _machineTypeId = res.data['id'] as String;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+      }
+    }
+  }
+
+  Future<void> _showCreateMachineTypeDialog() async {
+    final ctrl = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('New Machine Type'),
+        content: TextField(
+          controller: ctrl,
+          decoration: const InputDecoration(hintText: 'e.g. Tractor, Harvester'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              if (ctrl.text.trim().isNotEmpty) {
+                Navigator.pop(ctx, ctrl.text.trim());
+              }
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+    if (name != null && name.isNotEmpty) {
+      await _createMachineType(name);
+    }
+  }
+
   Future<void> _save() async {
     final registration = _registrationController.text.trim();
     if (registration.isEmpty || (_machineTypeId == null && !_isEdit)) {
@@ -185,11 +229,24 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
                 child: Text(_error!, style: const TextStyle(color: Colors.red)),
               ),
             typesAsync.when(
-              data: (types) => DropdownButtonFormField<String>(
-                initialValue: _machineTypeId,
-                decoration: const InputDecoration(labelText: 'Machine Type *', border: OutlineInputBorder()),
-                items: types.map((t) => DropdownMenuItem(value: t.id, child: Text(t.name))).toList(),
-                onChanged: _saving ? null : (value) => setState(() => _machineTypeId = value),
+              data: (types) => Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _machineTypeId,
+                      decoration: const InputDecoration(labelText: 'Machine Type *', border: OutlineInputBorder()),
+                      items: types.map((t) => DropdownMenuItem(value: t.id, child: Text(t.name))).toList(),
+                      onChanged: _saving ? null : (value) => setState(() => _machineTypeId = value),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle, color: Colors.green, size: 40),
+                    onPressed: _saving ? null : _showCreateMachineTypeDialog,
+                    tooltip: 'Add new Machine Type',
+                  ),
+                ],
               ),
               loading: () => const LinearProgressIndicator(),
               error: (e, s) => Text('Could not load machine types: ${apiErrorMessage(e)}'),
