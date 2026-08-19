@@ -101,8 +101,9 @@ async function assertDriverExists(companyId: string, driverId: string) {
 // any other still-active booking.
 async function assertNoScheduleConflict(
   companyId: string,
-  params: { machineId?: string | null; driverId?: string | null; scheduledDate: Date; excludeBookingId?: string },
+  params: { machineId?: string | null; driverId?: string | null; scheduledDate: Date; excludeBookingId?: string; ignoreConflict?: boolean },
 ) {
+  if (params.ignoreConflict) return;
   if (params.machineId) {
     const conflict = await bookingRepository.findConflictingBookingForMachine(
       companyId,
@@ -153,6 +154,7 @@ export async function create(companyId: string, creatorId: string, input: Create
       machineId: input.machineId,
       driverId: input.driverId,
       scheduledDate: input.scheduledDate,
+      ignoreConflict: (input as any).ignoreConflict,
     });
   }
 

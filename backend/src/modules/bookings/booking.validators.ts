@@ -35,6 +35,7 @@ export const createBookingSchema = z.object({
   pricingMethodId: z.string().uuid().optional(),
   rate: z.coerce.number().nonnegative().optional(),
   notes: z.string().optional(),
+  ignoreConflict: z.boolean().optional(),
 });
 
 // Deliberately excludes machineId/driverId (dedicated assign-machine /

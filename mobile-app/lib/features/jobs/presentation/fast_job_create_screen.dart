@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import "package:dio/dio.dart";
 import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_client.dart';
@@ -28,6 +29,7 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
   final _estimateHoursController = TextEditingController();
   
   bool _saving = false;
+  bool _ignoreConflict = false;
   String? _error;
 
   @override
@@ -59,6 +61,7 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
         'driverId': _driverId,
         'scheduledDate': DateTime.now().toIso8601String(),
         'estimatedHours': _estimateHoursController.text.trim().isNotEmpty ? double.tryParse(_estimateHoursController.text.trim()) : null,
+        'ignoreConflict': _ignoreConflict,
       });
 
       final bookingId = res.data['id'] as String;
@@ -92,6 +95,31 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
         }
       }
     } catch (e) {
+      if (e is DioException && e.response?.statusCode == 409) {
+        final errorMsg = e.response?.data?['error']?.toString() ?? '';
+        final match = RegExp(r'(BK-\d+)').firstMatch(errorMsg);
+        final bkNumber = match?.group(1) ?? 'Unknown';
+        
+        setState(() => _saving = false);
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Machine & Driver Currently Working'),
+            content: Text('This machine and driver are currently assigned to another job.\n\nCurrent Job: $bkNumber\n\nDo you want to book them for this?'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
+              ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('BOOK ANYWAY')),
+            ],
+          ),
+        );
+        
+        if (confirm == true) {
+          setState(() => _ignoreConflict = true);
+          return _submit(); // Retry
+        } else {
+          return; // Cancelled
+        }
+      }
       setState(() => _error = apiErrorMessage(e));
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -126,7 +154,7 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
                   DropdownButtonFormField<String>(
                     value: _customerId,
                     decoration: const InputDecoration(labelText: 'Farmer (Customer) *'),
-                    items: [...customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))), const DropdownMenuItem(value: 'NEW', child: Text('+ Add Farmer', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)))],
+                    items: [const DropdownMenuItem(value: 'NEW', child: Text('+ Add Farmer', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold))), ...customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))],
                     onChanged: (v) {
                        setState(() {
                          _customerId = v;
@@ -145,7 +173,7 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
                   DropdownButtonFormField<String>(
                     value: _villageId,
                     decoration: const InputDecoration(labelText: 'Village *'),
-                    items: [...villages.map((v) => DropdownMenuItem(value: v.id, child: Text(v.name))), const DropdownMenuItem(value: 'NEW', child: Text('+ Add Village', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)))],
+                    items: [const DropdownMenuItem(value: 'NEW', child: Text('+ Add Village', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold))), ...villages.map((v) => DropdownMenuItem(value: v.id, child: Text(v.name)))],
                     onChanged: (v) async {
                       if (v == 'NEW') {
                         final newId = await context.push('/villages/new'); ref.invalidate(villagesListProvider); if (newId != null && newId is String) setState(() => _villageId = newId); return;
@@ -166,7 +194,7 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
                   DropdownButtonFormField<String>(
                     value: _machineId,
                     decoration: const InputDecoration(labelText: 'Machine *'),
-                    items: [...machines.map((m) => DropdownMenuItem(value: m.id, child: Text('${m.registrationNumber} - ${m.status}'))), const DropdownMenuItem(value: 'NEW', child: Text('+ Add Machine', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)))],
+                    items: [const DropdownMenuItem(value: 'NEW', child: Text('+ Add Machine', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold))), ...machines.map((m) => DropdownMenuItem(value: m.id, child: Text('${m.registrationNumber} - ${m.status}')))],
                     onChanged: (v) async {
                       if (v == 'NEW') {
                         final newId = await context.push('/machines/new'); ref.invalidate(machinesListProvider); if (newId != null && newId is String) setState(() => _machineId = newId); return;
@@ -180,7 +208,7 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
                   DropdownButtonFormField<String>(
                     value: _driverId,
                     decoration: const InputDecoration(labelText: 'Driver *'),
-                    items: [...drivers.map((d) => DropdownMenuItem(value: d.id, child: Text('${d.name} - ${d.availabilityStatus}'))), const DropdownMenuItem(value: 'NEW', child: Text('+ Add Driver', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)))],
+                    items: [const DropdownMenuItem(value: 'NEW', child: Text('+ Add Driver', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold))), ...drivers.map((d) => DropdownMenuItem(value: d.id, child: Text('${d.name} - ${d.availabilityStatus}')))],
                     onChanged: (v) async {
                       if (v == 'NEW') {
                         final newId = await context.push('/drivers/new'); ref.invalidate(driversListProvider); if (newId != null && newId is String) setState(() => _driverId = newId); return;
