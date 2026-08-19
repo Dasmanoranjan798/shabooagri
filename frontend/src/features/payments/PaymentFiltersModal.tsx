@@ -26,8 +26,8 @@ export const PaymentFiltersModal: React.FC<PaymentFiltersModalProps> = ({
   const handleClear = () => {
     const defaultFilters: FilterInvoicesInput = {
       status: ["ALL"],
-      page: 1,
-      limit: 1000,
+      
+      
     };
     setFilters(defaultFilters);
     onApply(defaultFilters);

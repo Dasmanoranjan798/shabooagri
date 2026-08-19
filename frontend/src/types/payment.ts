@@ -219,17 +219,13 @@ export interface FilterInvoicesInput {
 
 export interface InvoiceAnalysisResponse {
   invoices: Invoice[];
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    pages: number;
-  };
+  
   summary: {
+    invoicesCount: number;
     totalInvoiced: number;
-    totalCollected: number;
+    totalPaid: number;
     totalOutstanding: number;
-    totalOverdue: number;
+    overdueAmount: number;
     paidCount: number;
     partialCount: number;
     unpaidCount: number;
@@ -239,6 +235,6 @@ export interface InvoiceAnalysisResponse {
   };
   dayWiseCollection: Array<{ date: string; amount: number }>;
   methodWiseCollection: Array<{ method: string; amount: number }>;
-  customerWise: Array<{ customerId: string; customerName: string; outstanding: number }>;
-  villageWise: Array<{ villageName: string; outstanding: number }>;
+  customerWise: Array<{ id: string; name: string; outstanding: number }>;
+  villageWise: Array<{ id: string; name: string; outstanding: number }>;
 }

@@ -39,8 +39,8 @@ export const PaymentsPage: React.FC = () => {
   
   const [filters, setFilters] = useState<FilterInvoicesInput>({
     status: ["ALL"],
-    page: 1,
-    limit: 1000,
+    
+    
   });
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -271,19 +271,19 @@ export const PaymentsPage: React.FC = () => {
           <div className="sa-kpi-content">
             <span className="sa-kpi-label">Total Collected</span>
             <span className="sa-kpi-value" style={{ color: "#16a34a" }}>
-              ₹{(analysis?.summary.totalCollected || 0).toLocaleString("en-IN")}
+              ₹{(analysis?.summary.totalPaid || 0).toLocaleString("en-IN")}
             </span>
           </div>
         </Card>
 
         <Card className="sa-kpi-card">
           <div className="sa-kpi-icon">
-            <AlertCircle size={24} color={(analysis?.summary.totalOverdue || 0) > 0 ? "#dc2626" : "#16a34a"} />
+            <AlertCircle size={24} color={(analysis?.summary.overdueAmount || 0) > 0 ? "#dc2626" : "#16a34a"} />
           </div>
           <div className="sa-kpi-content">
             <span className="sa-kpi-label">Total Overdue</span>
-            <span className="sa-kpi-value" style={{ color: (analysis?.summary.totalOverdue || 0) > 0 ? "#dc2626" : "#16a34a" }}>
-              ₹{(analysis?.summary.totalOverdue || 0).toLocaleString("en-IN")}
+            <span className="sa-kpi-value" style={{ color: (analysis?.summary.overdueAmount || 0) > 0 ? "#dc2626" : "#16a34a" }}>
+              ₹{(analysis?.summary.overdueAmount || 0).toLocaleString("en-IN")}
             </span>
           </div>
         </Card>
@@ -299,7 +299,7 @@ export const PaymentsPage: React.FC = () => {
               onClick={() => setFilters({ ...filters, status: [tab.value] })}
             >
               {tab.label}
-              {analysis && tab.value === "ALL" && <span className="sa-tab-count">({analysis.pagination.total})</span>}
+              {analysis && tab.value === "ALL" && <span className="sa-tab-count">({analysis.summary.invoicesCount})</span>}
               {analysis && tab.value === "UNPAID" && <span className="sa-tab-count">({analysis.summary.unpaidCount})</span>}
               {analysis && tab.value === "PARTIALLY_PAID" && <span className="sa-tab-count">({analysis.summary.partialCount})</span>}
               {analysis && tab.value === "PAID" && <span className="sa-tab-count">({analysis.summary.paidCount})</span>}
@@ -335,8 +335,8 @@ export const PaymentsPage: React.FC = () => {
                           <h4 style={{ margin: "0 0 1rem 0", fontSize: "1rem" }}>Customer Outstanding</h4>
                           <ul style={{ padding: 0, margin: 0, listStyle: "none" }}>
                               {analysis.customerWise.slice(0, 5).map(c => (
-                                  <li key={c.customerId} style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 0", borderBottom: "1px solid var(--color-border)" }}>
-                                      <span>{c.customerName}</span>
+                                  <li key={c.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 0", borderBottom: "1px solid var(--color-border)" }}>
+                                      <span>{c.name}</span>
                                       <span style={{ fontWeight: "bold", color: "#dc2626" }}>₹{c.outstanding.toLocaleString("en-IN")}</span>
                                   </li>
                               ))}
