@@ -101,7 +101,7 @@ export const MachineFormTask: TaskContentComponent<MachineFormInitProps> = ({ ta
   const [upgradeDialog, setUpgradeDialog] = useState<{ message: string; upgradeUrl: string } | null>(null);
 
   const handleQuickCreateMachineType = async () => {
-    if (!draft.newMachineTypeName.trim()) {
+    if (!draft.newMachineTypeName || !draft.newMachineTypeName.trim()) {
       setError(`Please enter a name for the new ${machineTerm.toLowerCase()} type`);
       return;
     }
@@ -216,8 +216,14 @@ export const MachineFormTask: TaskContentComponent<MachineFormInitProps> = ({ ta
               <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                 <Input
                   placeholder="e.g. Combine Harvester"
-                  value={draft.newMachineTypeName}
+                  value={draft.newMachineTypeName || ""}
                   onChange={(e) => setDraft({ newMachineTypeName: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleQuickCreateMachineType();
+                    }
+                  }}
                   style={{ flex: 1 }}
                   autoFocus
                 />
