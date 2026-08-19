@@ -276,3 +276,27 @@ Discovered a much better data source than expected: the backend has a purpose-bu
 - Confirmed the exact WhatsApp message template text against `ReceiptModal.tsx` source rather than approximating it, since this is customer-facing text that should match what the business already sends from the website.
 
 ---
+
+## Checkpoint 4: Jobs module closed — Manual Job Entry (new screen) + Job Execution completion grid/warnings
+
+**Manual Job Entry** — new `lib/features/jobs/presentation/manual_job_entry_screen.dart`, route `/jobs/manual`, entry point via a new AppBar icon on the Jobs List (Owner/Manager only, `add_task` icon next to Refresh). Fields: Customer/Village/Machine/Driver dropdowns (reusing the already-live `customersListProvider`/`villagesListProvider`/`machinesListProvider`/`driversListProvider`), Work Date picker, Start/End Time pickers with a live calculated-duration label + an Override Hours field, Pricing Method dropdown (new `pricingMethodsListProvider` hitting `GET /pricing-methods`), Rate, Acres, Fuel Used, Notes. Posts to `POST /jobs/manual` with a payload built to match `createManualJobSchema` field-for-field, read directly from `backend/src/modules/jobs/job.validators.ts` before writing any Dart (`customerId, villageId, machineId, driverId, scheduledDate, pricingMethodId, rate, startTime, endTime, actualHours?, completedAcres?, fuelUsedLitres?, notes?`). Gated server-side by `booking.create` (`job.routes.ts`), same permission the mobile app already relies on elsewhere for booking creation — no new permission plumbing needed.
+
+**Job Execution completion grid + warnings** (`job_detail_screen.dart`, `job_detail.dart`, `job_actions_repository.dart`):
+- Added `JobDetail.finalAmount` — mirrors `computeFinalAmount`/`calculateAmount` from `JobExecutionModal.tsx`/`pricing-calculator.ts` exactly: flat-rate (`unit == null`) returns `rate`; hour returns `rate * actualHours`; minute returns `rate * (actualHours * 60)`; acre returns `rate * completedAcres`; rounded to 2dp. This guarantees the mobile completion Total always matches what the backend's invoice generation actually charges, rather than being a separately-drifting estimate.
+- Added a completion summary grid (Customer / Village / Duration / Rate / **Total**) shown only when `status == 'COMPLETED'`, plus the verbatim "This is now locked. Only the Owner can edit or void it — Manager/Driver view only from here." notice, both placed directly above the existing action-button area.
+- Added `_jobFuelCountProvider`/`_jobPhotoCountProvider` (new `countFuelEntries`/`countPhotos` methods on `JobActionsRepository`, hitting the already-existing `GET /jobs/:id/fuel-entries` and `GET /jobs/:id/photos`) and reused the already-built `companyProfileProvider` to compute `missingPhoto`/`missingFuel` at the STOPPED state exactly like the website's `JobExecutionModal.tsx` — red warning banners shown proactively, Submit disabled, instead of only surfacing the backend's generic validation error after the tap.
+- **Real correctness bug found and fixed, not just a missing banner:** the mobile `submit()` action never sent `completedAcres` at all, for any job — meaning any acre-priced job's completed acreage was silently never recorded through the mobile app's Submit flow (the backend's `submitJobSchema` accepts `completedAcres` as optional, so no error was ever raised; it would just silently invoice with no acreage on record). Fixed by adding a Completed Acres input shown inline for acre-priced jobs, wired into `JobActionsRepository.submit(id, completedAcres: ...)`, with Submit disabled until it's filled for that pricing type — matching the website's `missingAcres` gate.
+- Went looking for the website's "existing fuel entries/photos list display" and "Field Notes section" polish items also named in the PARITY_INVENTORY gap for this screen; deliberately **not** built this checkpoint (disclosed in PARITY_INVENTORY, not silently dropped) — they're read-only display polish on top of the add-flows that already work, lower priority than the two correctness-adjacent gaps (missing acres, missing warnings) closed above.
+
+**Self-test:**
+- `flutter analyze`: clean — 0 errors (4 pre-existing/consistent `info`-level `use_null_aware_elements` style lints, same category already present elsewhere in the codebase and left as-is in prior checkpoints).
+- `flutter test`: passes.
+- Verified `/pricing-methods` response field is `label` (not `name`) by reading `schema.prisma`'s `PricingMethod` model directly before writing the Dart parser.
+- Verified `createManualJobSchema` and `submitJobSchema` field names/types directly from `job.validators.ts` rather than inferring from the frontend TS types.
+- Live-curled all new/changed endpoints: `POST /jobs/manual` → 401, `GET /pricing-methods` → 401, `GET /jobs/:id/fuel-entries` → 401, `GET /jobs/:id/photos` → 401 — all real, auth-gated, none 404.
+
+**PARITY_INVENTORY.md updated:** JOBS List → ✅ Full. Job Execution/Live Job → 🟡 Partial (upgraded from prior 🟡, gap list narrowed to just the disclosed display-only items). Manual Job Entry → 🟡 Near-full (only the inline quick-create-Customer sub-form is missing).
+
+**Jobs module status: effectively closed** for this pass — remaining items are disclosed, non-blocking display/polish gaps, not correctness gaps.
+
+---

@@ -93,4 +93,24 @@ class JobDetail {
     if (pricingUnit == 'minute') return rate! * (elapsedSec / 60);
     return null;
   }
+
+  /// Authoritative completed amount, matching the backend's invoice
+  /// generation formula exactly (`computeFinalAmount` in
+  /// `JobExecutionModal.tsx` / `pricing-calculator.ts`: `round2(rate *
+  /// quantity)`), so the completion grid's Total always matches the
+  /// invoice — never derived from the live ticking estimate.
+  double? get finalAmount {
+    if (rate == null) return null;
+    double? raw;
+    if (pricingUnit == null) {
+      raw = rate;
+    } else if (pricingUnit == 'hour') {
+      raw = actualHours != null ? rate! * actualHours! : null;
+    } else if (pricingUnit == 'minute') {
+      raw = actualHours != null ? rate! * (actualHours! * 60) : null;
+    } else if (pricingUnit == 'acre') {
+      raw = completedAcres != null ? rate! * completedAcres! : null;
+    }
+    return raw == null ? null : (raw * 100).round() / 100;
+  }
 }

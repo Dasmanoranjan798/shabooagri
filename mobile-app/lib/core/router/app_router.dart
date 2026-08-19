@@ -20,6 +20,7 @@ import '../../features/farmer/presentation/farmer_home_screen.dart';
 import '../../features/fuel/presentation/fuel_screen.dart';
 import '../../features/jobs/presentation/job_list_screen.dart';
 import '../../features/jobs/presentation/job_detail_screen.dart';
+import '../../features/jobs/presentation/manual_job_entry_screen.dart';
 import '../../features/machines/presentation/machine_detail_screen.dart';
 import '../../features/machines/presentation/machine_form_screen.dart';
 import '../../features/machines/presentation/machine_list_screen.dart';
@@ -59,6 +60,10 @@ GoRouter buildAppRouter(String initialLocation) {
         path: '/jobs',
         builder: (context, state) => const JobListScreen(),
         routes: [
+          GoRoute(
+            path: 'manual',
+            builder: (context, state) => const ManualJobEntryScreen(),
+          ),
           GoRoute(
             path: ':id',
             builder: (context, state) {

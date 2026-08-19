@@ -54,8 +54,10 @@ class JobActionsRepository {
     return JobDetail.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<JobDetail> submit(String id) async {
-    final response = await _dio.post('/jobs/$id/submit');
+  Future<JobDetail> submit(String id, {double? completedAcres}) async {
+    final response = await _dio.post('/jobs/$id/submit', data: {
+      if (completedAcres != null) 'completedAcres': completedAcres,
+    });
     return JobDetail.fromJson(response.data as Map<String, dynamic>);
   }
 
@@ -77,6 +79,21 @@ class JobActionsRepository {
       if (caption != null && caption.isNotEmpty) 'caption': caption,
     });
     await _dio.post('/jobs/$id/photos', data: formData);
+  }
+
+  /// Counts only — used to drive the missing-photo/missing-fuel warning
+  /// banners before Submit, matching `JobExecutionModal.tsx`'s
+  /// `missingPhoto`/`missingFuel` checks (`company.requireJobPhoto` /
+  /// `requireJobFuelLog` gated, evaluated client-side so the user sees the
+  /// warning before hitting the server's generic validation error).
+  Future<int> countFuelEntries(String id) async {
+    final response = await _dio.get('/jobs/$id/fuel-entries');
+    return (response.data as List<dynamic>).length;
+  }
+
+  Future<int> countPhotos(String id) async {
+    final response = await _dio.get('/jobs/$id/photos');
+    return (response.data as List<dynamic>).length;
   }
 
   Future<JobDetail> updateNotes(String id, String notes) async {

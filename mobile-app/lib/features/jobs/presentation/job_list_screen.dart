@@ -66,6 +66,12 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
       appBar: AppBar(
         title: const Text('Job Cards'),
         actions: [
+          if (isOwnerOrManager)
+            IconButton(
+              icon: const Icon(Icons.add_task),
+              tooltip: 'Log After-Work Entry',
+              onPressed: () => context.go('/jobs/manual'),
+            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => ref.invalidate(jobsListProvider),

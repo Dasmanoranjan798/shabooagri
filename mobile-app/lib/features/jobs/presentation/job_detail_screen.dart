@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/providers/company_profile_provider.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/widgets/info_row.dart';
 import '../data/job_actions_repository.dart';
@@ -14,6 +15,16 @@ import '../data/job_detail.dart';
 
 final jobDetailLiveProvider = FutureProvider.family<JobDetail, String>((ref, id) async {
   return ref.watch(jobActionsRepositoryProvider).getById(id);
+});
+
+/// Only fetched while STOPPED (the one state the missing-photo/missing-fuel
+/// warning banners apply to) — see `_buildActionButtons`'s STOPPED case.
+final _jobFuelCountProvider = FutureProvider.family<int, String>((ref, id) async {
+  return ref.watch(jobActionsRepositoryProvider).countFuelEntries(id);
+});
+
+final _jobPhotoCountProvider = FutureProvider.family<int, String>((ref, id) async {
+  return ref.watch(jobActionsRepositoryProvider).countPhotos(id);
 });
 
 class JobDetailScreen extends ConsumerStatefulWidget {
@@ -28,10 +39,12 @@ class JobDetailScreen extends ConsumerStatefulWidget {
 class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
   Timer? _ticker;
   bool _acting = false;
+  final _acresController = TextEditingController();
 
   @override
   void dispose() {
     _ticker?.cancel();
+    _acresController.dispose();
     super.dispose();
   }
 
@@ -120,7 +133,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     await _runAction(() => repo.stop(widget.jobId));
   }
 
-  Future<void> _handleSubmit() async {
+  Future<void> _handleSubmit({double? completedAcres}) async {
     final confirmed = await _showConfirmDialog(
       title: 'Submit this job?',
       body: 'Once submitted, this job cannot be changed by a Manager or Driver. Only the Owner can edit it after this point.',
@@ -130,7 +143,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     );
     if (confirmed != true) return;
     final repo = ref.read(jobActionsRepositoryProvider);
-    await _runAction(() => repo.submit(widget.jobId));
+    await _runAction(() => repo.submit(widget.jobId, completedAcres: completedAcres));
   }
 
   Future<void> _handleCancel() async {
@@ -366,6 +379,21 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                   InfoRow('Notes', job.notes!),
                   const SizedBox(height: 16),
                 ],
+                if (job.status == 'COMPLETED') ...[
+                  _buildCompletionGrid(job, displaySeconds: job.actualHours != null ? (job.actualHours! * 3600).round() : 0),
+                  const SizedBox(height: 16),
+                  const Card(
+                    color: Color(0xFFF5F5F5),
+                    child: Padding(
+                      padding: EdgeInsets.all(12.0),
+                      child: Text(
+                        'This is now locked. Only the Owner can edit or void it — Manager/Driver view only from here.',
+                        style: TextStyle(fontSize: 12, color: Colors.black87),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 _buildActionButtons(job, isOwnerOrManager, isOwner),
                 if (isOwnerOrManager && !['COMPLETED', 'CANCELLED'].contains(job.status)) ...[
                   const Divider(height: 32),
@@ -418,6 +446,50 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     );
   }
 
+  Widget _buildCompletionGrid(JobDetail job, {required int displaySeconds}) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Expanded(child: _gridItem('Customer', job.customerName)),
+              Expanded(child: _gridItem('Village', job.villageName)),
+            ]),
+            const SizedBox(height: 16),
+            Row(children: [
+              Expanded(child: _gridItem('Duration', _formatHms(displaySeconds))),
+              Expanded(
+                child: _gridItem(
+                  'Rate',
+                  job.rate != null ? '₹${job.rate!.toStringAsFixed(0)}${job.pricingUnit != null ? '/${job.pricingUnit}' : ''}' : '—',
+                ),
+              ),
+            ]),
+            const SizedBox(height: 16),
+            _gridItem(
+              'Total',
+              job.finalAmount != null ? '₹${job.finalAmount!.toStringAsFixed(2)}' : '—',
+              valueStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _gridItem(String label, String value, {TextStyle? valueStyle}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        Text(value, style: valueStyle ?? const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+      ],
+    );
+  }
+
   Widget _buildActionButtons(JobDetail job, bool isOwnerOrManager, bool isOwner) {
     switch (job.status) {
       case 'NOT_STARTED':
@@ -438,13 +510,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
           _primaryButton('Stop', Colors.red, _acting ? null : _handleStop),
         ]);
       case 'STOPPED':
-        return Column(children: [
-          _primaryButton('Submit', Colors.red, _acting ? null : _handleSubmit),
-          if (isOwner) ...[
-            const SizedBox(height: 12),
-            TextButton(onPressed: _acting ? null : _handleCancel, child: const Text('Cancel Job', style: TextStyle(color: Colors.red))),
-          ],
-        ]);
+        return _buildStoppedActions(job, isOwner);
       case 'COMPLETED':
         return const Center(
           child: Text('Job Completed & Submitted',
@@ -460,6 +526,63 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
         }
         return const SizedBox.shrink();
     }
+  }
+
+  /// Mirrors `JobExecutionModal.tsx`'s STOPPED block: an inline Completed
+  /// Acres input for acre-priced jobs, proactive missing-photo/missing-fuel
+  /// banners driven by the company's `requireJobPhoto`/`requireJobFuelLog`
+  /// settings (rather than only surfacing the backend's generic rejection
+  /// after the user taps Submit), and Submit disabled until all three are
+  /// satisfied.
+  Widget _buildStoppedActions(JobDetail job, bool isOwner) {
+    final companyAsync = ref.watch(companyProfileProvider);
+    final fuelCountAsync = ref.watch(_jobFuelCountProvider(widget.jobId));
+    final photoCountAsync = ref.watch(_jobPhotoCountProvider(widget.jobId));
+
+    final company = companyAsync.valueOrNull;
+    final missingPhoto = (company?.requireJobPhoto ?? false) && (photoCountAsync.valueOrNull ?? 1) == 0;
+    final missingFuel = (company?.requireJobFuelLog ?? false) && (fuelCountAsync.valueOrNull ?? 1) == 0;
+    final isAcrePriced = job.pricingUnit == 'acre';
+    final acres = double.tryParse(_acresController.text.trim());
+    final missingAcres = isAcrePriced && (acres == null || acres <= 0);
+    final stillLoading = companyAsync.isLoading || fuelCountAsync.isLoading || photoCountAsync.isLoading;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (isAcrePriced)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: TextField(
+              controller: _acresController,
+              decoration: const InputDecoration(labelText: 'Completed Acres *', border: OutlineInputBorder()),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+        if (missingPhoto)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: _WarningBanner(icon: Icons.camera_alt, text: 'A completion photo is required before submitting this job.'),
+          ),
+        if (missingFuel)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: _WarningBanner(icon: Icons.local_gas_station, text: 'A fuel-log entry is required before submitting this job.'),
+          ),
+        _primaryButton(
+          'Submit',
+          Colors.red,
+          (_acting || stillLoading || missingPhoto || missingFuel || missingAcres)
+              ? null
+              : () => _handleSubmit(completedAcres: acres),
+        ),
+        if (isOwner) ...[
+          const SizedBox(height: 12),
+          TextButton(onPressed: _acting ? null : _handleCancel, child: const Text('Cancel Job', style: TextStyle(color: Colors.red))),
+        ],
+      ],
+    );
   }
 
   Widget _buildQuickActions(JobDetail job) {
@@ -482,6 +605,26 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
         onPressed: onPressed,
         child: Text(label, style: const TextStyle(fontSize: 16, color: Colors.white)),
       ),
+    );
+  }
+}
+
+class _WarningBanner extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _WarningBanner({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.red.shade200)),
+      child: Row(children: [
+        Icon(icon, size: 16, color: Colors.red.shade700),
+        const SizedBox(width: 8),
+        Expanded(child: Text(text, style: TextStyle(color: Colors.red.shade700, fontSize: 13))),
+      ]),
     );
   }
 }
