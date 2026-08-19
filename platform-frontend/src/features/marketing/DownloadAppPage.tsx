@@ -52,8 +52,8 @@ export const DownloadAppPage: React.FC = () => {
             </p>
             <div style={{ display: "flex", justifyContent: "center" }}>
               <a
-                href="/downloads/shabooagri-v0.4.4.apk"
-                download="shabooagri-v0.4.4.apk"
+                href="/downloads/shabooagri-v0.4.5.apk"
+                download="shabooagri-v0.4.5.apk"
                 className="pf-btn pf-btn-primary"
                 style={{
                   textDecoration: "none",
@@ -93,7 +93,7 @@ export const DownloadAppPage: React.FC = () => {
                 }}
               >
                 <Info size={24} color="var(--color-primary)" />
-                What's New in v0.4.4
+                What's New in v0.4.5
               </h2>
               <ul
                 style={{
@@ -105,9 +105,9 @@ export const DownloadAppPage: React.FC = () => {
                   gap: 8,
                 }}
               >
-                <li><strong>Fixed</strong> Machine Type selection during Machine creation.</li>
+                <li><strong>Fixed</strong> Machine creation validation error.</li>
+                <li><strong>Fixed</strong> Dashboard authentication and session issue. App now properly restores sessions and prompts login if your token naturally expires.</li>
                 <li><strong>Added</strong> quick + Create Machine Type action directly from the Machine form.</li>
-                <li>Newly created Machine Types can be selected immediately without refreshing.</li>
                 <li>Safely parse Decimal salary strings in employee form.</li>
               </ul>
               <div

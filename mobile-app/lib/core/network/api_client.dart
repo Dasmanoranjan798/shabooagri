@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/session_provider.dart';
 import '../storage/local_storage.dart';
+import 'package:go_router/go_router.dart';
+import '../router/app_router.dart';
 
 /// Dio instance scoped to the current tenant. Rebuilds (cheap) whenever the
 /// company slug changes, e.g. right after the Company Setup screen saves it.
@@ -22,7 +24,7 @@ final apiClientProvider = Provider<Dio>((ref) {
     ),
   );
 
-  dio.interceptors.add(_AuthInterceptor(dio));
+  dio.interceptors.add(_AuthInterceptor(dio, ref));
 
   dio.interceptors.add(LogInterceptor(
     request: true,
@@ -43,9 +45,10 @@ final apiClientProvider = Provider<Dio>((ref) {
 /// short-lived (15 minutes) and field sessions need to outlast that.
 class _AuthInterceptor extends Interceptor {
   final Dio _dio;
+  final Ref _ref;
   bool _isRefreshing = false;
 
-  _AuthInterceptor(this._dio);
+  _AuthInterceptor(this._dio, this._ref);
 
   @override
   Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
@@ -68,6 +71,9 @@ class _AuthInterceptor extends Interceptor {
 
     final refreshToken = await AuthStorage.getRefreshToken();
     if (refreshToken == null) {
+      await AuthStorage.clear();
+      _ref.read(currentUserProvider.notifier).state = null;
+      rootNavigatorKey.currentContext?.go('/login');
       handler.next(err);
       return;
     }
@@ -90,6 +96,8 @@ class _AuthInterceptor extends Interceptor {
       // Refresh token is invalid/expired too — surface the original 401 so
       // the caller can route the user back to login.
       await AuthStorage.clear();
+      _ref.read(currentUserProvider.notifier).state = null;
+      rootNavigatorKey.currentContext?.go('/login');
       handler.next(err);
     } finally {
       _isRefreshing = false;

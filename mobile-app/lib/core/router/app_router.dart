@@ -40,12 +40,17 @@ import '../../features/team/presentation/team_screen.dart';
 import '../../features/villages/presentation/village_list_screen.dart';
 import '../../features/villages/presentation/village_form_screen.dart';
 
+import 'package:flutter/material.dart';
+
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
 /// Built once at startup (see main.dart) after resolving where this device
 /// should land: `/setup` if no company slug is persisted yet, `/login` if a
 /// slug exists but no session, or the role-appropriate home route if a
 /// session was restored.
 GoRouter buildAppRouter(String initialLocation) {
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: initialLocation,
     routes: [
       GoRoute(

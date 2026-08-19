@@ -166,7 +166,7 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
       'status': _status,
       if (_hourMeterController.text.trim().isNotEmpty)
         'hourMeterReading': double.tryParse(_hourMeterController.text.trim()),
-      'assignedDriverId': _assignedDriverId,
+      if (_assignedDriverId != null) 'assignedDriverId': _assignedDriverId,
       if (_nextServiceDueController.text.trim().isNotEmpty)
         'nextServiceDueHours': double.tryParse(_nextServiceDueController.text.trim()),
       if (_insuranceNumberController.text.trim().isNotEmpty) 'insuranceNumber': _insuranceNumberController.text.trim(),
