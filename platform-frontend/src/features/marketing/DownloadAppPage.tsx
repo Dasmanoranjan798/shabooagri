@@ -52,8 +52,8 @@ export const DownloadAppPage: React.FC = () => {
             </p>
             <div style={{ display: "flex", justifyContent: "center" }}>
               <a
-                href="/downloads/shabooagri-v0.4.2.apk"
-                download="shabooagri-v0.4.2.apk"
+                href="/downloads/shabooagri-v0.4.4.apk"
+                download="shabooagri-v0.4.4.apk"
                 className="pf-btn pf-btn-primary"
                 style={{
                   textDecoration: "none",
@@ -93,7 +93,7 @@ export const DownloadAppPage: React.FC = () => {
                 }}
               >
                 <Info size={24} color="var(--color-primary)" />
-                What's New in v0.4.0-preview
+                What's New in v0.4.4
               </h2>
               <ul
                 style={{
@@ -105,12 +105,10 @@ export const DownloadAppPage: React.FC = () => {
                   gap: 8,
                 }}
               >
-                <li>Job Cards now match the website exactly: live counter, live running price, mandatory pause-reason, two-step Stop→Submit confirmation, and photo/fuel/note logging</li>
-                <li>Dashboard now shows real revenue, pending collection, and machine/driver activity — not just job counts</li>
-                <li>Full Create/Edit for Bookings, Machines, Drivers, Customers, Villages, Employees, and Expenses — not just viewing</li>
-                <li>Receive Payment and Void Invoice actions</li>
-                <li>New: Maintenance (service records, alerts), Fuel log, and Reports with PDF/CSV export</li>
-                <li>Fixed a critical bug where the previous release build couldn't connect to the internet at all</li>
+                <li><strong>Fixed</strong> Machine Type selection during Machine creation.</li>
+                <li><strong>Added</strong> quick + Create Machine Type action directly from the Machine form.</li>
+                <li>Newly created Machine Types can be selected immediately without refreshing.</li>
+                <li>Safely parse Decimal salary strings in employee form.</li>
               </ul>
               <div
                 style={{
@@ -123,8 +121,7 @@ export const DownloadAppPage: React.FC = () => {
                   borderLeft: "4px solid #eab308",
                 }}
               >
-                <strong>Note:</strong> Google Play Store availability is coming later. This is an early preview
-                strictly for testing purposes and is not the final product.
+                <strong>Updated:</strong> 19 August 2026. This is the latest preview release.
               </div>
             </div>
 
