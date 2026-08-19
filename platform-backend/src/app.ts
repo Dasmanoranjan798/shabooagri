@@ -29,7 +29,7 @@ app.get("/health", async (_req, res) => {
 
 app.get("/api/app-version", (_req, res) => {
   res.status(200).json({
-    version: "0.7.1",
+    version: "0.7.2",
     downloadUrl: "https://shabooagri.com/app",
     mandatory: false
   });

@@ -14,3 +14,29 @@
 .sa-badge-danger { background-color: #fee2e2; color: #b91c1c; }
 .sa-badge-info { background-color: #e0f2fe; color: #0369a1; }
 .sa-badge-neutral { background-color: #f1f5f9; color: #475569; }
+
+@keyframes sa-pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.sa-badge-pulse-indicator {
+  position: relative;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: currentColor;
+  border-radius: 50%;
+}
+
+.sa-badge-pulse-indicator::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: inherit;
+  border-radius: 50%;
+  animation: sa-pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}

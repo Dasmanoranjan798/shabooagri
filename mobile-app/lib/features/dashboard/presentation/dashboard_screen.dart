@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/status_badge.dart';
+import '../../../core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -130,13 +132,44 @@ class DashboardScreen extends ConsumerWidget {
                 const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('No jobs scheduled today.'))
               else
                 ...summary.todaysJobs.map((job) => Card(
-                      child: ListTile(
-                        title: Text('${job.bookingNumber} · ${job.customerName}'),
-                        subtitle: Text(job.jobStatus == 'NOT_STARTED'
-                            ? (job.isReadyToStart ? 'Ready to Start' : 'Awaiting Machine')
-                            : job.jobStatus),
-                        trailing: const Icon(Icons.chevron_right),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: InkWell(
                         onTap: () => context.go('/jobs/${job.jobId}'),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(job.bookingNumber, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                  JobStatusBadge(status: job.jobStatus),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  const Icon(Icons.person, size: 16, color: AppTheme.textMuted),
+                                  const SizedBox(width: 8),
+                                  Text(job.customerName, style: const TextStyle(fontSize: 14)),
+                                ],
+                              ),
+                              if (job.jobStatus == 'NOT_STARTED') ...[
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.info_outline, size: 16, color: AppTheme.textMuted),
+                                    const SizedBox(width: 8),
+                                    Text(job.isReadyToStart ? 'Ready to Start' : 'Awaiting Machine', 
+                                      style: TextStyle(fontSize: 13, color: job.isReadyToStart ? AppTheme.success : AppTheme.warning)),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                       ),
                     )),
               const SizedBox(height: 24),
@@ -275,20 +308,29 @@ class DashboardScreen extends ConsumerWidget {
 
   Widget _kpiCard(String title, String value, double? deltaPercent, Color color) {
     return Card(
+      color: color.withOpacity(0.05),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: color.withOpacity(0.2)),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey), maxLines: 2),
-            const SizedBox(height: 4),
-            Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color)),
-            if (deltaPercent != null)
-              Text(
-                '${deltaPercent >= 0 ? '+' : ''}${deltaPercent.toStringAsFixed(1)}% vs yesterday',
-                style: TextStyle(fontSize: 11, color: deltaPercent >= 0 ? Colors.green : Colors.red),
+            Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color.withOpacity(0.8)), maxLines: 1, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 6),
+            Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color.withOpacity(1.0))),
+            if (deltaPercent != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(deltaPercent >= 0 ? Icons.arrow_upward : Icons.arrow_downward, size: 12, color: deltaPercent >= 0 ? Colors.green : Colors.red),
+                  Text('${deltaPercent.abs().toStringAsFixed(1)}%', style: TextStyle(fontSize: 10, color: deltaPercent >= 0 ? Colors.green : Colors.red)),
+                ],
               ),
+            ]
           ],
         ),
       ),

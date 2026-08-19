@@ -89,39 +89,78 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                         itemBuilder: (context, index) {
                           final customer = filtered[index];
                           return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            child: ListTile(
-                              title: Text(customer.name),
-                              subtitle: Text(
-                                  '${customer.villageName} · ${customer.phone ?? 'No phone on file'}${customer.hasPortalAccess ? ' · Portal Linked' : ''}'),
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            child: InkWell(
                               onTap: () => context.go('/customers/${customer.id}'),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (canManage || canDelete)
-                                    PopupMenuButton<String>(
-                                      onSelected: (action) async {
-                                        if (action == 'edit') {
-                                          context.go('/customers/${customer.id}/edit');
-                                        } else if (action == 'delete') {
-                                          final dio = ref.read(apiClientProvider);
-                                          await confirmAndDelete(
-                                            context: context,
-                                            entityLabel: customer.name,
-                                            onDelete: () => dio.delete('/customers/${customer.id}'),
-                                            onSuccess: () => ref.invalidate(customersListProvider),
-                                          );
-                                        }
-                                      },
-                                      itemBuilder: (context) => [
-                                        if (canManage) const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                                        if (canDelete)
-                                          const PopupMenuItem(
-                                              value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(customer.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                        if (canManage || canDelete)
+                                          SizedBox(
+                                            width: 32,
+                                            height: 32,
+                                            child: PopupMenuButton<String>(
+                                              padding: EdgeInsets.zero,
+                                              icon: const Icon(Icons.more_vert, size: 20, color: Colors.grey),
+                                              onSelected: (action) async {
+                                                if (action == 'edit') {
+                                                  context.go('/customers/${customer.id}/edit');
+                                                } else if (action == 'delete') {
+                                                  final dio = ref.read(apiClientProvider);
+                                                  await confirmAndDelete(
+                                                    context: context,
+                                                    entityLabel: customer.name,
+                                                    onDelete: () => dio.delete('/customers/${customer.id}'),
+                                                    onSuccess: () => ref.invalidate(customersListProvider),
+                                                  );
+                                                }
+                                              },
+                                              itemBuilder: (context) => [
+                                                if (canManage) const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                                if (canDelete) const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
+                                              ],
+                                            ),
+                                          ),
                                       ],
                                     ),
-                                  const Icon(Icons.chevron_right),
-                                ],
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                                        const SizedBox(width: 8),
+                                        Expanded(child: Text(customer.villageName, style: const TextStyle(fontSize: 14))),
+                                      ],
+                                    ),
+                                    if (customer.phone != null) ...[
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.phone, size: 16, color: Colors.grey),
+                                          const SizedBox(width: 8),
+                                          Expanded(child: Text(customer.phone!, style: const TextStyle(fontSize: 14))),
+                                        ],
+                                      ),
+                                    ],
+                                    if (customer.hasPortalAccess) ...[
+                                      const SizedBox(height: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: const Text('Portal Linked', style: TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.bold)),
+                                      ),
+                                    ]
+                                  ],
+                                ),
                               ),
                             ),
                           );

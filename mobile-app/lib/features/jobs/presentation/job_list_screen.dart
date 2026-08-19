@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/status_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -200,16 +201,51 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
                         itemBuilder: (context, index) {
                           final job = filtered[index];
                           return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            child: ListTile(
-                              title: Text('${job.bookingNumber} · ${job.customerName}'),
-                              subtitle: Text(isOwnerOrManager
-                                  ? (job.machineRegistration != null
-                                      ? '${job.machineRegistration} · ${_statusLabel(job)}'
-                                      : _statusLabel(job))
-                                  : '${job.villageName} · ${_fmtDateRelative(job.scheduledDate)} · ${_driverStatusLabel(job.status)}'),
-                              trailing: const Icon(Icons.chevron_right),
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            child: InkWell(
                               onTap: () => context.go('/jobs/${job.id}'),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(job.bookingNumber, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                        JobStatusBadge(status: job.status),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.person, size: 16, color: Colors.grey),
+                                        const SizedBox(width: 8),
+                                        Expanded(child: Text(job.customerName, style: const TextStyle(fontSize: 14))),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                                        const SizedBox(width: 8),
+                                        Expanded(child: Text(job.villageName, style: const TextStyle(fontSize: 14))),
+                                      ],
+                                    ),
+                                    if (job.machineRegistration != null) ...[
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.agriculture, size: 16, color: Colors.grey),
+                                          const SizedBox(width: 8),
+                                          Expanded(child: Text(job.machineRegistration!, style: const TextStyle(fontSize: 14))),
+                                        ],
+                                      ),
+                                    ]
+                                  ],
+                                ),
+                              ),
                             ),
                           );
                         },

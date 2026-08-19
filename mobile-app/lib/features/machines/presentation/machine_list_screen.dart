@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/status_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
@@ -141,58 +142,110 @@ class _MachineListScreenState extends ConsumerState<MachineListScreen> {
                             overdueLabel: 'Insurance Expired',
                             dueSoonLabel: 'Insurance Expires',
                           );
+                          
                           return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            child: ListTile(
-                              title: Text(title.isNotEmpty ? title : machine.registrationNumber),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('${machine.registrationNumber} · ${machine.status}'),
-                                  if (serviceWarn != null)
-                                    Text(serviceWarn.$3,
-                                        style: TextStyle(color: serviceWarn.$1 ? Colors.red : Colors.orange, fontSize: 12)),
-                                  if (insuranceWarn != null)
-                                    Text(insuranceWarn.$3,
-                                        style:
-                                            TextStyle(color: insuranceWarn.$1 ? Colors.red : Colors.orange, fontSize: 12)),
-                                ],
-                              ),
-                              isThreeLine: serviceWarn != null || insuranceWarn != null,
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            child: InkWell(
                               onTap: () => context.go('/machines/${machine.id}'),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (canManage || canDelete)
-                                    PopupMenuButton<String>(
-                                      onSelected: (action) async {
-                                        if (action == 'edit') {
-                                          context.go('/machines/${machine.id}/edit');
-                                        } else if (action == 'delete') {
-                                          final dio = ref.read(apiClientProvider);
-                                          await confirmAndDelete(
-                                            context: context,
-                                            entityLabel: machine.registrationNumber,
-                                            onDelete: () => dio.delete('/machines/${machine.id}'),
-                                            onSuccess: () => ref.invalidate(machinesListProvider),
-                                          );
-                                        }
-                                      },
-                                      itemBuilder: (context) => [
-                                        if (canManage) const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                                        if (canDelete)
-                                          const PopupMenuItem(
-                                              value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          machine.registrationNumber,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                        ),
+                                        if (canManage || canDelete)
+                                          SizedBox(
+                                            width: 32,
+                                            height: 32,
+                                            child: PopupMenuButton<String>(
+                                              padding: EdgeInsets.zero,
+                                              icon: const Icon(Icons.more_vert, size: 20, color: Colors.grey),
+                                              onSelected: (action) async {
+                                                if (action == 'edit') {
+                                                  context.go('/machines/${machine.id}/edit');
+                                                } else if (action == 'delete') {
+                                                  final dio = ref.read(apiClientProvider);
+                                                  await confirmAndDelete(
+                                                    context: context,
+                                                    entityLabel: machine.registrationNumber,
+                                                    onDelete: () => dio.delete('/machines/${machine.id}'),
+                                                    onSuccess: () => ref.invalidate(machinesListProvider),
+                                                  );
+                                                }
+                                              },
+                                              itemBuilder: (context) => [
+                                                if (canManage) const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                                if (canDelete) const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
+                                              ],
+                                            ),
+                                          ),
                                       ],
                                     ),
-                                  const Icon(Icons.chevron_right),
-                                ],
+                                    if (title.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4, bottom: 8),
+                                        child: Text(title, style: TextStyle(color: Colors.grey.shade700, fontSize: 14)),
+                                      ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        MachineStatusBadge(status: machine.status),
+                                        if (machine.hourMeterReading != null)
+                                          Text(
+                                            '${machine.hourMeterReading} hrs',
+                                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                          ),
+                                      ],
+                                    ),
+                                    if (serviceWarn != null || insuranceWarn != null) ...[
+                                      const Divider(height: 24),
+                                      if (serviceWarn != null)
+                                        Row(
+                                          children: [
+                                            Icon(Icons.build, size: 14, color: serviceWarn.$1 ? Colors.red : Colors.orange),
+                                            const SizedBox(width: 6),
+                                            Expanded(
+                                              child: Text(
+                                                serviceWarn.$3,
+                                                style: TextStyle(color: serviceWarn.$1 ? Colors.red : Colors.orange, fontSize: 12),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      if (insuranceWarn != null)
+                                        Padding(
+                                          padding: EdgeInsets.only(top: serviceWarn != null ? 4 : 0),
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.shield_outlined, size: 14, color: insuranceWarn.$1 ? Colors.red : Colors.orange),
+                                              const SizedBox(width: 6),
+                                              Expanded(
+                                                child: Text(
+                                                  insuranceWarn.$3,
+                                                  style: TextStyle(color: insuranceWarn.$1 ? Colors.red : Colors.orange, fontSize: 12),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
+                                  ],
+                                ),
                               ),
                             ),
                           );
-                        },
+},
                       ),
               ),
+
             ],
           );
         },

@@ -59,8 +59,8 @@ export const DownloadAppPage: React.FC = () => {
                 </h3>
                 <div style={{ display: "flex", justifyContent: "center" }}>
                   <a
-                    href="/downloads/shabooagri-v0.7.1.apk"
-                    download="shabooagri-v0.7.1.apk"
+                    href="/downloads/shabooagri-v0.7.2.apk"
+                    download="shabooagri-v0.7.2.apk"
                     className="pf-btn pf-btn-primary"
                     style={{
                       textDecoration: "none",
@@ -70,7 +70,7 @@ export const DownloadAppPage: React.FC = () => {
                     }}
                   >
                     <Download size={20} />
-                    Download APK (v0.7.1)
+                    Download APK (v0.7.2)
                   </a>
                 </div>
               </div>
@@ -82,7 +82,7 @@ export const DownloadAppPage: React.FC = () => {
                   iPhone / iPad
                 </h3>
                 <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem", margin: 0 }}>
-                  <em>v0.7.1 submission pending. Will be available via TestFlight / App Store.</em>
+                  <em>v0.7.2 submission pending. Will be available via TestFlight / App Store.</em>
                 </p>
               </div>
 
@@ -159,7 +159,7 @@ export const DownloadAppPage: React.FC = () => {
                 }}
               >
                 <Info size={24} color="var(--color-primary)" />
-                What's New in v0.7.1
+                What's New in v0.7.2
               </h2>
               <ul
                 style={{

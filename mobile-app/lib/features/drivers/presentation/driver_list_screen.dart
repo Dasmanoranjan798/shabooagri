@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/status_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
@@ -132,52 +133,35 @@ class _DriverListScreenState extends ConsumerState<DriverListScreen> {
                             dueSoonLabel: 'License Expires',
                           );
                           return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            child: ListTile(
-                              title: Text(driver.name),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(driver.availabilityStatus),
-                                  if (licenseWarn != null)
-                                    Text(licenseWarn.$3,
-                                        style:
-                                            TextStyle(color: licenseWarn.$1 ? Colors.red : Colors.orange, fontSize: 12)),
-                                ],
-                              ),
-                              onTap: () => context.go('/drivers/${driver.id}'),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (canManage || canDelete)
-                                    PopupMenuButton<String>(
-                                      onSelected: (action) async {
-                                        if (action == 'edit') {
-                                          context.go('/drivers/${driver.id}/edit');
-                                        } else if (action == 'delete') {
-                                          final dio = ref.read(apiClientProvider);
-                                          await confirmAndDelete(
-                                            context: context,
-                                            entityLabel: driver.name,
-                                            onDelete: () => dio.delete('/drivers/${driver.id}'),
-                                            onSuccess: () => ref.invalidate(driversListProvider),
-                                          );
-                                        }
-                                      },
-                                      itemBuilder: (context) => [
-                                        if (canManage) const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                                        if (canDelete)
-                                          const PopupMenuItem(
-                                              value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
-                                      ],
-                                    ),
-                                  const Icon(Icons.chevron_right),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Colors.grey.shade200,
+                      child: const Icon(Icons.person, color: Colors.grey),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(driver.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          if (driver.phone != null) ...[
+                            const SizedBox(height: 4),
+                            Text(driver.phone!, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+                          ],
+                        ],
                       ),
+                    ),
+                    DriverStatusBadge(status: driver.availabilityStatus),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
               ),
             ],
           );

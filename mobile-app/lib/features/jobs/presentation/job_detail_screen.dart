@@ -1,3 +1,5 @@
+import '../../../core/widgets/status_badge.dart';
+import '../../../core/theme/app_theme.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -37,14 +39,24 @@ class JobDetailScreen extends ConsumerStatefulWidget {
   ConsumerState<JobDetailScreen> createState() => _JobDetailScreenState();
 }
 
-class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
+class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTickerProviderStateMixin {
   Timer? _ticker;
+  late AnimationController _pulseController;
+  late Animation<double> _animation;
   bool _acting = false;
   final _acresController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat(reverse: true);
+    _animation = Tween<double>(begin: 0.2, end: 1.0).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
+  }
+
+  @override
   void dispose() {
     _ticker?.cancel();
+    _pulseController.dispose();
     _acresController.dispose();
     super.dispose();
   }
@@ -377,8 +389,38 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                 InfoRow('Booking', job.bookingNumber),
                 InfoRow('Customer', job.customerName),
                 InfoRow('Village', job.villageName),
-                if (job.machineRegistration != null) InfoRow('Machine', job.machineRegistration!),
-                if (job.driverName != null) InfoRow('Driver', job.driverName!),
+                if (job.machineRegistration != null) Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Machine', style: TextStyle(color: AppTheme.textMuted, fontSize: 14, fontWeight: FontWeight.w500)),
+                      Row(
+                        children: [
+                          Text(job.machineRegistration!, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                          const SizedBox(width: 8),
+                          if (job.status == 'WORKING') MachineStatusBadge(status: 'WORKING'),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (job.driverName != null) Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Driver', style: TextStyle(color: AppTheme.textMuted, fontSize: 14, fontWeight: FontWeight.w500)),
+                      Row(
+                        children: [
+                          Text(job.driverName!, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                          const SizedBox(width: 8),
+                          if (job.status == 'WORKING') DriverStatusBadge(status: 'WORKING'),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: () => _navigate(job),
@@ -422,36 +464,61 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     );
   }
 
-  Widget _buildTimerCard(JobDetail job, int? elapsedSec, double? liveAmount) {
-    final isLocked = job.status == 'STOPPED' || job.status == 'COMPLETED';
-    final displaySeconds = elapsedSec ??
-        (job.actualHours != null ? (job.actualHours! * 3600).round() : job.elapsedSecondsNow());
+  Widget _buildTimerCard(JobDetail job, int? displaySeconds, double? liveAmount) {
+    final isLocked = job.status == 'COMPLETED' || job.status == 'CANCELLED';
+    if (displaySeconds == null && !isLocked) return const SizedBox.shrink();
+    if (displaySeconds == null) displaySeconds = 0;
+    
+    final timerColor = job.status == 'WORKING' ? AppTheme.primary : 
+                       job.status == 'PAUSED' ? AppTheme.warning : 
+                       job.status == 'COMPLETED' ? AppTheme.success : AppTheme.textMuted;
 
     return Card(
+      color: timerColor.withOpacity(0.05),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: timerColor.withOpacity(0.3), width: 1.5),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
         child: Column(
           children: [
-            Text(
-              isLocked ? 'FINAL TIME — LOCKED' : 'ELAPSED TIME',
-              style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 1),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (job.status == 'WORKING') ...[
+                   FadeTransition(
+                     opacity: _animation,
+                     child: Icon(Icons.circle, color: AppTheme.primary, size: 12),
+                   ),
+                   const SizedBox(width: 8),
+                ],
+                Text(
+                  isLocked ? 'FINAL TIME — LOCKED' : 'ELAPSED TIME',
+                  style: TextStyle(fontSize: 12, color: timerColor, fontWeight: FontWeight.bold, letterSpacing: 1),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
               _formatHms(displaySeconds),
-              style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, fontFeatures: [FontFeature.tabularFigures()]),
+              style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: AppTheme.text, fontFeatures: const [FontFeature.tabularFigures()]),
             ),
             if (liveAmount != null) ...[
               const SizedBox(height: 12),
-              Text('₹${liveAmount.toStringAsFixed(0)} — updates live', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                child: Text('₹${liveAmount.toStringAsFixed(0)} — updates live', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+              )
             ] else if (job.rate != null && job.pricingLabel != null) ...[
               const SizedBox(height: 12),
-              Text('${job.pricingLabel}: ₹${job.rate!.toStringAsFixed(0)}', style: const TextStyle(color: Colors.grey)),
+              Text('${job.pricingLabel}: ₹${job.rate!.toStringAsFixed(0)}', style: TextStyle(color: AppTheme.textMuted)),
             ],
             if (job.status == 'PAUSED')
               const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Text('PAUSED', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+                padding: EdgeInsets.only(top: 12),
+                child: JobStatusBadge(status: 'PAUSED'),
               ),
           ],
         ),

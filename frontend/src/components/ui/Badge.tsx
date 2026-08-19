@@ -22,8 +22,12 @@ export const Badge: React.FC<BadgeProps> = ({
   size = "md",
   className = "",
 }) => {
+  const isWorking = children?.toString().toUpperCase() === "WORKING";
   return (
-    <span className={`sa-badge sa-badge-${variant} sa-badge-${size} ${className}`}>
+    <span className={`sa-badge sa-badge-${variant} sa-badge-${size} ${className}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+      {isWorking && (
+        <span className="sa-badge-pulse-indicator"></span>
+      )}
       {children}
     </span>
   );

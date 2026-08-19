@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/status_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
@@ -77,7 +78,11 @@ class MachineDetailScreen extends ConsumerWidget {
                 InfoRow('Registration Number', machine['registrationNumber'] as String),
                 if (machine['brand'] != null) InfoRow('Brand', machine['brand'] as String),
                 if (machine['model'] != null) InfoRow('Model', machine['model'] as String),
-                InfoRow('Status', machine['status'] as String),
+                InfoRow(
+                  'Status', 
+                  machine['status'] as String,
+                  customValueWidget: MachineStatusBadge(status: machine['status'] as String),
+                ),
                 if (hourMeter != null) InfoRow('Hour Meter', '${hourMeter.toStringAsFixed(1)} hrs'),
                 InfoRow('Default Driver', assignedDriver != null ? (assignedDriver['employee']?['name'] ?? assignedDriver['id']) as String : 'Unassigned'),
                 InfoRow(

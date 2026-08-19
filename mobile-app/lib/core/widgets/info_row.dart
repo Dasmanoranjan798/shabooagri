@@ -1,27 +1,27 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
-/// Shared label/value row used across every read-only Detail screen
-/// (Bookings, Machines, Drivers, Customers, Villages, Payments, Employees).
 class InfoRow extends StatelessWidget {
   final String label;
   final String value;
+  final Widget? customValueWidget;
 
-  const InfoRow(this.label, this.value, {super.key});
+  const InfoRow(this.label, this.value, {super.key, this.customValueWidget});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 16)),
+          Text(label, style: const TextStyle(color: AppTheme.textMuted, fontSize: 14, fontWeight: FontWeight.w500)),
           const SizedBox(width: 16),
           Flexible(
-            child: Text(
+            child: customValueWidget ?? Text(
               value,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: AppTheme.text),
               textAlign: TextAlign.right,
             ),
           ),
