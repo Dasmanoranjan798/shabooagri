@@ -8,9 +8,9 @@ class DeltaMetric {
   final double? deltaPercent;
 
   DeltaMetric.fromJson(Map<String, dynamic> json)
-      : current = (json['current'] as num).toDouble(),
-        previous = (json['previous'] as num).toDouble(),
-        delta = (json['delta'] as num).toDouble(),
+      : current = (double.tryParse(json['current'].toString()) ?? 0.0),
+        previous = (double.tryParse(json['previous'].toString()) ?? 0.0),
+        delta = (double.tryParse(json['delta'].toString()) ?? 0.0),
         deltaPercent = (json['deltaPercent'] as num?)?.toDouble();
 }
 
@@ -24,7 +24,7 @@ class MachineWorkingMetric {
       : working = json['working'] as int,
         activeUsable = json['activeUsable'] as int,
         total = json['total'] as int,
-        percent = (json['percent'] as num).toDouble();
+        percent = (double.tryParse(json['percent'].toString()) ?? 0.0);
 }
 
 class DashboardKpis {
@@ -70,7 +70,7 @@ class DashboardPendingPayment {
       : invoiceId = json['invoiceId'] as String,
         invoiceNumber = json['invoiceNumber'] as String,
         customerName = json['customerName'] as String,
-        balanceAmount = (json['balanceAmount'] as num).toDouble(),
+        balanceAmount = (double.tryParse(json['balanceAmount'].toString()) ?? 0.0),
         daysOutstanding = json['daysOutstanding'] as int;
 }
 

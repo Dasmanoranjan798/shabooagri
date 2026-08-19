@@ -7,6 +7,7 @@ import {
   recordCustomerAdvanceSchema,
   updateInvoiceTaxSchema,
   voidSchema,
+  filterInvoicesSchema,
 } from "./payment.validators";
 
 export async function listInvoices(req: Request, res: Response) {
@@ -86,4 +87,11 @@ export async function getReceipt(req: Request, res: Response) {
   const user = requireUser(req);
   const receipt = await paymentService.getReceipt(user.companyId, req.params.id, user);
   res.json(receipt);
+}
+
+export async function filterInvoices(req: Request, res: Response) {
+  const user = requireUser(req);
+  const input = filterInvoicesSchema.parse(req.body);
+  const result = await paymentService.filterInvoices(user.companyId, user, input);
+  res.json(result);
 }

@@ -152,9 +152,9 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
               'Balance Due',
             ], data: [
               [
-                '₹${(inv['totalAmount'] as num).toStringAsFixed(2)}',
-                '₹${(inv['paidAmount'] as num).toStringAsFixed(2)}',
-                '₹${(inv['balanceAmount'] as num).toStringAsFixed(2)}',
+                '₹${(double.tryParse(inv['totalAmount'].toString()) ?? 0.0).toStringAsFixed(2)}',
+                '₹${(double.tryParse(inv['paidAmount'].toString()) ?? 0.0).toStringAsFixed(2)}',
+                '₹${(double.tryParse(inv['balanceAmount'].toString()) ?? 0.0).toStringAsFixed(2)}',
               ]
             ]),
             pw.SizedBox(height: 16),
@@ -223,7 +223,7 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
       body: receiptAsync.when(
         data: (receipt) {
           final inv = receipt.invoice;
-          final balance = (inv['balanceAmount'] as num).toDouble();
+          final balance = (double.tryParse(inv['balanceAmount'].toString()) ?? 0.0);
           final status = inv['status'] as String;
           final isVoided = status == 'VOIDED';
           final isGstApplicable = inv['isGstApplicable'] as bool? ?? false;
@@ -249,14 +249,14 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
                 const Divider(height: 32),
                 const Text('Billing Summary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 8),
-                InfoRow('Taxable Value', '₹${(inv['subtotalAmount'] as num).toStringAsFixed(2)}'),
+                InfoRow('Taxable Value', '₹${(double.tryParse(inv['subtotalAmount'].toString()) ?? 0.0).toStringAsFixed(2)}'),
                 if (isGstApplicable) ...[
-                  if ((inv['cgstAmount'] as num) > 0) InfoRow('CGST', '₹${(inv['cgstAmount'] as num).toStringAsFixed(2)}'),
-                  if ((inv['sgstAmount'] as num) > 0) InfoRow('SGST', '₹${(inv['sgstAmount'] as num).toStringAsFixed(2)}'),
-                  if ((inv['igstAmount'] as num) > 0) InfoRow('IGST', '₹${(inv['igstAmount'] as num).toStringAsFixed(2)}'),
+                  if ((double.tryParse(inv['cgstAmount'].toString()) ?? 0.0) > 0) InfoRow('CGST', '₹${(double.tryParse(inv['cgstAmount'].toString()) ?? 0.0).toStringAsFixed(2)}'),
+                  if ((double.tryParse(inv['sgstAmount'].toString()) ?? 0.0) > 0) InfoRow('SGST', '₹${(double.tryParse(inv['sgstAmount'].toString()) ?? 0.0).toStringAsFixed(2)}'),
+                  if ((double.tryParse(inv['igstAmount'].toString()) ?? 0.0) > 0) InfoRow('IGST', '₹${(double.tryParse(inv['igstAmount'].toString()) ?? 0.0).toStringAsFixed(2)}'),
                 ],
-                InfoRow('Total Amount', '₹${(inv['totalAmount'] as num).toStringAsFixed(2)}'),
-                InfoRow('Amount Received', '₹${(inv['paidAmount'] as num).toStringAsFixed(2)}'),
+                InfoRow('Total Amount', '₹${(double.tryParse(inv['totalAmount'].toString()) ?? 0.0).toStringAsFixed(2)}'),
+                InfoRow('Amount Received', '₹${(double.tryParse(inv['paidAmount'].toString()) ?? 0.0).toStringAsFixed(2)}'),
                 InfoRow('Balance Due', '₹${balance.toStringAsFixed(2)}'),
                 if (receipt.company['bankName'] != null || receipt.company['upiId'] != null) ...[
                   const Divider(height: 32),

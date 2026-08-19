@@ -13,7 +13,7 @@ class IncomePoint {
   final double amount;
   IncomePoint.fromJson(Map<String, dynamic> json)
       : label = (json['date'] ?? json['month']) as String,
-        amount = (json['amount'] as num).toDouble();
+        amount = (double.tryParse(json['amount'].toString()) ?? 0.0);
 }
 
 final reportsSummaryProvider = FutureProvider<DashboardSummary>((ref) async {

@@ -114,7 +114,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                       : 'Not set yet — assigned when work starts',
                 ),
                 if (booking['estimatedAmount'] != null)
-                  InfoRow('Estimated Amount', '₹${(booking['estimatedAmount'] as num).toStringAsFixed(0)}'),
+                  InfoRow('Estimated Amount', '₹${(double.tryParse(booking['estimatedAmount'].toString()) ?? 0.0).toStringAsFixed(0)}'),
                 if (booking['notes'] != null && (booking['notes'] as String).isNotEmpty)
                   InfoRow('Notes', booking['notes'] as String),
                 const Divider(height: 32),

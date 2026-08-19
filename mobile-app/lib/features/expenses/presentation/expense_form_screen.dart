@@ -50,7 +50,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
   void _prefillFrom(Map<String, dynamic> expense) {
     if (_prefilled) return;
     _prefilled = true;
-    _amountController.text = (expense['amount'] as num).toString();
+    _amountController.text = (double.tryParse(expense['amount'].toString()) ?? 0.0).toString();
     _descriptionController.text = expense['description'] as String? ?? '';
     _categoryId = (expense['category'] as Map<String, dynamic>?)?['id'] as String?;
     _machineId = (expense['machine'] as Map<String, dynamic>?)?['id'] as String?;

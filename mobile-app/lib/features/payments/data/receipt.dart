@@ -13,7 +13,7 @@ class ReceiptPayment {
 
   ReceiptPayment.fromJson(Map<String, dynamic> json)
       : id = json['id'] as String,
-        amount = (json['amount'] as num).toDouble(),
+        amount = (double.tryParse(json['amount'].toString()) ?? 0.0),
         paymentMethod = json['paymentMethod'] as String,
         referenceNumber = json['referenceNumber'] as String?,
         receivedAt = json['receivedAt'] as String,

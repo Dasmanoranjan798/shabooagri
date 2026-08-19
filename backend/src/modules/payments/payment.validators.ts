@@ -39,3 +39,33 @@ export type UpdateInvoiceTaxInput = z.infer<typeof updateInvoiceTaxSchema>;
 export type CreateManualInvoiceInput = z.infer<typeof createManualInvoiceSchema>;
 export type RecordCustomerAdvanceInput = z.infer<typeof recordCustomerAdvanceSchema>;
 export type VoidInput = z.infer<typeof voidSchema>;
+
+export const filterInvoicesSchema = z.object({
+  status: z.array(z.string()).optional(),
+  dateRange: z.object({
+    from: z.string().optional(), // ISO string
+    to: z.string().optional(), // ISO string
+    field: z.enum(["invoiceDate", "dueDate", "paymentDate", "workCompletionDate"]).optional(),
+  }).optional(),
+  customerId: z.array(z.string()).optional(),
+  villageId: z.array(z.string()).optional(),
+  driverId: z.array(z.string()).optional(),
+  machineId: z.array(z.string()).optional(),
+  paymentMethod: z.array(z.string()).optional(),
+  
+  amountFilter: z.object({
+    field: z.enum(["totalAmount", "paidAmount", "balanceAmount"]).optional(),
+    operator: z.enum(["gt", "lt", "eq", "between"]).optional(),
+    value: z.number().optional(),
+    valueMax: z.number().optional(), // used for 'between'
+  }).optional(),
+
+  outstandingAge: z.object({
+    minDays: z.number().optional(),
+    maxDays: z.number().optional(),
+  }).optional(),
+  
+  page: z.number().min(1).optional().default(1),
+  limit: z.number().min(1).max(100).optional().default(50),
+});
+export type FilterInvoicesInput = z.infer<typeof filterInvoicesSchema>;

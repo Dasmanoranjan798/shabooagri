@@ -37,7 +37,7 @@ class ExpenseDetailScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(16.0),
             child: ListView(
               children: [
-                InfoRow('Amount', '₹${(expense['amount'] as num).toStringAsFixed(2)}'),
+                InfoRow('Amount', '₹${(double.tryParse(expense['amount'].toString()) ?? 0.0).toStringAsFixed(2)}'),
                 InfoRow('Category', category?['name'] as String? ?? 'Uncategorized'),
                 InfoRow('Linked Machine', machine?['registrationNumber'] as String? ?? 'General Operational Expense'),
                 InfoRow('Recorded By', recorder?['fullName'] as String? ?? 'Company Staff'),

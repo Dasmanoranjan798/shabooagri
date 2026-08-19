@@ -55,9 +55,9 @@ class FarmerInvoice {
         invoiceNumber = json['invoiceNumber'] as String,
         createdAt = DateTime.parse(json['createdAt'] as String),
         dueDate = json['dueDate'] == null ? null : DateTime.parse(json['dueDate'] as String),
-        totalAmount = (json['totalAmount'] as num).toDouble(),
-        paidAmount = (json['paidAmount'] as num).toDouble(),
-        balanceAmount = (json['balanceAmount'] as num).toDouble(),
+        totalAmount = (double.tryParse(json['totalAmount'].toString()) ?? 0.0),
+        paidAmount = (double.tryParse(json['paidAmount'].toString()) ?? 0.0),
+        balanceAmount = (double.tryParse(json['balanceAmount'].toString()) ?? 0.0),
         status = json['status'] as String,
         bookingNumber = (json['booking'] as Map<String, dynamic>?)?['bookingNumber'] as String?;
 }

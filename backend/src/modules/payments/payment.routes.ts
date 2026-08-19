@@ -12,6 +12,7 @@ paymentRouter.use(authMiddleware);
 
 // Scoped read routes — company-wide for Owner/Manager, customer-scoped for Farmer
 invoiceRouter.get("/", asyncHandler(paymentController.listInvoices));
+invoiceRouter.post("/filter", asyncHandler(paymentController.filterInvoices));
 
 // Manual invoice creation — for cases the completed-job pipeline doesn't
 // cover (custom charges, backlog entries). Same permission as receiving a

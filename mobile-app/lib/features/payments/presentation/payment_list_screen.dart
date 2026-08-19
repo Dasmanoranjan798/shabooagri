@@ -7,12 +7,11 @@ import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/widgets/app_drawer.dart';
 import '../../../core/widgets/search_field.dart';
+import '../data/invoice_analysis.dart';
+import 'payment_filters.dart';
+import 'payment_list_screen_provider.dart';
+import 'widgets/payment_filters_dialog.dart';
 
-/// No offline table exists for invoices (Stage 2's offline layer never
-/// covered Payments/Invoices) — this is a live-only screen, same pattern as
-/// the Farmer portal's read-only invoice list, just company-wide in scope
-/// here since `GET /invoices` is scoped server-side per caller role
-/// (all company invoices for Owner/Manager, own only for a Farmer).
 class InvoiceSummary {
   final String id;
   final String invoiceNumber;
@@ -21,6 +20,7 @@ class InvoiceSummary {
   final double paidAmount;
   final double balanceAmount;
   final String invoiceDate;
+  final String? dueDate;
   final String customerName;
   final String villageName;
 
@@ -28,10 +28,11 @@ class InvoiceSummary {
       : id = json['id'] as String,
         invoiceNumber = json['invoiceNumber'] as String,
         status = json['status'] as String,
-        totalAmount = (json['totalAmount'] as num).toDouble(),
-        paidAmount = (json['paidAmount'] as num).toDouble(),
-        balanceAmount = (json['balanceAmount'] as num).toDouble(),
+        totalAmount = double.tryParse(json['totalAmount'].toString()) ?? 0.0,
+        paidAmount = double.tryParse(json['paidAmount'].toString()) ?? 0.0,
+        balanceAmount = double.tryParse(json['balanceAmount'].toString()) ?? 0.0,
         invoiceDate = json['invoiceDate'] as String,
+        dueDate = json['dueDate'] as String?,
         customerName = (json['customer'] as Map<String, dynamic>?)?['name'] as String? ?? 'Unknown',
         villageName = (json['customer'] as Map<String, dynamic>?)?['village']?['name'] as String? ?? '—';
 }
@@ -47,8 +48,8 @@ class AdvanceSummary {
 
   AdvanceSummary.fromJson(Map<String, dynamic> json)
       : customerName = (json['customer'] as Map<String, dynamic>?)?['name'] as String? ?? 'Unknown',
-        amount = (json['amount'] as num).toDouble(),
-        appliedAmount = (json['appliedAmount'] as num?)?.toDouble() ?? 0,
+        amount = double.tryParse(json['amount'].toString()) ?? 0.0,
+        appliedAmount = double.tryParse(json['appliedAmount']?.toString() ?? '0') ?? 0.0,
         paymentMethod = json['paymentMethod'] as String,
         receivedAt = json['receivedAt'] as String,
         notes = json['notes'] as String?,
@@ -57,6 +58,7 @@ class AdvanceSummary {
   double get balance => amount - appliedAmount;
 }
 
+// Keep original provider for Farmer app etc if needed
 final invoicesListProvider = FutureProvider<List<InvoiceSummary>>((ref) async {
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/invoices');
@@ -71,8 +73,6 @@ final advancesListProvider = FutureProvider<List<AdvanceSummary>>((ref) async {
   return (response.data as List<dynamic>).map((j) => AdvanceSummary.fromJson(j as Map<String, dynamic>)).toList();
 });
 
-enum _StatusFilter { all, unpaid, partiallyPaid, paid, voided }
-
 class PaymentListScreen extends ConsumerStatefulWidget {
   const PaymentListScreen({super.key});
 
@@ -82,44 +82,56 @@ class PaymentListScreen extends ConsumerStatefulWidget {
 
 class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
   String _query = '';
-  _StatusFilter _filter = _StatusFilter.all;
 
-  Future<void> _exportCsv(List<InvoiceSummary> invoices) async {
-    final buffer = StringBuffer('Invoice Number,Customer,Village,Total,Paid,Balance,Status,Date\n');
-    for (final i in invoices) {
+  Future<void> _exportCsv(InvoiceAnalysisResponse analysis) async {
+    final buffer = StringBuffer();
+    // Export Summary
+    buffer.writeln('PAYMENT OUTSTANDING REPORT');
+    buffer.writeln('Invoices:,${analysis.summary.invoicesCount}');
+    buffer.writeln('Total Invoiced:,₹${analysis.summary.totalInvoiced.toStringAsFixed(2)}');
+    buffer.writeln('Total Paid:,₹${analysis.summary.totalPaid.toStringAsFixed(2)}');
+    buffer.writeln('Outstanding:,₹${analysis.summary.totalOutstanding.toStringAsFixed(2)}');
+    buffer.writeln('Overdue Amount:,₹${analysis.summary.overdueAmount.toStringAsFixed(2)}');
+    buffer.writeln();
+    
+    // Details
+    buffer.writeln('Invoice Number,Customer,Village,Total,Paid,Balance,Status,Date,Due Date,Days Overdue');
+    for (final i in analysis.invoices) {
+      int daysOverdue = 0;
+      if (i.dueDate != null && i.balanceAmount > 0) {
+        final d = DateTime.parse(i.dueDate!);
+        daysOverdue = DateTime.now().difference(d).inDays;
+      }
       buffer.writeln(
-          '${i.invoiceNumber},${i.customerName},${i.villageName},${i.totalAmount.toStringAsFixed(2)},${i.paidAmount.toStringAsFixed(2)},${i.balanceAmount.toStringAsFixed(2)},${i.status},${i.invoiceDate.split('T').first}');
+          '${i.invoiceNumber},${i.customerName},${i.villageName},${i.totalAmount.toStringAsFixed(2)},${i.paidAmount.toStringAsFixed(2)},${i.balanceAmount.toStringAsFixed(2)},${i.status},${i.invoiceDate.split('T').first},${i.dueDate?.split('T').first ?? ''},$daysOverdue');
     }
     await Share.share(buffer.toString(), subject: 'ShabooAgri Payments Export');
   }
 
-  bool _matchesFilter(InvoiceSummary inv, _StatusFilter filter) {
-    switch (filter) {
-      case _StatusFilter.all:
-        return true;
-      case _StatusFilter.unpaid:
-        return inv.status == 'UNPAID';
-      case _StatusFilter.partiallyPaid:
-        return inv.status == 'PARTIALLY_PAID';
-      case _StatusFilter.paid:
-        return inv.status == 'PAID';
-      case _StatusFilter.voided:
-        return inv.status == 'VOIDED';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final invoicesAsync = ref.watch(invoicesListProvider);
+    final analysisAsync = ref.watch(invoicesAnalysisProvider);
     final advancesAsync = ref.watch(advancesListProvider);
     final user = ref.watch(currentUserProvider);
+    final filterState = ref.watch(paymentFilterProvider);
     final canReceive = user?.isOwnerOrManager ?? false;
 
     return Scaffold(
       drawer: const AppDrawer(currentRoute: '/payments'),
       appBar: AppBar(
-        title: const Text('Payments'),
+        title: const Text('Payments Analysis'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            tooltip: 'Advanced Filters',
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                builder: (_) => const PaymentFiltersDialog(),
+              );
+            },
+          ),
           if (canReceive)
             IconButton(
               icon: const Icon(Icons.savings),
@@ -135,21 +147,20 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
           IconButton(
             icon: const Icon(Icons.ios_share),
             tooltip: 'Export CSV',
-            onPressed: () => invoicesAsync.whenData(_exportCsv),
+            onPressed: () => analysisAsync.whenData(_exportCsv),
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              ref.invalidate(invoicesListProvider);
+              ref.invalidate(invoicesAnalysisProvider);
               ref.invalidate(advancesListProvider);
             },
           ),
         ],
       ),
-      body: invoicesAsync.when(
-        data: (invoices) {
-          final counts = {for (final f in _StatusFilter.values) f: invoices.where((i) => _matchesFilter(i, f)).length};
-          var filtered = invoices.where((i) => _matchesFilter(i, _filter)).toList();
+      body: analysisAsync.when(
+        data: (analysis) {
+          var filtered = analysis.invoices;
           if (_query.isNotEmpty) {
             filtered = filtered
                 .where((i) =>
@@ -158,18 +169,32 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                     i.villageName.toLowerCase().contains(_query))
                 .toList();
           }
-          final totalReceivables = invoices.fold<double>(0, (s, i) => s + i.totalAmount);
-          final totalCollected = invoices.fold<double>(0, (s, i) => s + i.paidAmount);
-          final outstandingBalance = invoices.fold<double>(0, (s, i) => s + i.balanceAmount);
           final advanceBalance = advancesAsync.valueOrNull?.fold<double>(0, (s, a) => s + a.balance) ?? 0;
+          
+          bool hasFilter = filterState.toJson().isNotEmpty;
 
           return RefreshIndicator(
             onRefresh: () async {
-              ref.invalidate(invoicesListProvider);
+              ref.invalidate(invoicesAnalysisProvider);
               ref.invalidate(advancesListProvider);
             },
             child: ListView(
               children: [
+                if (hasFilter)
+                   Container(
+                     padding: const EdgeInsets.all(8),
+                     color: Colors.amber.shade100,
+                     child: Row(
+                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                       children: [
+                         const Text('Filters Applied', style: TextStyle(fontWeight: FontWeight.bold)),
+                         TextButton(
+                           onPressed: () => ref.read(paymentFilterProvider.notifier).clearFilters(),
+                           child: const Text('Clear Filters'),
+                         )
+                       ]
+                     ),
+                   ),
                 Padding(
                   padding: const EdgeInsets.all(12.0),
                   child: GridView.count(
@@ -180,29 +205,18 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                     crossAxisSpacing: 8,
                     childAspectRatio: 2.2,
                     children: [
-                      _kpiCard('Total Invoices', '${invoices.length}', Colors.blueGrey),
-                      _kpiCard('Total Receivables', '₹${totalReceivables.toStringAsFixed(0)}', Colors.blue),
-                      _kpiCard('Total Collected', '₹${totalCollected.toStringAsFixed(0)}', Colors.green),
-                      _kpiCard('Outstanding Balance', '₹${outstandingBalance.toStringAsFixed(0)}',
-                          outstandingBalance > 0 ? Colors.red : Colors.green),
-                      _kpiCard('Advance Balance', '₹${advanceBalance.toStringAsFixed(0)}', Colors.purple),
+                      _kpiCard('Filtered Invoices', '${analysis.summary.invoicesCount}', Colors.blueGrey),
+                      _kpiCard('Total Invoiced', '₹${analysis.summary.totalInvoiced.toStringAsFixed(0)}', Colors.blue),
+                      _kpiCard('Total Collected', '₹${analysis.summary.totalPaid.toStringAsFixed(0)}', Colors.green),
+                      _kpiCard('Outstanding', '₹${analysis.summary.totalOutstanding.toStringAsFixed(0)}',
+                          analysis.summary.totalOutstanding > 0 ? Colors.red : Colors.green),
+                      _kpiCard('Overdue Amount', '₹${analysis.summary.overdueAmount.toStringAsFixed(0)}', Colors.redAccent),
                     ],
                   ),
                 ),
                 SearchField(
                   hintText: 'Search Invoice #, Customer, Village...',
                   onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
-                ),
-                FilterTabsRow<_StatusFilter>(
-                  selected: _filter,
-                  onSelected: (f) => setState(() => _filter = f),
-                  tabs: [
-                    (_StatusFilter.all, 'All', counts[_StatusFilter.all]!),
-                    (_StatusFilter.unpaid, 'Unpaid', counts[_StatusFilter.unpaid]!),
-                    (_StatusFilter.partiallyPaid, 'Partially Paid', counts[_StatusFilter.partiallyPaid]!),
-                    (_StatusFilter.paid, 'Paid', counts[_StatusFilter.paid]!),
-                    (_StatusFilter.voided, 'Voided', counts[_StatusFilter.voided]!),
-                  ],
                 ),
                 if (filtered.isEmpty)
                   const Padding(padding: EdgeInsets.all(24), child: Center(child: Text('No invoices match this view.')))
@@ -228,6 +242,35 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                                 ),
                         ),
                       )),
+                
+                // Analytics Section
+                const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text('Analytics', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
+                if (analysis.dayWiseCollection.isNotEmpty) ...[
+                   const ListTile(title: Text('Day-wise Collection', style: TextStyle(fontWeight: FontWeight.bold))),
+                   ...analysis.dayWiseCollection.map((d) => ListTile(
+                     title: Text(d['date']),
+                     trailing: Text('₹${(double.tryParse(d['amount'].toString()) ?? 0.0).toStringAsFixed(0)}'),
+                   )),
+                ],
+                if (analysis.methodWiseCollection.isNotEmpty) ...[
+                   const ListTile(title: Text('Payment Methods', style: TextStyle(fontWeight: FontWeight.bold))),
+                   ...analysis.methodWiseCollection.map((m) => ListTile(
+                     title: Text(m['method']),
+                     trailing: Text('₹${(double.tryParse(m['amount'].toString()) ?? 0.0).toStringAsFixed(0)}'),
+                   )),
+                ],
+                if (analysis.customerWise.isNotEmpty) ...[
+                   const ListTile(title: Text('Customer Outstanding', style: TextStyle(fontWeight: FontWeight.bold))),
+                   ...analysis.customerWise.map((c) => ListTile(
+                     title: Text(c['name']),
+                     subtitle: Text('Invoiced: ₹${c['invoiced']} | Paid: ₹${c['paid']}'),
+                     trailing: Text('₹${(double.tryParse(c['outstanding'].toString()) ?? 0.0).toStringAsFixed(0)}', style: TextStyle(color: c['outstanding'] > 0 ? Colors.red : Colors.green)),
+                   )),
+                ],
+
                 advancesAsync.when(
                   data: (advances) {
                     if (advances.isEmpty) return const SizedBox.shrink();
@@ -238,8 +281,6 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                         children: [
                           const Divider(),
                           const Text('Customer Advances', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          const Text('Money on file that isn\'t tied to an invoice yet.',
-                              style: TextStyle(fontSize: 12, color: Colors.grey)),
                           const SizedBox(height: 8),
                           ...advances.map((a) => Card(
                                 child: ListTile(

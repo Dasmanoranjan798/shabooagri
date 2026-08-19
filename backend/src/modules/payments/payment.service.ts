@@ -13,6 +13,7 @@ import type {
   CreateManualInvoiceInput,
   ReceivePaymentInput,
   RecordCustomerAdvanceInput,
+  FilterInvoicesInput,
 } from "./payment.validators";
 
 type JobWithRelations = Job & {
@@ -535,3 +536,24 @@ export function getDashboardPendingInvoices(companyId: string) {
   return paymentRepository.findPendingInvoices(companyId);
 }
 
+
+export async function filterInvoices(companyId: string, user: AuthenticatedUser, input: FilterInvoicesInput) {
+  const scope = await resolveCallerScope(companyId, user);
+  const options: { customerId?: string } = {};
+  
+  if (scope.kind === "customer") {
+    options.customerId = scope.customerId;
+  } else if (scope.kind === "driver" || scope.kind === "none") {
+    return {
+      invoices: [],
+      summary: {
+        invoicesCount: 0, totalInvoiced: 0, totalPaid: 0, totalOutstanding: 0,
+        overdueAmount: 0, paidCount: 0, partialCount: 0, unpaidCount: 0,
+        overdueCount: 0, dueTodayCount: 0, dueSoonCount: 0,
+      },
+      dayWiseCollection: [], methodWiseCollection: [], customerWise: [], villageWise: [],
+    };
+  }
+
+  return invoiceRepository.filterInvoicesWithAnalytics(companyId, input, options);
+}

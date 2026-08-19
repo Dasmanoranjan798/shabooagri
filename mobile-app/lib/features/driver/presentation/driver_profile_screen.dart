@@ -18,8 +18,8 @@ class _CompensationSummary {
   _CompensationSummary.fromJson(Map<String, dynamic> json)
       : compensationType = json['compensationType'] as String,
         totalCompletedJobs = json['totalCompletedJobs'] as int,
-        totalWorkedHours = (json['totalWorkedHours'] as num).toDouble(),
-        calculatedEarnings = (json['calculatedEarnings'] as num).toDouble(),
+        totalWorkedHours = (double.tryParse(json['totalWorkedHours'].toString()) ?? 0.0),
+        calculatedEarnings = (double.tryParse(json['calculatedEarnings'].toString()) ?? 0.0),
         explanation = json['explanation'] as String;
 }
 

@@ -59,8 +59,8 @@ export const DownloadAppPage: React.FC = () => {
                 </h3>
                 <div style={{ display: "flex", justifyContent: "center" }}>
                   <a
-                    href="/downloads/shabooagri-v0.5.0.apk"
-                    download="shabooagri-v0.5.0.apk"
+                    href="/downloads/shabooagri-v0.6.0.apk"
+                    download="shabooagri-v0.6.0.apk"
                     className="pf-btn pf-btn-primary"
                     style={{
                       textDecoration: "none",
@@ -70,7 +70,7 @@ export const DownloadAppPage: React.FC = () => {
                     }}
                   >
                     <Download size={20} />
-                    Download APK (v0.5.0)
+                    Download APK (v0.6.0)
                   </a>
                 </div>
               </div>
@@ -82,7 +82,7 @@ export const DownloadAppPage: React.FC = () => {
                   iPhone / iPad
                 </h3>
                 <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem", margin: 0 }}>
-                  <em>v0.5.0 submission pending. Will be available via TestFlight / App Store.</em>
+                  <em>v0.6.0 submission pending. Will be available via TestFlight / App Store.</em>
                 </p>
               </div>
 
@@ -159,7 +159,7 @@ export const DownloadAppPage: React.FC = () => {
                 }}
               >
                 <Info size={24} color="var(--color-primary)" />
-                What's New in v0.5.0
+                What's New in v0.6.0
               </h2>
               <ul
                 style={{
@@ -171,13 +171,12 @@ export const DownloadAppPage: React.FC = () => {
                   gap: 8,
                 }}
               >
-                <li><strong>NEW</strong> Windows application (pending artifact compilation)</li>
-                <li><strong>NEW</strong> macOS application (pending artifact compilation)</li>
-                <li><strong>NEW</strong> iOS application (pending store submission)</li>
-                <li><strong>IMPROVED</strong> Responsive desktop layouts</li>
-                <li><strong>IMPROVED</strong> Cross-platform local storage and sync architecture</li>
-                <li><strong>FIXED</strong> Machine creation validation</li>
-                <li><strong>FIXED</strong> Dashboard authentication/session handling</li>
+                <li>Payment collection improvements</li>
+                <li>Advanced payment filters</li>
+                <li>Outstanding analysis</li>
+                <li>Day-wise collection</li>
+                <li>Payment export</li>
+                <li>Bug fixes</li>
               </ul>
               <div
                 style={{

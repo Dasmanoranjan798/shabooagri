@@ -21,7 +21,7 @@ class ExpenseSummary {
 
   ExpenseSummary.fromJson(Map<String, dynamic> json)
       : id = json['id'] as String,
-        amount = (json['amount'] as num).toDouble(),
+        amount = (double.tryParse(json['amount'].toString()) ?? 0.0),
         description = json['description'] as String?,
         expenseDate = json['expenseDate'] as String,
         categoryId = (json['category'] as Map<String, dynamic>?)?['id'] as String? ?? '',

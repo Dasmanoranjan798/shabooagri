@@ -15,7 +15,7 @@ class FuelEntry {
 
   FuelEntry.fromJson(Map<String, dynamic> json)
       : machineRegistration = (json['machine'] as Map<String, dynamic>)['registrationNumber'] as String,
-        litres = (json['litres'] as num).toDouble(),
+        litres = (double.tryParse(json['litres'].toString()) ?? 0.0),
         cost = (json['cost'] as num?)?.toDouble(),
         recordedAt = json['recordedAt'] as String,
         recordedByName = (json['recorder'] as Map<String, dynamic>?)?['fullName'] as String? ?? 'Unknown';
