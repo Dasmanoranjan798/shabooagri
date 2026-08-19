@@ -300,3 +300,24 @@ Discovered a much better data source than expected: the backend has a purpose-bu
 **Jobs module status: effectively closed** for this pass — remaining items are disclosed, non-blocking display/polish gaps, not correctness gaps.
 
 ---
+
+## Checkpoint 5: Team module (new) — entirely new module, closed
+
+Company-wide staff/user-account management, distinct from Employees (HR records) — this was the one module the original audit found with *zero* mobile equivalent at all.
+
+- New `lib/features/team/data/team_models.dart`: `TeamUser`, `StaffInvite`, `RoleOption`, `CreateInviteResult`, field-for-field matching `frontend/src/types/team.ts`.
+- New `lib/features/team/presentation/team_screen.dart` (route `/team`, added to the Owner/Manager `AppDrawer`): Current Staff section (`GET /team/users`) as cards with a Deactivate/Reactivate icon button (confirm dialog, `PATCH /team/users/:id/status`); Pending Invites section (`GET /team/invites` filtered client-side to `PENDING`, matching the website's own client-side split) with Revoke (confirm dialog, `PATCH /team/invites/:id/revoke`); Invite History section (non-`PENDING` invites, shown only when non-empty, matching website's conditional render).
+- New `lib/features/team/presentation/invite_staff_screen.dart` (route `/team/invite`): Full Name, Role dropdown (new `GET /rbac/roles` fetch), Email, Phone, and a Village dropdown that only appears when the selected role's `systemKey == 'farmer'` (reusing the already-built `villagesListProvider` rather than adding a second village fetch) — same conditional-field behavior as `InviteStaffModal.tsx`. Client-side validation mirrors the website exactly: name required, role required, at least one of email/phone required, village required only for farmer-role invites. Posts to `POST /team/invites`, payload matches `createInviteSchema` (read from `staffInvite.validators.ts` before writing the Dart, not inferred from the frontend TS type — `villageId` is `.optional()`, not required, so it's only sent when actually set). On success, shows the same result screen the website does: `email`/`sms` delivery methods show a green confirmation banner; `manual_link`/`email_failed` shows the invite link in a copyable box (`Clipboard.setData`) plus a "Share via WhatsApp" button when a phone was given (`wa.me` deep link, message text copied verbatim from `InviteStaffModal.tsx`'s template — same pattern already established for Payments' receipt WhatsApp share in Checkpoint 3).
+- Confirmed `user.manage` (the permission gating every `/team/*` route server-side, per `staffInvite.routes.ts`) is held by both Owner and Manager by reading `backend/src/shared/seedData.ts` directly, not assumed — so gating the drawer entry on the existing `isOwnerOrManager` check (the same pattern used for every other admin module in this app) is correct and required no new permission-list plumbing on the mobile side.
+
+**Self-test:**
+- `flutter analyze`: clean — 0 errors (same 4 pre-existing style-only infos as Checkpoint 4, untouched).
+- `flutter test`: passes.
+- Live-curled all 6 endpoints touched: `GET /team/users`, `GET /team/invites`, `PATCH /team/users/:id/status`, `POST /team/invites`, `PATCH /team/invites/:id/revoke`, `GET /rbac/roles` — all 401, all real routes, none 404.
+- Verified field names against source, not the frontend TS types, for the two payloads that matter most (`createInviteSchema`, `setUserStatusSchema`) — `staffInvite.validators.ts`.
+
+**PARITY_INVENTORY.md updated:** TEAM → ✅ Full (from 🔴 Not Started).
+
+**No remaining known gaps in this module.**
+
+---

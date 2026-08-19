@@ -30,6 +30,7 @@ class AppDrawer extends ConsumerWidget {
     _DrawerItem('Villages', Icons.location_city, '/villages'),
     _DrawerItem('Payments', Icons.receipt_long, '/payments'),
     _DrawerItem('Employees', Icons.groups, '/employees'),
+    _DrawerItem('Team', Icons.admin_panel_settings, '/team'),
     _DrawerItem('Expenses', Icons.money_off, '/expenses'),
     _DrawerItem('Maintenance', Icons.build, '/maintenance'),
     _DrawerItem('Fuel', Icons.local_gas_station, '/fuel'),
