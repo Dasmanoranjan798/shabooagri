@@ -56,7 +56,7 @@ class JobActionsRepository {
 
   Future<JobDetail> submit(String id, {double? completedAcres}) async {
     final response = await _dio.post('/jobs/$id/submit', data: {
-      if (completedAcres != null) 'completedAcres': completedAcres,
+      'completedAcres': ?completedAcres,
     });
     return JobDetail.fromJson(response.data as Map<String, dynamic>);
   }
@@ -69,7 +69,7 @@ class JobActionsRepository {
   Future<void> addFuelEntry(String id, double litres, double? cost) async {
     await _dio.post('/jobs/$id/fuel-entries', data: {
       'litres': litres,
-      if (cost != null) 'cost': cost,
+      'cost': ?cost,
     });
   }
 

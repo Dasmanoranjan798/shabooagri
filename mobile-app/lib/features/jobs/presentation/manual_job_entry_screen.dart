@@ -115,7 +115,7 @@ class _ManualJobEntryScreenState extends ConsumerState<ManualJobEntryScreen> {
         'rate': rate,
         'startTime': _combine(_workDate, _startTime).toIso8601String(),
         'endTime': _combine(_workDate, _endTime).toIso8601String(),
-        if (overrideHours != null) 'actualHours': overrideHours,
+        'actualHours': ?overrideHours,
         if (_acresController.text.trim().isNotEmpty) 'completedAcres': double.tryParse(_acresController.text.trim()),
         if (_fuelController.text.trim().isNotEmpty) 'fuelUsedLitres': double.tryParse(_fuelController.text.trim()),
         if (_notesController.text.trim().isNotEmpty) 'notes': _notesController.text.trim(),

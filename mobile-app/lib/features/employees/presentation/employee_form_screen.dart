@@ -134,7 +134,7 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
       if (_roleTitleController.text.trim().isNotEmpty) 'roleTitle': _roleTitleController.text.trim(),
       'employmentStatus': _employmentStatus,
       'compensationType': _compensationType,
-      if (rate != null) _rateFieldKey: rate,
+      _rateFieldKey: ?rate,
       if (_joinedDate != null) 'joinedDate': _joinedDate!.toIso8601String(),
     };
     try {
