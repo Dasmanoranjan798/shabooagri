@@ -5,7 +5,6 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../customers/presentation/customer_list_screen.dart';
-import 'record_advance_screen.dart'; // Just using the route or we can redirect to it
 
 class TakePaymentScreen extends ConsumerStatefulWidget {
   final String? preselectedCustomerId;
@@ -96,9 +95,9 @@ class _TakePaymentScreenState extends ConsumerState<TakePaymentScreen> {
                  const Text('Select Farmer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                  const SizedBox(height: 8),
                  DropdownButtonFormField<String>(
-                   value: _selectedCustomerId,
+                   initialValue: _selectedCustomerId,
                    decoration: const InputDecoration(labelText: 'Farmer'),
-                   items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text('${c.name} - ${c.villageName ?? ''}'))).toList(),
+                   items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text('${c.name} - ${c.villageName}'))).toList(),
                    onChanged: (v) {
                      if (v != null) _fetchSummary(v);
                    },

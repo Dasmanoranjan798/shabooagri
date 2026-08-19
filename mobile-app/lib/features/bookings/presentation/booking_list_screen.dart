@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../core/widgets/quick_action_bar.dart';
-import '../../../core/widgets/status_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';

@@ -5,10 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
-import '../../../core/providers/company_profile_provider.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/widgets/app_drawer.dart';
-import '../../../core/widgets/confirm_delete.dart';
 import '../../../core/widgets/search_field.dart';
 
 class DriverSummary {
@@ -70,11 +68,11 @@ class _DriverListScreenState extends ConsumerState<DriverListScreen> {
   @override
   Widget build(BuildContext context) {
     final driversAsync = ref.watch(driversListProvider);
-    final profileAsync = ref.watch(companyProfileProvider);
+    
     final user = ref.watch(currentUserProvider);
     final canManage = user?.isOwnerOrManager ?? false;
-    final canDelete = user?.roleSystemKey == 'owner';
-    final licenseAlertDays = profileAsync.valueOrNull?.licenseAlertDays ?? 30;
+    
+    
 
     return Scaffold(
       drawer: const AppDrawer(currentRoute: '/drivers'),
@@ -128,12 +126,6 @@ class _DriverListScreenState extends ConsumerState<DriverListScreen> {
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
                           final driver = filtered[index];
-                          final licenseWarn = expiryWarning(
-                            expiryDate: driver.licenseExpiryDate,
-                            alertDays: licenseAlertDays,
-                            overdueLabel: 'License Expired',
-                            dueSoonLabel: 'License Expires',
-                          );
                           return Card(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: Padding(

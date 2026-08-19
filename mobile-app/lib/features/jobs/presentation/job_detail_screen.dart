@@ -467,17 +467,17 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
   Widget _buildTimerCard(JobDetail job, int? displaySeconds, double? liveAmount) {
     final isLocked = job.status == 'COMPLETED' || job.status == 'CANCELLED';
     if (displaySeconds == null && !isLocked) return const SizedBox.shrink();
-    if (displaySeconds == null) displaySeconds = 0;
+    displaySeconds ??= 0;
     
     final timerColor = job.status == 'WORKING' ? AppTheme.primary : 
                        job.status == 'PAUSED' ? AppTheme.warning : 
                        job.status == 'COMPLETED' ? AppTheme.success : AppTheme.textMuted;
 
     return Card(
-      color: timerColor.withOpacity(0.05),
+      color: timerColor.withValues(alpha: 0.05),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: timerColor.withOpacity(0.3), width: 1.5),
+        side: BorderSide(color: timerColor.withValues(alpha: 0.3), width: 1.5),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
@@ -508,7 +508,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
                 child: Text('₹${liveAmount.toStringAsFixed(0)} — updates live', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
               )
             ] else if (job.rate != null && job.pricingLabel != null) ...[

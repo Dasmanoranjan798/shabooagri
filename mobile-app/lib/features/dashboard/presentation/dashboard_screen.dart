@@ -281,10 +281,10 @@ class DashboardScreen extends ConsumerWidget {
 
   Widget _kpiCard(String title, String value, double? deltaPercent, Color color) {
     return Card(
-      color: color.withOpacity(0.05),
+      color: color.withValues(alpha: 0.05),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: color.withOpacity(0.2)),
+        side: BorderSide(color: color.withValues(alpha: 0.2)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -292,9 +292,9 @@ class DashboardScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color.withOpacity(0.8)), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color.withValues(alpha: 0.8)), maxLines: 1, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 6),
-            Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color.withOpacity(1.0))),
+            Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color.withValues(alpha: 1.0))),
             if (deltaPercent != null) ...[
               const SizedBox(height: 4),
               Row(

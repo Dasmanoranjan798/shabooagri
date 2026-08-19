@@ -4,13 +4,11 @@ import "package:dio/dio.dart";
 import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_client.dart';
-import '../../../core/network/api_error.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../customers/presentation/customer_list_screen.dart';
 import '../../drivers/presentation/driver_list_screen.dart';
 import '../../machines/presentation/machine_list_screen.dart';
 import '../../villages/presentation/village_list_screen.dart';
-import '../data/job_actions_repository.dart';
 
 class FastJobCreateScreen extends ConsumerStatefulWidget {
   const FastJobCreateScreen({super.key});
@@ -51,8 +49,10 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
       _error = null;
     });
 
+    String? bookingId;
+    final dio = ref.read(apiClientProvider);
+
     try {
-      final dio = ref.read(apiClientProvider);
       final res = await dio.post('/bookings', data: {
         'customerId': _customerId,
         'villageId': _villageId,
@@ -64,38 +64,10 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
         'ignoreConflict': _ignoreConflict,
       });
 
-      final bookingId = res.data['id'] as String;
-      
-      // Attempt to set pricing if provided
-      if (_rateController.text.trim().isNotEmpty) {
-        final rate = double.tryParse(_rateController.text.trim());
-        if (rate != null) {
-          await dio.put('/jobs/by-booking/$bookingId/pricing', data: {
-            'pricingMethodId': 'HOURLY', // Simplified default based on standard
-            'rate': rate,
-          });
-        }
-      }
-
-      // Automatically fetch the jobId and go to it
-      final jobActions = ref.read(jobActionsRepositoryProvider);
-      
-      if (mounted) {
-        // Wait briefly for triggers/sync
-        await Future.delayed(const Duration(milliseconds: 500));
-        
-        // Find the job ID by booking ID (we know booking = job 1:1 generally)
-        final getBooking = await dio.get('/bookings/$bookingId');
-        final jobCards = getBooking.data['jobCards'] as List;
-        if (jobCards.isNotEmpty) {
-           final jobId = jobCards.first['id'] as String;
-           context.go('/jobs/$jobId');
-        } else {
-           context.go('/bookings/$bookingId'); // Fallback
-        }
-      }
+      bookingId = res.data['id'] as String;
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 409) {
+        if (!mounted) return;
         final errorMsg = e.response?.data?['error']?.toString() ?? '';
         final match = RegExp(r'(BK-\d+)').firstMatch(errorMsg);
         final bkNumber = match?.group(1) ?? 'Unknown';
@@ -120,9 +92,39 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
           return; // Cancelled
         }
       }
-      setState(() => _error = apiErrorMessage(e));
-    } finally {
-      if (mounted) setState(() => _saving = false);
+      
+      setState(() {
+        _error = 'Failed to create job: ${e.toString()}';
+        _saving = false;
+      });
+      return;
+    }
+
+    try {
+      if (_rateController.text.trim().isNotEmpty) {
+        final rate = double.tryParse(_rateController.text.trim());
+        if (rate != null) {
+          await dio.put('/jobs/by-booking/$bookingId/pricing', data: {
+            'pricingMethodId': 'HOURLY', // Simplified default based on standard
+            'rate': rate,
+          });
+        }
+      }
+
+      if (mounted) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        final getBooking = await dio.get('/bookings/$bookingId');
+        if (!mounted) return;
+        final jobCards = getBooking.data['jobCards'] as List;
+        if (jobCards.isNotEmpty) {
+           final jobId = jobCards.first['id'] as String;
+           context.go('/jobs/$jobId');
+        } else {
+           context.go('/bookings/$bookingId'); // Fallback
+        }
+      }
+    } catch (e) {
+      if (mounted) context.go('/bookings/$bookingId');
     }
   }
 
@@ -152,7 +154,7 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
                   
                   // 1. Farmer Selection
                   DropdownButtonFormField<String>(
-                    value: _customerId,
+                    initialValue: _customerId,
                     decoration: const InputDecoration(labelText: 'Farmer (Customer) *'),
                     items: [const DropdownMenuItem(value: 'NEW', child: Text('+ Add Farmer', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold))), ...customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))],
                     onChanged: (v) {
@@ -160,7 +162,7 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
                          _customerId = v;
                          // Smart linked data: Auto-select village based on customer
                          final customer = customers.firstWhere((c) => c.id == v);
-                         if (customer.villageName != null) {
+                         if (customer.villageName.isNotEmpty) {
                            final villageMatch = villages.firstWhere((vil) => vil.name == customer.villageName, orElse: () => villages.first);
                            _villageId = villageMatch.id;
                          }
@@ -171,7 +173,7 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
 
                   // 2. Village
                   DropdownButtonFormField<String>(
-                    value: _villageId,
+                    initialValue: _villageId,
                     decoration: const InputDecoration(labelText: 'Village *'),
                     items: [const DropdownMenuItem(value: 'NEW', child: Text('+ Add Village', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold))), ...villages.map((v) => DropdownMenuItem(value: v.id, child: Text(v.name)))],
                     onChanged: (v) async {
@@ -192,7 +194,7 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
                   
                   // 4. Machine
                   DropdownButtonFormField<String>(
-                    value: _machineId,
+                    initialValue: _machineId,
                     decoration: const InputDecoration(labelText: 'Machine *'),
                     items: [const DropdownMenuItem(value: 'NEW', child: Text('+ Add Machine', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold))), ...machines.map((m) => DropdownMenuItem(value: m.id, child: Text('${m.registrationNumber} - ${m.status}')))],
                     onChanged: (v) async {
@@ -206,7 +208,7 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
 
                   // 5. Driver
                   DropdownButtonFormField<String>(
-                    value: _driverId,
+                    initialValue: _driverId,
                     decoration: const InputDecoration(labelText: 'Driver *'),
                     items: [const DropdownMenuItem(value: 'NEW', child: Text('+ Add Driver', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold))), ...drivers.map((d) => DropdownMenuItem(value: d.id, child: Text('${d.name} - ${d.availabilityStatus}')))],
                     onChanged: (v) async {

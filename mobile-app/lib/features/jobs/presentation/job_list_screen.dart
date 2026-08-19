@@ -3,7 +3,6 @@ import '../../../core/widgets/quick_action_bar.dart';
 import '../../../core/widgets/status_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/widgets/app_drawer.dart';
@@ -25,16 +24,6 @@ enum _JobFilter { all, awaitingMachine, readyToStart, inProgress, completed, can
 /// assignment readiness rather than a driver's own schedule.
 enum _DriverFilter { all, active, upcoming, done }
 
-String _fmtDateRelative(DateTime? date) {
-  if (date == null) return '—';
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final tomorrow = today.add(const Duration(days: 1));
-  final d = DateTime(date.year, date.month, date.day);
-  if (d == today) return 'Today';
-  if (d == tomorrow) return 'Tomorrow';
-  return DateFormat('d MMM yyyy').format(date);
-}
 
 class JobListScreen extends ConsumerStatefulWidget {
   const JobListScreen({super.key});
@@ -92,34 +81,6 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
     }
   }
 
-  String _statusLabel(JobDetail job) {
-    if (job.status == 'NOT_STARTED') {
-      final isReady = job.machineRegistration != null && job.driverName != null;
-      return isReady ? 'Ready to Start' : 'Awaiting Machine';
-    }
-    return job.status;
-  }
-
-  /// Plain status label for Driver rows — matches `DriverJobsPage.tsx`'s
-  /// own `statusLabel()`, deliberately NOT the Owner/Manager
-  /// "Awaiting Machine"/"Ready to Start" framing above (a driver's own
-  /// jobs are already assigned to them by the time they see them here).
-  String _driverStatusLabel(String status) {
-    switch (status) {
-      case 'NOT_STARTED':
-        return 'Not Started';
-      case 'WORKING':
-        return 'Working';
-      case 'PAUSED':
-        return 'Paused';
-      case 'STOPPED':
-        return 'Stopped';
-      case 'COMPLETED':
-        return 'Completed';
-      default:
-        return status;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {

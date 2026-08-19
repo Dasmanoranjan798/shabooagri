@@ -63,7 +63,7 @@ class _StatusBadgeState extends State<StatusBadge> with SingleTickerProviderStat
       decoration: BoxDecoration(
         color: widget.backgroundColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: widget.color.withOpacity(0.3)),
+        border: Border.all(color: widget.color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -79,7 +79,7 @@ class _StatusBadgeState extends State<StatusBadge> with SingleTickerProviderStat
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: widget.color.withOpacity(0.5),
+                      color: widget.color.withValues(alpha: 0.5),
                       blurRadius: 4,
                       spreadRadius: 1,
                     )
@@ -133,19 +133,19 @@ class MachineStatusBadge extends StatelessWidget {
       return StatusBadge(
         label: 'AVAILABLE',
         color: AppTheme.success,
-        backgroundColor: AppTheme.success.withOpacity(0.1),
+        backgroundColor: AppTheme.success.withValues(alpha: 0.1),
       );
     } else if (s == 'REPAIR') {
       return StatusBadge(
         label: 'MAINTENANCE',
         color: AppTheme.warning,
-        backgroundColor: AppTheme.warning.withOpacity(0.1),
+        backgroundColor: AppTheme.warning.withValues(alpha: 0.1),
       );
     } else {
       return StatusBadge(
         label: 'OFFLINE',
         color: AppTheme.danger,
-        backgroundColor: AppTheme.danger.withOpacity(0.1),
+        backgroundColor: AppTheme.danger.withValues(alpha: 0.1),
       );
     }
   }
@@ -170,7 +170,7 @@ class DriverStatusBadge extends StatelessWidget {
       return StatusBadge(
         label: 'AVAILABLE',
         color: AppTheme.success,
-        backgroundColor: AppTheme.success.withOpacity(0.1),
+        backgroundColor: AppTheme.success.withValues(alpha: 0.1),
       );
     } else {
       return StatusBadge(
@@ -207,19 +207,19 @@ class JobStatusBadge extends StatelessWidget {
       return StatusBadge(
         label: 'PAUSED',
         color: AppTheme.warning,
-        backgroundColor: AppTheme.warning.withOpacity(0.1),
+        backgroundColor: AppTheme.warning.withValues(alpha: 0.1),
       );
     } else if (s == 'COMPLETED') {
       return StatusBadge(
         label: 'COMPLETED',
         color: AppTheme.success,
-        backgroundColor: AppTheme.success.withOpacity(0.1),
+        backgroundColor: AppTheme.success.withValues(alpha: 0.1),
       );
     } else if (s == 'CANCELLED') {
       return StatusBadge(
         label: 'CANCELLED',
         color: AppTheme.danger,
-        backgroundColor: AppTheme.danger.withOpacity(0.1),
+        backgroundColor: AppTheme.danger.withValues(alpha: 0.1),
       );
     }
     return StatusBadge(

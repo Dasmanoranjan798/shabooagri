@@ -1,0 +1,170 @@
+import re
+
+with open('lib/features/jobs/presentation/fast_job_create_screen.dart', 'r') as f:
+    text = f.read()
+
+original = """    try {
+      final dio = ref.read(apiClientProvider);
+      final res = await dio.post('/bookings', data: {
+        'customerId': _customerId,
+        'villageId': _villageId,
+        'workDescription': _workController.text.trim(),
+        'machineId': _machineId,
+        'driverId': _driverId,
+        'scheduledDate': DateTime.now().toIso8601String(),
+        'estimatedHours': _estimateHoursController.text.trim().isNotEmpty ? double.tryParse(_estimateHoursController.text.trim()) : null,
+        'ignoreConflict': _ignoreConflict,
+      });
+
+      final bookingId = res.data['id'] as String;
+      
+      // Attempt to set pricing if provided
+      if (_rateController.text.trim().isNotEmpty) {
+        final rate = double.tryParse(_rateController.text.trim());
+        if (rate != null) {
+          await dio.put('/jobs/by-booking/$bookingId/pricing', data: {
+            'pricingMethodId': 'HOURLY', // Simplified default based on standard
+            'rate': rate,
+          });
+        }
+      }
+
+      // Automatically fetch the jobId and go to it
+      
+      if (mounted) {
+        // Wait briefly for triggers/sync
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        // Find the job ID by booking ID (we know booking = job 1:1 generally)
+        final getBooking = await dio.get('/bookings/$bookingId');
+        final jobCards = getBooking.data['jobCards'] as List;
+        if (jobCards.isNotEmpty) {
+           final jobId = jobCards.first['id'] as String;
+           context.go('/jobs/$jobId');
+        } else {
+           context.go('/bookings/$bookingId'); // Fallback
+        }
+      }
+    } catch (e) {
+      if (e is DioException && e.response?.statusCode == 409) {
+        final errorMsg = e.response?.data?['error']?.toString() ?? '';
+        final match = RegExp(r'(BK-\d+)').firstMatch(errorMsg);
+        final bkNumber = match?.group(1) ?? 'Unknown';
+        
+        setState(() => _saving = false);
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Machine & Driver Currently Working'),
+            content: Text('This machine and driver are currently assigned to another job.\\n\\nCurrent Job: $bkNumber\\n\\nDo you want to book them for this?'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
+              ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('BOOK ANYWAY')),
+            ],
+          ),
+        );
+        
+        if (confirm == true) {
+          setState(() => _ignoreConflict = true);
+          return _submit(); // Retry
+        } else {
+          return; // Cancelled
+        }
+      }
+      
+      setState(() {
+        _error = 'Failed to create job: ${e.toString()}';
+        _saving = false;
+      });
+    }"""
+
+# Need to fix the literal `\n\n` in the original text representation above, 
+# it's better to just do a string find for the start and end of the block.
+
+start_str = "    try {\n      final dio = ref.read(apiClientProvider);"
+end_str = "      });\n    }"
+
+start_idx = text.find(start_str)
+end_idx = text.find(end_str, start_idx) + len(end_str)
+
+new_code = """    String? bookingId;
+    final dio = ref.read(apiClientProvider);
+    try {
+      final res = await dio.post('/bookings', data: {
+        'customerId': _customerId,
+        'villageId': _villageId,
+        'workDescription': _workController.text.trim(),
+        'machineId': _machineId,
+        'driverId': _driverId,
+        'scheduledDate': DateTime.now().toIso8601String(),
+        'estimatedHours': _estimateHoursController.text.trim().isNotEmpty ? double.tryParse(_estimateHoursController.text.trim()) : null,
+        'ignoreConflict': _ignoreConflict,
+      });
+
+      bookingId = res.data['id'] as String;
+    } catch (e) {
+      if (e is DioException && e.response?.statusCode == 409) {
+        if (!mounted) return;
+        final errorMsg = e.response?.data?['error']?.toString() ?? '';
+        final match = RegExp(r'(BK-\d+)').firstMatch(errorMsg);
+        final bkNumber = match?.group(1) ?? 'Unknown';
+        
+        setState(() => _saving = false);
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Machine & Driver Currently Working'),
+            content: Text('This machine and driver are currently assigned to another job.\\n\\nCurrent Job: $bkNumber\\n\\nDo you want to book them for this?'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
+              ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('BOOK ANYWAY')),
+            ],
+          ),
+        );
+        
+        if (confirm == true) {
+          setState(() => _ignoreConflict = true);
+          return _submit(); // Retry
+        } else {
+          return; // Cancelled
+        }
+      }
+      
+      setState(() {
+        _error = 'Failed to create job: ${e.toString()}';
+        _saving = false;
+      });
+      return;
+    }
+
+    try {
+      if (_rateController.text.trim().isNotEmpty) {
+        final rate = double.tryParse(_rateController.text.trim());
+        if (rate != null) {
+          await dio.put('/jobs/by-booking/$bookingId/pricing', data: {
+            'pricingMethodId': 'HOURLY', // Simplified default based on standard
+            'rate': rate,
+          });
+        }
+      }
+
+      if (mounted) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        final getBooking = await dio.get('/bookings/$bookingId');
+        if (!mounted) return;
+        final jobCards = getBooking.data['jobCards'] as List;
+        if (jobCards.isNotEmpty) {
+           final jobId = jobCards.first['id'] as String;
+           context.go('/jobs/$jobId');
+        } else {
+           context.go('/bookings/$bookingId'); // Fallback
+        }
+      }
+    } catch (e) {
+      if (mounted) context.go('/bookings/$bookingId');
+    }"""
+
+new_text = text[:start_idx] + new_code.replace('\\n', '\n') + text[end_idx:]
+
+with open('lib/features/jobs/presentation/fast_job_create_screen.dart', 'w') as f:
+    f.write(new_text)
