@@ -372,3 +372,30 @@ Closes every 🔴/🟡 Driver-role item in PARITY_INVENTORY.md. Driver previousl
 **Needs real-device testing:** the tab-persistence fix (navigate to a job from Job Cards tab, submit/cancel out, confirm it returns to Job Cards not Home); the 5s-ticking live timer on the Home spotlight card; Navigate button actually opening Google Maps with a sensible location on a real phone; the driver-compensation lookup actually resolving for a real driver login (the matching logic is verified against source but never executed against live data in this environment).
 
 ---
+
+## Checkpoint 8: Farmer/Customer portal role surface — Home, Bookings, Invoices, Profile, bottom nav
+
+Closes every 🔴/🟡 Farmer-role item in PARITY_INVENTORY.md. Farmer previously landed on one combined flat Bookings+Invoices list with no Home/greeting/KPI/filter/expandable-detail/Profile/bottom-nav at all.
+
+- **New `lib/features/farmer/data/farmer_models.dart`**: `FarmerBooking` (id, bookingNumber, scheduledDate, createdAt, workDescription, villageName, machineRegistration, machineBrand, pricingLabel, pricingUnit, rate, notes — parsed from `GET /bookings`, field names confirmed against `booking.repository.ts`'s `includeRelations` and the `Booking` Prisma model directly, not the old flat model the Owner/Manager Bookings screen still uses) and `FarmerInvoice` (id, invoiceNumber, createdAt, dueDate, totalAmount, paidAmount, balanceAmount, status, bookingNumber — from `GET /invoices`). Also two shared helpers, `farmerJobBadge()` and `farmerBookingFinalAmount()`, copied field-for-field from `FarmerBookingsPage.tsx`'s `jobBadge()`/`computeFinalAmount()` — both key off the linked Job's status (via the already-existing `jobsListProvider`/`JobDetail`, reused rather than re-fetched), not the booking's own legacy status.
+- **Real dead-code finding, disclosed rather than silently copied:** the website's `Invoice` TypeScript type declares a `notes` field and `FarmerInvoicesPage.tsx` conditionally renders a "Notes:" block for it, but the Prisma `Invoice` model has no `notes` column at all (only `description`, which is unrelated — a booking-less manual invoice's reason text). Confirmed by reading both the type file and `schema.prisma` directly. That block on the website never actually renders for any real invoice; mobile does not reproduce it.
+- **New `lib/features/farmer/presentation/farmer_home_screen.dart`**: greeting banner, 3 KPI cards (Total Bookings/Active/Balance Due — Active computed as "linked job is null or not COMPLETED/CANCELLED", matching `FarmerHomePage.tsx` exactly), 3 most-recent bookings by `createdAt` with status badges, "See all →" switching the shell's tab index.
+- **New `lib/features/farmer/presentation/farmer_bookings_screen.dart`**: All/Active/Awaiting/Done filter chips (predicates copied verbatim from `matchesFilter()` in `FarmerBookingsPage.tsx`), expandable cards (Work Needed/Village/Machine/Pricing/Rate/Total/Notes) using `farmerJobBadge`/`farmerBookingFinalAmount`.
+- **New `lib/features/farmer/presentation/farmer_invoices_screen.dart`**: KPI row (Total Invoices/Total Paid/Balance Due), All/Unpaid/Partial/Paid filter chips with live counts, expandable cards (Total/Paid/Balance/Booking/Due Date).
+- **New `lib/features/farmer/presentation/farmer_profile_screen.dart`**: profile card, details grid, shared `ChangePasswordCard` (built in Checkpoint 6), Sign Out — structurally identical to `DriverProfileScreen` minus the compensation section, matching the website's own near-duplication between `DriverProfilePage.tsx`/`FarmerProfilePage.tsx`.
+- **New `lib/features/farmer/presentation/farmer_shell_screen.dart`**: 4-tab `NavigationBar` (Home/Bookings/Invoices/Profile) via `IndexedStack`, same lifted-`StateProvider` tab-persistence pattern as `driverTabIndexProvider` from Checkpoint 7 (`farmerTabIndexProvider`).
+- **Old combined `farmer_home_screen.dart` fully replaced** (its inline `FarmerBooking`/`FarmerInvoice` classes and providers superseded by `farmer_models.dart`) — confirmed via grep that nothing else referenced the old inline versions before removing them.
+- **Confirmed server-side scoping, not assumed:** read `callerScope.ts` directly — Farmer's caller scope resolves to `{kind: "customer", customerId}`, which both `booking.service.list` and `job.service.list` already apply, so reusing the exact same `GET /bookings`/`GET /jobs`/`GET /invoices` endpoints (and the existing `jobsListProvider`) for the Farmer role requires zero new backend surface and correctly returns only this customer's own records.
+- Router: `/farmer` now renders `FarmerShellScreen` instead of the old single combined screen; `AppUser.homeRoute`'s farmer mapping (`/farmer`) was already correct and needed no change.
+
+**Self-test:**
+- `flutter analyze`: clean — 0 errors (same 4 pre-existing style-only infos, untouched).
+- `flutter test`: passes.
+- Live-curled `GET /bookings`, `GET /invoices`, `GET /jobs` — all 401, all real (all three already-existing, reused endpoints).
+- Verified `Booking`/`Invoice` Prisma field names directly from `schema.prisma` before writing the Dart models, rather than trusting the frontend TS types wholesale — which is exactly what caught the dead `notes` field above.
+
+**PARITY_INVENTORY.md updated:** FARMER/CUSTOMER PORTAL SURFACE — Home 🔴→✅, Bookings 🟡→✅, Invoices 🟡→✅, Profile 🔴→✅, bottom nav 🔴→✅. **Farmer role surface fully closed.**
+
+**Needs real-device testing:** the full Farmer login → 4-tab navigation flow end-to-end against a real Farmer/Customer account with actual bookings and invoices (this environment has no such test login readily available to exercise); expand/collapse interaction feel on a real touchscreen; confirming the "Total" amount in an expanded booking card actually matches that booking's real generated invoice once completed.
+
+---

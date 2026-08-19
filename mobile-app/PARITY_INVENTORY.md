@@ -254,23 +254,23 @@ Produced by reading the entire website source (`frontend/src`) file by file — 
 
 ### Farmer Home (`/farmer`)
 **Website:** Greeting + date. 3 KPI cards (Total Bookings, Active, Balance Due). Recent 3 bookings (with See All link).
-**Mobile:** 🔴 Not Started as a distinct screen — mobile's Farmer surface is one combined Bookings+Invoices list with no Home/greeting/KPI/recent-3 view.
+**Mobile:** ✅ Full. New `FarmerHomeScreen` — greeting banner, 3 KPI cards (Total Bookings/Active/Balance Due, same "not COMPLETED and not CANCELLED" active-count logic as `FarmerHomePage.tsx`), 3 most-recently-created bookings with per-row status badge and a "See all →" that switches the bottom-nav tab.
 
 ### Farmer Bookings (`/farmer/bookings`)
 **Website:** Filter chips — All/Active/Awaiting/Done. Expandable cards revealing Work Needed, Village, Machine, Pricing, Rate, Total, Notes.
-**Mobile:** 🟡 Partial. Has a flat bookings list (booking number, status, date, amount). **Missing: filter chips, expandable detail panel** (Work Needed, Machine, Pricing/Rate, Total, Notes are not shown anywhere).
+**Mobile:** ✅ Full. New `FarmerBookingsScreen` — filter chips with the exact same job-status-keyed predicates as `FarmerBookingsPage.tsx` (badges/filters read the linked Job's status, not the booking's own legacy status pipeline), expandable cards with Work Needed/Village/Machine/Pricing/Rate/Total (computed with the identical `round2(rate×quantity)` formula, only shown once the linked job is COMPLETED)/Notes.
 
 ### Farmer Invoices (`/farmer/invoices`)
 **Website:** Summary KPI row (Total Invoices, Total Paid, Balance Due). Filter chips — All/Unpaid/Partial/Paid. Expandable detail (Total/Paid/Balance/Booking/Due Date/Notes).
-**Mobile:** 🟡 Partial. Has a flat invoice list (number, status, balance). **Missing: KPI row, filter chips, expandable detail panel.**
+**Mobile:** ✅ Full. New `FarmerInvoicesScreen` — KPI row, filter chips with live counts, expandable cards (Total/Paid/Balance/Booking/Due Date). **Notes deliberately omitted**: `Invoice.notes` is declared on the website's own TypeScript type but doesn't exist on the Prisma `Invoice` model (only `description` does) — confirmed by reading both — so the website's own "Notes:" block is dead code that never renders; mobile doesn't reproduce a field that's never actually populated.
 
 ### Farmer Profile (`/farmer/profile`)
 **Website:** Profile card, details grid, Change Password, Sign Out.
-**Mobile:** 🔴 Not Started as a distinct screen (logout only via AppBar icon on the combined list screen).
+**Mobile:** ✅ Full. New `FarmerProfileScreen` (near-identical structure to `DriverProfileScreen`, minus the Driver-only compensation section) — profile card, details grid (Full Name/Email/Mobile/Status), shared `ChangePasswordCard`, Sign Out.
 
 ### Farmer bottom nav
 **Website:** 4-tab bottom bar — Home / Bookings / Invoices / Profile.
-**Mobile:** 🔴 Not Started — no bottom nav for Farmer role (single combined screen).
+**Mobile:** ✅ Full. New `FarmerShellScreen` — same lifted-tab-index-provider pattern as the Driver shell.
 
 ---
 

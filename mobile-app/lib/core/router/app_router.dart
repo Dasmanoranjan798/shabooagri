@@ -17,7 +17,7 @@ import '../../features/employees/presentation/employee_list_screen.dart';
 import '../../features/expenses/presentation/expense_detail_screen.dart';
 import '../../features/expenses/presentation/expense_form_screen.dart';
 import '../../features/expenses/presentation/expense_list_screen.dart';
-import '../../features/farmer/presentation/farmer_home_screen.dart';
+import '../../features/farmer/presentation/farmer_shell_screen.dart';
 import '../../features/fuel/presentation/fuel_screen.dart';
 import '../../features/jobs/presentation/job_list_screen.dart';
 import '../../features/jobs/presentation/job_detail_screen.dart';
@@ -258,7 +258,7 @@ GoRouter buildAppRouter(String initialLocation) {
       ),
       GoRoute(
         path: '/farmer',
-        builder: (context, state) => const FarmerHomeScreen(),
+        builder: (context, state) => const FarmerShellScreen(),
       ),
       GoRoute(
         path: '/fuel',
