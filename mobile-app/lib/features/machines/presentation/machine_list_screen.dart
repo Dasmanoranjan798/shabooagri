@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/quick_action_bar.dart';
 import '../../../core/widgets/status_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +20,7 @@ class MachineSummary {
   final double? hourMeterReading;
   final double? nextServiceDueHours;
   final DateTime? insuranceExpiryDate;
+  final String? driverName;
 
   MachineSummary.fromJson(Map<String, dynamic> json)
       : id = json['id'] as String,
@@ -29,7 +31,8 @@ class MachineSummary {
         hourMeterReading = (json['hourMeterReading'] != null ? double.tryParse(json['hourMeterReading'].toString()) : null),
         nextServiceDueHours = (json['nextServiceDueHours'] != null ? double.tryParse(json['nextServiceDueHours'].toString()) : null),
         insuranceExpiryDate =
-            json['insuranceExpiryDate'] == null ? null : DateTime.parse(json['insuranceExpiryDate'] as String);
+            json['insuranceExpiryDate'] == null ? null : DateTime.parse(json['insuranceExpiryDate'] as String),
+        driverName = json['assignedDriver']?['employee']?['name'] as String?;
 }
 
 /// Live list (not the offline cache) — service/insurance warning chips need
@@ -93,6 +96,7 @@ class _MachineListScreenState extends ConsumerState<MachineListScreen> {
       floatingActionButton: canManage
           ? FloatingActionButton(onPressed: () => context.go('/machines/new'), child: const Icon(Icons.add))
           : null,
+      bottomNavigationBar: const QuickActionBar(),
       body: machinesAsync.when(
         data: (machines) {
           final counts = {for (final f in _StatusFilter.values) f: machines.where((m) => _matchesFilter(m, f)).length};

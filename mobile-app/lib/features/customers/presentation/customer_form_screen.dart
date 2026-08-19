@@ -85,13 +85,22 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
       if (_isEdit) 'isActive': _isActive,
     };
     try {
+      
+      String? newId;
       if (_isEdit) {
         await dio.patch('/customers/${widget.customerId}', data: data);
       } else {
-        await dio.post('/customers', data: data);
+        final res = await dio.post('/customers', data: data);
+        newId = res.data['id'];
       }
       ref.invalidate(customersListProvider);
-      if (mounted) context.go('/customers');
+      if (mounted) {
+        if (context.canPop()) {
+          context.pop(newId);
+        } else {
+          context.go('/customers');
+        }
+      }
     } catch (e) {
       setState(() => _error = apiErrorMessage(e));
     } finally {
@@ -119,7 +128,7 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEdit ? 'Edit Customer' : 'New Customer'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/customers')),
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.canPop() ? context.pop() : context.go('/customers')),
       ),
       body: _buildForm(),
     );

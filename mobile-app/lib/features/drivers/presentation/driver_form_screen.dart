@@ -96,13 +96,22 @@ class _DriverFormScreenState extends ConsumerState<DriverFormScreen> {
       'availabilityStatus': _availability,
     };
     try {
+      
+      String? newId;
       if (_isEdit) {
         await dio.patch('/drivers/${widget.driverId}', data: data);
       } else {
-        await dio.post('/drivers', data: data);
+        final res = await dio.post('/drivers', data: data);
+        newId = res.data['id'];
       }
       ref.invalidate(driversListProvider);
-      if (mounted) context.go('/drivers');
+      if (mounted) {
+        if (context.canPop()) {
+          context.pop(newId);
+        } else {
+          context.go('/drivers');
+        }
+      }
     } catch (e) {
       setState(() => _error = apiErrorMessage(e));
     } finally {
@@ -130,7 +139,7 @@ class _DriverFormScreenState extends ConsumerState<DriverFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEdit ? 'Edit Driver' : 'New Driver'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/drivers')),
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.canPop() ? context.pop() : context.go('/drivers')),
       ),
       body: _buildForm(),
     );

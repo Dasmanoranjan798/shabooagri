@@ -61,7 +61,7 @@ class _VillageFormScreenState extends ConsumerState<VillageFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEdit ? 'Edit Village' : 'New Village'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/villages')),
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.canPop() ? context.pop() : context.go('/villages')),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

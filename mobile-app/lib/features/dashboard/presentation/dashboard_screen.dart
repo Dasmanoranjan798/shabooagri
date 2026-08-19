@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/quick_action_bar.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -90,6 +91,7 @@ class DashboardScreen extends ConsumerWidget {
           const SizedBox(width: 16),
         ],
       ),
+      bottomNavigationBar: const QuickActionBar(),
       body: summaryAsync.when(
         data: (summary) => RefreshIndicator(
           onRefresh: () async => ref.invalidate(dashboardSummaryProvider),
@@ -101,7 +103,7 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               if (opsCountsAsync.valueOrNull != null && !(opsDismissedAsync.valueOrNull ?? false))
                 _buildOpsWarningBanner(context, ref, opsCountsAsync.valueOrNull!),
-              _buildQuickActions(context),
+              
               const SizedBox(height: 8),
               GridView.count(
                 crossAxisCount: 2,
@@ -274,35 +276,6 @@ class DashboardScreen extends ConsumerWidget {
         const SizedBox(width: 6),
         Text(text, style: const TextStyle(color: Color(0xFFB45309), fontSize: 12, fontWeight: FontWeight.w600)),
       ]),
-    );
-  }
-
-  Widget _buildQuickActions(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(child: _quickActionButton(context, Icons.add, 'New Booking', '/bookings/new')),
-        const SizedBox(width: 8),
-        Expanded(child: _quickActionButton(context, Icons.credit_card, 'Collect Payment', '/payments')),
-        const SizedBox(width: 8),
-        Expanded(child: _quickActionButton(context, Icons.person_add, 'New Customer', '/customers/new')),
-        const SizedBox(width: 8),
-        Expanded(child: _quickActionButton(context, Icons.description, 'New Expense', '/expenses/new')),
-      ],
-    );
-  }
-
-  Widget _quickActionButton(BuildContext context, IconData icon, String label, String route) {
-    return OutlinedButton(
-      onPressed: () => context.go(route),
-      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4)),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 18),
-          const SizedBox(height: 4),
-          Text(label, style: const TextStyle(fontSize: 10), textAlign: TextAlign.center, maxLines: 2),
-        ],
-      ),
     );
   }
 

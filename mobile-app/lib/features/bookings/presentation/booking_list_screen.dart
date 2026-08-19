@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/quick_action_bar.dart';
 import '../../../core/widgets/status_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -68,6 +69,7 @@ class _BookingListScreenState extends ConsumerState<BookingListScreen> {
       floatingActionButton: canManage
           ? FloatingActionButton(onPressed: () => context.go('/bookings/new'), child: const Icon(Icons.add))
           : null,
+      bottomNavigationBar: const QuickActionBar(),
       body: Column(
         children: [
           SearchField(

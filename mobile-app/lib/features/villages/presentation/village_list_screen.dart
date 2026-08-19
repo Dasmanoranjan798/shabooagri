@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/quick_action_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
@@ -73,6 +74,7 @@ class _VillageListScreenState extends ConsumerState<VillageListScreen> {
               child: const Icon(Icons.add),
             )
           : null,
+      bottomNavigationBar: const QuickActionBar(),
       body: villagesAsync.when(
         data: (villages) {
           final filtered =

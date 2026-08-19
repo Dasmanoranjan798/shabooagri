@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/quick_action_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
@@ -64,6 +65,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
       floatingActionButton: canManage
           ? FloatingActionButton(onPressed: () => context.go('/customers/new'), child: const Icon(Icons.add))
           : null,
+      bottomNavigationBar: const QuickActionBar(),
       body: customersAsync.when(
         data: (customers) {
           final filtered = _query.isEmpty

@@ -175,13 +175,22 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
         'purchaseYear': int.tryParse(_purchaseYearController.text.trim()),
     };
     try {
+      
+      String? newId;
       if (_isEdit) {
         await dio.patch('/machines/${widget.machineId}', data: data);
       } else {
-        await dio.post('/machines', data: data);
+        final res = await dio.post('/machines', data: data);
+        newId = res.data['id'];
       }
       ref.invalidate(machinesListProvider);
-      if (mounted) context.go('/machines');
+      if (mounted) {
+        if (context.canPop()) {
+          context.pop(newId);
+        } else {
+          context.go('/machines');
+        }
+      }
     } catch (e) {
       setState(() => _error = apiErrorMessage(e));
     } finally {
@@ -211,7 +220,7 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEdit ? 'Edit Machine' : 'New Machine'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/machines')),
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.canPop() ? context.pop() : context.go('/machines')),
       ),
       body: _buildForm(typesAsync),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/quick_action_bar.dart';
 import '../../../core/widgets/status_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -143,6 +144,7 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
           ),
         ],
       ),
+      bottomNavigationBar: const QuickActionBar(),
       body: jobsAsync.when(
         data: (jobs) {
           List<JobDetail> filtered;

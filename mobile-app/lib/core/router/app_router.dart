@@ -20,6 +20,7 @@ import '../../features/expenses/presentation/expense_list_screen.dart';
 import '../../features/farmer/presentation/farmer_shell_screen.dart';
 import '../../features/fuel/presentation/fuel_screen.dart';
 import '../../features/jobs/presentation/job_list_screen.dart';
+import '../../features/jobs/presentation/fast_job_create_screen.dart';
 import '../../features/jobs/presentation/job_detail_screen.dart';
 import '../../features/jobs/presentation/manual_job_entry_screen.dart';
 import '../../features/machines/presentation/machine_detail_screen.dart';
@@ -32,6 +33,7 @@ import '../../features/payments/presentation/new_invoice_screen.dart';
 import '../../features/payments/presentation/payment_detail_screen.dart';
 import '../../features/payments/presentation/payment_list_screen.dart';
 import '../../features/payments/presentation/record_advance_screen.dart';
+import '../../features/payments/presentation/take_payment_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/setup/presentation/setup_screen.dart';
@@ -73,6 +75,10 @@ GoRouter buildAppRouter(String initialLocation) {
         path: '/jobs',
         builder: (context, state) => const JobListScreen(),
         routes: [
+          GoRoute(
+            path: 'fast-create',
+            builder: (context, state) => const FastJobCreateScreen(),
+          ),
           GoRoute(
             path: 'manual',
             builder: (context, state) => const ManualJobEntryScreen(),
@@ -179,6 +185,10 @@ GoRouter buildAppRouter(String initialLocation) {
         path: '/payments',
         builder: (context, state) => const PaymentListScreen(),
         routes: [
+          GoRoute(
+            path: 'take',
+            builder: (context, state) => TakePaymentScreen(preselectedCustomerId: state.extra as String?),
+          ),
           GoRoute(
             path: 'advance/new',
             builder: (context, state) => const RecordAdvanceScreen(),

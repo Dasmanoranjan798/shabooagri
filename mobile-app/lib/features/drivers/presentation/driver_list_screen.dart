@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/quick_action_bar.dart';
 import '../../../core/widgets/status_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -89,6 +90,7 @@ class _DriverListScreenState extends ConsumerState<DriverListScreen> {
       floatingActionButton: canManage
           ? FloatingActionButton(onPressed: () => context.go('/drivers/new'), child: const Icon(Icons.add))
           : null,
+      bottomNavigationBar: const QuickActionBar(),
       body: driversAsync.when(
         data: (drivers) {
           final counts = {for (final f in _AvailFilter.values) f: drivers.where((d) => _matchesFilter(d, f)).length};
