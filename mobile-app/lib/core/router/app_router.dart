@@ -7,6 +7,7 @@ import '../../features/customers/presentation/customer_detail_screen.dart';
 import '../../features/customers/presentation/customer_form_screen.dart';
 import '../../features/customers/presentation/customer_list_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
+import '../../features/driver/presentation/driver_shell_screen.dart';
 import '../../features/drivers/presentation/driver_detail_screen.dart';
 import '../../features/drivers/presentation/driver_form_screen.dart';
 import '../../features/drivers/presentation/driver_list_screen.dart';
@@ -58,6 +59,10 @@ GoRouter buildAppRouter(String initialLocation) {
       GoRoute(
         path: '/dashboard',
         builder: (context, state) => const DashboardScreen(),
+      ),
+      GoRoute(
+        path: '/driver',
+        builder: (context, state) => const DriverShellScreen(),
       ),
       GoRoute(
         path: '/jobs',

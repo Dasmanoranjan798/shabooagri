@@ -14,8 +14,10 @@ class JobDetail {
   final double? fuelUsedLitres;
   final String? notes;
   final String bookingNumber;
+  final DateTime? scheduledDate;
   final String customerName;
   final String villageName;
+  final String? location;
   final double? rate;
   final String? pricingUnit; // hour | minute | acre | null
   final String? pricingLabel;
@@ -34,8 +36,10 @@ class JobDetail {
     required this.fuelUsedLitres,
     required this.notes,
     required this.bookingNumber,
+    required this.scheduledDate,
     required this.customerName,
     required this.villageName,
+    required this.location,
     required this.rate,
     required this.pricingUnit,
     required this.pricingLabel,
@@ -64,8 +68,10 @@ class JobDetail {
       fuelUsedLitres: (json['fuelUsedLitres'] as num?)?.toDouble(),
       notes: json['notes'] as String?,
       bookingNumber: booking['bookingNumber'] as String? ?? '—',
+      scheduledDate: booking['scheduledDate'] == null ? null : DateTime.parse(booking['scheduledDate'] as String),
       customerName: customer['name'] as String? ?? 'Unknown',
       villageName: village['name'] as String? ?? '—',
+      location: booking['location'] as String?,
       rate: (booking['rate'] as num?)?.toDouble(),
       pricingUnit: pricingMethod?['unit'] as String?,
       pricingLabel: pricingMethod?['label'] as String?,

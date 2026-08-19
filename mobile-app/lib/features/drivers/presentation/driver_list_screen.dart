@@ -17,6 +17,7 @@ class DriverSummary {
   final String availabilityStatus;
   final String? licenseNumber;
   final DateTime? licenseExpiryDate;
+  final String? employeeUserId;
 
   DriverSummary.fromJson(Map<String, dynamic> json)
       : id = json['id'] as String,
@@ -26,7 +27,8 @@ class DriverSummary {
         availabilityStatus = json['availabilityStatus'] as String,
         licenseNumber = json['licenseNumber'] as String?,
         licenseExpiryDate =
-            json['licenseExpiryDate'] == null ? null : DateTime.parse(json['licenseExpiryDate'] as String);
+            json['licenseExpiryDate'] == null ? null : DateTime.parse(json['licenseExpiryDate'] as String),
+        employeeUserId = (json['employee'] as Map<String, dynamic>?)?['userId'] as String?;
 }
 
 /// Live list (not the offline cache) — license expiry warnings need

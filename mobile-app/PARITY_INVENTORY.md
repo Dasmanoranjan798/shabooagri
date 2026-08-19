@@ -230,23 +230,23 @@ Produced by reading the entire website source (`frontend/src`) file by file — 
 
 ### Driver Home (`/driver`)
 **Website:** Greeting + date banner. KPI row (Today/Upcoming/Total counts). "Today's Job" spotlight card (customer/village/machine/date/start time/running timer/acres/fuel) + Navigate button + full `DriverJobActions` embedded. "View All Job Cards →" link.
-**Mobile:** 🔴 **Not Started as a distinct screen.** Mobile's Driver role lands directly on the flat Job List — there is no Home screen with a greeting, KPI counts, or a spotlighted "today's job" card.
+**Mobile:** 🟡 Near-full. New `DriverHomeScreen` (now the Driver's landing route, `/driver`) — greeting banner with first name + full date, Today's Job spotlight card (customer/village/machine/date/start time/live running timer/acres/fuel), Navigate button, KPI row (Today/Upcoming/Total), "View All Job Cards →" (switches the bottom-nav tab rather than navigating a separate route). **Deliberate simplification, disclosed:** the spotlight card does not re-embed the full Start/Pause/Stop/Submit action set inline — it links to the existing, already-verified `job_detail_screen.dart` via a "Manage Job" button instead of duplicating the same action state machine in two places. The full workflow is one tap away.
 
 ### Driver Job Cards List (`/driver/jobs`)
 **Website:** Filter tabs — All / Active / Upcoming / Done (with counts). Relative-date display per row.
-**Mobile:** 🟡 Partial. Has the list. **Missing: all 4 filter tabs**, relative-date formatting (mobile shows raw status text).
+**Mobile:** ✅ Full. The shared `job_list_screen.dart` now branches its filter set by role: Owner/Manager keep their existing 6-tab set, Driver gets the website's exact All/Active/Upcoming/Done semantics (verified field-for-field against `DriverJobsPage.tsx`'s filter predicates) with live counts, plus relative-date ("Today"/"Tomorrow"/`d MMM yyyy`) row subtitles matching `fmtDateRelative`.
 
 ### Driver Job Detail (`/driver/jobs/:id`)
 **Website:** Details grid (Date/Machine/Start Time/End Time/Acres/Fuel/Actual Hours), Notes card, Navigate button, live timer (finer h/m/s granularity, ticks every 1s), full `DriverJobActions`.
-**Mobile:** ✅ Close match — this is the same shared `job_detail_screen.dart` used for Owner/Manager, with Owner/Manager-only actions correctly hidden for Driver. Live workflow verified to match verbatim (see Jobs section above). **Missing: "Navigate" (Google Maps) button.** Minor: mobile's live-counter format (HH:MM:SS everywhere) differs from the website's own inconsistency (Home card uses h/m only at 5s ticks, Detail page uses h/m/s at 1s ticks) — mobile's is arguably more consistent, not a real gap.
+**Mobile:** ✅ Full — same shared `job_detail_screen.dart` used for Owner/Manager, with Owner/Manager-only actions correctly hidden for Driver. Live workflow verified to match verbatim (see Jobs section above). Navigate (Google Maps) button added. Minor, unchanged: mobile's live-counter format (HH:MM:SS everywhere) differs from the website's own inconsistency (Home card uses h/m only at 5s ticks, Detail page uses h/m/s at 1s ticks) — mobile's is arguably more consistent, not a real gap.
 
 ### Driver Profile (`/driver/profile`)
 **Website:** Profile card, details grid, **Compensation summary** (model, total completed jobs + worked hours, calculation explanation, calculated earnings amount), Change Password, Sign Out.
-**Mobile:** 🔴 **Not Started.** No Driver Profile screen exists at all — no compensation/earnings view, no in-app sign-out for Driver specifically (logout only reachable via the Job List's AppBar icon), no change-password.
+**Mobile:** ✅ Full. New `DriverProfileScreen` (3rd bottom-nav tab) — avatar/name/role card, details grid (Full Name/Email/Mobile/Status), Work History & Compensation Model card (`GET /drivers/:id/compensation`, driver record resolved by matching the logged-in user against the Drivers list exactly as the website does — no direct "my driver record" endpoint exists on either platform), shared `ChangePasswordCard`, Sign Out.
 
 ### Driver bottom nav
 **Website:** 3-tab bottom bar — Home / Job Cards / Profile.
-**Mobile:** 🔴 Not Started — no bottom nav for Driver role at all (single flat screen).
+**Mobile:** ✅ Full. New `DriverShellScreen` — `NavigationBar` with Home/Job Cards/Profile, tab selection lifted to a provider so it survives navigating away to Job Detail and back (returns to whichever tab the driver was on, not always Home).
 
 ---
 

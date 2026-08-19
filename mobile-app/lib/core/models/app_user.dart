@@ -8,6 +8,7 @@ class AppUser {
   final String? mobileNumber;
   final String roleSystemKey; // "owner" | "manager" | "driver" | "farmer"
   final String roleName;
+  final String status; // "ACTIVE" | "INACTIVE"
 
   const AppUser({
     required this.id,
@@ -17,6 +18,7 @@ class AppUser {
     required this.mobileNumber,
     required this.roleSystemKey,
     required this.roleName,
+    this.status = 'ACTIVE',
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,7 @@ class AppUser {
       mobileNumber: json['mobileNumber'] as String?,
       roleSystemKey: role['systemKey'] as String? ?? '',
       roleName: role['name'] as String? ?? '',
+      status: json['status'] as String? ?? 'ACTIVE',
     );
   }
 
@@ -39,6 +42,7 @@ class AppUser {
         'email': email,
         'mobileNumber': mobileNumber,
         'role': {'systemKey': roleSystemKey, 'name': roleName},
+        'status': status,
       };
 
   bool get isOwnerOrManager => roleSystemKey == 'owner' || roleSystemKey == 'manager';
@@ -48,7 +52,7 @@ class AppUser {
   /// Route each role lands on after login, mirroring
   /// `frontend/src/app/App.tsx`'s `RootRoute`.
   String get homeRoute {
-    if (isDriver) return '/jobs';
+    if (isDriver) return '/driver';
     if (isFarmer) return '/farmer';
     return '/dashboard';
   }

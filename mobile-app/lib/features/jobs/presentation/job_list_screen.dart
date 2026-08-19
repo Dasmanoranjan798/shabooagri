@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
-import '../../../core/repositories/auth_repository.dart';
 import '../../../core/widgets/app_drawer.dart';
 import '../../../core/widgets/search_field.dart';
 import '../data/job_actions_repository.dart';
@@ -18,6 +18,22 @@ final jobsListProvider = FutureProvider<List<JobDetail>>((ref) async {
 
 enum _JobFilter { all, awaitingMachine, readyToStart, inProgress, completed, cancelled }
 
+/// Matches `DriverJobsPage.tsx`'s filter semantics exactly — distinct from
+/// Owner/Manager's `_JobFilter` above, which keys off machine/driver
+/// assignment readiness rather than a driver's own schedule.
+enum _DriverFilter { all, active, upcoming, done }
+
+String _fmtDateRelative(DateTime? date) {
+  if (date == null) return '—';
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final tomorrow = today.add(const Duration(days: 1));
+  final d = DateTime(date.year, date.month, date.day);
+  if (d == today) return 'Today';
+  if (d == tomorrow) return 'Tomorrow';
+  return DateFormat('d MMM yyyy').format(date);
+}
+
 class JobListScreen extends ConsumerStatefulWidget {
   const JobListScreen({super.key});
 
@@ -28,6 +44,7 @@ class JobListScreen extends ConsumerStatefulWidget {
 class _JobListScreenState extends ConsumerState<JobListScreen> {
   String _query = '';
   _JobFilter _filter = _JobFilter.all;
+  _DriverFilter _driverFilter = _DriverFilter.all;
 
   bool _matchesFilter(JobDetail job, _JobFilter filter) {
     final isReady = job.machineRegistration != null && job.driverName != null;
@@ -47,12 +64,59 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
     }
   }
 
+  bool _isToday(DateTime? date) {
+    if (date == null) return false;
+    final now = DateTime.now();
+    return date.year == now.year && date.month == now.month && date.day == now.day;
+  }
+
+  bool _isFutureDate(DateTime? date) {
+    if (date == null) return false;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return DateTime(date.year, date.month, date.day).isAfter(today);
+  }
+
+  bool _matchesDriverFilter(JobDetail job, _DriverFilter filter) {
+    switch (filter) {
+      case _DriverFilter.all:
+        return true;
+      case _DriverFilter.active:
+        return ['WORKING', 'PAUSED', 'STOPPED'].contains(job.status) || _isToday(job.scheduledDate);
+      case _DriverFilter.upcoming:
+        return _isFutureDate(job.scheduledDate) && job.status == 'NOT_STARTED';
+      case _DriverFilter.done:
+        return job.status == 'COMPLETED';
+    }
+  }
+
   String _statusLabel(JobDetail job) {
     if (job.status == 'NOT_STARTED') {
       final isReady = job.machineRegistration != null && job.driverName != null;
       return isReady ? 'Ready to Start' : 'Awaiting Machine';
     }
     return job.status;
+  }
+
+  /// Plain status label for Driver rows — matches `DriverJobsPage.tsx`'s
+  /// own `statusLabel()`, deliberately NOT the Owner/Manager
+  /// "Awaiting Machine"/"Ready to Start" framing above (a driver's own
+  /// jobs are already assigned to them by the time they see them here).
+  String _driverStatusLabel(String status) {
+    switch (status) {
+      case 'NOT_STARTED':
+        return 'Not Started';
+      case 'WORKING':
+        return 'Working';
+      case 'PAUSED':
+        return 'Paused';
+      case 'STOPPED':
+        return 'Stopped';
+      case 'COMPLETED':
+        return 'Completed';
+      default:
+        return status;
+    }
   }
 
   @override
@@ -76,20 +140,41 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
             icon: const Icon(Icons.refresh),
             onPressed: () => ref.invalidate(jobsListProvider),
           ),
-          if (!isOwnerOrManager)
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: () async {
-                await ref.read(authRepositoryProvider).logout();
-                if (context.mounted) context.go('/login');
-              },
-            ),
         ],
       ),
       body: jobsAsync.when(
         data: (jobs) {
-          final counts = {for (final f in _JobFilter.values) f: jobs.where((j) => _matchesFilter(j, f)).length};
-          var filtered = jobs.where((j) => _matchesFilter(j, _filter)).toList();
+          List<JobDetail> filtered;
+          Widget filterRow;
+          if (isOwnerOrManager) {
+            final counts = {for (final f in _JobFilter.values) f: jobs.where((j) => _matchesFilter(j, f)).length};
+            filtered = jobs.where((j) => _matchesFilter(j, _filter)).toList();
+            filterRow = FilterTabsRow<_JobFilter>(
+              selected: _filter,
+              onSelected: (f) => setState(() => _filter = f),
+              tabs: [
+                (_JobFilter.all, 'All', counts[_JobFilter.all]!),
+                (_JobFilter.awaitingMachine, 'Awaiting Machine', counts[_JobFilter.awaitingMachine]!),
+                (_JobFilter.readyToStart, 'Ready to Start', counts[_JobFilter.readyToStart]!),
+                (_JobFilter.inProgress, 'In Progress', counts[_JobFilter.inProgress]!),
+                (_JobFilter.completed, 'Completed', counts[_JobFilter.completed]!),
+                (_JobFilter.cancelled, 'Cancelled', counts[_JobFilter.cancelled]!),
+              ],
+            );
+          } else {
+            final counts = {for (final f in _DriverFilter.values) f: jobs.where((j) => _matchesDriverFilter(j, f)).length};
+            filtered = jobs.where((j) => _matchesDriverFilter(j, _driverFilter)).toList();
+            filterRow = FilterTabsRow<_DriverFilter>(
+              selected: _driverFilter,
+              onSelected: (f) => setState(() => _driverFilter = f),
+              tabs: [
+                (_DriverFilter.all, 'All', counts[_DriverFilter.all]!),
+                (_DriverFilter.active, 'Active', counts[_DriverFilter.active]!),
+                (_DriverFilter.upcoming, 'Upcoming', counts[_DriverFilter.upcoming]!),
+                (_DriverFilter.done, 'Done', counts[_DriverFilter.done]!),
+              ],
+            );
+          }
           if (_query.isNotEmpty) {
             filtered = filtered
                 .where((j) =>
@@ -106,18 +191,7 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
                 hintText: 'Search by #, customer, machine, driver...',
                 onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
               ),
-              FilterTabsRow<_JobFilter>(
-                selected: _filter,
-                onSelected: (f) => setState(() => _filter = f),
-                tabs: [
-                  (_JobFilter.all, 'All', counts[_JobFilter.all]!),
-                  (_JobFilter.awaitingMachine, 'Awaiting Machine', counts[_JobFilter.awaitingMachine]!),
-                  (_JobFilter.readyToStart, 'Ready to Start', counts[_JobFilter.readyToStart]!),
-                  (_JobFilter.inProgress, 'In Progress', counts[_JobFilter.inProgress]!),
-                  (_JobFilter.completed, 'Completed', counts[_JobFilter.completed]!),
-                  (_JobFilter.cancelled, 'Cancelled', counts[_JobFilter.cancelled]!),
-                ],
-              ),
+              filterRow,
               Expanded(
                 child: filtered.isEmpty
                     ? const Center(child: Text('No job cards match this view.'))
@@ -129,9 +203,11 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
                             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             child: ListTile(
                               title: Text('${job.bookingNumber} · ${job.customerName}'),
-                              subtitle: Text(job.machineRegistration != null
-                                  ? '${job.machineRegistration} · ${_statusLabel(job)}'
-                                  : _statusLabel(job)),
+                              subtitle: Text(isOwnerOrManager
+                                  ? (job.machineRegistration != null
+                                      ? '${job.machineRegistration} · ${_statusLabel(job)}'
+                                      : _statusLabel(job))
+                                  : '${job.villageName} · ${_fmtDateRelative(job.scheduledDate)} · ${_driverStatusLabel(job.status)}'),
                               trailing: const Icon(Icons.chevron_right),
                               onTap: () => context.go('/jobs/${job.id}'),
                             ),

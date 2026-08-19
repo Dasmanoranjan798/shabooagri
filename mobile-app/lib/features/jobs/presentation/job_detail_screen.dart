@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
@@ -60,6 +61,12 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
   }
 
   void _refresh() => ref.invalidate(jobDetailLiveProvider(widget.jobId));
+
+  Future<void> _navigate(JobDetail job) async {
+    final query = job.location ?? job.villageName;
+    final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}');
+    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
 
   Future<void> _runAction(Future<void> Function() action) async {
     if (_acting) return;
@@ -350,7 +357,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
         title: const Text('Job Details'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/jobs'),
+          onPressed: () => context.go(isOwnerOrManager ? '/jobs' : (user?.isDriver ?? false) ? '/driver' : '/jobs'),
         ),
         actions: [
           IconButton(icon: const Icon(Icons.refresh), onPressed: _refresh),
@@ -372,6 +379,12 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                 InfoRow('Village', job.villageName),
                 if (job.machineRegistration != null) InfoRow('Machine', job.machineRegistration!),
                 if (job.driverName != null) InfoRow('Driver', job.driverName!),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => _navigate(job),
+                  icon: const Icon(Icons.directions, size: 18),
+                  label: const Text('Navigate'),
+                ),
                 const Divider(height: 32),
                 _buildTimerCard(job, elapsedSec, liveAmount),
                 const SizedBox(height: 24),
