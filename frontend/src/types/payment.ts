@@ -190,3 +190,55 @@ export interface ReceiptData {
   };
   payments: ReceiptPayment[];
 }
+
+export interface FilterInvoicesInput {
+  status?: string[];
+  dateRange?: {
+    from?: string;
+    to?: string;
+    field?: "invoiceDate" | "dueDate" | "paymentDate" | "workCompletionDate";
+  };
+  customerId?: string[];
+  villageId?: string[];
+  driverId?: string[];
+  machineId?: string[];
+  paymentMethod?: string[];
+  amountFilter?: {
+    field?: "totalAmount" | "paidAmount" | "balanceAmount";
+    operator?: "gt" | "lt" | "eq" | "between";
+    value?: number;
+    valueMax?: number;
+  };
+  outstandingAge?: {
+    minDays?: number;
+    maxDays?: number;
+  };
+  page?: number;
+  limit?: number;
+}
+
+export interface InvoiceAnalysisResponse {
+  invoices: Invoice[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
+  summary: {
+    totalInvoiced: number;
+    totalCollected: number;
+    totalOutstanding: number;
+    totalOverdue: number;
+    paidCount: number;
+    partialCount: number;
+    unpaidCount: number;
+    overdueCount: number;
+    dueTodayCount: number;
+    dueSoonCount: number;
+  };
+  dayWiseCollection: Array<{ date: string; amount: number }>;
+  methodWiseCollection: Array<{ method: string; amount: number }>;
+  customerWise: Array<{ customerId: string; customerName: string; outstanding: number }>;
+  villageWise: Array<{ villageName: string; outstanding: number }>;
+}

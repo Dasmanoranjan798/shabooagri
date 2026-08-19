@@ -110,6 +110,7 @@ async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Re
   return response;
 }
 
+import type { InvoiceAnalysisResponse, FilterInvoicesInput } from "../types/payment";
 export const api = {
   // Auth
   async register(payload: {
@@ -861,6 +862,18 @@ export const api = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to fetch invoices" }));
       throw new ApiError(res.status, (err.error || err.message) || "Failed to load invoices");
+    }
+    return res.json();
+  },
+
+  async filterInvoices(input: FilterInvoicesInput): Promise<InvoiceAnalysisResponse> {
+    const res = await fetchWithAuth("/invoices/filter", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to fetch filtered invoices" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load filtered invoices");
     }
     return res.json();
   },
