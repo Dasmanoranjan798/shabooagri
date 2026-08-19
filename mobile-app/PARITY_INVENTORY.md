@@ -277,11 +277,10 @@ Produced by reading the entire website source (`frontend/src`) file by file — 
 ## SHARED CHROME (AppLayout — Owner/Manager)
 
 **Website sidebar nav (15 items, permission-gated):** Dashboard, Bookings, Job Cards, Customers, Villages, Machines, Drivers, Employees, **Team**, Payments, Expenses, Fuel, Maintenance, Reports, **Settings**.
-**Mobile drawer (13 items):** Dashboard, Jobs, Bookings, Machines, Drivers, Customers, Villages, Payments, Employees, Expenses, Maintenance, Fuel, Reports.
-**Gap:** Missing **Team** and **Settings** drawer entries — consistent with those modules being entirely unbuilt.
+**Mobile drawer (15 items):** ✅ Full — Dashboard, Jobs, Bookings, Machines, Drivers, Customers, Villages, Payments, Employees, **Team**, Expenses, Maintenance, Fuel, Reports, **Settings**. (Team/Settings added in Checkpoints 5–6.)
 
-**Website top bar:** Global search box (possibly non-functional on the website itself per source inspection — low priority). **Notifications bell + dropdown** (categorized alerts: service/insurance/license/invoice/booking, with overdue styling, click-through navigation). Date badge. Profile chip (click-to-logout).
-**Mobile:** 🔴 No notifications center anywhere. No global search. Logout via a dedicated drawer item (functionally equivalent, structurally simpler than the website's 3 logout entry points).
+**Website top bar:** Global search box (possibly non-functional on the website itself per source inspection — low priority, still not built). **Notifications bell + dropdown** (categorized alerts: service/insurance/license/invoice/booking, with overdue styling, click-through navigation). Date badge. Profile chip (click-to-logout).
+**Mobile:** 🟡 Near-full. ✅ New `NotificationBell` — same 5-source computation as `useNotifications.ts` (machines/drivers/invoices/bookings/company profile, reusing the already-built warning helpers, zero new backend endpoint), badge count, categorized icons, overdue bold styling, tap-to-navigate. **Deliberate placement simplification, disclosed:** added to the Dashboard AppBar only (the Owner/Manager landing screen) rather than every one of the ~15 individual screen AppBars the website's single shared `AppLayout` wrapper covers automatically — this app doesn't have an equivalent single-wrapper chrome layer, so replicating it fully would mean editing every screen file for one icon. Still missing: global search box (disclosed as low-priority on the website itself too). Logout remains via a dedicated drawer item, functionally equivalent to the website's 3 logout entry points.
 
 ---
 

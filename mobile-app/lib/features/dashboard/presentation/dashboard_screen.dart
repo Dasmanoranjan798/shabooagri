@@ -11,6 +11,7 @@ import '../../../core/storage/local_storage.dart';
 import '../../../core/widgets/app_drawer.dart';
 import '../../drivers/presentation/driver_list_screen.dart';
 import '../../machines/presentation/machine_list_screen.dart';
+import '../../notifications/presentation/notification_bell.dart';
 import '../data/dashboard_summary.dart';
 
 /// Owner/Manager home — real KPIs from `GET /dashboard/summary`, the same
@@ -82,6 +83,7 @@ class DashboardScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Dashboard'),
         actions: [
+          const NotificationBell(),
           Icon(isOnline ? Icons.cloud_done : Icons.cloud_off, color: isOnline ? Colors.green : Colors.red),
           const SizedBox(width: 16),
         ],
