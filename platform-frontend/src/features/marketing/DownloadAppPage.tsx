@@ -1,5 +1,5 @@
 import React from "react";
-import { Download, AlertTriangle, Info, CheckCircle2 } from "lucide-react";
+import { Download, AlertTriangle, Info, CheckCircle2, Smartphone, Monitor } from "lucide-react";
 import { MarketingLayout } from "../../components/MarketingLayout";
 
 export const DownloadAppPage: React.FC = () => {
@@ -92,9 +92,22 @@ export const DownloadAppPage: React.FC = () => {
                   <Monitor size={20} />
                   Windows
                 </h3>
-                <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem", margin: 0 }}>
-                  <em>v0.5.0 release artifact pending Windows host compilation.</em>
-                </p>
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <a
+                    href="/downloads/shabooagri-windows.zip"
+                    download="shabooagri-windows.zip"
+                    className="pf-btn pf-btn-secondary"
+                    style={{
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <Download size={20} />
+                    Download Windows Package
+                  </a>
+                </div>
               </div>
 
               {/* macOS */}
@@ -103,9 +116,22 @@ export const DownloadAppPage: React.FC = () => {
                   <Monitor size={20} />
                   macOS
                 </h3>
-                <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem", margin: 0 }}>
-                  <em>v0.5.0 release artifact pending macOS host compilation.</em>
-                </p>
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <a
+                    href="/downloads/shabooagri-macos.zip"
+                    download="shabooagri-macos.zip"
+                    className="pf-btn pf-btn-secondary"
+                    style={{
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <Download size={20} />
+                    Download macOS App
+                  </a>
+                </div>
               </div>
             </div>
           </section>
