@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/database/database.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/providers/session_provider.dart';
@@ -37,6 +38,26 @@ class _BookingListScreenState extends ConsumerState<BookingListScreen> {
       appBar: AppBar(
         title: const Text('Bookings'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.download),
+            tooltip: 'Export CSV',
+            onPressed: bookingsAsync.maybeWhen(
+              data: (bookings) => () async {
+                final buffer = StringBuffer('Booking Number,Status,Date\n');
+                for (final b in bookings) {
+                  buffer.writeln('${b.bookingNumber},${b.status},${b.scheduledDate?.toIso8601String() ?? ""}');
+                }
+                try {
+                  await Share.share(buffer.toString(), subject: 'Bookings Export');
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+                  }
+                }
+              },
+              orElse: () => null,
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => ref.invalidate(bookingsListProvider),
