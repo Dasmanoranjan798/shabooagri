@@ -40,9 +40,9 @@ class _MaintenanceRecordFormScreenState extends ConsumerState<MaintenanceRecordF
     if (_prefilled) return;
     _prefilled = true;
     _machineId = (record['machine'] as Map<String, dynamic>?)?['id'] as String?;
-    _hourMeterController.text = (record['hourMeterAtService'] as num?)?.toString() ?? '';
+    _hourMeterController.text = record['hourMeterAtService']?.toString() ?? '';
     _descriptionController.text = record['description'] as String? ?? '';
-    _costController.text = (record['cost'] as num?)?.toString() ?? '';
+    _costController.text = record['cost']?.toString() ?? '';
     _performedByController.text = record['performedBy'] as String? ?? '';
     if (record['serviceDate'] != null) {
       _serviceDate = DateTime.parse(record['serviceDate'] as String);

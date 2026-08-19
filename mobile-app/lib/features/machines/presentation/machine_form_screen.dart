@@ -69,10 +69,10 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
     _registrationController.text = machine['registrationNumber'] as String? ?? '';
     _brandController.text = machine['brand'] as String? ?? '';
     _modelController.text = machine['model'] as String? ?? '';
-    _hourMeterController.text = (machine['hourMeterReading'] as num?)?.toString() ?? '';
-    _nextServiceDueController.text = (machine['nextServiceDueHours'] as num?)?.toString() ?? '';
+    _hourMeterController.text = machine['hourMeterReading']?.toString() ?? '';
+    _nextServiceDueController.text = machine['nextServiceDueHours']?.toString() ?? '';
     _insuranceNumberController.text = machine['insuranceNumber'] as String? ?? '';
-    _purchaseYearController.text = (machine['purchaseYear'] as num?)?.toString() ?? '';
+    _purchaseYearController.text = machine['purchaseYear']?.toString() ?? '';
     _machineTypeId = machine['machineTypeId'] as String?;
     _status = machine['status'] as String? ?? 'AVAILABLE';
     _assignedDriverId = machine['assignedDriverId'] as String?;

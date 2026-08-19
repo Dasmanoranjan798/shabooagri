@@ -34,8 +34,8 @@ class MachineDetailScreen extends ConsumerWidget {
       ),
       body: machineAsync.when(
         data: (machine) {
-          final hourMeter = (machine['hourMeterReading'] as num?)?.toDouble();
-          final nextServiceDueHours = (machine['nextServiceDueHours'] as num?)?.toDouble();
+          final hourMeter = (machine['hourMeterReading'] != null ? double.tryParse(machine['hourMeterReading'].toString()) : null);
+          final nextServiceDueHours = (machine['nextServiceDueHours'] != null ? double.tryParse(machine['nextServiceDueHours'].toString()) : null);
           final insuranceExpiry =
               machine['insuranceExpiryDate'] == null ? null : DateTime.parse(machine['insuranceExpiryDate'] as String);
           final serviceWarn = machineServiceWarning(

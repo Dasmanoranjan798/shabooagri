@@ -35,7 +35,7 @@ class FarmerBooking {
         machineBrand = (json['machine'] as Map<String, dynamic>?)?['brand'] as String?,
         pricingLabel = (json['pricingMethod'] as Map<String, dynamic>?)?['label'] as String?,
         pricingUnit = (json['pricingMethod'] as Map<String, dynamic>?)?['unit'] as String?,
-        rate = (json['rate'] as num?)?.toDouble(),
+        rate = (json['rate'] != null ? double.tryParse(json['rate'].toString()) : null),
         notes = json['notes'] as String?;
 }
 

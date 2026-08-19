@@ -44,7 +44,7 @@ class MachineRepository {
               brand: Value(json['brand'] as String?),
               model: Value(json['model'] as String?),
               status: json['status'] as String,
-              hourMeter: Value((json['hourMeterReading'] as num?)?.toDouble()),
+              hourMeter: Value((json['hourMeterReading'] != null ? double.tryParse(json['hourMeterReading'].toString()) : null)),
               updatedAt: Value(DateTime.now()),
             ),
             mode: InsertMode.insertOrReplace,

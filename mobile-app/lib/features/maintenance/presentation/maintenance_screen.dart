@@ -33,7 +33,7 @@ class MaintenanceRecord {
       : id = json['id'] as String,
         machineRegistration = (json['machine'] as Map<String, dynamic>?)?['registrationNumber'] as String? ?? '—',
         serviceDate = json['serviceDate'] as String,
-        cost = (json['cost'] as num?)?.toDouble(),
+        cost = (json['cost'] != null ? double.tryParse(json['cost'].toString()) : null),
         description = json['description'] as String?;
 }
 

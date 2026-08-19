@@ -56,8 +56,8 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
     _driverId = booking['driverId'] as String?;
     _workDescriptionController.text = booking['workDescription'] as String? ?? '';
     _locationController.text = booking['location'] as String? ?? '';
-    _estimatedHoursController.text = (booking['estimatedHours'] as num?)?.toString() ?? '';
-    _estimatedAcresController.text = (booking['estimatedAcres'] as num?)?.toString() ?? '';
+    _estimatedHoursController.text = booking['estimatedHours']?.toString() ?? '';
+    _estimatedAcresController.text = booking['estimatedAcres']?.toString() ?? '';
     _notesController.text = booking['notes'] as String? ?? '';
     if (booking['scheduledDate'] != null) {
       _scheduledDate = DateTime.parse(booking['scheduledDate'] as String);

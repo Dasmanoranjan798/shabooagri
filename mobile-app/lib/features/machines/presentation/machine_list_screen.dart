@@ -25,8 +25,8 @@ class MachineSummary {
         brand = json['brand'] as String?,
         model = json['model'] as String?,
         status = json['status'] as String,
-        hourMeterReading = (json['hourMeterReading'] as num?)?.toDouble(),
-        nextServiceDueHours = (json['nextServiceDueHours'] as num?)?.toDouble(),
+        hourMeterReading = (json['hourMeterReading'] != null ? double.tryParse(json['hourMeterReading'].toString()) : null),
+        nextServiceDueHours = (json['nextServiceDueHours'] != null ? double.tryParse(json['nextServiceDueHours'].toString()) : null),
         insuranceExpiryDate =
             json['insuranceExpiryDate'] == null ? null : DateTime.parse(json['insuranceExpiryDate'] as String);
 }

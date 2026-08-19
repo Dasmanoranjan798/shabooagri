@@ -11,7 +11,7 @@ class DeltaMetric {
       : current = (double.tryParse(json['current'].toString()) ?? 0.0),
         previous = (double.tryParse(json['previous'].toString()) ?? 0.0),
         delta = (double.tryParse(json['delta'].toString()) ?? 0.0),
-        deltaPercent = (json['deltaPercent'] as num?)?.toDouble();
+        deltaPercent = (json['deltaPercent'] != null ? double.tryParse(json['deltaPercent'].toString()) : null);
 }
 
 class MachineWorkingMetric {

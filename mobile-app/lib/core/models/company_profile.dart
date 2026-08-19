@@ -92,7 +92,7 @@ class CompanyProfile {
       accountNumber: json['accountNumber'] as String?,
       ifscCode: json['ifscCode'] as String?,
       upiId: json['upiId'] as String?,
-      defaultTaxRate: (json['defaultTaxRate'] as num?)?.toDouble(),
+      defaultTaxRate: (json['defaultTaxRate'] != null ? double.tryParse(json['defaultTaxRate'].toString()) : null),
       taxInclusive: json['taxInclusive'] as bool? ?? false,
       serviceAlertHours: json['serviceAlertHours'] as int? ?? 50,
       insuranceAlertDays: json['insuranceAlertDays'] as int? ?? 30,

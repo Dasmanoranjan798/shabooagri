@@ -19,7 +19,7 @@ class MaintenanceSchedule {
       : id = json['id'] as String,
         machineId = (json['machine'] as Map<String, dynamic>)['id'] as String,
         machineRegistration = (json['machine'] as Map<String, dynamic>)['registrationNumber'] as String,
-        intervalHours = (json['intervalHours'] as num?)?.toDouble(),
+        intervalHours = (json['intervalHours'] != null ? double.tryParse(json['intervalHours'].toString()) : null),
         intervalDays = json['intervalDays'] as int?,
         description = json['description'] as String?;
 }
