@@ -52,8 +52,8 @@ export const DownloadAppPage: React.FC = () => {
             </p>
             <div style={{ display: "flex", justifyContent: "center" }}>
               <a
-                href="/downloads/shabooagri-v0.4.0.apk"
-                download
+                href="/downloads/shabooagri-v0.4.2.apk"
+                download="shabooagri-v0.4.2.apk"
                 className="pf-btn pf-btn-primary"
                 style={{
                   textDecoration: "none",
