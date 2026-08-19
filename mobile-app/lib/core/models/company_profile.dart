@@ -4,6 +4,9 @@
 /// photo/fuel-log requirements before Submit).
 class CompanyProfile {
   final String id;
+  final String slug;
+  final bool isActive;
+  final DateTime? createdAt;
   final String name;
   final String? invoicePrefix;
   final String? address;
@@ -34,6 +37,9 @@ class CompanyProfile {
 
   CompanyProfile({
     required this.id,
+    required this.slug,
+    required this.isActive,
+    required this.createdAt,
     required this.name,
     required this.invoicePrefix,
     required this.address,
@@ -66,6 +72,9 @@ class CompanyProfile {
   factory CompanyProfile.fromJson(Map<String, dynamic> json) {
     return CompanyProfile(
       id: json['id'] as String,
+      slug: json['slug'] as String? ?? '—',
+      isActive: json['isActive'] as bool? ?? true,
+      createdAt: json['createdAt'] == null ? null : DateTime.parse(json['createdAt'] as String),
       name: json['name'] as String,
       invoicePrefix: json['invoicePrefix'] as String?,
       address: json['address'] as String?,

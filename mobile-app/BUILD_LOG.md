@@ -321,3 +321,29 @@ Company-wide staff/user-account management, distinct from Employees (HR records)
 **No remaining known gaps in this module.**
 
 ---
+
+## Checkpoint 6: Settings module (new) — 4 tabs, closed
+
+The one module PARITY_INVENTORY.md flagged as feeding several other modules' gaps: Machine/Driver warning-chip thresholds and Job completion photo/fuel-log mandates all read from the same `CompanyProfile`/`companyProfileProvider` this module now makes editable, rather than leaving them permanently at defaults.
+
+- Extended `CompanyProfile`/`company_profile.dart` with `slug`, `isActive`, `createdAt` (needed for the Business Profile tab's Company Metadata card; not previously needed by the Machines/Drivers/Job-detail consumers built earlier this session). Confirmed against `GET /settings/profile`'s actual response (the raw `Company` Prisma row, per `settings.service.ts`) and `schema.prisma`'s `Company` model — not guessed.
+- New `lib/core/widgets/change_password_card.dart` — a shared widget (not settings-specific), `POST /auth/change-password` with `{currentPassword?, newPassword}` matching `changePasswordSchema` exactly. Deliberately built as a reusable shared widget rather than settings-local, since Driver Profile and Farmer Profile (Tasks 44/45, still pending) need the identical "Change Password" card the website's `ChangePasswordCard.tsx` also reuses across Settings/Driver/Farmer.
+- New `lib/features/settings/presentation/settings_screen.dart` (route `/settings`, added to the Owner/Manager drawer) — `DefaultTabController` with 4 tabs matching `SettingsPage.tsx` exactly:
+  1. **Business Profile**: Name/Phone/Email/Address/City/District/State/PIN/Country, GST-registered switch + conditional-looking GSTIN/PAN (always visible, matching website — not actually conditional on the switch), read-only Currency/Timezone/Language, Company Metadata card (ID/Slug/Status/Created).
+  2. **Invoicing & Payments**: Invoice Prefix with a live-updating example string, Bank Name/Account Number/IFSC/UPI (a card styled like the website's shaded "Business Bank & UPI" box), Default Tax Rate + Tax-Inclusive switch.
+  3. **Equipment & Operational Rules**: Service Alert Hours / Insurance Alert Days / License Alert Days (each with the website's exact helper text), Require Completion Photo / Require Fuel-Log switches.
+  4. **My Account & Security**: the new shared `ChangePasswordCard`.
+  - All three writable tabs PATCH `/settings/profile` independently per-tab (matching the website's 3 separate save handlers, not one combined form), each with its own saving/error/saved state and a 3-second success message, matching `SettingsPage.tsx`'s `setTimeout(..., 3000)` pattern already used elsewhere in this app (e.g. Payments).
+- **Correctness detail investigated, not assumed:** read `ROLE_PERMISSIONS` in `seedData.ts` directly to confirm `settings.manage` is Owner-only — Manager's permission list does NOT include it, unlike almost every other admin permission in this app (`village.manage`, `machine.manage`, `employee.manage`, etc. are all in Manager's list). So `canManage` here is gated on `roleSystemKey == 'owner'` specifically, not the usual `isOwnerOrManager` — a deliberate, disclosed deviation from this app's usual gating pattern, not an oversight. All 3 writable tabs render fully read-only (fields disabled, Save button hidden) for Manager, matching the website's per-tab "Read-only" banners.
+
+**Self-test:**
+- `flutter analyze`: clean — 0 errors (same 4 pre-existing style-only infos, untouched).
+- `flutter test`: passes.
+- Live-curled `GET /settings/profile`, `PATCH /settings/profile`, `POST /auth/change-password` — all 401, all real, none 404.
+- Verified `updateCompanyProfileSchema` and `changePasswordSchema` field names directly from `settings.validators.ts`/`auth.validators.ts` before writing the Dart payloads.
+
+**PARITY_INVENTORY.md updated:** SETTINGS → ✅ Full (from 🔴 Not Started).
+
+**No remaining known gaps in this module** (the website's read-only terminology-customization data is consumed silently into global UI strings on the website, not rendered as a visible Settings field anywhere — nothing to mirror).
+
+---

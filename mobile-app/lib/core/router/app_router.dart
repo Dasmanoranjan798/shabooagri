@@ -32,6 +32,7 @@ import '../../features/payments/presentation/payment_detail_screen.dart';
 import '../../features/payments/presentation/payment_list_screen.dart';
 import '../../features/payments/presentation/record_advance_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
+import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/setup/presentation/setup_screen.dart';
 import '../../features/team/presentation/invite_staff_screen.dart';
 import '../../features/team/presentation/team_screen.dart';
@@ -235,6 +236,10 @@ GoRouter buildAppRouter(String initialLocation) {
             builder: (context, state) => ExpenseFormScreen(expenseId: state.pathParameters['id']!),
           ),
         ],
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
         path: '/team',
