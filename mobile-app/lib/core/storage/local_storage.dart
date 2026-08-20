@@ -81,3 +81,11 @@ class DashboardStorage {
     return DateTime.now().millisecondsSinceEpoch < dismissedUntil;
   }
 }
+
+class ProfileStorage {
+  static const _profileImagePathKey = 'profile_image_path';
+
+  static Future<String?> getProfileImagePath() => _storage.read(key: _profileImagePathKey);
+
+  static Future<void> setProfileImagePath(String path) => _storage.write(key: _profileImagePathKey, value: path);
+}
