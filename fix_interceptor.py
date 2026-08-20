@@ -1,49 +1,12 @@
-import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/session_provider.dart';
-import '../storage/local_storage.dart';
-import 'package:go_router/go_router.dart';
-import '../router/app_router.dart';
+import re
 
-/// Dio instance scoped to the current tenant. Rebuilds (cheap) whenever the
-/// company slug changes, e.g. right after the Company Setup screen saves it.
-/// Base URL is `https://{slug}.shabooagri.com`, matching the wildcard
-/// subdomain -> tenantResolver middleware the web app already relies on —
-/// no backend changes needed to support this.
-final apiClientProvider = Provider<Dio>((ref) {
-  final slug = ref.watch(tenantSlugProvider);
+with open('mobile-app/lib/core/network/api_client.dart', 'r') as f:
+    text = f.read()
 
-  final dio = Dio(
-    BaseOptions(
-      baseUrl: slug != null ? 'https://$slug.shabooagri.com' : 'https://shabooagri.com',
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    ),
-  );
+# Replace the _AuthInterceptor completely
+start_idx = text.find("class _AuthInterceptor extends Interceptor {")
 
-  dio.interceptors.add(_AuthInterceptor(dio, ref));
-
-  dio.interceptors.add(LogInterceptor(
-    request: true,
-    requestHeader: true,
-    requestBody: true,
-    responseHeader: true,
-    responseBody: true,
-    error: true,
-  ));
-
-  return dio;
-});
-
-/// Attaches the stored access token to every request, and on a 401
-/// transparently refreshes the session once (via `/auth/refresh`) and
-/// retries the original request — mirroring the same pattern already used
-/// by the website (`frontend/src/lib/api.ts`), since the access token is
-/// short-lived (15 minutes) and field sessions need to outlast that.
-class _AuthInterceptor extends Interceptor {
+new_interceptor = """class _AuthInterceptor extends Interceptor {
   final Dio _dio;
   final Ref _ref;
   bool _isRefreshing = false;
@@ -129,3 +92,9 @@ class _AuthInterceptor extends Interceptor {
     return _dio.fetch(options);
   }
 }
+"""
+
+text = text[:start_idx] + new_interceptor
+
+with open('mobile-app/lib/core/network/api_client.dart', 'w') as f:
+    f.write(text)
