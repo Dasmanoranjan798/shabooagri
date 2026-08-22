@@ -47,6 +47,15 @@ class AuthRepository {
       if (e.response?.statusCode == 401) {
         throw AuthException('Incorrect email/phone or password.');
       }
+      if (e.response?.statusCode == 429) {
+        // Rate-limited by the backend's brute-force protection (P1-4). Surface
+        // the server's own wait message rather than the generic connectivity
+        // error below — otherwise a throttled user is wrongly told their
+        // connection failed and just keeps retrying.
+        final data = e.response?.data;
+        final serverMsg = (data is Map && data['error'] is String) ? data['error'] as String : null;
+        throw AuthException(serverMsg ?? 'Too many login attempts. Please wait a few minutes and try again.');
+      }
       throw AuthException('Could not reach the server. Check your connection and try again.');
     }
   }
