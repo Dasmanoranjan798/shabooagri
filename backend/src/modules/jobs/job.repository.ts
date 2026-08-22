@@ -86,8 +86,9 @@ export function createManual(
     fuelUsedLitres?: number;
     notes?: string;
   },
+  tx: Prisma.TransactionClient | typeof prisma = prisma,
 ) {
-  return prisma.job.create({
+  return tx.job.create({
     data: { ...data, companyId },
     include: includeRelations,
   });

@@ -115,9 +115,16 @@ async function claimNextBookingNumber(companyId: string): Promise<string> {
 export async function create(
   companyId: string,
   data: Omit<Prisma.BookingUncheckedCreateInput, "companyId" | "bookingNumber">,
+  tx: Prisma.TransactionClient | typeof prisma = prisma,
 ) {
+  // The monotonic counter claim intentionally stays on the global client,
+  // not tx: it's an atomic self-serializing UPDATE (see claimNextBookingNumber)
+  // and gaps on rollback are an accepted property of the numbering scheme
+  // (same as invoice numbering in invoice.repository.create). Only the row
+  // insert is bound to the caller's transaction so it commits/rolls back
+  // together with the rest of a multi-write operation.
   const bookingNumber = await claimNextBookingNumber(companyId);
-  return prisma.booking.create({
+  return tx.booking.create({
     data: { ...data, companyId, bookingNumber },
     include: includeRelations,
   });
