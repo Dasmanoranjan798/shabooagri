@@ -214,7 +214,12 @@ export async function requestOtp(input: OtpRequestInput, tenantCompany?: any) {
     await sendOtpSms(input.identifier, code);
   }
 
-  console.log(`[dev-only] OTP for ${input.identifier}: ${code}`);
+  // Dev convenience only. MUST stay guarded: a real OTP is a login credential,
+  // and writing it to the production log would let anyone with log access read
+  // active codes and authenticate. Mirrors the devOtp response guard below.
+  if (env.NODE_ENV !== "production") {
+    console.log(`[dev-only] OTP for ${input.identifier}: ${code}`);
+  }
   return {
     message: "OTP sent",
     devOtp: env.NODE_ENV !== "production" ? code : undefined,
