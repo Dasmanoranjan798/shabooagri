@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { env } from "../../config/env";
+import { logger } from "../logger";
 
 export async function sendPasswordResetEmail(toEmail: string, resetLink: string): Promise<boolean> {
   if (env.SMTP_HOST && env.SMTP_USER) {
@@ -37,11 +38,11 @@ export async function sendPasswordResetEmail(toEmail: string, resetLink: string)
 
       return true;
     } catch (err: any) {
-      console.error("[MailService] Failed to send email via SMTP:", err.message);
+      logger.error("mail.reset.failed", { err });
       return false;
     }
   } else {
-    console.log(`[MailService] SMTP not configured. Generated reset link safely for ${toEmail}.`);
+    logger.warn("mail.reset.smtp_not_configured");
     return true;
   }
 }
@@ -88,11 +89,11 @@ export async function sendStaffInviteEmail(
 
       return true;
     } catch (err: any) {
-      console.error("[MailService] Failed to send staff invite email via SMTP:", err.message);
+      logger.error("mail.invite.failed", { err });
       return false;
     }
   } else {
-    console.log(`[MailService] SMTP not configured. Generated invite link safely for ${toEmail}.`);
+    logger.warn("mail.invite.smtp_not_configured");
     return true;
   }
 }
@@ -130,11 +131,11 @@ export async function sendOtpEmail(toEmail: string, otpCode: string): Promise<bo
 
       return true;
     } catch (err: any) {
-      console.error("[MailService] Failed to send OTP email via SMTP:", err.message);
+      logger.error("mail.otp.failed", { err });
       return false;
     }
   } else {
-    console.log(`[MailService] SMTP not configured. Generated OTP safely for ${toEmail}.`);
+    logger.warn("mail.otp.smtp_not_configured");
     return true;
   }
 }

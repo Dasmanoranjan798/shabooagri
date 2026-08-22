@@ -2,11 +2,22 @@ import { Prisma } from "@prisma/client";
 import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
 import { AppError } from "../shared/errors/AppError";
+import { logger } from "../shared/logger";
 
 // Central place that turns a thrown error into an HTTP response — no route
-// or service handler formats its own error response.
-export function errorMiddleware(err: unknown, _req: Request, res: Response, _next: NextFunction) {
+// or service handler formats its own error response. HTTP responses are
+// unchanged from before; this only adds structured logging so unexpected
+// server errors are captured with a stack trace and request correlation id
+// instead of a bare console.error dump.
+export function errorMiddleware(err: unknown, req: Request, res: Response, _next: NextFunction) {
+  const base = { requestId: req.requestId, method: req.method, path: req.path };
+
   if (err instanceof AppError) {
+    // Server-side AppErrors (5xx) are unexpected enough to log with detail;
+    // 4xx are expected client errors already captured by the access log.
+    if (err.statusCode >= 500) {
+      logger.error("app_error", { ...base, status: err.statusCode, err });
+    }
     return res.status(err.statusCode).json({ error: err.message, ...err.details });
   }
   if (err instanceof ZodError) {
@@ -26,6 +37,7 @@ export function errorMiddleware(err: unknown, _req: Request, res: Response, _nex
       return res.status(404).json({ error: "Record not found" });
     }
   }
-  console.error(err);
+  // Unexpected/unhandled error — the one path that previously did console.error(err).
+  logger.error("unhandled_error", { ...base, status: 500, err });
   return res.status(500).json({ error: "Internal server error" });
 }

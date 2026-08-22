@@ -4,6 +4,7 @@ import * as fuelService from "../fuel/fuel.service";
 import { resolveCallerScope } from "../../shared/access/callerScope";
 import { AppError } from "../../shared/errors/AppError";
 import * as dashboardRepository from "./dashboard.repository";
+import { logger } from "../../shared/logger";
 import * as settingsRepo from "../settings/settings.repository";
 
 // ---- Date / Timezone Utilities ----
@@ -31,7 +32,7 @@ async function getCompanyTimezone(companyId: string): Promise<string> {
     Intl.DateTimeFormat("en", { timeZone: tz });
     return tz;
   } catch {
-    console.warn(`[Dashboard] Invalid timezone "${tz}" for company ${companyId}; falling back to Asia/Kolkata`);
+    logger.warn("dashboard.invalid_timezone", { companyId, tz, fallback: "Asia/Kolkata" });
     return "Asia/Kolkata";
   }
 }

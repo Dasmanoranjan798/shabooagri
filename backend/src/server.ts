@@ -1,6 +1,7 @@
 import { app } from "./app";
 import { env } from "./config/env";
+import { logger } from "./shared/logger";
 
 app.listen(env.PORT, () => {
-  console.log(`ShabooAgri API listening on port ${env.PORT} (${env.NODE_ENV})`);
+  logger.info("server.started", { port: env.PORT });
 });

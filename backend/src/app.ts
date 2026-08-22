@@ -25,6 +25,7 @@ import { rbacRouter } from "./modules/rbac/rbac.routes";
 import { teamRouter } from "./modules/team/staffInvite.routes";
 import { internalRouter } from "./modules/internal/internal.routes";
 import { internalApiKeyMiddleware } from "./middleware/internalApiKey.middleware";
+import { requestLoggerMiddleware } from "./middleware/requestLogger.middleware";
 
 // Express app assembly only. Module routers are mounted here once they exist —
 // this file must never contain business logic itself.
@@ -57,6 +58,11 @@ app.use(
     credentials: true,
   }),
 );
+
+// Structured request logging + correlation id — as early as possible so every
+// request (including json parse failures) gets an id and an access-log line.
+app.use(requestLoggerMiddleware);
+
 app.use(express.json());
 
 app.get("/health", async (_req, res) => {
