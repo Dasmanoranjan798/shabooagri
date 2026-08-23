@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart' show Share;
@@ -8,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/info_row.dart';
 import '../data/receipt.dart';
 import 'payment_list_screen.dart';
@@ -204,21 +204,17 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
     final canReceivePayment = user?.isOwnerOrManager ?? false;
     final isOwner = user?.roleSystemKey == 'owner';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Invoice Details'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/payments'),
-        ),
-        actions: receiptAsync.maybeWhen(
-          data: (receipt) => [
-            IconButton(icon: const Icon(Icons.picture_as_pdf), tooltip: 'Print / PDF', onPressed: () => _exportPdf(receipt)),
-            IconButton(icon: const Icon(Icons.ios_share), tooltip: 'Export CSV', onPressed: () => _exportCsv(receipt)),
-            IconButton(icon: const Icon(Icons.chat), tooltip: 'Share WhatsApp', onPressed: () => _shareWhatsApp(receipt)),
-          ],
-          orElse: () => const [],
-        ),
+    return AdaptiveScaffold(
+      currentRoute: '/payments',
+      title: 'Invoice Details',
+      showBack: true,
+      actions: receiptAsync.maybeWhen(
+        data: (receipt) => [
+          IconButton(icon: const Icon(Icons.picture_as_pdf), tooltip: 'Print / PDF', onPressed: () => _exportPdf(receipt)),
+          IconButton(icon: const Icon(Icons.ios_share), tooltip: 'Export CSV', onPressed: () => _exportCsv(receipt)),
+          IconButton(icon: const Icon(Icons.chat), tooltip: 'Share WhatsApp', onPressed: () => _shareWhatsApp(receipt)),
+        ],
+        orElse: () => const [],
       ),
       body: receiptAsync.when(
         data: (receipt) {

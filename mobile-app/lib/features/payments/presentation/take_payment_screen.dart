@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../customers/presentation/customer_list_screen.dart';
 
 class TakePaymentScreen extends ConsumerStatefulWidget {
@@ -83,8 +84,10 @@ class _TakePaymentScreenState extends ConsumerState<TakePaymentScreen> {
   Widget build(BuildContext context) {
     final customersAsync = ref.watch(customersListProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Take Payment')),
+    return AdaptiveScaffold(
+      currentRoute: '/payments',
+      title: 'Take Payment',
+      showBack: true,
       body: customersAsync.when(
         data: (customers) {
            return Padding(

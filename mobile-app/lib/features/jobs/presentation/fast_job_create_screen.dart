@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../customers/presentation/customer_list_screen.dart';
 import '../../drivers/presentation/driver_list_screen.dart';
 import '../../machines/presentation/machine_list_screen.dart';
@@ -151,8 +152,10 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
     final machinesAsync = ref.watch(machinesListProvider);
     final driversAsync = ref.watch(driversListProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Create Job Card')),
+    return AdaptiveScaffold(
+      currentRoute: '/jobs',
+      title: 'Create Job Card',
+      showBack: true,
       body: customersAsync.when(
         data: (customers) => villagesAsync.when(
           data: (villages) => machinesAsync.when(

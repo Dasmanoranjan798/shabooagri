@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/company_profile_provider.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/info_row.dart';
 
 final machineDetailProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
@@ -25,14 +26,17 @@ class MachineDetailScreen extends ConsumerWidget {
     final serviceAlertHours = profileAsync.valueOrNull?.serviceAlertHours ?? 50;
     final insuranceAlertDays = profileAsync.valueOrNull?.insuranceAlertDays ?? 30;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Machine Details'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/machines'),
+    return AdaptiveScaffold(
+      currentRoute: '/machines',
+      title: 'Machine Details',
+      showBack: true,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.edit),
+          tooltip: 'Edit',
+          onPressed: () => context.go('/machines/$machineId/edit'),
         ),
-      ),
+      ],
       body: machineAsync.when(
         data: (machine) {
           final hourMeter = (machine['hourMeterReading'] != null ? double.tryParse(machine['hourMeterReading'].toString()) : null);
@@ -75,6 +79,12 @@ class MachineDetailScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
+                Card(
+                  margin: const EdgeInsets.only(top: 8),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
                 InfoRow('Registration Number', machine['registrationNumber'] as String),
                 if (machine['brand'] != null) InfoRow('Brand', machine['brand'] as String),
                 if (machine['model'] != null) InfoRow('Model', machine['model'] as String),
@@ -93,6 +103,10 @@ class MachineDetailScreen extends ConsumerWidget {
                 if (machine['insuranceNumber'] != null) InfoRow('Insurance Policy Number', machine['insuranceNumber'] as String),
                 if (insuranceExpiry != null)
                   InfoRow('Insurance Expiry', insuranceExpiry.toIso8601String().split('T').first),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           );

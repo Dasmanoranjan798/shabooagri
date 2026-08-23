@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/layout/responsive.dart';
+import '../../../core/layout/responsive_form.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import 'employee_list_screen.dart';
 
 final employeeByIdProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
@@ -168,36 +171,30 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isEdit && !_prefilled) {
-      final employeeAsync = ref.watch(employeeByIdProvider(widget.employeeId!));
-      return Scaffold(
-        appBar: AppBar(title: const Text('Edit Employee')),
-        body: employeeAsync.when(
-          data: (employee) {
-            _prefillFrom(employee);
-            return _buildForm();
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text('Could not load employee: ${apiErrorMessage(e)}')),
-        ),
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? 'Edit Employee' : 'New Employee'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/employees')),
-      ),
-      body: _buildForm(),
+    return AdaptiveScaffold(
+      currentRoute: '/employees',
+      title: _isEdit ? 'Edit Employee' : 'New Employee',
+      showBack: true,
+      body: (_isEdit && !_prefilled)
+          ? ref.watch(employeeByIdProvider(widget.employeeId!)).when(
+              data: (employee) {
+                _prefillFrom(employee);
+                return _buildForm(context);
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, s) => Center(child: Text('Could not load employee: ${apiErrorMessage(e)}')),
+            )
+          : _buildForm(context),
     );
   }
 
-  Widget _buildForm() {
+  Widget _buildForm(BuildContext context) {
     final canSendInvite = !_isEdit || !_hasExistingUser;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
+      padding: EdgeInsets.all(context.responsive.isDesktop ? 24.0 : 16.0),
+      child: DesktopFormContainer(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (_error != null)
@@ -205,63 +202,67 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
               padding: const EdgeInsets.only(bottom: 12),
               child: Text(_error!, style: const TextStyle(color: Colors.red)),
             ),
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Full Name *', border: OutlineInputBorder()),
-            enabled: !_saving,
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _roleTitleController,
-            decoration: const InputDecoration(labelText: 'Designation / Role Title', border: OutlineInputBorder()),
-            enabled: !_saving,
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _phoneController,
-            decoration: const InputDecoration(labelText: 'Mobile Phone', border: OutlineInputBorder()),
-            keyboardType: TextInputType.phone,
-            enabled: !_saving,
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            initialValue: _employmentStatus,
-            decoration: const InputDecoration(labelText: 'Employment Status', border: OutlineInputBorder()),
-            items: const [
-              DropdownMenuItem(value: 'ACTIVE', child: Text('ACTIVE')),
-              DropdownMenuItem(value: 'INACTIVE', child: Text('INACTIVE')),
+          ResponsiveFormGrid(
+            children: [
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Full Name *', border: OutlineInputBorder()),
+                enabled: !_saving,
+              ),
+              TextField(
+                controller: _roleTitleController,
+                decoration: const InputDecoration(labelText: 'Designation / Role Title', border: OutlineInputBorder()),
+                enabled: !_saving,
+              ),
+              TextField(
+                controller: _phoneController,
+                decoration: const InputDecoration(labelText: 'Mobile Phone', border: OutlineInputBorder()),
+                keyboardType: TextInputType.phone,
+                enabled: !_saving,
+              ),
+              DropdownButtonFormField<String>(
+                initialValue: _employmentStatus,
+                decoration: const InputDecoration(labelText: 'Employment Status', border: OutlineInputBorder()),
+                items: const [
+                  DropdownMenuItem(value: 'ACTIVE', child: Text('ACTIVE')),
+                  DropdownMenuItem(value: 'INACTIVE', child: Text('INACTIVE')),
+                ],
+                onChanged: _saving ? null : (value) => setState(() => _employmentStatus = value!),
+              ),
+              InputDecorator(
+                decoration: const InputDecoration(labelText: 'Joined Date', border: OutlineInputBorder()),
+                child: InkWell(
+                  onTap: _saving ? null : _pickJoinedDate,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(_joinedDate == null ? 'Not set' : _joinedDate!.toIso8601String().split('T').first),
+                      const Icon(Icons.calendar_today, size: 18),
+                    ],
+                  ),
+                ),
+              ),
+              DropdownButtonFormField<String>(
+                initialValue: _compensationType,
+                decoration: const InputDecoration(labelText: 'Compensation Type', border: OutlineInputBorder()),
+                items: _compensationTypes.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                onChanged: _saving ? null : (value) => setState(() => _compensationType = value!),
+              ),
+              TextField(
+                controller: _rateController,
+                decoration: InputDecoration(
+                  labelText: _compensationType == 'HOURLY'
+                      ? 'Hourly Rate'
+                      : _compensationType == 'YEARLY'
+                          ? 'Yearly Salary'
+                          : 'Monthly Salary',
+                  border: const OutlineInputBorder(),
+                  prefixText: '₹ ',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                enabled: !_saving,
+              ),
             ],
-            onChanged: _saving ? null : (value) => setState(() => _employmentStatus = value!),
-          ),
-          const SizedBox(height: 16),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Joined Date'),
-            subtitle: Text(_joinedDate == null ? 'Not set' : _joinedDate!.toIso8601String().split('T').first),
-            trailing: const Icon(Icons.calendar_today),
-            onTap: _saving ? null : _pickJoinedDate,
-          ),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<String>(
-            initialValue: _compensationType,
-            decoration: const InputDecoration(labelText: 'Compensation Type', border: OutlineInputBorder()),
-            items: _compensationTypes.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-            onChanged: _saving ? null : (value) => setState(() => _compensationType = value!),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _rateController,
-            decoration: InputDecoration(
-              labelText: _compensationType == 'HOURLY'
-                  ? 'Hourly Rate'
-                  : _compensationType == 'YEARLY'
-                      ? 'Yearly Salary'
-                      : 'Monthly Salary',
-              border: const OutlineInputBorder(),
-              prefixText: '₹ ',
-            ),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            enabled: !_saving,
           ),
           if (canSendInvite) ...[
             const Divider(height: 32),
@@ -302,14 +303,17 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
             ],
           ],
           const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: _saving ? null : _save,
-            style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-            child: _saving
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : Text(_isEdit ? 'Save Changes' : 'Create Employee'),
+          DesktopFormActions(
+            child: ElevatedButton(
+              onPressed: _saving ? null : _save,
+              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32)),
+              child: _saving
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text(_isEdit ? 'Save Changes' : 'Create Employee'),
+            ),
           ),
         ],
+      ),
       ),
     );
   }

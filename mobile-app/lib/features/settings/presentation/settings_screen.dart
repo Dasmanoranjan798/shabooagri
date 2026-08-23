@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/company_profile.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/layout/responsive_form.dart';
 import '../../../core/providers/company_profile_provider.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/widgets/adaptive_scaffold.dart';
@@ -189,21 +190,29 @@ class _BusinessProfileTabState extends ConsumerState<_BusinessProfileTab> {
     final enabled = widget.canManage && !_saving;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
+      child: DesktopFormContainer(
+        maxWidth: 960,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (!widget.canManage) _readOnlyBanner('Read-only — only the Owner can edit company profile settings.'),
           if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
           if (_saved) const Padding(padding: EdgeInsets.only(bottom: 12), child: Text('Business profile saved successfully.', style: TextStyle(color: Colors.green))),
-          _field('Business Name *', _name, enabled),
-          _field('Primary Phone', _phone, enabled),
-          _field('Official Email', _email, enabled),
-          _field('Business Address', _address, enabled),
-          _field('City / Town', _city, enabled),
-          _field('District', _district, enabled),
-          _field('State', _state, enabled),
-          _field('PIN / Postal Code', _pincode, enabled),
-          _field('Country', _country, enabled),
+          ResponsiveFormGrid(
+            gap: 0,
+            fullWidthIndices: const {0, 3},
+            children: [
+              _field('Business Name *', _name, enabled),
+              _field('Primary Phone', _phone, enabled),
+              _field('Official Email', _email, enabled),
+              _field('Business Address', _address, enabled),
+              _field('City / Town', _city, enabled),
+              _field('District', _district, enabled),
+              _field('State', _state, enabled),
+              _field('PIN / Postal Code', _pincode, enabled),
+              _field('Country', _country, enabled),
+            ],
+          ),
           const SizedBox(height: 8),
           Card(
             color: Colors.grey.shade50,
@@ -260,6 +269,7 @@ class _BusinessProfileTabState extends ConsumerState<_BusinessProfileTab> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -365,7 +375,9 @@ class _InvoicingTabState extends ConsumerState<_InvoicingTab> {
     final enabled = widget.canManage && !_saving;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
+      child: DesktopFormContainer(
+        maxWidth: 960,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (!widget.canManage) _readOnlyBanner('Read-only — only the Owner can edit invoice & payment settings.'),
@@ -449,6 +461,7 @@ class _InvoicingTabState extends ConsumerState<_InvoicingTab> {
           ],
         ],
       ),
+      ),
     );
   }
 }
@@ -523,7 +536,9 @@ class _OperationsTabState extends ConsumerState<_OperationsTab> {
     final enabled = widget.canManage && !_saving;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
+      child: DesktopFormContainer(
+        maxWidth: 960,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (!widget.canManage) _readOnlyBanner('Read-only — only the Owner can edit operational rules.'),
@@ -589,6 +604,7 @@ class _OperationsTabState extends ConsumerState<_OperationsTab> {
             ),
           ],
         ],
+      ),
       ),
     );
   }

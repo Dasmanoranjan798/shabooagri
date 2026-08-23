@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/info_row.dart';
 import '../../drivers/presentation/driver_list_screen.dart';
 import '../../machines/presentation/machine_list_screen.dart';
@@ -87,14 +88,17 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     final attachmentsAsync = ref.watch(bookingAttachmentsProvider(widget.bookingId));
     final dio = ref.read(apiClientProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Booking Details'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/bookings'),
+    return AdaptiveScaffold(
+      currentRoute: '/bookings',
+      title: 'Booking Details',
+      showBack: true,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.edit),
+          tooltip: 'Edit',
+          onPressed: () => context.go('/bookings/${widget.bookingId}/edit'),
         ),
-      ),
+      ],
       body: bookingAsync.when(
         data: (booking) {
           final pricingMethod = booking['pricingMethod'] as Map<String, dynamic>?;

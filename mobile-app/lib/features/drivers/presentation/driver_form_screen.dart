@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/layout/responsive.dart';
+import '../../../core/layout/responsive_form.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import 'driver_list_screen.dart';
 
 class EmployeeOption {
@@ -121,84 +124,88 @@ class _DriverFormScreenState extends ConsumerState<DriverFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isEdit && !_prefilled) {
-      final driverAsync = ref.watch(driverByIdProvider(widget.driverId!));
-      return Scaffold(
-        appBar: AppBar(title: const Text('Edit Driver')),
-        body: driverAsync.when(
-          data: (driver) {
-            _prefillFrom(driver);
-            return _buildForm();
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text('Could not load driver: ${apiErrorMessage(e)}')),
-        ),
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? 'Edit Driver' : 'New Driver'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.canPop() ? context.pop() : context.go('/drivers')),
-      ),
-      body: _buildForm(),
+    return AdaptiveScaffold(
+      currentRoute: '/drivers',
+      title: _isEdit ? 'Edit Driver' : 'New Driver',
+      showBack: true,
+      body: (_isEdit && !_prefilled)
+          ? ref.watch(driverByIdProvider(widget.driverId!)).when(
+              data: (driver) {
+                _prefillFrom(driver);
+                return _buildForm(context);
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, s) => Center(child: Text('Could not load driver: ${apiErrorMessage(e)}')),
+            )
+          : _buildForm(context),
     );
   }
 
-  Widget _buildForm() {
+  Widget _buildForm(BuildContext context) {
     final employeesAsync = ref.watch(employeeOptionsProvider);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(_error!, style: const TextStyle(color: Colors.red)),
+    final form = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(_error!, style: const TextStyle(color: Colors.red)),
+          ),
+        ResponsiveFormGrid(
+          children: [
+            employeesAsync.when(
+              data: (employees) => DropdownButtonFormField<String>(
+                initialValue: _employeeId,
+                decoration: const InputDecoration(labelText: 'Employee *', border: OutlineInputBorder()),
+                items: employees.map((e) => DropdownMenuItem(value: e.id, child: Text(e.name))).toList(),
+                onChanged: _saving ? null : (value) => setState(() => _employeeId = value),
+              ),
+              loading: () => const LinearProgressIndicator(),
+              error: (e, s) => Text('Could not load employees: ${apiErrorMessage(e)}'),
             ),
-          employeesAsync.when(
-            data: (employees) => DropdownButtonFormField<String>(
-              initialValue: _employeeId,
-              decoration: const InputDecoration(labelText: 'Employee *', border: OutlineInputBorder()),
-              items: employees.map((e) => DropdownMenuItem(value: e.id, child: Text(e.name))).toList(),
-              onChanged: _saving ? null : (value) => setState(() => _employeeId = value),
+            TextField(
+              controller: _licenseController,
+              decoration: const InputDecoration(labelText: 'License Number', border: OutlineInputBorder()),
+              enabled: !_saving,
             ),
-            loading: () => const LinearProgressIndicator(),
-            error: (e, s) => Text('Could not load employees: ${apiErrorMessage(e)}'),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _licenseController,
-            decoration: const InputDecoration(labelText: 'License Number', border: OutlineInputBorder()),
-            enabled: !_saving,
-          ),
-          const SizedBox(height: 16),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('License Expiry Date'),
-            subtitle: Text(_licenseExpiryDate == null ? 'Not set' : _licenseExpiryDate!.toIso8601String().split('T').first),
-            trailing: const Icon(Icons.calendar_today),
-            onTap: _saving ? null : _pickLicenseExpiry,
-          ),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<String>(
-            initialValue: _availability,
-            decoration: const InputDecoration(labelText: 'Availability', border: OutlineInputBorder()),
-            items: _availabilityOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-            onChanged: _saving ? null : (value) => setState(() => _availability = value!),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
+            InputDecorator(
+              decoration: const InputDecoration(labelText: 'License Expiry Date', border: OutlineInputBorder()),
+              child: InkWell(
+                onTap: _saving ? null : _pickLicenseExpiry,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(_licenseExpiryDate == null ? 'Not set' : _licenseExpiryDate!.toIso8601String().split('T').first),
+                    const Icon(Icons.calendar_today, size: 18),
+                  ],
+                ),
+              ),
+            ),
+            DropdownButtonFormField<String>(
+              initialValue: _availability,
+              decoration: const InputDecoration(labelText: 'Availability', border: OutlineInputBorder()),
+              items: _availabilityOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+              onChanged: _saving ? null : (value) => setState(() => _availability = value!),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        DesktopFormActions(
+          child: ElevatedButton(
             onPressed: _saving ? null : _save,
-            style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+            style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32)),
             child: _saving
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : Text(_isEdit ? 'Save Changes' : 'Create Driver'),
           ),
-        ],
-      ),
+        ),
+      ],
+    );
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(context.responsive.isDesktop ? 24.0 : 16.0),
+      child: DesktopFormContainer(child: form),
     );
   }
 }

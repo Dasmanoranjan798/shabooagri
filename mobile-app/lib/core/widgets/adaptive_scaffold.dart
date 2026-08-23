@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../layout/responsive.dart';
 import 'app_drawer.dart';
 import 'desktop_sidebar.dart';
@@ -35,6 +36,14 @@ class AdaptiveScaffold extends StatelessWidget {
   /// Data-grid screens that want the full width can set this false.
   final bool constrainContentWidth;
 
+  /// For detail/create/edit sub-pages: show a back affordance. On desktop this
+  /// renders a leading back button in the top bar (the sidebar is still shown,
+  /// with [currentRoute]'s module highlighted); on mobile the [AppBar] already
+  /// shows its automatic back button, so this only adds an explicit one when
+  /// there is nothing to pop. Back pops the navigation stack, falling back to
+  /// [currentRoute] (the module's list page) when the stack can't pop.
+  final bool showBack;
+
   const AdaptiveScaffold({
     super.key,
     required this.currentRoute,
@@ -44,7 +53,16 @@ class AdaptiveScaffold extends StatelessWidget {
     this.floatingActionButton,
     this.bottomNavigationBar,
     this.constrainContentWidth = true,
+    this.showBack = false,
   });
+
+  void _onBack(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(currentRoute);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,9 +71,23 @@ class AdaptiveScaffold extends StatelessWidget {
   }
 
   Widget _buildMobile(BuildContext context) {
+    // On a sub-page (showBack) the AppBar's automatic back button already
+    // handles it; only when the stack can't pop do we add an explicit one so a
+    // back affordance is always present. On a top-level module page the drawer
+    // is shown instead.
+    final bool needsExplicitBack = showBack && !context.canPop();
     return Scaffold(
-      drawer: AppDrawer(currentRoute: currentRoute),
-      appBar: AppBar(title: Text(title), actions: actions),
+      drawer: showBack ? null : AppDrawer(currentRoute: currentRoute),
+      appBar: AppBar(
+        title: Text(title),
+        actions: actions,
+        leading: needsExplicitBack
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => _onBack(context),
+              )
+            : null,
+      ),
       bottomNavigationBar: bottomNavigationBar,
       floatingActionButton: floatingActionButton,
       body: body,
@@ -83,7 +115,11 @@ class AdaptiveScaffold extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                _DesktopTopBar(title: title, actions: actions),
+                _DesktopTopBar(
+                  title: title,
+                  actions: actions,
+                  onBack: showBack ? () => _onBack(context) : null,
+                ),
                 Expanded(child: content),
               ],
             ),
@@ -100,14 +136,15 @@ class AdaptiveScaffold extends StatelessWidget {
 class _DesktopTopBar extends StatelessWidget {
   final String title;
   final List<Widget>? actions;
+  final VoidCallback? onBack;
 
-  const _DesktopTopBar({required this.title, this.actions});
+  const _DesktopTopBar({required this.title, this.actions, this.onBack});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: EdgeInsets.only(left: onBack != null ? 8 : 24, right: 24),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
@@ -116,6 +153,15 @@ class _DesktopTopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
+          if (onBack != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                tooltip: 'Back',
+                onPressed: onBack,
+              ),
+            ),
           Expanded(
             child: Text(
               title,

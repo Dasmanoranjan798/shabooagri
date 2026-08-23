@@ -1,6 +1,64 @@
 import 'package:flutter/material.dart';
 import 'responsive.dart';
 
+/// Centres a form and caps its width on desktop so fields don't stretch to the
+/// full (up to 1200px) content area — long single-line inputs are unpleasant to
+/// scan when they're that wide. On phones it's a no-op (full width).
+class DesktopFormContainer extends StatelessWidget {
+  final Widget child;
+
+  /// Max width the form is allowed to grow to on desktop.
+  final double maxWidth;
+
+  const DesktopFormContainer({super.key, required this.child, this.maxWidth = 880});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!Responsive.of(context).isDesktop) return child;
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(constraints: BoxConstraints(maxWidth: maxWidth), child: child),
+    );
+  }
+}
+
+/// Lays out a form's primary action(s): right-aligned on desktop (conventional
+/// for desktop dialogs/forms), full-width stretched on phones (thumb-friendly).
+/// Pass a single button as [child], or use [children] for Cancel + Save pairs.
+class DesktopFormActions extends StatelessWidget {
+  final Widget? child;
+  final List<Widget>? children;
+
+  const DesktopFormActions({super.key, this.child, this.children})
+      : assert(child != null || children != null);
+
+  @override
+  Widget build(BuildContext context) {
+    final items = children ?? [child!];
+    if (Responsive.of(context).isDesktop) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          for (int i = 0; i < items.length; i++) ...[
+            if (i != 0) const SizedBox(width: 12),
+            items[i],
+          ],
+        ],
+      );
+    }
+    // Phone: stretch each action full width, stacked.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (int i = 0; i < items.length; i++) ...[
+          if (i != 0) const SizedBox(height: 12),
+          items[i],
+        ],
+      ],
+    );
+  }
+}
+
 /// Lays a list of form fields into a **single column on phones** and into
 /// **two columns on desktop** — so long forms read as compact desktop forms
 /// instead of an endlessly-stacked phone form. Each child occupies one cell;

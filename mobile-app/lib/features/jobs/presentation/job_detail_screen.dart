@@ -12,6 +12,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/company_profile_provider.dart';
 import '../../../core/providers/session_provider.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/info_row.dart';
 import '../data/job_actions_repository.dart';
 import '../data/job_detail.dart';
@@ -369,18 +370,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
     final isOwnerOrManager = user?.isOwnerOrManager ?? false;
     final isOwner = user?.roleSystemKey == 'owner';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Job Details'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go(isOwnerOrManager ? '/jobs' : (user?.isDriver ?? false) ? '/driver' : '/jobs'),
-        ),
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _refresh),
-        ],
-      ),
-      body: jobAsync.when(
+    final content = jobAsync.when(
         data: (job) {
           _ensureTicker(job.status);
           final elapsedSec = job.status == 'WORKING' ? job.elapsedSecondsNow() : null;
@@ -465,7 +455,32 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: ${apiErrorMessage(error)}')),
+      );
+
+    // Owner/Manager get the desktop shell (persistent sidebar) on wide windows;
+    // drivers keep the phone layout everywhere (no owner sidebar).
+    if (isOwnerOrManager) {
+      return AdaptiveScaffold(
+        currentRoute: '/jobs',
+        title: 'Job Details',
+        showBack: true,
+        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _refresh)],
+        body: content,
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Job Details'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go((user?.isDriver ?? false) ? '/driver' : '/jobs'),
+        ),
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _refresh),
+        ],
       ),
+      body: content,
     );
   }
 

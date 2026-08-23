@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/company_profile_provider.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/info_row.dart';
 
 final driverDetailProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
@@ -23,14 +24,17 @@ class DriverDetailScreen extends ConsumerWidget {
     final profileAsync = ref.watch(companyProfileProvider);
     final licenseAlertDays = profileAsync.valueOrNull?.licenseAlertDays ?? 30;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Driver Details'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/drivers'),
+    return AdaptiveScaffold(
+      currentRoute: '/drivers',
+      title: 'Driver Details',
+      showBack: true,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.edit),
+          tooltip: 'Edit',
+          onPressed: () => context.go('/drivers/$driverId/edit'),
         ),
-      ),
+      ],
       body: driverAsync.when(
         data: (driver) {
           final employee = driver['employee'] as Map<String, dynamic>? ?? const {};
@@ -56,6 +60,12 @@ class DriverDetailScreen extends ConsumerWidget {
                           style: TextStyle(color: licenseWarn.$1 ? Colors.red : Colors.orange, fontWeight: FontWeight.bold)),
                     ),
                   ),
+                Card(
+                  margin: const EdgeInsets.only(top: 8),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
                 InfoRow('Name', employee['name'] as String? ?? 'Unknown'),
                 InfoRow('Designation', employee['roleTitle'] as String? ?? 'Equipment Operator'),
                 if (employee['phone'] != null) InfoRow('Mobile Number', employee['phone'] as String),
@@ -67,6 +77,10 @@ class DriverDetailScreen extends ConsumerWidget {
                       : 'N/A',
                 ),
                 InfoRow('Availability', driver['availabilityStatus'] as String),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           );
