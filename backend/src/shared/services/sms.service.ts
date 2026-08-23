@@ -1,5 +1,24 @@
 import { env } from "../../config/env";
 import { logger } from "../logger";
+import { AppError } from "../errors/AppError";
+
+// Whether a REAL SMS provider is configured (i.e. not the dev mock and with the
+// credentials that provider needs). Exported for testing. "mock" is never
+// considered configured — it must never deliver real production OTPs.
+export function smsProviderStatus(): { provider: string; configured: boolean } {
+  const provider = env.SMS_PROVIDER;
+  if (provider === "fast2sms" || provider === "msg91") {
+    return { provider, configured: !!env.SMS_API_KEY };
+  }
+  if (provider === "twilio") {
+    return {
+      provider,
+      configured: !!(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_FROM_NUMBER),
+    };
+  }
+  // "mock" or anything unrecognized
+  return { provider, configured: false };
+}
 
 /**
  * Normalizes phone numbers to standard 10-digit Indian phone numbers
@@ -24,22 +43,33 @@ function maskMobile(mobile: string): string {
  */
 export async function sendOtpSms(mobile: string, otpCode: string): Promise<boolean> {
   const cleanedMobile = cleanPhoneNumber(mobile);
-  const provider = env.SMS_PROVIDER;
-  const messageText = `Your ShabooAgri verification code is ${otpCode}. Valid for 10 minutes. Do not share this OTP with anyone.`;
+  const { provider, configured } = smsProviderStatus();
+  const messageText = `Your ShabooAgri verification code is ${otpCode}. Valid for 5 minutes. Do not share this OTP with anyone.`;
 
-  logger.info("sms.otp.preparing", { provider, to: maskMobile(cleanedMobile) });
+  logger.info("sms.otp.preparing", { provider, configured, to: maskMobile(cleanedMobile) });
+
+  // No real provider configured. In production this must NEVER silently
+  // "succeed" via the mock — that would tell a real user "OTP sent" while no
+  // SMS is delivered and, worse, let mobile OTP appear to work without any
+  // gateway. Fail with a safe error instead. The mock is only for dev/test.
+  if (!configured) {
+    if (env.NODE_ENV === "production") {
+      logger.error("sms.otp.provider_unconfigured", { provider });
+      throw new AppError(
+        503,
+        "SMS delivery is temporarily unavailable. Please use another sign-in method or contact support.",
+      );
+    }
+    logger.info("sms.otp.mock", { provider, to: maskMobile(cleanedMobile) });
+    return true;
+  }
 
   try {
-    if (provider === "mock" || !env.SMS_API_KEY) {
-      logger.info("sms.otp.mock", { to: maskMobile(cleanedMobile) });
-      return true;
-    }
-
     if (provider === "fast2sms") {
       const response = await fetch("https://www.fast2sms.com/dev/bulkV2", {
         method: "POST",
         headers: {
-          "authorization": env.SMS_API_KEY,
+          "authorization": env.SMS_API_KEY!,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -57,7 +87,7 @@ export async function sendOtpSms(mobile: string, otpCode: string): Promise<boole
       const response = await fetch("https://control.msg91.com/api/v5/otp", {
         method: "POST",
         headers: {
-          "authkey": env.SMS_API_KEY,
+          "authkey": env.SMS_API_KEY!,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -96,7 +126,9 @@ export async function sendOtpSms(mobile: string, otpCode: string): Promise<boole
       return !!data.sid;
     }
 
-    return true;
+    // Reached only if a "configured" provider isn't handled above — treat as a
+    // failed send (do not falsely report success).
+    return false;
   } catch (err: any) {
     logger.error("sms.otp.failed", { provider, to: maskMobile(cleanedMobile), err });
     return false;
@@ -123,7 +155,7 @@ export async function sendStaffInviteSms(mobile: string, inviteLink: string, com
       const response = await fetch("https://www.fast2sms.com/dev/bulkV2", {
         method: "POST",
         headers: {
-          "authorization": env.SMS_API_KEY,
+          "authorization": env.SMS_API_KEY!,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

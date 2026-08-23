@@ -208,10 +208,17 @@ export async function requestOtp(input: OtpRequestInput, tenantCompany?: any) {
     expiresAt: addDuration(new Date(), `${OTP_EXPIRY_MINUTES}m`),
   });
 
-  if (input.identifier.includes("@")) {
-    await sendOtpEmail(input.identifier, code);
-  } else {
-    await sendOtpSms(input.identifier, code);
+  // Actually confirm delivery succeeded before telling the caller "OTP sent".
+  // Previously the send result was ignored, so a failed SMS/email (or an
+  // unconfigured provider) still returned success and the user waited for a
+  // code that never arrived. sendOtpSms throws in production when no real
+  // provider is configured (never silently mocks); a false result here means a
+  // genuine provider/delivery failure.
+  const delivered = input.identifier.includes("@")
+    ? await sendOtpEmail(input.identifier, code)
+    : await sendOtpSms(input.identifier, code);
+  if (!delivered) {
+    throw new AppError(502, "We couldn't send your verification code right now. Please try again shortly.");
   }
 
   // Dev convenience only. MUST stay guarded: a real OTP is a login credential,
