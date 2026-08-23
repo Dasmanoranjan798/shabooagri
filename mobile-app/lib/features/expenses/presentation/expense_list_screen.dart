@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart' show Share;
+import '../../../core/layout/responsive.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
-import '../../../core/widgets/app_drawer.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/confirm_delete.dart';
+import '../../../core/widgets/desktop_table.dart';
 import '../../../core/widgets/search_field.dart';
 
 class ExpenseSummary {
@@ -59,6 +61,16 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
     await Share.share(buffer.toString(), subject: 'ShabooAgri Expenses Export');
   }
 
+  Future<void> _delete(ExpenseSummary expense) async {
+    final dio = ref.read(apiClientProvider);
+    await confirmAndDelete(
+      context: context,
+      entityLabel: 'this expense',
+      onDelete: () => dio.delete('/expenses/${expense.id}'),
+      onSuccess: () => ref.invalidate(expensesListProvider),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final expensesAsync = ref.watch(expensesListProvider);
@@ -69,21 +81,29 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
     // expense.routes.ts before building this, not assumed from the
     // pattern used everywhere else.
     final canManage = user?.isOwnerOrManager ?? false;
+    final isDesktop = context.responsive.isDesktop;
 
-    return Scaffold(
-      drawer: const AppDrawer(currentRoute: '/expenses'),
-      appBar: AppBar(
-        title: const Text('Expenses'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.ios_share),
-            tooltip: 'Export CSV',
-            onPressed: () => expensesAsync.whenData(_exportCsv),
+    return AdaptiveScaffold(
+      currentRoute: '/expenses',
+      title: 'Expenses',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.ios_share),
+          tooltip: 'Export CSV',
+          onPressed: () => expensesAsync.whenData(_exportCsv),
+        ),
+        IconButton(icon: const Icon(Icons.refresh), onPressed: () => ref.invalidate(expensesListProvider)),
+        if (isDesktop && canManage)
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: FilledButton.icon(
+              onPressed: () => context.go('/expenses/new'),
+              icon: const Icon(Icons.add),
+              label: const Text('New Expense'),
+            ),
           ),
-          IconButton(icon: const Icon(Icons.refresh), onPressed: () => ref.invalidate(expensesListProvider)),
-        ],
-      ),
-      floatingActionButton: canManage
+      ],
+      floatingActionButton: (!isDesktop && canManage)
           ? FloatingActionButton(onPressed: () => context.go('/expenses/new'), child: const Icon(Icons.add))
           : null,
       body: expensesAsync.when(
@@ -110,8 +130,8 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.all(12.0),
-                child: GridView.count(
-                  crossAxisCount: 2,
+                child: GridView.extent(
+                  maxCrossAxisExtent: isDesktop ? 280 : 240,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   mainAxisSpacing: 8,
@@ -160,7 +180,9 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
               Expanded(
                 child: filtered.isEmpty
                     ? const Center(child: Text('No expenses match this view.'))
-                    : ListView.builder(
+                    : isDesktop
+                        ? _desktopTable(context, filtered, canManage: canManage)
+                        : ListView.builder(
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
                           final expense = filtered[index];
@@ -183,13 +205,7 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
                                         if (action == 'edit') {
                                           context.go('/expenses/${expense.id}/edit');
                                         } else if (action == 'delete') {
-                                          final dio = ref.read(apiClientProvider);
-                                          await confirmAndDelete(
-                                            context: context,
-                                            entityLabel: 'this expense',
-                                            onDelete: () => dio.delete('/expenses/${expense.id}'),
-                                            onSuccess: () => ref.invalidate(expensesListProvider),
-                                          );
+                                          await _delete(expense);
                                         }
                                       },
                                       itemBuilder: (context) => const [
@@ -209,6 +225,56 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: ${apiErrorMessage(error)}')),
+      ),
+    );
+  }
+
+  /// Desktop presentation: a proper expenses data grid — same data + row nav +
+  /// RBAC as the phone list.
+  Widget _desktopTable(BuildContext context, List<ExpenseSummary> expenses, {required bool canManage}) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: DesktopTable(
+        columns: const [
+          DataColumn(label: Text('Date')),
+          DataColumn(label: Text('Category')),
+          DataColumn(label: Text('Machine')),
+          DataColumn(label: Text('Recorded By')),
+          DataColumn(label: Text('Amount'), numeric: true),
+          DataColumn(label: Text('Actions')),
+        ],
+        rows: [
+          for (final e in expenses)
+            DataRow(
+              onSelectChanged: (_) => context.go('/expenses/${e.id}'),
+              cells: [
+                DataCell(Text(e.expenseDate.split('T').first)),
+                DataCell(Text(e.categoryName, style: const TextStyle(fontWeight: FontWeight.w600))),
+                DataCell(Text(e.machineRegistration ?? '—')),
+                DataCell(Text(e.recordedBy)),
+                DataCell(Text('₹${e.amount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold))),
+                DataCell(
+                  canManage
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, size: 18),
+                              tooltip: 'Edit',
+                              onPressed: () => context.go('/expenses/${e.id}/edit'),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                              tooltip: 'Delete',
+                              onPressed: () => _delete(e),
+                            ),
+                          ],
+                        )
+                      : const Text('—'),
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart' show Share;
+import '../../../core/layout/responsive.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
-import '../../../core/widgets/app_drawer.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
+import '../../../core/widgets/desktop_table.dart';
 import '../../machines/presentation/machine_list_screen.dart';
 
 class FuelEntry {
@@ -78,20 +80,19 @@ class FuelScreen extends ConsumerWidget {
     final entriesAsync = ref.watch(fuelEntriesProvider);
     final filter = ref.watch(fuelFilterProvider);
     final machinesAsync = ref.watch(machinesListProvider);
+    final isDesktop = context.responsive.isDesktop;
 
-    return Scaffold(
-      drawer: const AppDrawer(currentRoute: '/fuel'),
-      appBar: AppBar(
-        title: const Text('Fuel Log'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.ios_share),
-            tooltip: 'Export CSV',
-            onPressed: () => entriesAsync.whenData(_exportCsv),
-          ),
-          IconButton(icon: const Icon(Icons.refresh), onPressed: () => ref.invalidate(fuelEntriesProvider)),
-        ],
-      ),
+    return AdaptiveScaffold(
+      currentRoute: '/fuel',
+      title: 'Fuel Log',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.ios_share),
+          tooltip: 'Export CSV',
+          onPressed: () => entriesAsync.whenData(_exportCsv),
+        ),
+        IconButton(icon: const Icon(Icons.refresh), onPressed: () => ref.invalidate(fuelEntriesProvider)),
+      ],
       body: Column(
         children: [
           Padding(
@@ -149,20 +150,43 @@ class FuelScreen extends ConsumerWidget {
                       ),
                     ),
                     Expanded(
-                      child: ListView.builder(
-                        itemCount: entries.length,
-                        itemBuilder: (context, index) {
-                          final entry = entries[index];
-                          return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            child: ListTile(
-                              title: Text('${entry.machineRegistration} · ${entry.litres.toStringAsFixed(1)} L'),
-                              subtitle: Text('${entry.recordedAt.split('T').first} · ${entry.recordedByName}'),
-                              trailing: entry.cost != null ? Text('₹${entry.cost!.toStringAsFixed(0)}') : null,
+                      child: isDesktop
+                          ? Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              child: DesktopTable(
+                                columns: const [
+                                  DataColumn(label: Text('Date')),
+                                  DataColumn(label: Text('Machine')),
+                                  DataColumn(label: Text('Litres'), numeric: true),
+                                  DataColumn(label: Text('Cost'), numeric: true),
+                                  DataColumn(label: Text('Recorded By')),
+                                ],
+                                rows: [
+                                  for (final e in entries)
+                                    DataRow(cells: [
+                                      DataCell(Text(e.recordedAt.split('T').first)),
+                                      DataCell(Text(e.machineRegistration, style: const TextStyle(fontWeight: FontWeight.w600))),
+                                      DataCell(Text('${e.litres.toStringAsFixed(1)} L')),
+                                      DataCell(Text(e.cost != null ? '₹${e.cost!.toStringAsFixed(0)}' : '—')),
+                                      DataCell(Text(e.recordedByName)),
+                                    ]),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: entries.length,
+                              itemBuilder: (context, index) {
+                                final entry = entries[index];
+                                return Card(
+                                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  child: ListTile(
+                                    title: Text('${entry.machineRegistration} · ${entry.litres.toStringAsFixed(1)} L'),
+                                    subtitle: Text('${entry.recordedAt.split('T').first} · ${entry.recordedByName}'),
+                                    trailing: entry.cost != null ? Text('₹${entry.cost!.toStringAsFixed(0)}') : null,
+                                  ),
+                                );
+                              },
                             ),
-                          );
-                        },
-                      ),
                     ),
                   ],
                 );

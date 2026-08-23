@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/layout/responsive.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
-import '../../../core/widgets/app_drawer.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/confirm_delete.dart';
+import '../../../core/widgets/desktop_table.dart';
 import '../../../core/widgets/search_field.dart';
 
 /// No offline table exists for Employees either (same Stage 2 gap as
@@ -62,25 +64,43 @@ class _EmployeeListScreenState extends ConsumerState<EmployeeListScreen> {
     }
   }
 
+  Future<void> _delete(EmployeeSummary employee) async {
+    final dio = ref.read(apiClientProvider);
+    await confirmAndDelete(
+      context: context,
+      entityLabel: employee.name,
+      onDelete: () => dio.delete('/employees/${employee.id}'),
+      onSuccess: () => ref.invalidate(employeesListProvider),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final employeesAsync = ref.watch(employeesListProvider);
     final user = ref.watch(currentUserProvider);
     final canManage = user?.isOwnerOrManager ?? false;
     final canDelete = user?.roleSystemKey == 'owner';
+    final isDesktop = context.responsive.isDesktop;
 
-    return Scaffold(
-      drawer: const AppDrawer(currentRoute: '/employees'),
-      appBar: AppBar(
-        title: const Text('Employees'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(employeesListProvider),
+    return AdaptiveScaffold(
+      currentRoute: '/employees',
+      title: 'Employees',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: () => ref.invalidate(employeesListProvider),
+        ),
+        if (isDesktop && canManage)
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: FilledButton.icon(
+              onPressed: () => context.go('/employees/new'),
+              icon: const Icon(Icons.add),
+              label: const Text('New Employee'),
+            ),
           ),
-        ],
-      ),
-      floatingActionButton: canManage
+      ],
+      floatingActionButton: (!isDesktop && canManage)
           ? FloatingActionButton(onPressed: () => context.go('/employees/new'), child: const Icon(Icons.add))
           : null,
       body: employeesAsync.when(
@@ -113,7 +133,9 @@ class _EmployeeListScreenState extends ConsumerState<EmployeeListScreen> {
               Expanded(
                 child: filtered.isEmpty
                     ? const Center(child: Text('No staff records match this view.'))
-                    : ListView.builder(
+                    : isDesktop
+                        ? _desktopTable(context, filtered, canManage: canManage, canDelete: canDelete)
+                        : ListView.builder(
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
                           final employee = filtered[index];
@@ -132,13 +154,7 @@ class _EmployeeListScreenState extends ConsumerState<EmployeeListScreen> {
                                         if (action == 'edit') {
                                           context.go('/employees/${employee.id}/edit');
                                         } else if (action == 'delete') {
-                                          final dio = ref.read(apiClientProvider);
-                                          await confirmAndDelete(
-                                            context: context,
-                                            entityLabel: employee.name,
-                                            onDelete: () => dio.delete('/employees/${employee.id}'),
-                                            onSuccess: () => ref.invalidate(employeesListProvider),
-                                          );
+                                          await _delete(employee);
                                         }
                                       },
                                       itemBuilder: (context) => [
@@ -161,6 +177,68 @@ class _EmployeeListScreenState extends ConsumerState<EmployeeListScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: ${apiErrorMessage(error)}')),
+      ),
+    );
+  }
+
+  /// Desktop presentation: a proper staff data grid — same data + row nav +
+  /// RBAC as the phone list.
+  Widget _desktopTable(
+    BuildContext context,
+    List<EmployeeSummary> employees, {
+    required bool canManage,
+    required bool canDelete,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: DesktopTable(
+        columns: const [
+          DataColumn(label: Text('Name')),
+          DataColumn(label: Text('Role Title')),
+          DataColumn(label: Text('Phone')),
+          DataColumn(label: Text('Status')),
+          DataColumn(label: Text('Joined')),
+          DataColumn(label: Text('Actions')),
+        ],
+        rows: [
+          for (final e in employees)
+            DataRow(
+              onSelectChanged: (_) => context.go('/employees/${e.id}'),
+              cells: [
+                DataCell(Text(e.name, style: const TextStyle(fontWeight: FontWeight.w600))),
+                DataCell(Text(e.roleTitle ?? '—')),
+                DataCell(Text(e.phone ?? '—')),
+                DataCell(Text(
+                  e.employmentStatus,
+                  style: TextStyle(color: e.employmentStatus == 'ACTIVE' ? Colors.green : Colors.grey),
+                )),
+                DataCell(Text(e.joinedDate != null
+                    ? e.joinedDate!.toLocal().toString().split(' ').first
+                    : '—')),
+                DataCell(
+                  (canManage || canDelete)
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (canManage)
+                              IconButton(
+                                icon: const Icon(Icons.edit, size: 18),
+                                tooltip: 'Edit',
+                                onPressed: () => context.go('/employees/${e.id}/edit'),
+                              ),
+                            if (canDelete)
+                              IconButton(
+                                icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                                tooltip: 'Delete',
+                                onPressed: () => _delete(e),
+                              ),
+                          ],
+                        )
+                      : const Text('—'),
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }

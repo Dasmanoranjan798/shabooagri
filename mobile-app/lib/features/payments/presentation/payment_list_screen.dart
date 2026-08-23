@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart' show Share;
+import '../../../core/layout/responsive.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
-import '../../../core/widgets/app_drawer.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/search_field.dart';
 import '../data/invoice_analysis.dart';
 import 'payment_list_screen_provider.dart';
@@ -92,7 +93,7 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
     buffer.writeln('Outstanding:,₹${analysis.summary.totalOutstanding.toStringAsFixed(2)}');
     buffer.writeln('Overdue Amount:,₹${analysis.summary.overdueAmount.toStringAsFixed(2)}');
     buffer.writeln();
-    
+
     // Details
     buffer.writeln('Invoice Number,Customer,Village,Total,Paid,Balance,Status,Date,Due Date,Days Overdue');
     for (final i in analysis.invoices) {
@@ -114,49 +115,48 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
     final user = ref.watch(currentUserProvider);
     final filterState = ref.watch(paymentFilterProvider);
     final canReceive = user?.isOwnerOrManager ?? false;
+    final isDesktop = context.responsive.isDesktop;
 
-    return Scaffold(
-      drawer: const AppDrawer(currentRoute: '/payments'),
-      appBar: AppBar(
-        title: const Text('Payments Analysis'),
-        actions: [
+    return AdaptiveScaffold(
+      currentRoute: '/payments',
+      title: 'Payments Analysis',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.filter_list),
+          tooltip: 'Advanced Filters',
+          onPressed: () {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => const PaymentFiltersDialog(),
+            );
+          },
+        ),
+        if (canReceive)
           IconButton(
-            icon: const Icon(Icons.filter_list),
-            tooltip: 'Advanced Filters',
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                builder: (_) => const PaymentFiltersDialog(),
-              );
-            },
+            icon: const Icon(Icons.savings),
+            tooltip: 'Record Advance',
+            onPressed: () => context.go('/payments/advance/new'),
           ),
-          if (canReceive)
-            IconButton(
-              icon: const Icon(Icons.savings),
-              tooltip: 'Record Advance',
-              onPressed: () => context.go('/payments/advance/new'),
-            ),
-          if (canReceive)
-            IconButton(
-              icon: const Icon(Icons.receipt_long),
-              tooltip: 'New Invoice',
-              onPressed: () => context.go('/payments/invoice/new'),
-            ),
+        if (canReceive)
           IconButton(
-            icon: const Icon(Icons.ios_share),
-            tooltip: 'Export CSV',
-            onPressed: () => analysisAsync.whenData(_exportCsv),
+            icon: const Icon(Icons.receipt_long),
+            tooltip: 'New Invoice',
+            onPressed: () => context.go('/payments/invoice/new'),
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              ref.invalidate(invoicesAnalysisProvider);
-              ref.invalidate(advancesListProvider);
-            },
-          ),
-        ],
-      ),
+        IconButton(
+          icon: const Icon(Icons.ios_share),
+          tooltip: 'Export CSV',
+          onPressed: () => analysisAsync.whenData(_exportCsv),
+        ),
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: () {
+            ref.invalidate(invoicesAnalysisProvider);
+            ref.invalidate(advancesListProvider);
+          },
+        ),
+      ],
       body: analysisAsync.when(
         data: (analysis) {
           var filtered = analysis.invoices;
@@ -168,7 +168,7 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                     i.villageName.toLowerCase().contains(_query))
                 .toList();
           }
-          
+
           bool hasFilter = filterState.toJson().isNotEmpty;
 
           return RefreshIndicator(
@@ -195,8 +195,8 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                    ),
                 Padding(
                   padding: const EdgeInsets.all(12.0),
-                  child: GridView.count(
-                    crossAxisCount: 2,
+                  child: GridView.extent(
+                    maxCrossAxisExtent: isDesktop ? 260 : 220,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     mainAxisSpacing: 8,
@@ -218,6 +218,8 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                 ),
                 if (filtered.isEmpty)
                   const Padding(padding: EdgeInsets.all(24), child: Center(child: Text('No invoices match this view.')))
+                else if (isDesktop)
+                  _desktopInvoiceTable(context, filtered, canReceive: canReceive)
                 else
                   ...filtered.map((invoice) => Card(
                         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -240,7 +242,7 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                                 ),
                         ),
                       )),
-                
+
                 // Analytics Section
                 const Padding(
                   padding: EdgeInsets.all(16.0),
@@ -301,6 +303,70 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: ${apiErrorMessage(error)}')),
+      ),
+    );
+  }
+
+  /// Desktop presentation of the invoices list: a proper data grid. Lives
+  /// inside the page's own vertical [ListView], so it manages only horizontal
+  /// scroll (the DataTable has intrinsic height) — no nested vertical scroll.
+  /// Same row navigation + same Receive action + same RBAC as the phone list.
+  Widget _desktopInvoiceTable(BuildContext context, List<InvoiceSummary> invoices, {required bool canReceive}) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minWidth: (MediaQuery.sizeOf(context).width - Breakpoints.sidebarWidth - 96).clamp(0, double.infinity),
+            ),
+            child: DataTable(
+              headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
+              showCheckboxColumn: false,
+              columns: const [
+                DataColumn(label: Text('Invoice #')),
+                DataColumn(label: Text('Customer')),
+                DataColumn(label: Text('Village')),
+                DataColumn(label: Text('Status')),
+                DataColumn(label: Text('Date')),
+                DataColumn(label: Text('Total'), numeric: true),
+                DataColumn(label: Text('Balance'), numeric: true),
+                DataColumn(label: Text('Action')),
+              ],
+              rows: [
+                for (final i in invoices)
+                  DataRow(
+                    onSelectChanged: (_) => context.go('/payments/${i.id}'),
+                    cells: [
+                      DataCell(Text(i.invoiceNumber, style: const TextStyle(fontWeight: FontWeight.w600))),
+                      DataCell(Text(i.customerName)),
+                      DataCell(Text(i.villageName)),
+                      DataCell(Text(i.status)),
+                      DataCell(Text(i.invoiceDate.split('T').first)),
+                      DataCell(Text('₹${i.totalAmount.toStringAsFixed(0)}')),
+                      DataCell(Text(
+                        i.balanceAmount > 0 ? '₹${i.balanceAmount.toStringAsFixed(0)}' : 'Paid',
+                        style: TextStyle(
+                          color: i.balanceAmount > 0 ? Colors.red : Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )),
+                      DataCell(
+                        canReceive && i.balanceAmount > 0 && i.status != 'VOIDED'
+                            ? FilledButton.tonal(
+                                onPressed: () => context.go('/payments/${i.id}'),
+                                child: const Text('Receive'),
+                              )
+                            : const Text('—'),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

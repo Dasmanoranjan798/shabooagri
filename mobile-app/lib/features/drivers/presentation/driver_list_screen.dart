@@ -3,10 +3,12 @@ import '../../../core/widgets/quick_action_bar.dart';
 import '../../../core/widgets/status_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/layout/responsive.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
-import '../../../core/widgets/app_drawer.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
+import '../../../core/widgets/desktop_table.dart';
 import '../../../core/widgets/search_field.dart';
 
 class DriverSummary {
@@ -68,27 +70,33 @@ class _DriverListScreenState extends ConsumerState<DriverListScreen> {
   @override
   Widget build(BuildContext context) {
     final driversAsync = ref.watch(driversListProvider);
-    
+
     final user = ref.watch(currentUserProvider);
     final canManage = user?.isOwnerOrManager ?? false;
-    
-    
+    final isDesktop = context.responsive.isDesktop;
 
-    return Scaffold(
-      drawer: const AppDrawer(currentRoute: '/drivers'),
-      appBar: AppBar(
-        title: const Text('Drivers'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(driversListProvider),
+    return AdaptiveScaffold(
+      currentRoute: '/drivers',
+      title: 'Drivers',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: () => ref.invalidate(driversListProvider),
+        ),
+        if (isDesktop && canManage)
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: FilledButton.icon(
+              onPressed: () => context.go('/drivers/new'),
+              icon: const Icon(Icons.add),
+              label: const Text('New Driver'),
+            ),
           ),
-        ],
-      ),
-      floatingActionButton: canManage
+      ],
+      floatingActionButton: (!isDesktop && canManage)
           ? FloatingActionButton(onPressed: () => context.go('/drivers/new'), child: const Icon(Icons.add))
           : null,
-      bottomNavigationBar: const QuickActionBar(),
+      bottomNavigationBar: isDesktop ? null : const QuickActionBar(),
       body: driversAsync.when(
         data: (drivers) {
           final counts = {for (final f in _AvailFilter.values) f: drivers.where((d) => _matchesFilter(d, f)).length};
@@ -122,7 +130,9 @@ class _DriverListScreenState extends ConsumerState<DriverListScreen> {
               Expanded(
                 child: filtered.isEmpty
                     ? const Center(child: Text('No drivers match this view.'))
-                    : ListView.builder(
+                    : isDesktop
+                        ? _desktopTable(context, filtered)
+                        : ListView.builder(
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
                           final driver = filtered[index];
@@ -162,6 +172,35 @@ class _DriverListScreenState extends ConsumerState<DriverListScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: ${apiErrorMessage(error)}')),
+      ),
+    );
+  }
+
+  /// Desktop presentation: a proper drivers data grid — same data as the phone
+  /// card list, laid out for mouse/keyboard.
+  Widget _desktopTable(BuildContext context, List<DriverSummary> drivers) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: DesktopTable(
+        columns: const [
+          DataColumn(label: Text('Name')),
+          DataColumn(label: Text('Phone')),
+          DataColumn(label: Text('Role')),
+          DataColumn(label: Text('License #')),
+          DataColumn(label: Text('Availability')),
+        ],
+        rows: [
+          for (final d in drivers)
+            DataRow(
+              cells: [
+                DataCell(Text(d.name, style: const TextStyle(fontWeight: FontWeight.w600))),
+                DataCell(Text(d.phone ?? '—')),
+                DataCell(Text(d.roleTitle ?? '—')),
+                DataCell(Text(d.licenseNumber ?? '—')),
+                DataCell(DriverStatusBadge(status: d.availabilityStatus)),
+              ],
+            ),
+        ],
       ),
     );
   }
