@@ -114,11 +114,16 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
     final pricingMethodId = result['pricingMethodId'];
     final rate = double.tryParse(result['rate'] ?? '');
     if (pricingMethodId == null || rate == null || rate < 0) return;
+    // Optional minimum billable floor (§8.2). Blank -> null (clears any floor);
+    // the backend applies the authoritative max(metered, minimumCharge).
+    final minText = (result['minimumCharge'] ?? '').trim();
+    final minimumCharge = minText.isEmpty ? null : double.tryParse(minText);
 
     setState(() => _acting = true);
     try {
       final dio = ref.read(apiClientProvider);
-      await dio.patch('/bookings/$bookingId/pricing', data: {'pricingMethodId': pricingMethodId, 'rate': rate});
+      await dio.patch('/bookings/$bookingId/pricing',
+          data: {'pricingMethodId': pricingMethodId, 'rate': rate, 'minimumCharge': minimumCharge});
       _refresh();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
@@ -718,17 +723,24 @@ class _SetPricingDialog extends ConsumerStatefulWidget {
 
 class _SetPricingDialogState extends ConsumerState<_SetPricingDialog> {
   final _rateController = TextEditingController();
+  final _minChargeController = TextEditingController();
   String? _pricingMethodId;
+  // Unit of the selected method (hour/minute/acre or null for fixed/custom).
+  // Minimum Charge is a floor on METERED methods only, so the field is shown
+  // only when the selected method has a non-null unit — matching React.
+  String? _selectedUnit;
 
   @override
   void dispose() {
     _rateController.dispose();
+    _minChargeController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final methodsAsync = ref.watch(_pricingMethodsProvider);
+    final isMetered = _selectedUnit != null;
     return AlertDialog(
       title: const Text('Set Pricing'),
       content: Column(
@@ -739,7 +751,12 @@ class _SetPricingDialogState extends ConsumerState<_SetPricingDialog> {
               initialValue: _pricingMethodId,
               decoration: const InputDecoration(labelText: 'Pricing Method *', border: OutlineInputBorder()),
               items: methods.map((m) => DropdownMenuItem(value: m['id'] as String, child: Text(m['label'] as String))).toList(),
-              onChanged: (value) => setState(() => _pricingMethodId = value),
+              onChanged: (value) => setState(() {
+                _pricingMethodId = value;
+                _selectedUnit = value == null
+                    ? null
+                    : methods.firstWhere((m) => m['id'] == value)['unit'] as String?;
+              }),
             ),
             loading: () => const LinearProgressIndicator(),
             error: (e, s) => Text('Could not load pricing methods: ${apiErrorMessage(e)}'),
@@ -750,6 +767,19 @@ class _SetPricingDialogState extends ConsumerState<_SetPricingDialog> {
             decoration: const InputDecoration(labelText: 'Rate *', border: OutlineInputBorder(), prefixText: '₹ '),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
           ),
+          if (isMetered) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _minChargeController,
+              decoration: const InputDecoration(
+                labelText: 'Minimum Charge',
+                helperText: 'Optional. Lowest amount that will be charged.',
+                border: OutlineInputBorder(),
+                prefixText: '₹ ',
+              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            ),
+          ],
         ],
       ),
       actions: [
@@ -757,7 +787,12 @@ class _SetPricingDialogState extends ConsumerState<_SetPricingDialog> {
         ElevatedButton(
           onPressed: _pricingMethodId == null
               ? null
-              : () => Navigator.pop(context, {'pricingMethodId': _pricingMethodId!, 'rate': _rateController.text}),
+              : () => Navigator.pop(context, {
+                    'pricingMethodId': _pricingMethodId!,
+                    'rate': _rateController.text,
+                    // Only send a minimum for metered methods; blank otherwise.
+                    'minimumCharge': isMetered ? _minChargeController.text : '',
+                  }),
           child: const Text('Save'),
         ),
       ],

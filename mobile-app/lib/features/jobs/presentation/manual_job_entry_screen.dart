@@ -12,9 +12,13 @@ import 'job_list_screen.dart';
 class PricingMethodOption {
   final String id;
   final String label;
+  // hour | minute | acre | null (fixed/custom). Minimum Charge is a floor on
+  // metered methods only, so the UI keys off this.
+  final String? unit;
   PricingMethodOption.fromJson(Map<String, dynamic> json)
       : id = json['id'] as String,
-        label = json['label'] as String;
+        label = json['label'] as String,
+        unit = json['unit'] as String?;
 }
 
 final pricingMethodsListProvider = FutureProvider<List<PricingMethodOption>>((ref) async {
@@ -46,6 +50,8 @@ class _ManualJobEntryScreenState extends ConsumerState<ManualJobEntryScreen> {
   String? _machineId;
   String? _driverId;
   String? _pricingMethodId;
+  String? _selectedUnit; // unit of selected pricing method (metered => show minimum)
+  final _minChargeController = TextEditingController();
   DateTime _workDate = DateTime.now();
   TimeOfDay _startTime = const TimeOfDay(hour: 8, minute: 0);
   TimeOfDay _endTime = const TimeOfDay(hour: 12, minute: 0);
@@ -55,6 +61,7 @@ class _ManualJobEntryScreenState extends ConsumerState<ManualJobEntryScreen> {
   @override
   void dispose() {
     _rateController.dispose();
+    _minChargeController.dispose();
     _acresController.dispose();
     _fuelController.dispose();
     _notesController.dispose();
@@ -113,6 +120,10 @@ class _ManualJobEntryScreenState extends ConsumerState<ManualJobEntryScreen> {
         'scheduledDate': _workDate.toIso8601String(),
         'pricingMethodId': _pricingMethodId,
         'rate': rate,
+        // Optional minimum billable floor (§8.2) — metered methods only; backend
+        // applies the authoritative max(metered, minimumCharge).
+        if (_selectedUnit != null && _minChargeController.text.trim().isNotEmpty)
+          'minimumCharge': double.tryParse(_minChargeController.text.trim()),
         'startTime': _combine(_workDate, _startTime).toIso8601String(),
         'endTime': _combine(_workDate, _endTime).toIso8601String(),
         'actualHours': ?overrideHours,
@@ -237,7 +248,13 @@ class _ManualJobEntryScreenState extends ConsumerState<ManualJobEntryScreen> {
                 initialValue: _pricingMethodId,
                 decoration: const InputDecoration(labelText: 'Pricing Method *', border: OutlineInputBorder()),
                 items: methods.map((m) => DropdownMenuItem(value: m.id, child: Text(m.label))).toList(),
-                onChanged: _saving ? null : (v) => setState(() => _pricingMethodId = v),
+                onChanged: _saving
+                    ? null
+                    : (v) => setState(() {
+                          _pricingMethodId = v;
+                          _selectedUnit =
+                              v == null ? null : methods.firstWhere((m) => m.id == v).unit;
+                        }),
               ),
               loading: () => const LinearProgressIndicator(),
               error: (e, s) => Text('Could not load pricing methods: ${apiErrorMessage(e)}'),
@@ -249,6 +266,19 @@ class _ManualJobEntryScreenState extends ConsumerState<ManualJobEntryScreen> {
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               enabled: !_saving,
             ),
+            if (_selectedUnit != null) ...[
+              const SizedBox(height: 16),
+              TextField(
+                controller: _minChargeController,
+                decoration: const InputDecoration(
+                  labelText: 'Minimum Charge (₹)',
+                  helperText: 'Optional. Lowest amount that will be charged.',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                enabled: !_saving,
+              ),
+            ],
             const SizedBox(height: 16),
             TextField(
               controller: _acresController,
