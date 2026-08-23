@@ -59,8 +59,8 @@ export const DownloadAppPage: React.FC = () => {
                 </h3>
                 <div style={{ display: "flex", justifyContent: "center" }}>
                   <a
-                    href="/downloads/shabooagri-v0.8.0.apk"
-                    download="shabooagri-v0.8.0.apk"
+                    href="/downloads/shabooagri-v0.8.1.apk"
+                    download="shabooagri-v0.8.1.apk"
                     className="pf-btn pf-btn-primary"
                     style={{
                       textDecoration: "none",
@@ -70,7 +70,7 @@ export const DownloadAppPage: React.FC = () => {
                     }}
                   >
                     <Download size={20} />
-                    Download APK (v0.8.0)
+                    Download APK (v0.8.1)
                   </a>
                 </div>
               </div>
@@ -82,7 +82,7 @@ export const DownloadAppPage: React.FC = () => {
                   iPhone / iPad
                 </h3>
                 <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem", margin: 0 }}>
-                  <em>v0.8.0 submission pending. Will be available via TestFlight / App Store.</em>
+                  <em>v0.8.1 submission pending. Will be available via TestFlight / App Store.</em>
                 </p>
               </div>
 
@@ -159,7 +159,7 @@ export const DownloadAppPage: React.FC = () => {
                 }}
               >
                 <Info size={24} color="var(--color-primary)" />
-                What's New in v0.8.0
+                What's New in v0.8.1
               </h2>
               <ul
                 style={{
@@ -171,11 +171,10 @@ export const DownloadAppPage: React.FC = () => {
                   gap: 8,
                 }}
               >
-                <li>Payment collection improvements</li>
-                <li>Advanced payment filters</li>
-                <li>Outstanding analysis</li>
-                <li>Day-wise collection</li>
-                <li>Payment export</li>
+                <li>Full sign-in parity with the web app: password, PIN, and OTP</li>
+                <li>Forgot-password and staff-invite links now open directly in the app</li>
+                <li>Minimum-charge pricing support on jobs</li>
+                <li>Production-signed release build</li>
                 <li>Bug fixes</li>
               </ul>
               <div
@@ -189,7 +188,7 @@ export const DownloadAppPage: React.FC = () => {
                   borderLeft: "4px solid #eab308",
                 }}
               >
-                <strong>Updated:</strong> 19 August 2026. This is the latest preview release.
+                <strong>Updated:</strong> 23 August 2026. This is the latest preview release.
               </div>
             </div>
 

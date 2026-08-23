@@ -1,13 +1,84 @@
-# ShabooAgri — Client Distribution (Windows & iOS)
+# ShabooAgri — Client Distribution (Android, Windows & iOS)
 
-Scope of this document: how the Windows desktop app and the iOS app are
-packaged and delivered to end users. Android (APK), macOS, React web, and the
-backend are covered elsewhere; this file exists for the two platforms addressed
-in milestone **P2-4**.
+Scope of this document: how the Android, Windows and iOS apps are packaged and
+delivered to end users. macOS, React web, and the backend are covered
+elsewhere. Windows/iOS were addressed in milestone **P2-4**; the Android
+production-distribution path was completed in the **Android Production
+Distribution** milestone.
 
 The one Flutter codebase (`mobile-app/`) builds every platform — there is no
 platform-specific application/business logic. Distribution differs per OS; the
 app code does not.
+
+---
+
+## Android
+
+### What ships
+A single **production release APK**, signed with the dedicated ShabooAgri
+release key, served over HTTPS from the SaaS site.
+
+- **Download page:** `https://shabooagri.com/app` (React SPA route `/app`,
+  `platform-frontend/src/features/marketing/DownloadAppPage.tsx`).
+- **Artifact URL:** `https://shabooagri.com/downloads/shabooagri-v<version>.apk`
+  (served statically by nginx from `platform-frontend/dist/downloads/`).
+- **Version endpoint:** `GET https://shabooagri.com/api/app-version` →
+  `{ version, buildNumber, downloadUrl, mandatory }` (platform-backend).
+- The download page is a **public marketing page** — this matches the existing
+  business model (the site's "Download for Android" call-to-action is public).
+  No new gating was added; the operational app itself still requires
+  tenant + login + an active license (unchanged, server-authoritative).
+
+### Signing (production release key)
+Release builds are signed with a dedicated keystore, **not** the debug key.
+
+- Keystore: `mobile-app/android/shabooagri-release.jks`
+- Signing config: `mobile-app/android/key.properties`
+- Both are **gitignored** and exist only on the build/deploy host. The recorded
+  passwords live in `mobile-app/android/shabooagri-release-keystore.secret`
+  (also gitignored).
+- `android/app/build.gradle.kts` loads `key.properties` and signs `release`
+  with it; if `key.properties` is absent (fresh clone / CI without the secret)
+  it falls back to debug signing — such a build is **not** the production
+  artifact and its fingerprint will **not** match `assetlinks.json`.
+
+> **CRITICAL — back up the keystore.** `shabooagri-release.jks` is
+> irreplaceable. If it is lost, App-Links-verified updates to already-installed
+> apps break, and (if Play Store is ever used) update continuity is lost. Store
+> an off-host backup of the `.jks` and its password.
+
+**Production signing certificate SHA-256:**
+`D7:54:7D:04:7F:88:06:84:5C:29:A9:D2:E4:24:29:BA:EE:6F:C4:08:A6:59:46:53:09:CC:C9:FB:77:C8:C4:21`
+**Package / application id:** `com.shabooagri.shabooagri_mobile`
+
+### Android App Links + deep links
+The app declares an `autoVerify` App Links intent-filter for
+`shabooagri.com` and `*.shabooagri.com` with path prefixes `/accept-invite`
+and `/reset-password` (`AndroidManifest.xml`), and Flutter deep-linking hands
+those URLs to `go_router` (routes `/accept-invite`, `/reset-password`).
+
+For auto-verification, `/.well-known/assetlinks.json` is hosted on **both**
+host groups, because the emailed reset/invite links use the tenant subdomain:
+- `https://shabooagri.com/.well-known/assetlinks.json`
+  (source: `platform-frontend/public/.well-known/assetlinks.json`)
+- `https://<slug>.shabooagri.com/.well-known/assetlinks.json`
+  (source: `frontend/public/.well-known/assetlinks.json`)
+
+Both files carry the package name and the production SHA-256 above. Keep them in
+sync with the signing key: **if the release key ever changes, update both
+`assetlinks.json` files with the new fingerprint** or App Links stop verifying.
+
+### Tenant routing
+The APK is **not** tenant-specific. On first run the user enters their company
+slug (Setup screen); the app targets `https://<slug>.shabooagri.com` — the same
+wildcard-subdomain → `tenantResolverMiddleware` contract the web app uses. One
+APK serves every tenant.
+
+### Rebuilding / republishing
+`./update_apk.sh` builds the release APK, copies it into
+`platform-frontend/{public,dist}/downloads/`, bumps the version string on the
+download page, and rebuilds `platform-frontend`. Bump `version:` in
+`mobile-app/pubspec.yaml` and the `/api/app-version` values first.
 
 ---
 
