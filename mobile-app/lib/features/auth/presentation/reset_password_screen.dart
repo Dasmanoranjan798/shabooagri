@@ -87,7 +87,9 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
-          child: Column(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (_done) ...[
@@ -140,6 +142,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 TextButton(onPressed: _busy ? null : () => context.go('/login'), child: const Text('Back to Sign In')),
               ],
             ],
+          ),
           ),
         ),
       ),

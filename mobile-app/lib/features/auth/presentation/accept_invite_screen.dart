@@ -86,7 +86,9 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
-          child: Column(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (!_verified) ...[
@@ -136,6 +138,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
               const SizedBox(height: 8),
               TextButton(onPressed: _busy ? null : () => context.go('/login'), child: const Text('Back to Sign In')),
             ],
+          ),
           ),
         ),
       ),

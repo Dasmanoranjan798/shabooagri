@@ -126,7 +126,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       appBar: AppBar(title: const Text('ShabooAgri')),
       body: Center(
         child: SingleChildScrollView(
-          child: Padding(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -221,6 +223,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
               ],
             ),
+          ),
           ),
         ),
       ),
