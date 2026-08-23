@@ -31,6 +31,11 @@ const envSchema = z.object({
   // back to SMTP_USER (the support mailbox itself) when unset, so no extra
   // config is required in the common case of sending-to-self.
   SUPPORT_NOTIFY_EMAIL: z.string().optional(),
+  // Scheduled license-expiry sweep (§ P2-7). On by default and part of the
+  // normal app lifecycle; set to "false" to disable (e.g. if expiry
+  // enforcement is ever centralized elsewhere). Interval in minutes.
+  LICENSE_EXPIRY_SWEEP_ENABLED: z.string().optional().default("true"),
+  LICENSE_EXPIRY_SWEEP_INTERVAL_MINUTES: z.coerce.number().int().positive().default(60),
 });
 
 export const env = envSchema.parse(process.env);
