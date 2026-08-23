@@ -42,9 +42,10 @@ function withEstimatedAmount<T extends BookingWithRelations>(booking: T) {
   }
   const unit = booking.pricingMethod.unit as PricingUnit;
   const quantity = resolveEstimatedQuantity(unit, booking.estimatedHours, booking.estimatedAcres);
+  const minimumCharge = booking.minimumCharge != null ? Number(booking.minimumCharge) : undefined;
   let estimatedAmount: number | null;
   try {
-    estimatedAmount = calculateAmount({ unit, rate: Number(booking.rate), quantity });
+    estimatedAmount = calculateAmount({ unit, rate: Number(booking.rate), quantity, minimumCharge });
   } catch {
     // e.g. an hourly pricing method with no estimatedHours entered yet —
     // not an error, just not computable until the estimate is filled in.
@@ -172,6 +173,7 @@ export async function create(companyId: string, creatorId: string, input: Create
     workDescription: input.workDescription,
     pricingMethodId: input.pricingMethodId,
     rate: input.rate,
+    minimumCharge: input.minimumCharge,
     notes: input.notes,
     createdBy: creatorId,
   });
@@ -264,9 +266,21 @@ export async function assignDriver(companyId: string, id: string, driverId: stri
 // there, not at booking creation (see createBookingSchema's comment).
 // Whatever is set here is what drives the live price display and the
 // invoice generated on Submit.
-export async function assignPricing(companyId: string, id: string, pricingMethodId: string, rate: number) {
+export async function assignPricing(
+  companyId: string,
+  id: string,
+  pricingMethodId: string,
+  rate: number,
+  minimumCharge?: number | null,
+) {
   await pricingMethodService.getById(companyId, pricingMethodId);
-  const updated = await bookingRepository.updateScopedWithRelations(companyId, id, { pricingMethodId, rate });
+  const updated = await bookingRepository.updateScopedWithRelations(companyId, id, {
+    pricingMethodId,
+    rate,
+    // Explicitly set (null clears any prior floor) so editing pricing can also
+    // remove a minimum, not just add one.
+    minimumCharge: minimumCharge ?? null,
+  });
   if (!updated) {
     throw new AppError(404, "Booking not found");
   }

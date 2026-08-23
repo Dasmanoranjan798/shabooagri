@@ -58,6 +58,7 @@ export interface JobExecutionDraft {
   submitAcres: string;
   pricingMethodId: string;
   pricingRate: string;
+  pricingMinimum: string;
 }
 
 export function defaultJobExecutionDraft(): JobExecutionDraft {
@@ -71,6 +72,7 @@ export function defaultJobExecutionDraft(): JobExecutionDraft {
     submitAcres: "",
     pricingMethodId: "",
     pricingRate: "",
+    pricingMinimum: "",
   };
 }
 
@@ -84,10 +86,14 @@ function round2(value: number): number {
 // calculateAmount, but only for the units a running clock can price
 // (hour/minute/flat). Acre-priced jobs can't be estimated from elapsed
 // time, so this returns null for those (the UI shows the rate instead).
-function computeLiveAmount(unit: PricingUnit, rate: number, elapsedSec: number): number | null {
-  if (unit === null) return round2(rate);
-  if (unit === "hour") return round2(rate * (elapsedSec / 3600));
-  if (unit === "minute") return round2(rate * (elapsedSec / 60));
+function applyFloor(amount: number, minimumCharge: number | null | undefined): number {
+  return minimumCharge != null && minimumCharge > amount ? round2(minimumCharge) : round2(amount);
+}
+
+function computeLiveAmount(unit: PricingUnit, rate: number, elapsedSec: number, minimumCharge: number | null): number | null {
+  if (unit === null) return applyFloor(rate, minimumCharge);
+  if (unit === "hour") return applyFloor(rate * (elapsedSec / 3600), minimumCharge);
+  if (unit === "minute") return applyFloor(rate * (elapsedSec / 60), minimumCharge);
   return null;
 }
 
@@ -98,10 +104,11 @@ function computeFinalAmount(job: Job): number | null {
   const pm = job.booking.pricingMethod;
   if (!pm || job.booking.rate == null) return null;
   const rate = job.booking.rate;
-  if (pm.unit === null) return round2(rate);
-  if (pm.unit === "hour") return job.actualHours != null ? calculateAmount({ unit: "hour", rate, quantity: job.actualHours }) : null;
-  if (pm.unit === "minute") return job.actualHours != null ? calculateAmount({ unit: "minute", rate, quantity: job.actualHours * 60 }) : null;
-  if (pm.unit === "acre") return job.completedAcres != null ? calculateAmount({ unit: "acre", rate, quantity: job.completedAcres }) : null;
+  const minimumCharge = job.booking.minimumCharge;
+  if (pm.unit === null) return calculateAmount({ unit: null, rate, quantity: null, minimumCharge });
+  if (pm.unit === "hour") return job.actualHours != null ? calculateAmount({ unit: "hour", rate, quantity: job.actualHours, minimumCharge }) : null;
+  if (pm.unit === "minute") return job.actualHours != null ? calculateAmount({ unit: "minute", rate, quantity: job.actualHours * 60, minimumCharge }) : null;
+  if (pm.unit === "acre") return job.completedAcres != null ? calculateAmount({ unit: "acre", rate, quantity: job.completedAcres, minimumCharge }) : null;
   return null;
 }
 
@@ -238,7 +245,7 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
 
   const pricingUnit = (job.booking.pricingMethod?.unit ?? null) as PricingUnit;
   const hasPricing = !!job.booking.pricingMethod && job.booking.rate != null;
-  const liveAmount = hasPricing ? computeLiveAmount(pricingUnit, job.booking.rate!, displaySec) : null;
+  const liveAmount = hasPricing ? computeLiveAmount(pricingUnit, job.booking.rate!, displaySec, job.booking.minimumCharge) : null;
   const finalAmount = computeFinalAmount(job);
 
   const handleStart = async () => {
@@ -324,9 +331,14 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
     setIsSubmitting(true);
     setError(null);
     try {
+      // Minimum charge only applies to metered methods; send null otherwise so
+      // it never floors a fixed/custom fee.
+      const selectedUnit = pricingMethods.find((p) => p.id === draft.pricingMethodId)?.unit ?? null;
+      const minimum = selectedUnit !== null && draft.pricingMinimum.trim() !== "" ? parseFloat(draft.pricingMinimum) : null;
       await api.assignBookingPricing(job.bookingId, {
         pricingMethodId: draft.pricingMethodId,
         rate: parseFloat(draft.pricingRate),
+        minimumCharge: minimum,
       });
       notifyDataRefresh("jobs");
       await loadJob();
@@ -730,6 +742,22 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
               value={draft.pricingRate}
               onChange={(e) => setDraft({ pricingRate: e.target.value })}
             />
+            {(pricingMethods.find((p) => p.id === draft.pricingMethodId)?.unit ?? null) !== null && (
+              <>
+                <Input
+                  label="Minimum Charge (₹)"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={draft.pricingMinimum}
+                  onChange={(e) => setDraft({ pricingMinimum: e.target.value })}
+                />
+                <p className="sa-input-hint">
+                  Optional. The lowest amount that will be charged — the final total is never below this,
+                  even if the metered amount works out lower.
+                </p>
+              </>
+            )}
             <Button
               type="button"
               variant="primary"

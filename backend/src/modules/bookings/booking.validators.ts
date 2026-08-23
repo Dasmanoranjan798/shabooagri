@@ -34,6 +34,8 @@ export const createBookingSchema = z.object({
   workDescription: z.string().trim().min(1, "Work needed is required"),
   pricingMethodId: z.string().uuid().optional(),
   rate: z.coerce.number().nonnegative().optional(),
+  // Optional minimum billable floor (§8.2). Applied as max(metered, minimum).
+  minimumCharge: z.coerce.number().nonnegative().optional(),
   notes: z.string().optional(),
   ignoreConflict: z.boolean().optional(),
 });
@@ -44,7 +46,7 @@ export const createBookingSchema = z.object({
 // job.update_status since it's part of the Live Job screen's pre-Start
 // step, not a booking-edit action).
 export const updateBookingSchema = createBookingSchema
-  .omit({ machineId: true, driverId: true, pricingMethodId: true, rate: true })
+  .omit({ machineId: true, driverId: true, pricingMethodId: true, rate: true, minimumCharge: true })
   .partial();
 
 export const assignMachineSchema = z.object({
@@ -58,6 +60,8 @@ export const assignDriverSchema = z.object({
 export const assignPricingSchema = z.object({
   pricingMethodId: z.string().uuid(),
   rate: z.coerce.number().nonnegative(),
+  // Optional minimum billable floor (§8.2). Null/omitted clears any prior floor.
+  minimumCharge: z.coerce.number().nonnegative().nullable().optional(),
 });
 
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;

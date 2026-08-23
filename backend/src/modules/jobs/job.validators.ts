@@ -76,6 +76,8 @@ export const createManualJobSchema = z.object({
   scheduledDate: z.coerce.date(),
   pricingMethodId: z.string().uuid(),
   rate: z.coerce.number().positive(),
+  // Optional minimum billable floor (§8.2): final = max(metered, minimumCharge).
+  minimumCharge: z.coerce.number().nonnegative().optional(),
   startTime: z.coerce.date(),
   endTime: z.coerce.date(),
   actualHours: z.coerce.number().nonnegative().optional(),

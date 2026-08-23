@@ -415,6 +415,7 @@ export async function createManualEntryJob(
         scheduledDate: input.scheduledDate,
         pricingMethodId: input.pricingMethodId,
         rate: input.rate,
+        minimumCharge: input.minimumCharge,
         notes: input.notes,
         createdBy: creatorUserId,
       },

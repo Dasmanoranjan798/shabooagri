@@ -24,6 +24,7 @@ export interface ManualJobEntryDraft {
   endTimeStr: string;
   pricingMethodId: string;
   rate: string;
+  minimumCharge: string;
   actualHoursInput: string;
   completedAcres: string;
   fuelUsedLitres: string;
@@ -44,6 +45,7 @@ export function defaultManualJobEntryDraft(): ManualJobEntryDraft {
     endTimeStr: "12:00",
     pricingMethodId: "",
     rate: "500",
+    minimumCharge: "",
     actualHoursInput: "",
     completedAcres: "",
     fuelUsedLitres: "",
@@ -159,6 +161,12 @@ export const ManualJobEntryTask: TaskContentComponent<ManualJobEntryInitProps> =
         scheduledDate: draft.workDate,
         pricingMethodId: draft.pricingMethodId,
         rate: Number(draft.rate) || 0,
+        // Minimum floor only for metered methods; omit for fixed/custom fees.
+        minimumCharge:
+          (pricingMethods.find((p) => p.id === draft.pricingMethodId)?.unit ?? null) !== null &&
+          draft.minimumCharge.trim() !== ""
+            ? Number(draft.minimumCharge)
+            : undefined,
         startTime: startIso,
         endTime: endIso,
         actualHours: draft.actualHoursInput ? Number(draft.actualHoursInput) : calculatedHours,
@@ -338,7 +346,24 @@ export const ManualJobEntryTask: TaskContentComponent<ManualJobEntryInitProps> =
               onChange={(e) => setDraft({ rate: e.target.value })}
               required
             />
+            {(pricingMethods.find((p) => p.id === draft.pricingMethodId)?.unit ?? null) !== null && (
+              <Input
+                label="Minimum Charge (₹)"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Optional floor"
+                value={draft.minimumCharge}
+                onChange={(e) => setDraft({ minimumCharge: e.target.value })}
+              />
+            )}
           </div>
+          {(pricingMethods.find((p) => p.id === draft.pricingMethodId)?.unit ?? null) !== null && (
+            <p className="sa-input-hint">
+              Minimum Charge is the lowest amount that will be billed — the final total is never below it,
+              even if the metered amount is lower.
+            </p>
+          )}
 
           {/* Acres, Fuel & Notes */}
           <div className="sa-form-row">

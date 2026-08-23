@@ -90,11 +90,15 @@ export const TERMINOLOGY_DEFAULTS = [
   { termKey: "invoice", singular: "Invoice", plural: "Invoices" },
 ] as const;
 
+// §8.2 pricing methods. NOTE: "Minimum Charge" is intentionally NOT a method
+// here — it is a minimum billable FLOOR (bookings.minimum_charge) applied on
+// top of a metered method (max(metered, minimum)), not a standalone flat fee.
+// The old standalone `minimum_charge` method was retired in migration
+// 20260823025656_add_booking_minimum_charge_floor.
 export const PRICING_METHOD_DEFAULTS = [
   { key: "per_hour", label: "Per Hour", unit: "hour" },
   { key: "per_minute", label: "Per Minute", unit: "minute" },
   { key: "per_acre", label: "Per Acre", unit: "acre" },
   { key: "per_job", label: "Per Job (Fixed)", unit: null },
-  { key: "minimum_charge", label: "Minimum Charge", unit: null },
   { key: "custom", label: "Custom Rate", unit: null },
 ] as const;
