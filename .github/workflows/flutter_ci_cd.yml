@@ -5,6 +5,10 @@ on:
     branches: [ "master", "main" ]
   pull_request:
     branches: [ "master", "main" ]
+  # Allow building the release artifacts (incl. the Windows installer) on any
+  # branch on demand — used to produce ShabooAgri-Setup-x64.exe for publishing
+  # without waiting for a merge to master.
+  workflow_dispatch:
 
 jobs:
   test:

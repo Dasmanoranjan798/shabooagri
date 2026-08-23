@@ -4,17 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../navigation/nav_destinations.dart';
 import '../repositories/auth_repository.dart';
 import '../storage/local_storage.dart';
 import '../../features/settings/presentation/privacy_policy_screen.dart';
-
-class _DrawerItem {
-  final String label;
-  final IconData icon;
-  final String route;
-
-  const _DrawerItem(this.label, this.icon, this.route);
-}
 
 /// Owner/Manager navigation — one entry per module, so no single screen
 /// (least of all the Dashboard) ends up cramming links to everything.
@@ -32,23 +25,8 @@ class AppDrawer extends ConsumerStatefulWidget {
 class _AppDrawerState extends ConsumerState<AppDrawer> {
   String? _profileImagePath;
 
-  static const _items = [
-    _DrawerItem('Dashboard', Icons.dashboard, '/dashboard'),
-    _DrawerItem('Jobs', Icons.work, '/jobs'),
-    _DrawerItem('Bookings', Icons.event_note, '/bookings'),
-    _DrawerItem('Machines', Icons.agriculture, '/machines'),
-    _DrawerItem('Drivers', Icons.badge, '/drivers'),
-    _DrawerItem('Customers', Icons.people, '/customers'),
-    _DrawerItem('Villages', Icons.location_city, '/villages'),
-    _DrawerItem('Payments', Icons.receipt_long, '/payments'),
-    _DrawerItem('Employees', Icons.groups, '/employees'),
-    _DrawerItem('Team', Icons.admin_panel_settings, '/team'),
-    _DrawerItem('Expenses', Icons.money_off, '/expenses'),
-    _DrawerItem('Maintenance', Icons.build, '/maintenance'),
-    _DrawerItem('Fuel', Icons.local_gas_station, '/fuel'),
-    _DrawerItem('Reports', Icons.bar_chart, '/reports'),
-    _DrawerItem('Settings', Icons.settings, '/settings'),
-  ];
+  // Shared with the desktop sidebar — one module list, two presentations.
+  static const _items = ownerNavDestinations;
 
   @override
   void initState() {

@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.shabooagri" "\0"
-            VALUE "FileDescription", "shabooagri_mobile" "\0"
+            VALUE "CompanyName", "Shaboo" "\0"
+            VALUE "FileDescription", "ShabooAgri" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "shabooagri_mobile" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.shabooagri. All rights reserved." "\0"
+            VALUE "InternalName", "ShabooAgri" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Shaboo. All rights reserved." "\0"
             VALUE "OriginalFilename", "shabooagri_mobile.exe" "\0"
-            VALUE "ProductName", "shabooagri_mobile" "\0"
+            VALUE "ProductName", "ShabooAgri" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

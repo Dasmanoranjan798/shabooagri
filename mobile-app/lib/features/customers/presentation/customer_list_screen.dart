@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
-import '../../../core/widgets/app_drawer.dart';
+import '../../../core/layout/responsive.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/confirm_delete.dart';
+import '../../../core/widgets/desktop_table.dart';
 import '../../../core/widgets/search_field.dart';
 
 class CustomerSummary {
@@ -51,21 +53,31 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
     final canManage = user?.isOwnerOrManager ?? false;
     final canDelete = user?.roleSystemKey == 'owner';
 
-    return Scaffold(
-      drawer: const AppDrawer(currentRoute: '/customers'),
-      appBar: AppBar(
-        title: const Text('Customers'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(customersListProvider),
+    final isDesktop = context.responsive.isDesktop;
+    return AdaptiveScaffold(
+      currentRoute: '/customers',
+      title: 'Customers',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          tooltip: 'Refresh',
+          onPressed: () => ref.invalidate(customersListProvider),
+        ),
+        if (isDesktop && canManage)
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: FilledButton.icon(
+              onPressed: () => context.go('/customers/new'),
+              icon: const Icon(Icons.add),
+              label: const Text('New Customer'),
+            ),
           ),
-        ],
-      ),
-      floatingActionButton: canManage
+      ],
+      // On desktop the "New" action is a top-bar button; on phones it's a FAB.
+      floatingActionButton: (!isDesktop && canManage)
           ? FloatingActionButton(onPressed: () => context.go('/customers/new'), child: const Icon(Icons.add))
           : null,
-      bottomNavigationBar: const QuickActionBar(),
+      bottomNavigationBar: isDesktop ? null : const QuickActionBar(),
       body: customersAsync.when(
         data: (customers) {
           final filtered = _query.isEmpty
@@ -86,7 +98,9 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
               Expanded(
                 child: filtered.isEmpty
                     ? Center(child: Text(_query.isEmpty ? 'No customers found.' : 'No customers match your search.'))
-                    : ListView.builder(
+                    : isDesktop
+                        ? _desktopTable(context, ref, filtered, canManage: canManage, canDelete: canDelete)
+                        : ListView.builder(
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
                           final customer = filtered[index];
@@ -174,6 +188,73 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: ${apiErrorMessage(error)}')),
+      ),
+    );
+  }
+
+  /// Desktop presentation: a proper data grid. Same data + same navigation
+  /// (row click → detail) + same RBAC (edit/delete gated by role) as the phone
+  /// card list — just laid out as a table for mouse/keyboard use.
+  Widget _desktopTable(
+    BuildContext context,
+    WidgetRef ref,
+    List<CustomerSummary> customers, {
+    required bool canManage,
+    required bool canDelete,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: DesktopTable(
+        columns: const [
+          DataColumn(label: Text('Name')),
+          DataColumn(label: Text('Village')),
+          DataColumn(label: Text('Phone')),
+          DataColumn(label: Text('Portal')),
+          DataColumn(label: Text('Actions')),
+        ],
+        rows: [
+          for (final c in customers)
+            DataRow(
+              onSelectChanged: (_) => context.go('/customers/${c.id}'),
+              cells: [
+                DataCell(Text(c.name, style: const TextStyle(fontWeight: FontWeight.w600))),
+                DataCell(Text(c.villageName)),
+                DataCell(Text(c.phone ?? '—')),
+                DataCell(c.hasPortalAccess
+                    ? const Text('Linked', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold))
+                    : const Text('—')),
+                DataCell(
+                  (canManage || canDelete)
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (canManage)
+                              IconButton(
+                                icon: const Icon(Icons.edit, size: 18),
+                                tooltip: 'Edit',
+                                onPressed: () => context.go('/customers/${c.id}/edit'),
+                              ),
+                            if (canDelete)
+                              IconButton(
+                                icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                                tooltip: 'Delete',
+                                onPressed: () async {
+                                  final dio = ref.read(apiClientProvider);
+                                  await confirmAndDelete(
+                                    context: context,
+                                    entityLabel: c.name,
+                                    onDelete: () => dio.delete('/customers/${c.id}'),
+                                    onSuccess: () => ref.invalidate(customersListProvider),
+                                  );
+                                },
+                              ),
+                          ],
+                        )
+                      : const Text('—'),
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }

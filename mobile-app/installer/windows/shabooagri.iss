@@ -20,7 +20,7 @@
 ;   VcRedistPath  - path to vc_redist.x64.exe to bundle
 
 #ifndef MyAppVersion
-  #define MyAppVersion "0.8.0"
+  #define MyAppVersion "0.8.1"
 #endif
 #ifndef SourceDir
   #define SourceDir "..\..\build\windows\x64\runner\Release"

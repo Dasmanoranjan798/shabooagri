@@ -94,8 +94,8 @@ export const DownloadAppPage: React.FC = () => {
                 </h3>
                 <div style={{ display: "flex", justifyContent: "center" }}>
                   <a
-                    href="/downloads/shabooagri-windows.zip"
-                    download="shabooagri-windows.zip"
+                    href="/downloads/ShabooAgri-Setup-x64.exe"
+                    download="ShabooAgri-Setup-x64.exe"
                     className="pf-btn pf-btn-secondary"
                     style={{
                       textDecoration: "none",
@@ -105,7 +105,7 @@ export const DownloadAppPage: React.FC = () => {
                     }}
                   >
                     <Download size={20} />
-                    Download Windows Package
+                    Download Windows Installer (.exe)
                   </a>
                 </div>
               </div>
