@@ -1,5 +1,7 @@
 import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/auth/presentation/reset_password_screen.dart';
+import '../../features/auth/presentation/accept_invite_screen.dart';
 import '../../features/bookings/presentation/booking_detail_screen.dart';
 import '../../features/bookings/presentation/booking_form_screen.dart';
 import '../../features/bookings/presentation/booking_list_screen.dart';
@@ -62,6 +64,24 @@ GoRouter buildAppRouter(String initialLocation) {
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),
+      ),
+      // Deep-link + in-app entry: the emailed reset link is
+      // /reset-password?token=..&email=.. (see auth.service). Query params are
+      // prefilled into the confirm step; no params => request step.
+      GoRoute(
+        path: '/reset-password',
+        builder: (context, state) => ResetPasswordScreen(
+          initialEmail: state.uri.queryParameters['email'],
+          initialToken: state.uri.queryParameters['token'],
+        ),
+      ),
+      // Deep-link + in-app entry: the emailed/SMSed invite link is
+      // /accept-invite?token=.. (see staffInvite.service).
+      GoRoute(
+        path: '/accept-invite',
+        builder: (context, state) => AcceptInviteScreen(
+          initialToken: state.uri.queryParameters['token'],
+        ),
       ),
       GoRoute(
         path: '/dashboard',

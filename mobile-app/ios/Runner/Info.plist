@@ -66,5 +66,12 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Deliver Universal Links to go_router (mirrors Android's
+	     flutter_deeplinking_enabled). Universal Links additionally require the
+	     associated-domains entitlement (see Runner.entitlements) wired via
+	     CODE_SIGN_ENTITLEMENTS in Xcode, an Apple Team, and a hosted
+	     apple-app-site-association file — a macOS/Xcode/account deploy step. -->
+	<key>FlutterDeepLinkingEnabled</key>
+	<true/>
 </dict>
 </plist>
