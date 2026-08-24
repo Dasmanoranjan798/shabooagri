@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
+import '../../../core/layout/responsive_form.dart';
 import '../../jobs/data/job_detail.dart';
 import '../../jobs/presentation/job_list_screen.dart';
 import 'driver_shell_screen.dart';
@@ -99,7 +100,10 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
 
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(jobsListProvider),
-            child: ListView(
+            // On desktop the driver's home is a centred column (not a full-
+            // width stretch); on phone this is a no-op.
+            child: DesktopContentColumn(
+              child: ListView(
               padding: const EdgeInsets.all(16.0),
               children: [
                 Card(
@@ -145,6 +149,7 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
                   child: const Text('View All Job Cards →'),
                 ),
               ],
+            ),
             ),
           );
         },

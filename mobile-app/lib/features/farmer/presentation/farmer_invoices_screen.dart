@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/layout/responsive_form.dart';
 import '../../../core/network/api_error.dart';
 import '../data/farmer_models.dart';
 
@@ -80,7 +81,8 @@ class _FarmerInvoicesScreenState extends ConsumerState<FarmerInvoicesScreen> {
               f: f == _InvoiceFilter.all ? invoices.length : invoices.where((i) => _matches(i.status, f)).length,
           };
 
-          return Column(
+          return DesktopContentColumn(
+            child: Column(
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
@@ -184,6 +186,7 @@ class _FarmerInvoicesScreenState extends ConsumerState<FarmerInvoicesScreen> {
                       ),
               ),
             ],
+          ),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),

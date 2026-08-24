@@ -4,6 +4,7 @@ import '../../../core/widgets/status_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/layout/responsive.dart';
+import '../../../core/layout/responsive_form.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/widgets/adaptive_scaffold.dart';
@@ -162,7 +163,12 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
                   ? const Center(child: Text('No job cards match this view.'))
                   : isDesktop
                       ? _desktopTable(context, filtered)
-                      : ListView.builder(
+                      // Driver (and phone) card list. On a desktop window the
+                      // driver keeps this card view but centred as a column so
+                      // it uses the width without stretching edge-to-edge; a
+                      // no-op on phone. Owner-desktop uses the table above.
+                      : DesktopContentColumn(
+                          child: ListView.builder(
                           itemCount: filtered.length,
                           itemBuilder: (context, index) {
                             final job = filtered[index];
@@ -215,6 +221,7 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
                               ),
                             );
                           },
+                        ),
                         ),
             ),
           ],

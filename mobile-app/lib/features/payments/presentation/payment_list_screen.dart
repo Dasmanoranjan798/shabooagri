@@ -11,6 +11,7 @@ import '../../../core/widgets/search_field.dart';
 import '../data/invoice_analysis.dart';
 import 'payment_list_screen_provider.dart';
 import 'widgets/payment_filters_dialog.dart';
+import 'widgets/payment_filters_desktop_dialog.dart';
 
 class InvoiceSummary {
   final String id;
@@ -125,11 +126,18 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
           icon: const Icon(Icons.filter_list),
           tooltip: 'Advanced Filters',
           onPressed: () {
-            showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              builder: (_) => const PaymentFiltersDialog(),
-            );
+            // Desktop: a centred filter dialog (mouse/keyboard). Phone: the
+            // existing modal bottom sheet, unchanged. Both drive the same
+            // paymentFilterProvider with identical filters + apply/clear.
+            if (isDesktop) {
+              showPaymentFiltersDesktopDialog(context);
+            } else {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                builder: (_) => const PaymentFiltersDialog(),
+              );
+            }
           },
         ),
         if (canReceive)

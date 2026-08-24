@@ -22,6 +22,30 @@ class DesktopFormContainer extends StatelessWidget {
   }
 }
 
+/// Centres page content and caps its width on desktop, so screens that are a
+/// single scrolling column (notably the role apps — Driver/Farmer — Home/
+/// Profile/Bookings/Invoices) use the desktop real-estate as a comfortable
+/// centred column instead of stretching cards/text across an entire wide
+/// monitor. No-op on phones and in the phone layout (full width preserved), so
+/// mobile behaviour is unchanged.
+class DesktopContentColumn extends StatelessWidget {
+  final Widget child;
+
+  /// Max width the content column is allowed to grow to on desktop.
+  final double maxWidth;
+
+  const DesktopContentColumn({super.key, required this.child, this.maxWidth = 920});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!Responsive.of(context).isDesktop) return child;
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(constraints: BoxConstraints(maxWidth: maxWidth), child: child),
+    );
+  }
+}
+
 /// Lays out a form's primary action(s): right-aligned on desktop (conventional
 /// for desktop dialogs/forms), full-width stretched on phones (thumb-friendly).
 /// Pass a single button as [child], or use [children] for Cancel + Save pairs.
@@ -82,7 +106,11 @@ class ResponsiveFormGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final columns = Responsive.of(context).pick(compact: 1, desktop: 2);
+    final r = Responsive.of(context);
+    // Two columns only on a full-size desktop; the compact desktop tier
+    // (small Windows window) uses a single column so fields stay legible and
+    // never overflow the narrower content area.
+    final columns = (r.isDesktop && !r.isDesktopCompact) ? 2 : 1;
     if (columns == 1) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

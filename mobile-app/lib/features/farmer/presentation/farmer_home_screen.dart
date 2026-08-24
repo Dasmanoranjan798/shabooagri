@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/layout/responsive_form.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../jobs/presentation/job_list_screen.dart';
@@ -56,7 +57,8 @@ class FarmerHomeScreen extends ConsumerWidget {
               ref.invalidate(farmerInvoicesProvider);
               ref.invalidate(jobsListProvider);
             },
-            child: ListView(
+            child: DesktopContentColumn(
+              child: ListView(
               padding: const EdgeInsets.all(16.0),
               children: [
                 Card(
@@ -139,6 +141,7 @@ class FarmerHomeScreen extends ConsumerWidget {
                   }),
                 ],
               ],
+            ),
             ),
           );
         },

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/layout/responsive_form.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/repositories/auth_repository.dart';
 import '../../../core/widgets/change_password_card.dart';
@@ -22,7 +23,9 @@ class FarmerProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('My Account')),
-      body: ListView(
+      body: DesktopContentColumn(
+        maxWidth: 720,
+        child: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
           Card(
@@ -68,6 +71,7 @@ class FarmerProfileScreen extends ConsumerWidget {
             style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), foregroundColor: Colors.red),
           ),
         ],
+      ),
       ),
     );
   }
