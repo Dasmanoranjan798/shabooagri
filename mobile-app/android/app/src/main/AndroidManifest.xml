@@ -7,7 +7,7 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.CAMERA"/>
     <application
-        android:label="shabooagri_mobile"
+        android:label="ShabooAgri"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/session_provider.dart';
 import '../storage/local_storage.dart';
@@ -26,14 +27,20 @@ final apiClientProvider = Provider<Dio>((ref) {
 
   dio.interceptors.add(_AuthInterceptor(dio, ref));
 
-  dio.interceptors.add(LogInterceptor(
-    request: true,
-    requestHeader: true,
-    requestBody: true,
-    responseHeader: true,
-    responseBody: true,
-    error: true,
-  ));
+  // Full request/response logging (headers + bodies) prints the Bearer token
+  // and login/OTP payloads to the platform log. That is a development aid only
+  // — it must never run in a production/release build (it would leak
+  // credentials to logcat). Gate it to debug builds.
+  if (kDebugMode) {
+    dio.interceptors.add(LogInterceptor(
+      request: true,
+      requestHeader: true,
+      requestBody: true,
+      responseHeader: true,
+      responseBody: true,
+      error: true,
+    ));
+  }
 
   return dio;
 });

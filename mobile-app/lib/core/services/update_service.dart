@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,7 +19,22 @@ class UpdateService {
 
   UpdateService(this._dio);
 
+  /// The in-app self-updater (server version check → prompt → download an
+  /// installer from an external URL) is ONLY valid for the direct-distribution
+  /// desktop builds (the Windows .exe served from shabooagri.com). App-store
+  /// builds must never do this: Google Play's Device and Network Abuse policy
+  /// forbids apps distributed through Play from downloading/installing an APK
+  /// from outside Play, and Play (or the App Store) already owns updates on
+  /// mobile. So on Android/iOS/web this is a no-op — updates flow through the
+  /// store — while Windows/macOS/Linux keep the self-update prompt.
+  static bool get _selfUpdateAllowed =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.macOS ||
+          defaultTargetPlatform == TargetPlatform.linux);
+
   Future<void> checkForUpdates(BuildContext context) async {
+    if (!_selfUpdateAllowed) return;
     if (_hasChecked) return;
     _hasChecked = true;
 
