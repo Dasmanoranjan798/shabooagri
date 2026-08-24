@@ -7,6 +7,7 @@ import '../../../core/providers/session_provider.dart';
 import '../../../core/layout/responsive_form.dart';
 import '../../../core/repositories/auth_repository.dart';
 import '../../../core/widgets/change_password_card.dart';
+import '../../settings/presentation/privacy_policy_screen.dart';
 import '../../drivers/presentation/driver_list_screen.dart';
 
 class _CompensationSummary {
@@ -155,6 +156,14 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
           ],
           const SizedBox(height: 20),
           const ChangePasswordCard(),
+          const SizedBox(height: 12),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text('Privacy Policy'),
+            trailing: const Icon(Icons.open_in_new, size: 18),
+            onTap: openPrivacyPolicy,
+          ),
           const SizedBox(height: 24),
           OutlinedButton.icon(
             onPressed: _handleLogout,

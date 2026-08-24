@@ -6,6 +6,7 @@ import '../../../core/layout/responsive_form.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/repositories/auth_repository.dart';
 import '../../../core/widgets/change_password_card.dart';
+import '../../settings/presentation/privacy_policy_screen.dart';
 
 /// Matches `FarmerProfilePage.tsx`: profile card, details grid, shared
 /// Change Password, Sign Out. No compensation section — that's Driver-only.
@@ -63,6 +64,14 @@ class FarmerProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
           const ChangePasswordCard(),
+          const SizedBox(height: 12),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text('Privacy Policy'),
+            trailing: const Icon(Icons.open_in_new, size: 18),
+            onTap: openPrivacyPolicy,
+          ),
           const SizedBox(height: 24),
           OutlinedButton.icon(
             onPressed: () => _handleLogout(ref, context),

@@ -1,5 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+/// The single governing ShabooAgri Privacy Policy. The app does NOT ship its
+/// own separate policy document — it points at the same public policy that
+/// governs the website and SaaS platform, so the two can never drift apart
+/// (this is what Google Play's User Data policy requires of an in-app link).
+const String kPrivacyPolicyUrl = 'https://www.shabooagri.com/privacy';
+
+/// Opens the governing Privacy Policy in the device browser. Exposed so any
+/// entry point (owner drawer, desktop sidebar, driver/farmer profile) can
+/// reuse the exact same destination.
+Future<void> openPrivacyPolicy() async {
+  final uri = Uri.parse(kPrivacyPolicyUrl);
+  await launchUrl(uri, mode: LaunchMode.externalApplication);
+}
+
+/// A simple in-app Privacy Policy link/page. It carries no policy text of its
+/// own; it explains that the full, current policy lives at the public URL and
+/// opens it. This keeps a single source of truth for the policy.
 class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
 
@@ -11,76 +29,46 @@ class PrivacyPolicyScreen extends StatelessWidget {
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: const Text(
-          '''Privacy Policy
-
-App purpose
-This application is designed to help farmers, machine owners, and drivers manage agricultural operations, bookings, jobs, and related workflows efficiently.
-
-Account/user information
-We collect and store your basic profile information (such as name, role, email, and mobile number) to facilitate account creation, authentication, and role-based access control within the app.
-
-Company/business information
-Information regarding your agricultural company or business is stored to logically separate tenant data and provide relevant operational metrics and dashboards.
-
-Farmer/customer information
-We collect details about farmers and customers (names, contact details) to associate them with bookings, jobs, and payments.
-
-Machine/driver/job/booking information
-Data related to machines, drivers, jobs, and bookings are collected and processed to ensure smooth operations, scheduling, and tracking.
-
-Payment and transaction information
-We log payment records, invoices, and advance transactions for accounting and reconciliation purposes.
-
-Profile pictures and uploaded images
-Any profile pictures or images uploaded are stored locally on your device or securely on our servers solely for identification and operational documentation.
-
-Device/app information where applicable
-We may collect minimal device-specific information (such as operating system version) to help troubleshoot issues and optimize application performance.
-
-Authentication and security
-We employ standard security protocols, including secure token-based authentication (JWT) and encrypted local storage, to protect your session and data from unauthorized access.
-
-Offline-first/local storage and synchronization
-The app is designed with an offline-first architecture. Your data is stored locally on your device using encrypted databases/storage and will synchronize with our servers automatically when internet connectivity is available.
-
-Server/API communication
-All communication between the application and our servers is transmitted over secure, encrypted channels (HTTPS).
-
-Data synchronization when internet connectivity is available
-When connected to the internet, locally stored changes are pushed to our backend, and any new data from the server is pulled to keep your local records up to date.
-
-Data retention
-We retain your operational data as long as your account is active or as needed to provide our services and comply with legal obligations.
-
-Data deletion/account deletion where applicable
-You can request account deletion or data removal by contacting our support team. Upon verification, we will securely erase your data in accordance with our retention policies.
-
-Data sharing/disclosure
-We do not sell your personal or operational data. Data is only shared with authorized personnel within your organization or as required by law.
-
-Third-party services where actually used
-We do not use unnecessary third-party tracking or advertising services. We only use essential third-party services required for foundational app functionality, such as crash reporting or mapping, if explicitly integrated.
-
-Permissions used by the application
-The app may request access to your device's camera or photo library (for profile pictures or documentation), and local storage (for offline data). These permissions are strictly used for documented features.
-
-Security practices
-We continuously monitor and update our security practices to protect against data breaches, unauthorized access, and other vulnerabilities.
-
-User responsibilities
-You are responsible for maintaining the confidentiality of your login credentials and for all activities that occur under your account.
-
-Policy updates
-We may update this Privacy Policy from time to time. Significant changes will be communicated through the application or via email.
-
-Contact information & Support
-For any questions or concerns regarding this Privacy Policy or your data, please contact us at:
-Support email: support.shaboo@gmail.com
-''',
-          style: TextStyle(fontSize: 14, height: 1.5),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Icon(Icons.privacy_tip_outlined, size: 56, color: Colors.green),
+                const SizedBox(height: 16),
+                const Text(
+                  'Your privacy matters',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'The ShabooAgri Privacy Policy explains what data the app '
+                  'collects, how it is used and protected, and how you can '
+                  'request deletion of your account and data. The same policy '
+                  'governs the website, the platform, and this app.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, height: 1.5),
+                ),
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: openPrivacyPolicy,
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('View Privacy Policy'),
+                ),
+                const SizedBox(height: 12),
+                const SelectableText(
+                  kPrivacyPolicyUrl,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.black54),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
