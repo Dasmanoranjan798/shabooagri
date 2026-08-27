@@ -68,6 +68,8 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({ summary }) => 
             value={formatCurrency(kpis.pendingCollection.current)}
             icon={<Clock size={18} />}
             badge={{ text: "Due", variant: "warning" }}
+            onClick={() => navigate("/payments")}
+            valueColor={kpis.pendingCollection.current > 0 ? "var(--color-danger)" : undefined}
           />
           <KpiCard
             title={`${machineTerm} Working`}

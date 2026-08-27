@@ -9,6 +9,8 @@ interface KpiCardProps {
   delta?: { delta: number | null; deltaPercent: number | null } | null;
   icon: React.ReactNode;
   badge?: { text: string; variant?: BadgeVariant };
+  onClick?: () => void;
+  valueColor?: string;
 }
 
 export const KpiCard: React.FC<KpiCardProps> = ({
@@ -18,11 +20,13 @@ export const KpiCard: React.FC<KpiCardProps> = ({
   delta,
   icon,
   badge,
+  onClick,
+  valueColor,
 }) => {
   const isPositive = delta?.delta != null && delta.delta >= 0;
 
   return (
-    <Card className="sa-kpi-card">
+    <Card className="sa-kpi-card" onClick={onClick}>
       <div className="sa-kpi-header">
         <span className="sa-kpi-icon" style={{ display: "inline-flex", alignItems: "center" }}>{icon}</span>
         {badge ? (
@@ -38,7 +42,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
       </div>
 
       <div className="sa-kpi-body">
-        <span className="sa-kpi-value">{value}</span>
+        <span className="sa-kpi-value" style={valueColor ? { color: valueColor } : undefined}>{value}</span>
         <span className="sa-kpi-title">{title}</span>
         {subtitle && <span className="sa-kpi-subtitle">{subtitle}</span>}
       </div>

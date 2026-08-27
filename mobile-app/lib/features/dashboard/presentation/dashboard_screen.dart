@@ -122,7 +122,9 @@ class DashboardScreen extends ConsumerWidget {
                   _kpiCard('This Month', '₹${summary.kpis.monthRevenue.current.toStringAsFixed(0)}',
                       summary.kpis.monthRevenue.deltaPercent, Colors.green),
                   _kpiCard('Pending Collection', '₹${summary.kpis.pendingCollection.current.toStringAsFixed(0)}',
-                      null, Colors.orange),
+                      null, Colors.orange,
+                      onTap: () => context.go('/payments'),
+                      valueColor: summary.kpis.pendingCollection.current > 0 ? Colors.red : null),
                   _kpiCard('Machines Working',
                       '${summary.kpis.machinesWorking.working}/${summary.kpis.machinesWorking.activeUsable}',
                       null, Colors.blue),
@@ -239,12 +241,18 @@ class DashboardScreen extends ConsumerWidget {
           const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('No pending payments.'))
         else
           ...summary.pendingPayments.map((p) => Card(
-                child: ListTile(
-                  title: Text('${p.invoiceNumber} · ${p.customerName}', overflow: TextOverflow.ellipsis),
-                  subtitle: Text('${p.daysOutstanding} days outstanding'),
-                  trailing: Text('₹${p.balanceAmount.toStringAsFixed(0)}',
+                child: ExpansionTile(
+                  title: Text(p.customerName, overflow: TextOverflow.ellipsis),
+                  subtitle: Text(p.villageName, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  trailing: Text('₹${p.totalOutstanding.toStringAsFixed(0)}',
                       style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                  onTap: () => context.go('/payments/${p.invoiceId}'),
+                  children: p.invoices.map((inv) => ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 32),
+                    title: Text(inv.invoiceNumber, style: const TextStyle(fontSize: 14)),
+                    subtitle: Text('${inv.daysOutstanding}d outstanding', style: const TextStyle(fontSize: 12)),
+                    trailing: Text('₹${inv.balanceAmount.toStringAsFixed(0)}', style: const TextStyle(color: Colors.red, fontSize: 13)),
+                    onTap: () => context.go('/payments/${inv.invoiceId}'),
+                  )).toList(),
                 ),
               )),
       ],
@@ -332,32 +340,36 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _kpiCard(String title, String value, double? deltaPercent, Color color) {
+  Widget _kpiCard(String title, String value, double? deltaPercent, Color color, {VoidCallback? onTap, Color? valueColor}) {
     return Card(
       color: color.withValues(alpha: 0.05),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: color.withValues(alpha: 0.2)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color.withValues(alpha: 0.8)), maxLines: 1, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 6),
-            Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color.withValues(alpha: 1.0))),
-            if (deltaPercent != null) ...[
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(deltaPercent >= 0 ? Icons.arrow_upward : Icons.arrow_downward, size: 12, color: deltaPercent >= 0 ? Colors.green : Colors.red),
-                  Text('${deltaPercent.abs().toStringAsFixed(1)}%', style: TextStyle(fontSize: 10, color: deltaPercent >= 0 ? Colors.green : Colors.red)),
-                ],
-              ),
-            ]
-          ],
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color.withValues(alpha: 0.8)), maxLines: 1, overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 6),
+              Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: valueColor ?? color.withValues(alpha: 1.0))),
+              if (deltaPercent != null) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(deltaPercent >= 0 ? Icons.arrow_upward : Icons.arrow_downward, size: 12, color: deltaPercent >= 0 ? Colors.green : Colors.red),
+                    Text('${deltaPercent.abs().toStringAsFixed(1)}%', style: TextStyle(fontSize: 10, color: deltaPercent >= 0 ? Colors.green : Colors.red)),
+                  ],
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

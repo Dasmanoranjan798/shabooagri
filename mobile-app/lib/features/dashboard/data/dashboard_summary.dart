@@ -59,19 +59,37 @@ class DashboardJobRow {
         customerName = (json['customer'] as Map<String, dynamic>?)?['name'] as String? ?? 'Unknown';
 }
 
-class DashboardPendingPayment {
+class DashboardPendingInvoice {
   final String invoiceId;
   final String invoiceNumber;
-  final String customerName;
   final double balanceAmount;
   final int daysOutstanding;
+  final String status;
 
-  DashboardPendingPayment.fromJson(Map<String, dynamic> json)
+  DashboardPendingInvoice.fromJson(Map<String, dynamic> json)
       : invoiceId = json['invoiceId'] as String,
         invoiceNumber = json['invoiceNumber'] as String,
-        customerName = json['customerName'] as String,
         balanceAmount = (double.tryParse(json['balanceAmount'].toString()) ?? 0.0),
-        daysOutstanding = json['daysOutstanding'] as int;
+        daysOutstanding = json['daysOutstanding'] as int,
+        status = json['status'] as String? ?? '';
+}
+
+class DashboardPendingPayment {
+  final String customerId;
+  final String customerName;
+  final String villageName;
+  final double totalOutstanding;
+  final List<DashboardPendingInvoice> invoices;
+
+  DashboardPendingPayment.fromJson(Map<String, dynamic> json)
+      : customerId = json['customerId'] as String,
+        customerName = json['customerName'] as String,
+        villageName = json['villageName'] as String,
+        totalOutstanding = (double.tryParse(json['totalOutstanding'].toString()) ?? 0.0),
+        invoices = (json['invoices'] as List<dynamic>?)
+                ?.map((i) => DashboardPendingInvoice.fromJson(i as Map<String, dynamic>))
+                .toList() ??
+            [];
 }
 
 class DashboardSummary {

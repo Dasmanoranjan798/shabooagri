@@ -315,16 +315,35 @@ export async function getSummary(companyId: string, user: AuthenticatedUser) {
   // We use the current UTC date for this calculation; off by at most 1 day
   // across timezone boundaries, acceptable for an age display field.
   const today = new Date();
-  const pendingPayments = pendingInvoices.map((inv) => {
+  
+  // Filter out invoices with no actual balance
+  const validInvoices = pendingInvoices.filter((inv) => Number(inv.balanceAmount) > 0);
+  
+  // Group by customer
+  const customerMap = new Map<string, any>();
+  
+  for (const inv of validInvoices) {
+    const cId = inv.customer.id;
+    if (!customerMap.has(cId)) {
+      customerMap.set(cId, {
+        customerId: cId,
+        customerName: inv.customer.name,
+        villageName: inv.customer.village.name,
+        villageId: inv.customer.village.id,
+        totalOutstanding: 0,
+        invoices: [],
+      });
+    }
+    
+    const customer = customerMap.get(cId);
+    customer.totalOutstanding += Number(inv.balanceAmount);
+    
     const invoiceDateMs = new Date(inv.invoiceDate).getTime();
     const daysOutstanding = Math.max(0, Math.floor((today.getTime() - invoiceDateMs) / (1000 * 60 * 60 * 24)));
-    return {
+    
+    customer.invoices.push({
       invoiceId: inv.id,
       invoiceNumber: inv.invoiceNumber,
-      customerId: inv.customer.id,
-      customerName: inv.customer.name,
-      villageName: inv.customer.village.name,
-      villageId: inv.customer.village.id,
       totalAmount: Number(inv.totalAmount),
       paidAmount: Number(inv.paidAmount),
       balanceAmount: Number(inv.balanceAmount),
@@ -332,8 +351,10 @@ export async function getSummary(companyId: string, user: AuthenticatedUser) {
       invoiceDate: inv.invoiceDate.toISOString().slice(0, 10),
       dueDate: inv.dueDate ? inv.dueDate.toISOString().slice(0, 10) : null,
       daysOutstanding,
-    };
-  });
+    });
+  }
+  
+  const pendingPayments = Array.from(customerMap.values()).sort((a, b) => b.totalOutstanding - a.totalOutstanding);
 
   return {
     scope: "company",
