@@ -253,8 +253,8 @@ export const PaymentsPage: React.FC = () => {
         <Card className="sa-kpi-card">
           <div className="sa-kpi-icon"><FileText size={24} color="var(--color-primary)" /></div>
           <div className="sa-kpi-content">
-            <span className="sa-kpi-label">Filtered Invoices</span>
-            <span className="sa-kpi-value">{analysis?.summary.totalInvoiced || 0}</span>
+            <span className="sa-kpi-label">Total Invoiced</span>
+            <span className="sa-kpi-value">₹{(analysis?.summary.totalInvoiced || 0).toLocaleString("en-IN")}</span>
           </div>
         </Card>
 

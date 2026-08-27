@@ -172,7 +172,8 @@ export async function filterInvoicesWithAnalytics(
   if (input.status && input.status.length > 0) {
     const statuses = new Set(input.status.map(s => s.toUpperCase()));
     if (statuses.has("ALL")) {
-      // no status filter
+      // By default, hide VOIDED invoices in the "All" view to prevent confusion
+      where.status = { not: "VOIDED" };
     } else {
       if (statuses.has("OVERDUE")) includeOverdue = true;
       if (statuses.has("DUE_TODAY")) includeDueToday = true;
@@ -332,6 +333,8 @@ export async function filterInvoicesWithAnalytics(
   const villageMap = new Map<string, { outstanding: number; name: string }>();
 
   for (const inv of invoices) {
+    if (inv.status === "VOIDED") continue;
+
     const total = Number(inv.totalAmount || 0);
     const paid = Number(inv.paidAmount || 0);
     const balance = Number(inv.balanceAmount || 0);
