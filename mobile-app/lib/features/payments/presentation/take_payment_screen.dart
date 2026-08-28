@@ -41,36 +41,18 @@ class _TakePaymentScreenState extends ConsumerState<TakePaymentScreen> {
       final dio = ref.read(apiClientProvider);
       // We can fetch from /dashboard/summary or filter invoices
       final invoices = await dio.post('/invoices/filter', data: {
-         'customerId': customerId,
-         'limit': 100,
+         'customerId': [customerId],
       });
       
-      final data = invoices.data['data'] as List;
-      double totalBilled = 0;
-      double totalPaid = 0;
-      double totalOutstanding = 0;
-      double overdue = 0;
-      int completedJobs = 0;
-
-      for (final inv in data) {
-        totalBilled += (inv['totalAmount'] as num).toDouble();
-        totalPaid += (inv['paidAmount'] as num).toDouble();
-        totalOutstanding += (inv['balanceAmount'] as num).toDouble();
-        completedJobs += 1;
-        
-        final due = DateTime.parse(inv['dueDate'] as String);
-        if (due.isBefore(DateTime.now()) && (inv['balanceAmount'] as num) > 0) {
-           overdue += (inv['balanceAmount'] as num).toDouble();
-        }
-      }
+      final summaryData = invoices.data['summary'];
 
       setState(() {
         _summary = {
-           'totalBilled': totalBilled,
-           'totalPaid': totalPaid,
-           'totalOutstanding': totalOutstanding,
-           'overdue': overdue,
-           'completedJobs': completedJobs,
+           'totalBilled': (summaryData['totalInvoiced'] as num).toDouble(),
+           'totalPaid': (summaryData['totalPaid'] as num).toDouble(),
+           'totalOutstanding': (summaryData['totalOutstanding'] as num).toDouble(),
+           'overdue': (summaryData['overdueAmount'] as num).toDouble(),
+           'completedJobs': summaryData['invoicesCount'],
         };
       });
     } catch (e) {

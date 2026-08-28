@@ -123,7 +123,7 @@ class DashboardScreen extends ConsumerWidget {
                       summary.kpis.monthRevenue.deltaPercent, Colors.green),
                   _kpiCard('Pending Collection', '₹${summary.kpis.pendingCollection.current.toStringAsFixed(0)}',
                       null, Colors.orange,
-                      onTap: () => context.go('/payments'),
+                      onTap: () => context.go('/payments?status=UNPAID&status=PARTIALLY_PAID'),
                       valueColor: summary.kpis.pendingCollection.current > 0 ? Colors.red : null),
                   _kpiCard('Machines Working',
                       '${summary.kpis.machinesWorking.working}/${summary.kpis.machinesWorking.activeUsable}',

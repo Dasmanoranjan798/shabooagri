@@ -203,7 +203,10 @@ GoRouter buildAppRouter(String initialLocation) {
       ),
       GoRoute(
         path: '/payments',
-        builder: (context, state) => const PaymentListScreen(),
+        builder: (context, state) {
+        final statuses = state.uri.queryParametersAll['status'];
+        return PaymentListScreen(initialStatuses: statuses);
+      },
         routes: [
           GoRoute(
             path: 'take',

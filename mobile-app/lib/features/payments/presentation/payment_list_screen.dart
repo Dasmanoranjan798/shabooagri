@@ -75,7 +75,8 @@ final advancesListProvider = FutureProvider<List<AdvanceSummary>>((ref) async {
 });
 
 class PaymentListScreen extends ConsumerStatefulWidget {
-  const PaymentListScreen({super.key});
+  final List<String>? initialStatuses;
+  const PaymentListScreen({super.key, this.initialStatuses});
 
   @override
   ConsumerState<PaymentListScreen> createState() => _PaymentListScreenState();
@@ -83,6 +84,17 @@ class PaymentListScreen extends ConsumerStatefulWidget {
 
 class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
   String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialStatuses != null && widget.initialStatuses!.isNotEmpty) {
+      Future.microtask(() {
+        final current = ref.read(paymentFilterProvider);
+        ref.read(paymentFilterProvider.notifier).updateFilter(current.copyWith(status: widget.initialStatuses!));
+      });
+    }
+  }
 
   Future<void> _exportCsv(InvoiceAnalysisResponse analysis) async {
     final buffer = StringBuffer();
@@ -212,11 +224,12 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                     childAspectRatio: 2.2,
                     children: [
                       _kpiCard('Filtered Invoices', '${analysis.summary.invoicesCount}', Colors.blueGrey),
-                      _kpiCard('Total Invoiced', '₹${analysis.summary.totalInvoiced.toStringAsFixed(0)}', Colors.blue),
-                      _kpiCard('Total Collected', '₹${analysis.summary.totalPaid.toStringAsFixed(0)}', Colors.green),
+                      _kpiCard('Total Invoiced', '₹${analysis.summary.totalInvoiced.toStringAsFixed(0)}', Colors.blue, onTap: () => ref.read(paymentFilterProvider.notifier).updateFilter(ref.read(paymentFilterProvider).copyWith(status: []))),
+                      _kpiCard('Total Collected', '₹${analysis.summary.totalPaid.toStringAsFixed(0)}', Colors.green, onTap: () => ref.read(paymentFilterProvider.notifier).updateFilter(ref.read(paymentFilterProvider).copyWith(status: ['PAID']))),
                       _kpiCard('Outstanding', '₹${analysis.summary.totalOutstanding.toStringAsFixed(0)}',
+                          onTap: () => ref.read(paymentFilterProvider.notifier).updateFilter(ref.read(paymentFilterProvider).copyWith(status: ['UNPAID', 'PARTIALLY_PAID'])),
                           analysis.summary.totalOutstanding > 0 ? Colors.red : Colors.green),
-                      _kpiCard('Overdue Amount', '₹${analysis.summary.overdueAmount.toStringAsFixed(0)}', Colors.redAccent),
+                      _kpiCard('Overdue Amount', '₹${analysis.summary.overdueAmount.toStringAsFixed(0)}', Colors.redAccent, onTap: () => ref.read(paymentFilterProvider.notifier).updateFilter(ref.read(paymentFilterProvider).copyWith(status: ['OVERDUE']))),
                     ],
                   ),
                 ),
@@ -379,18 +392,21 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
     );
   }
 
-  Widget _kpiCard(String title, String value, Color color) {
+  Widget _kpiCard(String title, String value, Color color, {VoidCallback? onTap}) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(10.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-            const SizedBox(height: 2),
-            Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
-          ],
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(10.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              const SizedBox(height: 2),
+              Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+            ],
+          ),
         ),
       ),
     );

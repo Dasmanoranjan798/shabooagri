@@ -336,11 +336,24 @@ export async function filterInvoicesWithAnalytics(
     if (inv.status === "VOIDED") continue;
 
     const total = Number(inv.totalAmount || 0);
-    const paid = Number(inv.paidAmount || 0);
     const balance = Number(inv.balanceAmount || 0);
+    
+    // Instead of using inv.paidAmount (which sums all historical payments for this invoice),
+    // calculate totalPaid by summing ONLY the payments that match the current paymentDate filter (if any).
+    // If no paymentDate filter is applied, this safely sums all valid payments.
+    let scopedPaid = 0;
+    if (inv.payments) {
+      for (const p of inv.payments) {
+        if (p.voided) continue;
+        const pDate = new Date(p.receivedAt);
+        if (pFrom && pDate < pFrom) continue;
+        if (pTo && pDate >= pTo) continue;
+        scopedPaid += Number(p.amount || 0);
+      }
+    }
 
     totalInvoiced += total;
-    totalPaid += paid;
+    totalPaid += scopedPaid;
     totalOutstanding += balance;
 
     if (inv.status === "PAID") paidCount++;
@@ -369,7 +382,7 @@ export async function filterInvoicesWithAnalytics(
       }
       const cStat = customerMap.get(cid)!;
       cStat.invoiced += total;
-      cStat.paid += paid;
+      cStat.paid += scopedPaid;
       cStat.outstanding += balance;
       
       if (inv.customer.village) {

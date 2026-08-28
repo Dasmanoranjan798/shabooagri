@@ -87,7 +87,7 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
             subtitle="Unpaid & Partial Invoices"
             icon={<Clock size={20} />}
             badge={{ text: "Outstanding", variant: "warning" }}
-            onClick={() => navigate("/payments")}
+            onClick={() => navigate("/payments?status=UNPAID&status=PARTIALLY_PAID")}
             valueColor={kpis.pendingCollection.current > 0 ? "var(--color-danger)" : undefined}
           />
           <KpiCard
