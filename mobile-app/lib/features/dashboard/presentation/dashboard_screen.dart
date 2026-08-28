@@ -103,37 +103,39 @@ class DashboardScreen extends ConsumerWidget {
               Text('Hello, ${user?.fullName.split(' ').first ?? 'Partner'}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               Text(dateStr, style: const TextStyle(fontSize: 12, color: Colors.grey)),
               const SizedBox(height: 16),
-              if (opsCountsAsync.valueOrNull != null && !(opsDismissedAsync.valueOrNull ?? false))
-                _buildOpsWarningBanner(context, ref, opsCountsAsync.valueOrNull!),
+              if (summary.kpis != null) ...[
+                if (opsCountsAsync.valueOrNull != null && !(opsDismissedAsync.valueOrNull ?? false))
+                  _buildOpsWarningBanner(context, ref, opsCountsAsync.valueOrNull!),
 
-              const SizedBox(height: 8),
-              // KPI cards auto-flow into as many columns as the width allows
-              // (2 on a phone, up to 6 across on a wide desktop) — no overflow.
-              GridView.extent(
-                maxCrossAxisExtent: 240,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.6,
-                children: [
-                  _kpiCard("Today's Revenue", '₹${summary.kpis.todayRevenue.current.toStringAsFixed(0)}',
-                      summary.kpis.todayRevenue.deltaPercent, Colors.green),
-                  _kpiCard('This Month', '₹${summary.kpis.monthRevenue.current.toStringAsFixed(0)}',
-                      summary.kpis.monthRevenue.deltaPercent, Colors.green),
-                  _kpiCard('Pending Collection', '₹${summary.kpis.pendingCollection.current.toStringAsFixed(0)}',
-                      null, Colors.orange,
-                      onTap: () => context.go('/payments?status=UNPAID&status=PARTIALLY_PAID'),
-                      valueColor: summary.kpis.pendingCollection.current > 0 ? Colors.red : null),
-                  _kpiCard('Machines Working',
-                      '${summary.kpis.machinesWorking.working}/${summary.kpis.machinesWorking.activeUsable}',
-                      null, Colors.blue),
-                  _kpiCard('Drivers Active', '${summary.kpis.driversActive.current.toInt()}', null, Colors.purple),
-                  _kpiCard('Jobs Completed', '${summary.kpis.jobsCompleted.current.toInt()}',
-                      summary.kpis.jobsCompleted.deltaPercent, Colors.teal),
-                ],
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 8),
+                // KPI cards auto-flow into as many columns as the width allows
+                // (2 on a phone, up to 6 across on a wide desktop) — no overflow.
+                GridView.extent(
+                  maxCrossAxisExtent: 240,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 1.6,
+                  children: [
+                    _kpiCard("Today's Revenue", '₹${summary.kpis!.todayRevenue.current.toStringAsFixed(0)}',
+                        summary.kpis!.todayRevenue.deltaPercent, Colors.green),
+                    _kpiCard('This Month', '₹${summary.kpis!.monthRevenue.current.toStringAsFixed(0)}',
+                        summary.kpis!.monthRevenue.deltaPercent, Colors.green),
+                    _kpiCard('Pending Collection', '₹${summary.kpis!.pendingCollection.current.toStringAsFixed(0)}',
+                        null, Colors.orange,
+                        onTap: () => context.go('/payments?status=UNPAID&status=PARTIALLY_PAID'),
+                        valueColor: summary.kpis!.pendingCollection.current > 0 ? Colors.red : null),
+                    _kpiCard('Machines Working',
+                        '${summary.kpis!.machinesWorking.working}/${summary.kpis!.machinesWorking.activeUsable}',
+                        null, Colors.blue),
+                    _kpiCard('Drivers Active', '${summary.kpis!.driversActive.current.toInt()}', null, Colors.purple),
+                    _kpiCard('Jobs Completed', '${summary.kpis!.jobsCompleted.current.toInt()}',
+                        summary.kpis!.jobsCompleted.deltaPercent, Colors.teal),
+                  ],
+                ),
+                const SizedBox(height: 24),
+              ],
               // On desktop the two operational lists sit side by side; on a
               // phone they stack.
               if (isDesktop)
@@ -143,14 +145,14 @@ class DashboardScreen extends ConsumerWidget {
                     children: [
                       Expanded(child: _todaysJobsSection(context, summary)),
                       const SizedBox(width: 24),
-                      Expanded(child: _pendingPaymentsSection(context, summary)),
+                      if (summary.pendingPayments != null) Expanded(child: _pendingPaymentsSection(context, summary)),
                     ],
                   ),
                 )
               else ...[
                 _todaysJobsSection(context, summary),
                 const SizedBox(height: 24),
-                _pendingPaymentsSection(context, summary),
+                if (summary.pendingPayments != null) _pendingPaymentsSection(context, summary),
               ],
               const SizedBox(height: 24),
               // Primary shortcuts. Side by side with room on desktop, stacked
@@ -237,10 +239,10 @@ class DashboardScreen extends ConsumerWidget {
       children: [
         const Text('Pending Payments', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        if (summary.pendingPayments.isEmpty)
+        if (summary.pendingPayments!.isEmpty)
           const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('No pending payments.'))
         else
-          ...summary.pendingPayments.map((p) => Card(
+          ...summary.pendingPayments!.map((p) => Card(
                 child: ExpansionTile(
                   title: Text(p.customerName, overflow: TextOverflow.ellipsis),
                   subtitle: Text(p.villageName, style: const TextStyle(fontSize: 12, color: Colors.grey)),

@@ -1,6 +1,3 @@
-/// Mirrors `backend/src/modules/dashboard/dashboard.service.ts`'s
-/// `getSummary()` response exactly — real KPIs from the same endpoint the
-/// website's DesktopDashboard/ReportsPage both already use.
 class DeltaMetric {
   final double current;
   final double previous;
@@ -93,16 +90,16 @@ class DashboardPendingPayment {
 }
 
 class DashboardSummary {
-  final DashboardKpis kpis;
+  final DashboardKpis? kpis;
   final List<DashboardJobRow> todaysJobs;
-  final List<DashboardPendingPayment> pendingPayments;
+  final List<DashboardPendingPayment>? pendingPayments;
 
   DashboardSummary.fromJson(Map<String, dynamic> json)
-      : kpis = DashboardKpis.fromJson(json['kpis'] as Map<String, dynamic>),
-        todaysJobs = (json['todaysJobs'] as List<dynamic>)
-            .map((j) => DashboardJobRow.fromJson(j as Map<String, dynamic>))
-            .toList(),
-        pendingPayments = (json['pendingPayments'] as List<dynamic>)
+      : kpis = json['kpis'] != null ? DashboardKpis.fromJson(json['kpis'] as Map<String, dynamic>) : null,
+        todaysJobs = (json['todaysJobs'] as List<dynamic>?)
+            ?.map((j) => DashboardJobRow.fromJson(j as Map<String, dynamic>))
+            .toList() ?? [],
+        pendingPayments = json['pendingPayments'] != null ? (json['pendingPayments'] as List<dynamic>)
             .map((p) => DashboardPendingPayment.fromJson(p as Map<String, dynamic>))
-            .toList();
+            .toList() : null;
 }
