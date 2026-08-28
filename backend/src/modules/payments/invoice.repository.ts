@@ -332,6 +332,12 @@ export async function filterInvoicesWithAnalytics(
   const customerMap = new Map<string, { invoiced: number; paid: number; outstanding: number; name: string }>();
   const villageMap = new Map<string, { outstanding: number; name: string }>();
 
+  // Pre-calculate date range for payments if a paymentDate filter is applied
+  const pRange = (input.dateRange?.field === "paymentDate") ? input.dateRange : null;
+  const pFrom = pRange?.from ? new Date(pRange.from) : null;
+  let pTo = pRange?.to ? new Date(pRange.to) : null;
+  if (pTo) pTo.setDate(pTo.getDate() + 1);
+
   for (const inv of invoices) {
     if (inv.status === "VOIDED") continue;
 
@@ -398,18 +404,6 @@ export async function filterInvoicesWithAnalytics(
   }
 
   // Payment Day-wise & Method-wise (Only considering payments for these filtered invoices)
-  // Wait, if filter is DateRange = This Month, and date field is "Invoice Date", 
-  // then the day-wise payment collection should probably only include payments made within that same date range?
-  // "The owner specifically needs day-wise collection analysis. Provide a day-wise view based on actual payment dates."
-  // Let's fetch payments that belong to these invoices, but only if they match the date filter (if it's a paymentDate filter).
-  // Actually, to be robust, we fetch all payments for these invoices that are not voided, 
-  // and if a paymentDate filter was applied, we only include payments in that range.
-  
-  const pRange = (input.dateRange?.field === "paymentDate") ? input.dateRange : null;
-  const pFrom = pRange?.from ? new Date(pRange.from) : null;
-  let pTo = pRange?.to ? new Date(pRange.to) : null;
-  if (pTo) pTo.setDate(pTo.getDate() + 1);
-
   for (const inv of invoices) {
     if (!inv.payments) continue;
     for (const p of inv.payments) {
