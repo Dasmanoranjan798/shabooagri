@@ -121,7 +121,21 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       currentRoute: '/reports',
       title: 'Reports',
       body: summaryAsync.when(
-        data: (summary) => incomeAsync.when(
+        // The dashboard/summary contract returns `kpis: null` for the narrow
+        // (driver/non-company) scope. Reports are a company-level view, so
+        // guard here instead of force-unwrapping `kpis!` further down (which
+        // would throw for a non-company caller).
+        data: (summary) => summary.kpis == null
+            ? const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text(
+                    'Reports are available for owner and manager accounts.',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              )
+            : incomeAsync.when(
           data: (income) {
             final rangeField = DropdownButtonFormField<String>(
               initialValue: _range,
