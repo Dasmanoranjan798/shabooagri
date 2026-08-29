@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/layout/responsive_form.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import 'village_list_screen.dart';
 
 /// Create/Edit Village — the simplest master-data form (single field),
@@ -58,31 +60,35 @@ class _VillageFormScreenState extends ConsumerState<VillageFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? 'Edit Village' : 'New Village'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.canPop() ? context.pop() : context.go('/villages')),
-      ),
-      body: Padding(
+    return AdaptiveScaffold(
+      currentRoute: '/villages',
+      title: _isEdit ? 'Edit Village' : 'New Village',
+      showBack: true,
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(labelText: 'Village Name', border: const OutlineInputBorder(), errorText: _error),
-              enabled: !_saving,
-              autofocus: true,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _saving ? null : _save,
-              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-              child: _saving
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text(_isEdit ? 'Save Changes' : 'Create Village'),
-            ),
-          ],
+        child: DesktopFormContainer(
+          maxWidth: 560,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(labelText: 'Village Name', border: const OutlineInputBorder(), errorText: _error),
+                enabled: !_saving,
+                autofocus: true,
+              ),
+              const SizedBox(height: 24),
+              DesktopFormActions(
+                child: ElevatedButton(
+                  onPressed: _saving ? null : _save,
+                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32)),
+                  child: _saving
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : Text(_isEdit ? 'Save Changes' : 'Create Village'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

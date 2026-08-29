@@ -12,3 +12,7 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Recorded keystore passwords — never commit
+*keystore*.secret
+*.secret

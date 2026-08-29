@@ -57,14 +57,18 @@ export async function createInvoiceForCompletedJob(
   const unit = job.booking.pricingMethod.unit as PricingUnit;
   const quantity = resolveJobWorkedQuantity(unit, job.actualHours, job.completedAcres);
   const rate = Number(job.booking.rate);
+  // §8.2 minimum billable floor — the invoice amount is never below it.
+  const minimumCharge = job.booking.minimumCharge != null ? Number(job.booking.minimumCharge) : undefined;
 
   let calculatedAmount: number;
   try {
-    calculatedAmount = calculateAmount({ unit, rate, quantity });
+    calculatedAmount = calculateAmount({ unit, rate, quantity, minimumCharge });
   } catch {
     // Fallback: if quantity was zero or missing for unit-based calculation,
-    // evaluate base rate to avoid failing job completion.
-    calculatedAmount = Math.round(rate * 100) / 100;
+    // evaluate base rate — still honoring the minimum floor so a failed metered
+    // calc can never produce an amount below the agreed minimum.
+    const base = Math.round(rate * 100) / 100;
+    calculatedAmount = minimumCharge != null && minimumCharge > base ? Math.round(minimumCharge * 100) / 100 : base;
   }
 
   // Phase B Default: GST is OFF for normal farmer transactions unless explicitly toggled ON

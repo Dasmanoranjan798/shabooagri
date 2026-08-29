@@ -81,13 +81,9 @@ export interface JobRow {
   invoice: InvoiceSummary | null;
 }
 
-export interface PendingPaymentItem {
+export interface PendingInvoiceItem {
   invoiceId: string;
   invoiceNumber: string;
-  customerId: string;
-  customerName: string;
-  villageId: string;
-  villageName: string;
   totalAmount: number;
   paidAmount: number;
   balanceAmount: number;
@@ -95,6 +91,15 @@ export interface PendingPaymentItem {
   invoiceDate: string;
   dueDate: string | null;
   daysOutstanding: number;
+}
+
+export interface PendingPaymentItem {
+  customerId: string;
+  customerName: string;
+  villageId: string;
+  villageName: string;
+  totalOutstanding: number;
+  invoices: PendingInvoiceItem[];
 }
 
 export interface DashboardSummaryResponse {

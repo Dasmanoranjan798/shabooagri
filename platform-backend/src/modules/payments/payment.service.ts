@@ -21,6 +21,18 @@ const razorpay =
     ? new Razorpay({ key_id: env.RAZORPAY_KEY_ID, key_secret: env.RAZORPAY_KEY_SECRET })
     : null;
 
+// The stub payment path (no Razorpay keys -> synthetic order id, no
+// signature to verify) exists ONLY so the signup -> pay -> provision
+// pipeline is exercisable in dev/test before real keys exist. In
+// production it must be structurally impossible: a paid license must never
+// become ACTIVE without a genuine, signature-verified payment. If keys are
+// missing in production we fail safe (reject) rather than activate for
+// free. Enabling billing in production is therefore a matter of setting
+// RAZORPAY_KEY_ID/SECRET — nothing here needs code changes to "go live".
+const isProduction = env.NODE_ENV === "production";
+const PAYMENTS_NOT_CONFIGURED_MESSAGE =
+  "Online payments are not available right now. Please contact support to complete your purchase.";
+
 function rupeesToPaise(amount: number): number {
   return Math.round(amount * 100);
 }
@@ -33,6 +45,12 @@ function safeSignatureEquals(a: string, b: string): boolean {
 }
 
 export async function createOrder(platformUserId: string, input: CreateOrderInput) {
+  // Fail safe in production if the gateway isn't configured: never hand a
+  // real user a stub order that would later "verify" for free.
+  if (isProduction && !razorpay) {
+    throw new AppError(503, PAYMENTS_NOT_CONFIGURED_MESSAGE);
+  }
+
   const settings = await plansRepository.getSiteSettings();
   if (settings.purchasingBlocked) {
     throw new AppError(403, "Purchasing is temporarily unavailable. Please check back shortly.");
@@ -112,10 +130,17 @@ export async function verifyPayment(platformUserId: string, input: VerifyPayment
     if (!safeSignatureEquals(expectedSignature, input.gatewaySignature)) {
       throw new AppError(400, "Payment signature verification failed");
     }
+  } else if (isProduction) {
+    // No gateway configured AND we're in production: refuse. A license must
+    // NEVER be activated without a signature-verified payment. This makes the
+    // stub success path structurally unreachable in production, regardless of
+    // how verifyPayment is called. Nothing below this point runs.
+    throw new AppError(503, PAYMENTS_NOT_CONFIGURED_MESSAGE);
   }
-  // Stub mode: no real gateway to verify a signature against — this path
-  // only exists so the pipeline is testable before real Razorpay keys are
-  // configured. It is disabled the instant RAZORPAY_KEY_ID/SECRET are set.
+  // Stub mode (non-production only): no real gateway to verify a signature
+  // against — this path exists solely so the pipeline is testable before real
+  // Razorpay keys are configured. It is disabled the instant
+  // RAZORPAY_KEY_ID/SECRET are set, and can never run in production.
 
   await paymentRepository.updateStatus(payment.id, {
     status: "SUCCESS",

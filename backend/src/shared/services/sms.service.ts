@@ -1,4 +1,24 @@
 import { env } from "../../config/env";
+import { logger } from "../logger";
+import { AppError } from "../errors/AppError";
+
+// Whether a REAL SMS provider is configured (i.e. not the dev mock and with the
+// credentials that provider needs). Exported for testing. "mock" is never
+// considered configured — it must never deliver real production OTPs.
+export function smsProviderStatus(): { provider: string; configured: boolean } {
+  const provider = env.SMS_PROVIDER;
+  if (provider === "fast2sms" || provider === "msg91") {
+    return { provider, configured: !!env.SMS_API_KEY };
+  }
+  if (provider === "twilio") {
+    return {
+      provider,
+      configured: !!(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_FROM_NUMBER),
+    };
+  }
+  // "mock" or anything unrecognized
+  return { provider, configured: false };
+}
 
 /**
  * Normalizes phone numbers to standard 10-digit Indian phone numbers
@@ -11,27 +31,45 @@ function cleanPhoneNumber(phone: string): string {
   return digits;
 }
 
+// Masks a mobile number for logs: keep only the last 3 digits (PII + it is one
+// half of an OTP delivery — never log it in full). "9876543210" -> "*******210".
+function maskMobile(mobile: string): string {
+  if (mobile.length <= 3) return "***";
+  return "*".repeat(mobile.length - 3) + mobile.slice(-3);
+}
+
 /**
  * Send OTP SMS using configured SMS Provider (Fast2SMS, MSG91, Twilio, or Mock)
  */
 export async function sendOtpSms(mobile: string, otpCode: string): Promise<boolean> {
   const cleanedMobile = cleanPhoneNumber(mobile);
-  const provider = env.SMS_PROVIDER;
-  const messageText = `Your ShabooAgri verification code is ${otpCode}. Valid for 10 minutes. Do not share this OTP with anyone.`;
+  const { provider, configured } = smsProviderStatus();
+  const messageText = `Your ShabooAgri verification code is ${otpCode}. Valid for 5 minutes. Do not share this OTP with anyone.`;
 
-  console.log(`[SmsService] Preparing SMS to ${cleanedMobile} via ${provider.toUpperCase()}`);
+  logger.info("sms.otp.preparing", { provider, configured, to: maskMobile(cleanedMobile) });
+
+  // No real provider configured. In production this must NEVER silently
+  // "succeed" via the mock — that would tell a real user "OTP sent" while no
+  // SMS is delivered and, worse, let mobile OTP appear to work without any
+  // gateway. Fail with a safe error instead. The mock is only for dev/test.
+  if (!configured) {
+    if (env.NODE_ENV === "production") {
+      logger.error("sms.otp.provider_unconfigured", { provider });
+      throw new AppError(
+        503,
+        "SMS delivery is temporarily unavailable. Please use another sign-in method or contact support.",
+      );
+    }
+    logger.info("sms.otp.mock", { provider, to: maskMobile(cleanedMobile) });
+    return true;
+  }
 
   try {
-    if (provider === "mock" || !env.SMS_API_KEY) {
-      console.log(`[SmsService][MOCK] SMS Payload to +91${cleanedMobile}: "${messageText}"`);
-      return true;
-    }
-
     if (provider === "fast2sms") {
       const response = await fetch("https://www.fast2sms.com/dev/bulkV2", {
         method: "POST",
         headers: {
-          "authorization": env.SMS_API_KEY,
+          "authorization": env.SMS_API_KEY!,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -41,7 +79,7 @@ export async function sendOtpSms(mobile: string, otpCode: string): Promise<boole
         }),
       });
       const data = (await response.json()) as any;
-      console.log(`[SmsService][Fast2SMS] Response:`, data);
+      logger.info("sms.otp.provider_response", { provider: "fast2sms", ok: data?.return === true });
       return data?.return === true;
     }
 
@@ -49,7 +87,7 @@ export async function sendOtpSms(mobile: string, otpCode: string): Promise<boole
       const response = await fetch("https://control.msg91.com/api/v5/otp", {
         method: "POST",
         headers: {
-          "authkey": env.SMS_API_KEY,
+          "authkey": env.SMS_API_KEY!,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -59,13 +97,13 @@ export async function sendOtpSms(mobile: string, otpCode: string): Promise<boole
         }),
       });
       const data = (await response.json()) as any;
-      console.log(`[SmsService][MSG91] Response:`, data);
+      logger.info("sms.otp.provider_response", { provider: "msg91", ok: data?.type === "success" });
       return data?.type === "success";
     }
 
     if (provider === "twilio") {
       if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN || !env.TWILIO_FROM_NUMBER) {
-        console.warn("[SmsService][Twilio] Missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN");
+        logger.warn("sms.otp.twilio_misconfigured");
         return false;
       }
       const auth = Buffer.from(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`).toString("base64");
@@ -84,13 +122,15 @@ export async function sendOtpSms(mobile: string, otpCode: string): Promise<boole
         body: body.toString(),
       });
       const data = (await response.json()) as any;
-      console.log(`[SmsService][Twilio] Response SID: ${data.sid}`);
+      logger.info("sms.otp.provider_response", { provider: "twilio", ok: !!data.sid });
       return !!data.sid;
     }
 
-    return true;
+    // Reached only if a "configured" provider isn't handled above — treat as a
+    // failed send (do not falsely report success).
+    return false;
   } catch (err: any) {
-    console.error(`[SmsService] Failed to send SMS to ${cleanedMobile}:`, err?.message || err);
+    logger.error("sms.otp.failed", { provider, to: maskMobile(cleanedMobile), err });
     return false;
   }
 }
@@ -103,10 +143,10 @@ export async function sendStaffInviteSms(mobile: string, inviteLink: string, com
   const provider = env.SMS_PROVIDER;
   const messageText = `You have been invited to join ${companyName} on ShabooAgri. Click here to activate your account: ${inviteLink}`;
 
-  console.log(`[SmsService] Sending Staff Invite SMS to ${cleanedMobile} via ${provider.toUpperCase()}`);
+  logger.info("sms.invite.preparing", { provider, to: maskMobile(cleanedMobile) });
 
   if (provider === "mock" || !env.SMS_API_KEY) {
-    console.log(`[SmsService][MOCK] Staff Invite to +91${cleanedMobile}: "${messageText}"`);
+    logger.info("sms.invite.mock", { to: maskMobile(cleanedMobile) });
     return true;
   }
 
@@ -115,7 +155,7 @@ export async function sendStaffInviteSms(mobile: string, inviteLink: string, com
       const response = await fetch("https://www.fast2sms.com/dev/bulkV2", {
         method: "POST",
         headers: {
-          "authorization": env.SMS_API_KEY,
+          "authorization": env.SMS_API_KEY!,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -152,7 +192,7 @@ export async function sendStaffInviteSms(mobile: string, inviteLink: string, com
 
     return true;
   } catch (err: any) {
-    console.error(`[SmsService] Failed to send Staff Invite SMS to ${cleanedMobile}:`, err?.message || err);
+    logger.error("sms.invite.failed", { provider, to: maskMobile(cleanedMobile), err });
     return false;
   }
 }

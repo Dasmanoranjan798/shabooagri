@@ -5,10 +5,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../customers/presentation/customer_list_screen.dart';
 import '../../drivers/presentation/driver_list_screen.dart';
 import '../../machines/presentation/machine_list_screen.dart';
 import '../../villages/presentation/village_list_screen.dart';
+// Reuse the single pricing-methods fetch + model (no duplicated API/logic).
+import 'manual_job_entry_screen.dart' show pricingMethodsListProvider, PricingMethodOption;
 
 class FastJobCreateScreen extends ConsumerStatefulWidget {
   const FastJobCreateScreen({super.key});
@@ -101,11 +104,25 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
     }
 
     try {
-      if (_rateController.text.trim().isNotEmpty) {
-        final rate = double.tryParse(_rateController.text.trim());
-        if (rate != null) {
-          await dio.put('/jobs/by-booking/$bookingId/pricing', data: {
-            'pricingMethodId': 'HOURLY', // Simplified default based on standard
+      // Assign hourly pricing via the authoritative endpoint the whole product
+      // uses (PATCH /bookings/:id/pricing — same as React and the Live Job
+      // screen). The old code PUT to a non-existent /jobs/by-booking/:id/pricing
+      // with a hardcoded 'HOURLY' string that was never a real pricingMethodId.
+      // This "fast" flow is hourly by design (the field is "Hourly Rate"), so
+      // resolve the real Per Hour method id (unit == 'hour') from the backend's
+      // own /pricing-methods list. If a rate isn't entered or no hourly method
+      // exists, pricing is simply left unset here and can be set later on the
+      // Job Detail "Set Pricing" screen — no client-side pricing rule is applied.
+      final rate = double.tryParse(_rateController.text.trim());
+      if (rate != null && rate >= 0) {
+        final methods = await ref.read(pricingMethodsListProvider.future);
+        PricingMethodOption? hourly;
+        for (final m in methods) {
+          if (m.unit == 'hour') { hourly = m; break; }
+        }
+        if (hourly != null) {
+          await dio.patch('/bookings/$bookingId/pricing', data: {
+            'pricingMethodId': hourly.id,
             'rate': rate,
           });
         }
@@ -135,8 +152,10 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
     final machinesAsync = ref.watch(machinesListProvider);
     final driversAsync = ref.watch(driversListProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Create Job Card')),
+    return AdaptiveScaffold(
+      currentRoute: '/jobs',
+      title: 'Create Job Card',
+      showBack: true,
       body: customersAsync.when(
         data: (customers) => villagesAsync.when(
           data: (villages) => machinesAsync.when(

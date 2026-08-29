@@ -37,10 +37,12 @@ export const PaymentsPage: React.FC = () => {
   const [advances, setAdvances] = useState<CustomerAdvance[]>([]);
   const [analysis, setAnalysis] = useState<InvoiceAnalysisResponse | null>(null);
   
-  const [filters, setFilters] = useState<FilterInvoicesInput>({
-    status: ["ALL"],
-    
-    
+  const [filters, setFilters] = useState<FilterInvoicesInput>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const statuses = params.getAll("status");
+    return {
+      status: statuses.length > 0 ? statuses : ["ALL"],
+    };
   });
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -250,15 +252,15 @@ export const PaymentsPage: React.FC = () => {
 
       {/* Financial KPI Summary Cards */}
       <div className="sa-kpi-grid" style={{ marginBottom: "1.5rem" }}>
-        <Card className="sa-kpi-card">
+        <Card className="sa-kpi-card" onClick={() => setFilters({ ...filters, status: ["ALL"] })}>
           <div className="sa-kpi-icon"><FileText size={24} color="var(--color-primary)" /></div>
           <div className="sa-kpi-content">
-            <span className="sa-kpi-label">Filtered Invoices</span>
-            <span className="sa-kpi-value">{analysis?.summary.totalInvoiced || 0}</span>
+            <span className="sa-kpi-label">Total Invoiced</span>
+            <span className="sa-kpi-value">₹{(analysis?.summary.totalInvoiced || 0).toLocaleString("en-IN")}</span>
           </div>
         </Card>
 
-        <Card className="sa-kpi-card">
+        <Card className="sa-kpi-card" onClick={() => setFilters({ ...filters, status: ["UNPAID", "PARTIALLY_PAID"] })}>
           <div className="sa-kpi-icon"><Wallet size={24} color="var(--color-primary)" /></div>
           <div className="sa-kpi-content">
             <span className="sa-kpi-label">Total Outstanding</span>
@@ -266,7 +268,7 @@ export const PaymentsPage: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="sa-kpi-card">
+        <Card className="sa-kpi-card" onClick={() => setFilters({ ...filters, status: ["PAID"] })}>
           <div className="sa-kpi-icon"><CheckCircle2 size={24} color="#16a34a" /></div>
           <div className="sa-kpi-content">
             <span className="sa-kpi-label">Total Collected</span>
@@ -276,7 +278,7 @@ export const PaymentsPage: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="sa-kpi-card">
+        <Card className="sa-kpi-card" onClick={() => setFilters({ ...filters, status: ["OVERDUE"] })}>
           <div className="sa-kpi-icon">
             <AlertCircle size={24} color={(analysis?.summary.overdueAmount || 0) > 0 ? "#dc2626" : "#16a34a"} />
           </div>

@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import * as fuelRepository from "./fuel.repository";
 
 // Company-wide fuel entry listing — used by GET /fuel/entries route.
@@ -20,8 +21,9 @@ export function addEntry(
   recordedBy: string,
   litres: number,
   cost: number | undefined,
+  tx?: Prisma.TransactionClient,
 ) {
-  return fuelRepository.create(companyId, jobId, machineId, litres, cost, recordedBy);
+  return fuelRepository.create(companyId, jobId, machineId, litres, cost, recordedBy, tx);
 }
 
 export function listForJob(companyId: string, jobId: string) {

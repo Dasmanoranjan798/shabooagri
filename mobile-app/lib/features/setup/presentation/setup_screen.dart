@@ -79,7 +79,10 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Company Setup')),
       body: Center(
-        child: Padding(
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -126,6 +129,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
               ),
             ],
           ),
+        ),
+        ),
         ),
       ),
     );

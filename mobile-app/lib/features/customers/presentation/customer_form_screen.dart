@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/layout/responsive.dart';
+import '../../../core/layout/responsive_form.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../villages/presentation/village_list_screen.dart';
 import 'customer_list_screen.dart';
 
@@ -110,112 +113,112 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isEdit && !_prefilled) {
-      final customerAsync = ref.watch(customerByIdProvider(widget.customerId!));
-      return Scaffold(
-        appBar: AppBar(title: const Text('Edit Customer')),
-        body: customerAsync.when(
-          data: (customer) {
-            _prefillFrom(customer);
-            return _buildForm();
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text('Could not load customer: ${apiErrorMessage(e)}')),
-        ),
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? 'Edit Customer' : 'New Customer'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.canPop() ? context.pop() : context.go('/customers')),
-      ),
-      body: _buildForm(),
+    return AdaptiveScaffold(
+      currentRoute: '/customers',
+      title: _isEdit ? 'Edit Customer' : 'New Customer',
+      showBack: true,
+      body: (_isEdit && !_prefilled)
+          ? ref.watch(customerByIdProvider(widget.customerId!)).when(
+              data: (customer) {
+                _prefillFrom(customer);
+                return _buildForm(context);
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, s) => Center(child: Text('Could not load customer: ${apiErrorMessage(e)}')),
+            )
+          : _buildForm(context),
     );
   }
 
-  Widget _buildForm() {
+  Widget _buildForm(BuildContext context) {
     final villagesAsync = ref.watch(villagesListProvider);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(_error!, style: const TextStyle(color: Colors.red)),
-            ),
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Name *', border: OutlineInputBorder()),
-            enabled: !_saving,
+    final form = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(_error!, style: const TextStyle(color: Colors.red)),
           ),
-          const SizedBox(height: 16),
-          villagesAsync.when(
-            data: (villages) => DropdownButtonFormField<String>(
-              initialValue: _villageId,
-              decoration: const InputDecoration(labelText: 'Village *', border: OutlineInputBorder()),
-              items: villages.map((v) => DropdownMenuItem(value: v.id, child: Text(v.name))).toList(),
-              onChanged: _saving ? null : (value) => setState(() => _villageId = value),
-            ),
-            loading: () => const LinearProgressIndicator(),
-            error: (e, s) => Text('Could not load villages: ${apiErrorMessage(e)}'),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _phoneController,
-            decoration: const InputDecoration(labelText: 'Phone', border: OutlineInputBorder()),
-            keyboardType: TextInputType.phone,
-            enabled: !_saving,
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _addressController,
-            decoration: const InputDecoration(labelText: 'Address', border: OutlineInputBorder()),
-            enabled: !_saving,
-          ),
-          if (_isEdit) ...[
-            const SizedBox(height: 8),
-            SwitchListTile(
-              title: const Text('Active (customer can be booked/assigned)'),
-              value: _isActive,
-              onChanged: _saving ? null : (value) => setState(() => _isActive = value),
-            ),
-          ],
-          const SizedBox(height: 8),
-          SwitchListTile(
-            title: const Text('GST Applicable'),
-            value: _isGstApplicable,
-            onChanged: _saving ? null : (value) => setState(() => _isGstApplicable = value),
-          ),
-          if (_isGstApplicable) ...[
-            const SizedBox(height: 8),
+        ResponsiveFormGrid(
+          children: [
             TextField(
-              controller: _gstinController,
-              decoration: const InputDecoration(labelText: 'GSTIN', border: OutlineInputBorder()),
-              textCapitalization: TextCapitalization.characters,
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: 'Name *', border: OutlineInputBorder()),
+              enabled: !_saving,
+            ),
+            villagesAsync.when(
+              data: (villages) => DropdownButtonFormField<String>(
+                initialValue: _villageId,
+                decoration: const InputDecoration(labelText: 'Village *', border: OutlineInputBorder()),
+                items: villages.map((v) => DropdownMenuItem(value: v.id, child: Text(v.name))).toList(),
+                onChanged: _saving ? null : (value) => setState(() => _villageId = value),
+              ),
+              loading: () => const LinearProgressIndicator(),
+              error: (e, s) => Text('Could not load villages: ${apiErrorMessage(e)}'),
+            ),
+            TextField(
+              controller: _phoneController,
+              decoration: const InputDecoration(labelText: 'Phone', border: OutlineInputBorder()),
+              keyboardType: TextInputType.phone,
+              enabled: !_saving,
+            ),
+            TextField(
+              controller: _addressController,
+              decoration: const InputDecoration(labelText: 'Address', border: OutlineInputBorder()),
               enabled: !_saving,
             ),
           ],
-          const SizedBox(height: 16),
+        ),
+        if (_isEdit) ...[
+          const SizedBox(height: 8),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Active (customer can be booked/assigned)'),
+            value: _isActive,
+            onChanged: _saving ? null : (value) => setState(() => _isActive = value),
+          ),
+        ],
+        const SizedBox(height: 8),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('GST Applicable'),
+          value: _isGstApplicable,
+          onChanged: _saving ? null : (value) => setState(() => _isGstApplicable = value),
+        ),
+        if (_isGstApplicable) ...[
+          const SizedBox(height: 8),
           TextField(
-            controller: _notesController,
-            decoration: const InputDecoration(labelText: 'Notes', border: OutlineInputBorder()),
-            maxLines: 3,
+            controller: _gstinController,
+            decoration: const InputDecoration(labelText: 'GSTIN', border: OutlineInputBorder()),
+            textCapitalization: TextCapitalization.characters,
             enabled: !_saving,
           ),
-          const SizedBox(height: 24),
-          ElevatedButton(
+        ],
+        const SizedBox(height: 16),
+        TextField(
+          controller: _notesController,
+          decoration: const InputDecoration(labelText: 'Notes', border: OutlineInputBorder()),
+          maxLines: 3,
+          enabled: !_saving,
+        ),
+        const SizedBox(height: 24),
+        DesktopFormActions(
+          child: ElevatedButton(
             onPressed: _saving ? null : _save,
-            style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+            style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32)),
             child: _saving
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : Text(_isEdit ? 'Save Changes' : 'Create Customer'),
           ),
-        ],
-      ),
+        ),
+      ],
+    );
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(context.responsive.isDesktop ? 24.0 : 16.0),
+      child: DesktopFormContainer(child: form),
     );
   }
 }

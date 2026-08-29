@@ -4,9 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/company_profile.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/layout/responsive_form.dart';
 import '../../../core/providers/company_profile_provider.dart';
 import '../../../core/providers/session_provider.dart';
-import '../../../core/widgets/app_drawer.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/change_password_card.dart';
 
 /// Settings Control Center — mirrors `SettingsPage.tsx`'s 4 tabs exactly.
@@ -31,36 +32,54 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final canManage = user?.roleSystemKey == 'owner';
     final profileAsync = ref.watch(companyProfileProvider);
 
+    // The tabbed control-center lives inside the AdaptiveScaffold body (desktop
+    // sidebar + top bar / phone drawer + app bar), with the TabBar as the first
+    // row of the content rather than pinned under an AppBar — so the desktop
+    // shell (persistent sidebar) is used on Windows/desktop just like every
+    // other module, while the 4 tabs and their forms stay identical.
     return DefaultTabController(
       length: 4,
-      child: Scaffold(
-        drawer: const AppDrawer(currentRoute: '/settings'),
-        appBar: AppBar(
-          title: const Text('Settings'),
-          actions: [
-            IconButton(icon: const Icon(Icons.refresh), onPressed: () => ref.invalidate(companyProfileProvider)),
+      child: AdaptiveScaffold(
+        currentRoute: '/settings',
+        title: 'Settings',
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: () => ref.invalidate(companyProfileProvider)),
+        ],
+        body: Column(
+          children: [
+            Material(
+              color: Theme.of(context).colorScheme.surface,
+              child: Column(
+                children: [
+                  const TabBar(
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
+                    tabs: [
+                      Tab(text: 'Business Profile'),
+                      Tab(text: 'Invoicing & Payments'),
+                      Tab(text: 'Equipment & Operational Rules'),
+                      Tab(text: 'My Account & Security'),
+                    ],
+                  ),
+                  Divider(height: 1, color: Theme.of(context).dividerColor),
+                ],
+              ),
+            ),
+            Expanded(
+              child: profileAsync.when(
+                data: (profile) => TabBarView(
+                  children: [
+                    _BusinessProfileTab(profile: profile, canManage: canManage),
+                    _InvoicingTab(profile: profile, canManage: canManage),
+                    _OperationsTab(profile: profile, canManage: canManage),
+                    const SingleChildScrollView(padding: EdgeInsets.all(16.0), child: ChangePasswordCard()),
+                  ],
+                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, s) => Center(child: Text('Error: ${apiErrorMessage(e)}')),
+              ),
+            ),
           ],
-          bottom: const TabBar(
-            isScrollable: true,
-            tabs: [
-              Tab(text: 'Business Profile'),
-              Tab(text: 'Invoicing & Payments'),
-              Tab(text: 'Equipment & Operational Rules'),
-              Tab(text: 'My Account & Security'),
-            ],
-          ),
-        ),
-        body: profileAsync.when(
-          data: (profile) => TabBarView(
-            children: [
-              _BusinessProfileTab(profile: profile, canManage: canManage),
-              _InvoicingTab(profile: profile, canManage: canManage),
-              _OperationsTab(profile: profile, canManage: canManage),
-              const SingleChildScrollView(padding: EdgeInsets.all(16.0), child: ChangePasswordCard()),
-            ],
-          ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text('Error: ${apiErrorMessage(e)}')),
         ),
       ),
     );
@@ -171,21 +190,29 @@ class _BusinessProfileTabState extends ConsumerState<_BusinessProfileTab> {
     final enabled = widget.canManage && !_saving;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
+      child: DesktopFormContainer(
+        maxWidth: 960,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (!widget.canManage) _readOnlyBanner('Read-only — only the Owner can edit company profile settings.'),
           if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
           if (_saved) const Padding(padding: EdgeInsets.only(bottom: 12), child: Text('Business profile saved successfully.', style: TextStyle(color: Colors.green))),
-          _field('Business Name *', _name, enabled),
-          _field('Primary Phone', _phone, enabled),
-          _field('Official Email', _email, enabled),
-          _field('Business Address', _address, enabled),
-          _field('City / Town', _city, enabled),
-          _field('District', _district, enabled),
-          _field('State', _state, enabled),
-          _field('PIN / Postal Code', _pincode, enabled),
-          _field('Country', _country, enabled),
+          ResponsiveFormGrid(
+            gap: 0,
+            fullWidthIndices: const {0, 3},
+            children: [
+              _field('Business Name *', _name, enabled),
+              _field('Primary Phone', _phone, enabled),
+              _field('Official Email', _email, enabled),
+              _field('Business Address', _address, enabled),
+              _field('City / Town', _city, enabled),
+              _field('District', _district, enabled),
+              _field('State', _state, enabled),
+              _field('PIN / Postal Code', _pincode, enabled),
+              _field('Country', _country, enabled),
+            ],
+          ),
           const SizedBox(height: 8),
           Card(
             color: Colors.grey.shade50,
@@ -242,6 +269,7 @@ class _BusinessProfileTabState extends ConsumerState<_BusinessProfileTab> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -347,7 +375,9 @@ class _InvoicingTabState extends ConsumerState<_InvoicingTab> {
     final enabled = widget.canManage && !_saving;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
+      child: DesktopFormContainer(
+        maxWidth: 960,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (!widget.canManage) _readOnlyBanner('Read-only — only the Owner can edit invoice & payment settings.'),
@@ -431,6 +461,7 @@ class _InvoicingTabState extends ConsumerState<_InvoicingTab> {
           ],
         ],
       ),
+      ),
     );
   }
 }
@@ -505,7 +536,9 @@ class _OperationsTabState extends ConsumerState<_OperationsTab> {
     final enabled = widget.canManage && !_saving;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
+      child: DesktopFormContainer(
+        maxWidth: 960,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (!widget.canManage) _readOnlyBanner('Read-only — only the Owner can edit operational rules.'),
@@ -571,6 +604,7 @@ class _OperationsTabState extends ConsumerState<_OperationsTab> {
             ),
           ],
         ],
+      ),
       ),
     );
   }

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/layout/responsive.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
-import '../../../core/widgets/app_drawer.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/confirm_delete.dart';
 
 class MaintenanceAlert {
@@ -63,9 +64,14 @@ Color _statusColor(String status) {
 /// New module — Alerts (read-only, real-time engine already built
 /// server-side) + Service Records CRUD, matching `MaintenancePage.tsx`'s
 /// "Log Service Record" flow. Schedules management lives one tap away via
-/// the AppBar action rather than cluttering this screen.
+/// the app bar / top bar action rather than cluttering this screen.
 class MaintenanceScreen extends ConsumerWidget {
   const MaintenanceScreen({super.key});
+
+  void _refresh(WidgetRef ref) {
+    ref.invalidate(maintenanceAlertsProvider);
+    ref.invalidate(maintenanceRecordsProvider);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -73,27 +79,32 @@ class MaintenanceScreen extends ConsumerWidget {
     final recordsAsync = ref.watch(maintenanceRecordsProvider);
     final user = ref.watch(currentUserProvider);
     final canManage = user?.isOwnerOrManager ?? false;
+    final isDesktop = context.responsive.isDesktop;
 
-    return Scaffold(
-      drawer: const AppDrawer(currentRoute: '/maintenance'),
-      appBar: AppBar(
-        title: const Text('Maintenance'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.schedule),
-            tooltip: 'Schedules',
-            onPressed: () => context.go('/maintenance/schedules'),
+    return AdaptiveScaffold(
+      currentRoute: '/maintenance',
+      title: 'Maintenance',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.schedule),
+          tooltip: 'Schedules',
+          onPressed: () => context.go('/maintenance/schedules'),
+        ),
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: () => _refresh(ref),
+        ),
+        if (isDesktop && canManage)
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: FilledButton.icon(
+              onPressed: () => context.go('/maintenance/records/new'),
+              icon: const Icon(Icons.add),
+              label: const Text('Log Service'),
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              ref.invalidate(maintenanceAlertsProvider);
-              ref.invalidate(maintenanceRecordsProvider);
-            },
-          ),
-        ],
-      ),
-      floatingActionButton: canManage
+      ],
+      floatingActionButton: (!isDesktop && canManage)
           ? FloatingActionButton.extended(
               onPressed: () => context.go('/maintenance/records/new'),
               icon: const Icon(Icons.add),
@@ -101,10 +112,7 @@ class MaintenanceScreen extends ConsumerWidget {
             )
           : null,
       body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(maintenanceAlertsProvider);
-          ref.invalidate(maintenanceRecordsProvider);
-        },
+        onRefresh: () async => _refresh(ref),
         child: ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
@@ -140,6 +148,9 @@ class MaintenanceScreen extends ConsumerWidget {
                 if (records.isEmpty) {
                   return const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('No service records yet.'));
                 }
+                if (isDesktop) {
+                  return _recordsTable(context, ref, records, canManage: canManage);
+                }
                 return Column(
                   children: records
                       .map((r) => Card(
@@ -156,13 +167,7 @@ class MaintenanceScreen extends ConsumerWidget {
                                         if (action == 'edit') {
                                           context.go('/maintenance/records/${r.id}/edit');
                                         } else if (action == 'delete') {
-                                          final dio = ref.read(apiClientProvider);
-                                          await confirmAndDelete(
-                                            context: context,
-                                            entityLabel: 'this service record',
-                                            onDelete: () => dio.delete('/maintenance/records/${r.id}'),
-                                            onSuccess: () => ref.invalidate(maintenanceRecordsProvider),
-                                          );
+                                          await _deleteRecord(context, ref, r);
                                         }
                                       },
                                       itemBuilder: (context) => const [
@@ -181,6 +186,71 @@ class MaintenanceScreen extends ConsumerWidget {
               error: (e, s) => Text('Could not load records: ${apiErrorMessage(e)}'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteRecord(BuildContext context, WidgetRef ref, MaintenanceRecord r) async {
+    final dio = ref.read(apiClientProvider);
+    await confirmAndDelete(
+      context: context,
+      entityLabel: 'this service record',
+      onDelete: () => dio.delete('/maintenance/records/${r.id}'),
+      onSuccess: () => ref.invalidate(maintenanceRecordsProvider),
+    );
+  }
+
+  /// Desktop presentation of service records: a proper data grid (horizontal
+  /// scroll only; lives inside the page ListView). Same edit/delete RBAC.
+  Widget _recordsTable(BuildContext context, WidgetRef ref, List<MaintenanceRecord> records, {required bool canManage}) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: (MediaQuery.sizeOf(context).width - Breakpoints.sidebarWidth - 96).clamp(0, double.infinity),
+          ),
+          child: DataTable(
+            headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
+            showCheckboxColumn: false,
+            columns: const [
+              DataColumn(label: Text('Machine')),
+              DataColumn(label: Text('Service Date')),
+              DataColumn(label: Text('Details')),
+              DataColumn(label: Text('Cost'), numeric: true),
+              DataColumn(label: Text('Actions')),
+            ],
+            rows: [
+              for (final r in records)
+                DataRow(cells: [
+                  DataCell(Text(r.machineRegistration, style: const TextStyle(fontWeight: FontWeight.w600))),
+                  DataCell(Text(r.serviceDate.split('T').first)),
+                  DataCell(Text(r.description ?? '—')),
+                  DataCell(Text(r.cost != null ? '₹${r.cost!.toStringAsFixed(0)}' : '—')),
+                  DataCell(
+                    canManage
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit, size: 18),
+                                tooltip: 'Edit',
+                                onPressed: () => context.go('/maintenance/records/${r.id}/edit'),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                                tooltip: 'Delete',
+                                onPressed: () => _deleteRecord(context, ref, r),
+                              ),
+                            ],
+                          )
+                        : const Text('—'),
+                  ),
+                ]),
+            ],
+          ),
         ),
       ),
     );

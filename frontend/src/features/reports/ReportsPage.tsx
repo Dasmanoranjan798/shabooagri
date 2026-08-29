@@ -195,17 +195,19 @@ export const ReportsPage: React.FC = () => {
  </tr>
  </thead>
  <tbody>
- {summary.pendingPayments.map((p) => (
- <tr key={p.invoiceId}>
- <td>{p.invoiceNumber}</td>
- <td>{p.customerName}</td>
- <td>{p.villageName}</td>
- <td>{fmtCurrency(p.totalAmount)}</td>
- <td>{fmtCurrency(p.paidAmount)}</td>
- <td style={{ color: "var(--color-danger)", fontWeight: 600 }}>{fmtCurrency(p.balanceAmount)}</td>
- <td>{p.daysOutstanding}d</td>
- </tr>
- ))}
+ {summary.pendingPayments.flatMap((c) => 
+   c.invoices.map((inv) => (
+     <tr key={inv.invoiceId}>
+       <td>{inv.invoiceNumber}</td>
+       <td>{c.customerName}</td>
+       <td>{c.villageName}</td>
+       <td>{fmtCurrency(inv.totalAmount)}</td>
+       <td>{fmtCurrency(inv.paidAmount)}</td>
+       <td style={{ color: "var(--color-danger)", fontWeight: 600 }}>{fmtCurrency(inv.balanceAmount)}</td>
+       <td>{inv.daysOutstanding}d</td>
+     </tr>
+   ))
+ )}
  </tbody>
  </table>
  </div>

@@ -477,6 +477,13 @@ model Booking {
   // creation — see assignPricing in booking.service.ts.
   pricingMethodId String?       @map("pricing_method_id") @db.Uuid
   rate            Decimal?      @db.Decimal(10, 2)
+  // Optional minimum billable floor (§8.2 "Minimum Charge"). When set (> 0),
+  // the final amount is max(metered amount, minimumCharge) — e.g. Per Acre
+  // ₹100 × 2 = ₹200 but never below a ₹500 minimum. Null/0 = no floor. Applied
+  // in exactly one place, the shared pricing calculator, so Booking estimate
+  // and Invoice stay consistent. Replaces the retired standalone
+  // `minimum_charge` pricing method, which was a flat fee.
+  minimumCharge   Decimal?      @map("minimum_charge") @db.Decimal(10, 2)
   status          BookingStatus @default(PENDING)
   // What the farmer actually asked for (e.g. "Rotavator — 1 acre field"),
   // captured at booking time. Deliberately separate from `notes`, which is

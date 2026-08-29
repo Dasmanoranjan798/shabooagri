@@ -269,7 +269,9 @@ async function runTests() {
     if (foundJob.customer.name !== customer.name) throw new Error("Customer name mismatch on job");
 
     if (ownerSummary.pendingPayments.length < 1) throw new Error("Pending payments list empty");
-    const foundInvoice = ownerSummary.pendingPayments.find((i) => i.invoiceId === invoice!.id);
+    const foundCustomer = ownerSummary.pendingPayments.find((c) => c.customerId === customer!.id);
+    if (!foundCustomer) throw new Error("Test customer missing from pending payments");
+    const foundInvoice = foundCustomer.invoices.find((i) => i.invoiceId === invoice!.id);
     if (!foundInvoice) throw new Error("Test invoice missing from pending payments");
     if (foundInvoice.balanceAmount !== 600) throw new Error("Balance amount mismatch on pending invoice");
     console.log("  PASSED");

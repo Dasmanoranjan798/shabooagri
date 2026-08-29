@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/layout/responsive.dart';
+import '../../../core/layout/responsive_form.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../customers/presentation/customer_list_screen.dart';
 import '../../machines/presentation/machine_list_screen.dart';
 import '../../drivers/presentation/driver_list_screen.dart';
@@ -154,160 +157,166 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isEdit && !_prefilled) {
-      final bookingAsync = ref.watch(bookingByIdProvider(widget.bookingId!));
-      return Scaffold(
-        appBar: AppBar(title: const Text('Edit Booking')),
-        body: bookingAsync.when(
-          data: (booking) {
-            _prefillFrom(booking);
-            return _buildForm();
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text('Could not load booking: ${apiErrorMessage(e)}')),
-        ),
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? 'Edit Booking' : 'New Booking'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/bookings')),
-      ),
-      body: _buildForm(),
+    return AdaptiveScaffold(
+      currentRoute: '/bookings',
+      title: _isEdit ? 'Edit Booking' : 'New Booking',
+      showBack: true,
+      body: (_isEdit && !_prefilled)
+          ? ref.watch(bookingByIdProvider(widget.bookingId!)).when(
+              data: (booking) {
+                _prefillFrom(booking);
+                return _buildForm(context);
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, s) => Center(child: Text('Could not load booking: ${apiErrorMessage(e)}')),
+            )
+          : _buildForm(context),
     );
   }
 
-  Widget _buildForm() {
+  Widget _buildForm(BuildContext context) {
     final customersAsync = ref.watch(customersListProvider);
     final villagesAsync = ref.watch(villagesListProvider);
     final machinesAsync = ref.watch(machinesListProvider);
     final driversAsync = ref.watch(driversListProvider);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(_error!, style: const TextStyle(color: Colors.red)),
+    final form = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(_error!, style: const TextStyle(color: Colors.red)),
+          ),
+        ResponsiveFormGrid(
+          children: [
+            customersAsync.when(
+              data: (customers) => DropdownButtonFormField<String>(
+                initialValue: _customerId,
+                decoration: const InputDecoration(labelText: 'Customer *', border: OutlineInputBorder()),
+                items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                onChanged: _saving ? null : (value) => setState(() => _customerId = value),
+              ),
+              loading: () => const LinearProgressIndicator(),
+              error: (e, s) => Text('Could not load customers: ${apiErrorMessage(e)}'),
             ),
-          customersAsync.when(
-            data: (customers) => DropdownButtonFormField<String>(
-              initialValue: _customerId,
-              decoration: const InputDecoration(labelText: 'Customer *', border: OutlineInputBorder()),
-              items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-              onChanged: _saving ? null : (value) => setState(() => _customerId = value),
+            villagesAsync.when(
+              data: (villages) => DropdownButtonFormField<String>(
+                initialValue: _villageId,
+                decoration: const InputDecoration(labelText: 'Village *', border: OutlineInputBorder()),
+                items: villages.map((v) => DropdownMenuItem(value: v.id, child: Text(v.name))).toList(),
+                onChanged: _saving ? null : (value) => setState(() => _villageId = value),
+              ),
+              loading: () => const LinearProgressIndicator(),
+              error: (e, s) => Text('Could not load villages: ${apiErrorMessage(e)}'),
             ),
-            loading: () => const LinearProgressIndicator(),
-            error: (e, s) => Text('Could not load customers: ${apiErrorMessage(e)}'),
-          ),
-          const SizedBox(height: 16),
-          villagesAsync.when(
-            data: (villages) => DropdownButtonFormField<String>(
-              initialValue: _villageId,
-              decoration: const InputDecoration(labelText: 'Village *', border: OutlineInputBorder()),
-              items: villages.map((v) => DropdownMenuItem(value: v.id, child: Text(v.name))).toList(),
-              onChanged: _saving ? null : (value) => setState(() => _villageId = value),
-            ),
-            loading: () => const LinearProgressIndicator(),
-            error: (e, s) => Text('Could not load villages: ${apiErrorMessage(e)}'),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _workDescriptionController,
-            decoration: const InputDecoration(labelText: 'Work Needed *', border: OutlineInputBorder()),
-            maxLines: 2,
-            enabled: !_saving,
-          ),
-          const SizedBox(height: 16),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Scheduled Date'),
-            subtitle: Text('${_scheduledDate.year}-${_scheduledDate.month.toString().padLeft(2, '0')}-${_scheduledDate.day.toString().padLeft(2, '0')}'),
-            trailing: const Icon(Icons.calendar_today),
-            onTap: _saving ? null : _pickDate,
-          ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Scheduled Time'),
-            subtitle: Text(_scheduledTime == null ? 'Not set' : _scheduledTime!.format(context)),
-            trailing: const Icon(Icons.access_time),
-            onTap: _saving ? null : _pickTime,
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _locationController,
-            decoration: const InputDecoration(labelText: 'Location', border: OutlineInputBorder()),
-            enabled: !_saving,
-          ),
-          const SizedBox(height: 16),
-          Row(children: [
-            Expanded(
-              child: TextField(
-                controller: _estimatedHoursController,
-                decoration: const InputDecoration(labelText: 'Est. Hours', border: OutlineInputBorder()),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                enabled: !_saving,
+          ],
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _workDescriptionController,
+          decoration: const InputDecoration(labelText: 'Work Needed *', border: OutlineInputBorder()),
+          maxLines: 2,
+          enabled: !_saving,
+        ),
+        const SizedBox(height: 16),
+        ResponsiveFormGrid(
+          children: [
+            InputDecorator(
+              decoration: const InputDecoration(labelText: 'Scheduled Date', border: OutlineInputBorder()),
+              child: InkWell(
+                onTap: _saving ? null : _pickDate,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                        '${_scheduledDate.year}-${_scheduledDate.month.toString().padLeft(2, '0')}-${_scheduledDate.day.toString().padLeft(2, '0')}'),
+                    const Icon(Icons.calendar_today, size: 18),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TextField(
-                controller: _estimatedAcresController,
-                decoration: const InputDecoration(labelText: 'Est. Acres', border: OutlineInputBorder()),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                enabled: !_saving,
+            InputDecorator(
+              decoration: const InputDecoration(labelText: 'Scheduled Time', border: OutlineInputBorder()),
+              child: InkWell(
+                onTap: _saving ? null : _pickTime,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(_scheduledTime == null ? 'Not set' : _scheduledTime!.format(context)),
+                    const Icon(Icons.access_time, size: 18),
+                  ],
+                ),
               ),
             ),
-          ]),
-          const SizedBox(height: 16),
-          machinesAsync.when(
-            data: (machines) => DropdownButtonFormField<String>(
-              initialValue: _machineId,
-              decoration: const InputDecoration(labelText: 'Machine (optional)', border: OutlineInputBorder()),
-              items: [
-                const DropdownMenuItem(value: null, child: Text('Not assigned yet')),
-                ...machines.map((m) => DropdownMenuItem(value: m.id, child: Text(m.registrationNumber))),
-              ],
-              onChanged: _saving ? null : (value) => setState(() => _machineId = value),
+            TextField(
+              controller: _locationController,
+              decoration: const InputDecoration(labelText: 'Location', border: OutlineInputBorder()),
+              enabled: !_saving,
             ),
-            loading: () => const LinearProgressIndicator(),
-            error: (e, s) => Text('Could not load machines: ${apiErrorMessage(e)}'),
-          ),
-          const SizedBox(height: 16),
-          driversAsync.when(
-            data: (drivers) => DropdownButtonFormField<String>(
-              initialValue: _driverId,
-              decoration: const InputDecoration(labelText: 'Driver (optional)', border: OutlineInputBorder()),
-              items: [
-                const DropdownMenuItem(value: null, child: Text('Not assigned yet')),
-                ...drivers.map((d) => DropdownMenuItem(value: d.id, child: Text(d.name))),
-              ],
-              onChanged: _saving ? null : (value) => setState(() => _driverId = value),
+            TextField(
+              controller: _estimatedHoursController,
+              decoration: const InputDecoration(labelText: 'Est. Hours', border: OutlineInputBorder()),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              enabled: !_saving,
             ),
-            loading: () => const LinearProgressIndicator(),
-            error: (e, s) => Text('Could not load drivers: ${apiErrorMessage(e)}'),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _notesController,
-            decoration: const InputDecoration(labelText: 'Notes', border: OutlineInputBorder()),
-            maxLines: 2,
-            enabled: !_saving,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
+            TextField(
+              controller: _estimatedAcresController,
+              decoration: const InputDecoration(labelText: 'Est. Acres', border: OutlineInputBorder()),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              enabled: !_saving,
+            ),
+            machinesAsync.when(
+              data: (machines) => DropdownButtonFormField<String>(
+                initialValue: _machineId,
+                decoration: const InputDecoration(labelText: 'Machine (optional)', border: OutlineInputBorder()),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Not assigned yet')),
+                  ...machines.map((m) => DropdownMenuItem(value: m.id, child: Text(m.registrationNumber))),
+                ],
+                onChanged: _saving ? null : (value) => setState(() => _machineId = value),
+              ),
+              loading: () => const LinearProgressIndicator(),
+              error: (e, s) => Text('Could not load machines: ${apiErrorMessage(e)}'),
+            ),
+            driversAsync.when(
+              data: (drivers) => DropdownButtonFormField<String>(
+                initialValue: _driverId,
+                decoration: const InputDecoration(labelText: 'Driver (optional)', border: OutlineInputBorder()),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Not assigned yet')),
+                  ...drivers.map((d) => DropdownMenuItem(value: d.id, child: Text(d.name))),
+                ],
+                onChanged: _saving ? null : (value) => setState(() => _driverId = value),
+              ),
+              loading: () => const LinearProgressIndicator(),
+              error: (e, s) => Text('Could not load drivers: ${apiErrorMessage(e)}'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _notesController,
+          decoration: const InputDecoration(labelText: 'Notes', border: OutlineInputBorder()),
+          maxLines: 2,
+          enabled: !_saving,
+        ),
+        const SizedBox(height: 24),
+        DesktopFormActions(
+          child: ElevatedButton(
             onPressed: _saving ? null : _save,
-            style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+            style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32)),
             child: _saving
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : Text(_isEdit ? 'Save Changes' : 'Create Booking'),
           ),
-        ],
-      ),
+        ),
+      ],
+    );
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(context.responsive.isDesktop ? 24.0 : 16.0),
+      child: DesktopFormContainer(child: form),
     );
   }
 }

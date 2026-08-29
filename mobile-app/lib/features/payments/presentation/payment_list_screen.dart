@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart' show Share;
+import '../../../core/layout/responsive.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
-import '../../../core/widgets/app_drawer.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/search_field.dart';
 import '../data/invoice_analysis.dart';
 import 'payment_list_screen_provider.dart';
 import 'widgets/payment_filters_dialog.dart';
+import 'widgets/payment_filters_desktop_dialog.dart';
 
 class InvoiceSummary {
   final String id;
@@ -73,7 +75,8 @@ final advancesListProvider = FutureProvider<List<AdvanceSummary>>((ref) async {
 });
 
 class PaymentListScreen extends ConsumerStatefulWidget {
-  const PaymentListScreen({super.key});
+  final List<String>? initialStatuses;
+  const PaymentListScreen({super.key, this.initialStatuses});
 
   @override
   ConsumerState<PaymentListScreen> createState() => _PaymentListScreenState();
@@ -81,6 +84,17 @@ class PaymentListScreen extends ConsumerStatefulWidget {
 
 class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
   String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialStatuses != null && widget.initialStatuses!.isNotEmpty) {
+      Future.microtask(() {
+        final current = ref.read(paymentFilterProvider);
+        ref.read(paymentFilterProvider.notifier).updateFilter(current.copyWith(status: widget.initialStatuses!));
+      });
+    }
+  }
 
   Future<void> _exportCsv(InvoiceAnalysisResponse analysis) async {
     final buffer = StringBuffer();
@@ -92,7 +106,7 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
     buffer.writeln('Outstanding:,₹${analysis.summary.totalOutstanding.toStringAsFixed(2)}');
     buffer.writeln('Overdue Amount:,₹${analysis.summary.overdueAmount.toStringAsFixed(2)}');
     buffer.writeln();
-    
+
     // Details
     buffer.writeln('Invoice Number,Customer,Village,Total,Paid,Balance,Status,Date,Due Date,Days Overdue');
     for (final i in analysis.invoices) {
@@ -114,49 +128,55 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
     final user = ref.watch(currentUserProvider);
     final filterState = ref.watch(paymentFilterProvider);
     final canReceive = user?.isOwnerOrManager ?? false;
+    final isDesktop = context.responsive.isDesktop;
 
-    return Scaffold(
-      drawer: const AppDrawer(currentRoute: '/payments'),
-      appBar: AppBar(
-        title: const Text('Payments Analysis'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            tooltip: 'Advanced Filters',
-            onPressed: () {
+    return AdaptiveScaffold(
+      currentRoute: '/payments',
+      title: 'Payments Analysis',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.filter_list),
+          tooltip: 'Advanced Filters',
+          onPressed: () {
+            // Desktop: a centred filter dialog (mouse/keyboard). Phone: the
+            // existing modal bottom sheet, unchanged. Both drive the same
+            // paymentFilterProvider with identical filters + apply/clear.
+            if (isDesktop) {
+              showPaymentFiltersDesktopDialog(context);
+            } else {
               showModalBottomSheet(
                 context: context,
                 isScrollControlled: true,
                 builder: (_) => const PaymentFiltersDialog(),
               );
-            },
-          ),
-          if (canReceive)
-            IconButton(
-              icon: const Icon(Icons.savings),
-              tooltip: 'Record Advance',
-              onPressed: () => context.go('/payments/advance/new'),
-            ),
-          if (canReceive)
-            IconButton(
-              icon: const Icon(Icons.receipt_long),
-              tooltip: 'New Invoice',
-              onPressed: () => context.go('/payments/invoice/new'),
-            ),
+            }
+          },
+        ),
+        if (canReceive)
           IconButton(
-            icon: const Icon(Icons.ios_share),
-            tooltip: 'Export CSV',
-            onPressed: () => analysisAsync.whenData(_exportCsv),
+            icon: const Icon(Icons.savings),
+            tooltip: 'Record Advance',
+            onPressed: () => context.go('/payments/advance/new'),
           ),
+        if (canReceive)
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              ref.invalidate(invoicesAnalysisProvider);
-              ref.invalidate(advancesListProvider);
-            },
+            icon: const Icon(Icons.receipt_long),
+            tooltip: 'New Invoice',
+            onPressed: () => context.go('/payments/invoice/new'),
           ),
-        ],
-      ),
+        IconButton(
+          icon: const Icon(Icons.ios_share),
+          tooltip: 'Export CSV',
+          onPressed: () => analysisAsync.whenData(_exportCsv),
+        ),
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: () {
+            ref.invalidate(invoicesAnalysisProvider);
+            ref.invalidate(advancesListProvider);
+          },
+        ),
+      ],
       body: analysisAsync.when(
         data: (analysis) {
           var filtered = analysis.invoices;
@@ -168,7 +188,7 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                     i.villageName.toLowerCase().contains(_query))
                 .toList();
           }
-          
+
           bool hasFilter = filterState.toJson().isNotEmpty;
 
           return RefreshIndicator(
@@ -195,8 +215,8 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                    ),
                 Padding(
                   padding: const EdgeInsets.all(12.0),
-                  child: GridView.count(
-                    crossAxisCount: 2,
+                  child: GridView.extent(
+                    maxCrossAxisExtent: isDesktop ? 260 : 220,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     mainAxisSpacing: 8,
@@ -204,11 +224,12 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                     childAspectRatio: 2.2,
                     children: [
                       _kpiCard('Filtered Invoices', '${analysis.summary.invoicesCount}', Colors.blueGrey),
-                      _kpiCard('Total Invoiced', '₹${analysis.summary.totalInvoiced.toStringAsFixed(0)}', Colors.blue),
-                      _kpiCard('Total Collected', '₹${analysis.summary.totalPaid.toStringAsFixed(0)}', Colors.green),
+                      _kpiCard('Total Invoiced', '₹${analysis.summary.totalInvoiced.toStringAsFixed(0)}', Colors.blue, onTap: () => ref.read(paymentFilterProvider.notifier).updateFilter(ref.read(paymentFilterProvider).copyWith(status: []))),
+                      _kpiCard('Total Collected', '₹${analysis.summary.totalPaid.toStringAsFixed(0)}', Colors.green, onTap: () => ref.read(paymentFilterProvider.notifier).updateFilter(ref.read(paymentFilterProvider).copyWith(status: ['PAID']))),
                       _kpiCard('Outstanding', '₹${analysis.summary.totalOutstanding.toStringAsFixed(0)}',
+                          onTap: () => ref.read(paymentFilterProvider.notifier).updateFilter(ref.read(paymentFilterProvider).copyWith(status: ['UNPAID', 'PARTIALLY_PAID'])),
                           analysis.summary.totalOutstanding > 0 ? Colors.red : Colors.green),
-                      _kpiCard('Overdue Amount', '₹${analysis.summary.overdueAmount.toStringAsFixed(0)}', Colors.redAccent),
+                      _kpiCard('Overdue Amount', '₹${analysis.summary.overdueAmount.toStringAsFixed(0)}', Colors.redAccent, onTap: () => ref.read(paymentFilterProvider.notifier).updateFilter(ref.read(paymentFilterProvider).copyWith(status: ['OVERDUE']))),
                     ],
                   ),
                 ),
@@ -218,6 +239,8 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                 ),
                 if (filtered.isEmpty)
                   const Padding(padding: EdgeInsets.all(24), child: Center(child: Text('No invoices match this view.')))
+                else if (isDesktop)
+                  _desktopInvoiceTable(context, filtered, canReceive: canReceive)
                 else
                   ...filtered.map((invoice) => Card(
                         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -240,7 +263,7 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                                 ),
                         ),
                       )),
-                
+
                 // Analytics Section
                 const Padding(
                   padding: EdgeInsets.all(16.0),
@@ -305,18 +328,85 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
     );
   }
 
-  Widget _kpiCard(String title, String value, Color color) {
+  /// Desktop presentation of the invoices list: a proper data grid. Lives
+  /// inside the page's own vertical [ListView], so it manages only horizontal
+  /// scroll (the DataTable has intrinsic height) — no nested vertical scroll.
+  /// Same row navigation + same Receive action + same RBAC as the phone list.
+  Widget _desktopInvoiceTable(BuildContext context, List<InvoiceSummary> invoices, {required bool canReceive}) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minWidth: (MediaQuery.sizeOf(context).width - Breakpoints.sidebarWidth - 96).clamp(0, double.infinity),
+            ),
+            child: DataTable(
+              headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
+              showCheckboxColumn: false,
+              columns: const [
+                DataColumn(label: Text('Invoice #')),
+                DataColumn(label: Text('Customer')),
+                DataColumn(label: Text('Village')),
+                DataColumn(label: Text('Status')),
+                DataColumn(label: Text('Date')),
+                DataColumn(label: Text('Total'), numeric: true),
+                DataColumn(label: Text('Balance'), numeric: true),
+                DataColumn(label: Text('Action')),
+              ],
+              rows: [
+                for (final i in invoices)
+                  DataRow(
+                    onSelectChanged: (_) => context.go('/payments/${i.id}'),
+                    cells: [
+                      DataCell(Text(i.invoiceNumber, style: const TextStyle(fontWeight: FontWeight.w600))),
+                      DataCell(Text(i.customerName)),
+                      DataCell(Text(i.villageName)),
+                      DataCell(Text(i.status)),
+                      DataCell(Text(i.invoiceDate.split('T').first)),
+                      DataCell(Text('₹${i.totalAmount.toStringAsFixed(0)}')),
+                      DataCell(Text(
+                        i.balanceAmount > 0 ? '₹${i.balanceAmount.toStringAsFixed(0)}' : 'Paid',
+                        style: TextStyle(
+                          color: i.balanceAmount > 0 ? Colors.red : Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )),
+                      DataCell(
+                        canReceive && i.balanceAmount > 0 && i.status != 'VOIDED'
+                            ? FilledButton.tonal(
+                                onPressed: () => context.go('/payments/${i.id}'),
+                                child: const Text('Receive'),
+                              )
+                            : const Text('—'),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _kpiCard(String title, String value, Color color, {VoidCallback? onTap}) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(10.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-            const SizedBox(height: 2),
-            Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
-          ],
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(10.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              const SizedBox(height: 2),
+              Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+            ],
+          ),
         ),
       ),
     );

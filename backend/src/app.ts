@@ -25,20 +25,44 @@ import { rbacRouter } from "./modules/rbac/rbac.routes";
 import { teamRouter } from "./modules/team/staffInvite.routes";
 import { internalRouter } from "./modules/internal/internal.routes";
 import { internalApiKeyMiddleware } from "./middleware/internalApiKey.middleware";
+import { requestLoggerMiddleware } from "./middleware/requestLogger.middleware";
 
 // Express app assembly only. Module routers are mounted here once they exist —
 // this file must never contain business logic itself.
 export const app = express();
 
+// Allowlist of browser origins permitted to make credentialed cross-origin
+// requests. Sourced from CORS_ORIGIN (comma-separated to support more than one
+// origin, e.g. prod + a staging host, without a new config format; a single
+// value like the current "https://shabooagri.com" still works unchanged).
+// The operational web app itself is served same-origin per tenant subdomain
+// and never triggers CORS; this list only governs genuine cross-origin
+// browser callers.
+const allowedOrigins = env.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean);
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, server-to-server) or any matching origin
-      callback(null, true);
+      // No Origin header at all (native mobile app via Dio, curl,
+      // server-to-server) — not a browser CORS scenario, allow through.
+      if (!origin) return callback(null, true);
+      // Only an explicitly configured origin gets an Access-Control-Allow-
+      // Origin echoed back (to that specific origin, never "*", so it stays
+      // compatible with credentials: true). Any other origin is NOT reflected:
+      // the browser then blocks the cross-origin response. This is a plain
+      // "no CORS header" outcome, not a thrown error — non-browser callers are
+      // unaffected and no request 500s.
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(null, false);
     },
     credentials: true,
   }),
 );
+
+// Structured request logging + correlation id — as early as possible so every
+// request (including json parse failures) gets an id and an access-log line.
+app.use(requestLoggerMiddleware);
+
 app.use(express.json());
 
 app.get("/health", async (_req, res) => {

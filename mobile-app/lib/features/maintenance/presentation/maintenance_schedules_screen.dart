@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import '../../../core/layout/responsive.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/confirm_delete.dart';
 import '../../machines/presentation/machine_list_screen.dart';
 
@@ -123,13 +124,24 @@ class MaintenanceSchedulesScreen extends ConsumerWidget {
     final schedulesAsync = ref.watch(maintenanceSchedulesProvider);
     final user = ref.watch(currentUserProvider);
     final canManage = user?.isOwnerOrManager ?? false;
+    final isDesktop = context.responsive.isDesktop;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Maintenance Schedules'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/maintenance')),
-      ),
-      floatingActionButton: canManage
+    return AdaptiveScaffold(
+      currentRoute: '/maintenance',
+      title: 'Maintenance Schedules',
+      showBack: true,
+      actions: [
+        if (isDesktop && canManage)
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: FilledButton.icon(
+              onPressed: () => _showScheduleDialog(context, ref),
+              icon: const Icon(Icons.add),
+              label: const Text('New Schedule'),
+            ),
+          ),
+      ],
+      floatingActionButton: (!isDesktop && canManage)
           ? FloatingActionButton(onPressed: () => _showScheduleDialog(context, ref), child: const Icon(Icons.add))
           : null,
       body: schedulesAsync.when(

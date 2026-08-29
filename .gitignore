@@ -20,5 +20,6 @@ backups/
 tmp/
 .DS_Store
 
-# Mobile App
+# Mobile App — distributable binaries are published to the server, not committed
 platform-frontend/public/downloads/*.apk
+platform-frontend/public/downloads/*.exe

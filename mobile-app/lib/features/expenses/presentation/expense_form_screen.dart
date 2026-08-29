@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/layout/responsive.dart';
+import '../../../core/layout/responsive_form.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../machines/presentation/machine_list_screen.dart';
 import 'expense_list_screen.dart';
 
@@ -111,100 +114,105 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isEdit && !_prefilled) {
-      final expenseAsync = ref.watch(expenseByIdProvider(widget.expenseId!));
-      return Scaffold(
-        appBar: AppBar(title: const Text('Edit Expense')),
-        body: expenseAsync.when(
-          data: (expense) {
-            _prefillFrom(expense);
-            return _buildForm();
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text('Could not load expense: ${apiErrorMessage(e)}')),
-        ),
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? 'Edit Expense' : 'New Expense'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/expenses')),
-      ),
-      body: _buildForm(),
+    return AdaptiveScaffold(
+      currentRoute: '/expenses',
+      title: _isEdit ? 'Edit Expense' : 'New Expense',
+      showBack: true,
+      body: (_isEdit && !_prefilled)
+          ? ref.watch(expenseByIdProvider(widget.expenseId!)).when(
+              data: (expense) {
+                _prefillFrom(expense);
+                return _buildForm(context);
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, s) => Center(child: Text('Could not load expense: ${apiErrorMessage(e)}')),
+            )
+          : _buildForm(context),
     );
   }
 
-  Widget _buildForm() {
+  Widget _buildForm(BuildContext context) {
     final categoriesAsync = ref.watch(expenseCategoriesProvider);
     final machinesAsync = ref.watch(machinesListProvider);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(_error!, style: const TextStyle(color: Colors.red)),
+    final form = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(_error!, style: const TextStyle(color: Colors.red)),
+          ),
+        ResponsiveFormGrid(
+          children: [
+            categoriesAsync.when(
+              data: (categories) => DropdownButtonFormField<String>(
+                initialValue: _categoryId,
+                decoration: const InputDecoration(labelText: 'Category *', border: OutlineInputBorder()),
+                items: categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                onChanged: _saving ? null : (value) => setState(() => _categoryId = value),
+              ),
+              loading: () => const LinearProgressIndicator(),
+              error: (e, s) => Text('Could not load categories: ${apiErrorMessage(e)}'),
             ),
-          categoriesAsync.when(
-            data: (categories) => DropdownButtonFormField<String>(
-              initialValue: _categoryId,
-              decoration: const InputDecoration(labelText: 'Category *', border: OutlineInputBorder()),
-              items: categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-              onChanged: _saving ? null : (value) => setState(() => _categoryId = value),
+            TextField(
+              controller: _amountController,
+              decoration: const InputDecoration(labelText: 'Amount *', border: OutlineInputBorder(), prefixText: '₹ '),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              enabled: !_saving,
             ),
-            loading: () => const LinearProgressIndicator(),
-            error: (e, s) => Text('Could not load categories: ${apiErrorMessage(e)}'),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _amountController,
-            decoration: const InputDecoration(labelText: 'Amount *', border: OutlineInputBorder(), prefixText: '₹ '),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            enabled: !_saving,
-          ),
-          const SizedBox(height: 16),
-          machinesAsync.when(
-            data: (machines) => DropdownButtonFormField<String>(
-              initialValue: _machineId,
-              decoration: const InputDecoration(labelText: 'Machine (optional)', border: OutlineInputBorder()),
-              items: [
-                const DropdownMenuItem(value: null, child: Text('Not machine-specific')),
-                ...machines.map((m) => DropdownMenuItem(value: m.id, child: Text(m.registrationNumber))),
-              ],
-              onChanged: _saving ? null : (value) => setState(() => _machineId = value),
+            machinesAsync.when(
+              data: (machines) => DropdownButtonFormField<String>(
+                initialValue: _machineId,
+                decoration: const InputDecoration(labelText: 'Machine (optional)', border: OutlineInputBorder()),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Not machine-specific')),
+                  ...machines.map((m) => DropdownMenuItem(value: m.id, child: Text(m.registrationNumber))),
+                ],
+                onChanged: _saving ? null : (value) => setState(() => _machineId = value),
+              ),
+              loading: () => const LinearProgressIndicator(),
+              error: (e, s) => Text('Could not load machines: ${apiErrorMessage(e)}'),
             ),
-            loading: () => const LinearProgressIndicator(),
-            error: (e, s) => Text('Could not load machines: ${apiErrorMessage(e)}'),
-          ),
-          const SizedBox(height: 16),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Expense Date'),
-            subtitle: Text('${_expenseDate.year}-${_expenseDate.month.toString().padLeft(2, '0')}-${_expenseDate.day.toString().padLeft(2, '0')}'),
-            trailing: const Icon(Icons.calendar_today),
-            onTap: _saving ? null : _pickDate,
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _descriptionController,
-            decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
-            maxLines: 2,
-            enabled: !_saving,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
+            InputDecorator(
+              decoration: const InputDecoration(labelText: 'Expense Date', border: OutlineInputBorder()),
+              child: InkWell(
+                onTap: _saving ? null : _pickDate,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                        '${_expenseDate.year}-${_expenseDate.month.toString().padLeft(2, '0')}-${_expenseDate.day.toString().padLeft(2, '0')}'),
+                    const Icon(Icons.calendar_today, size: 18),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _descriptionController,
+          decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
+          maxLines: 2,
+          enabled: !_saving,
+        ),
+        const SizedBox(height: 24),
+        DesktopFormActions(
+          child: ElevatedButton(
             onPressed: _saving ? null : _save,
-            style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+            style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32)),
             child: _saving
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : Text(_isEdit ? 'Save Changes' : 'Create Expense'),
           ),
-        ],
-      ),
+        ),
+      ],
+    );
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(context.responsive.isDesktop ? 24.0 : 16.0),
+      child: DesktopFormContainer(child: form),
     );
   }
 }

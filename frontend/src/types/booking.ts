@@ -31,6 +31,8 @@ export interface Booking {
   // booking time — null on every freshly created booking.
   pricingMethodId: string | null;
   rate: number | null;
+  // Optional minimum billable floor (§8.2): final = max(metered, minimumCharge).
+  minimumCharge: number | null;
   estimatedAmount: number | null;
   status: BookingStatus;
   workDescription: string | null;
@@ -127,4 +129,6 @@ export interface UpdateBookingPayload {
 export interface AssignPricingPayload {
   pricingMethodId: string;
   rate: number;
+  // Optional minimum billable floor (§8.2). Null/omitted clears any prior floor.
+  minimumCharge?: number | null;
 }

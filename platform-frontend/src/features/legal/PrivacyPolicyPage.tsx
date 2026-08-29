@@ -4,21 +4,25 @@ import { LegalLayout, Section } from "./LegalLayout";
 
 export const PrivacyPolicyPage: React.FC = () => {
   return (
-    <LegalLayout title="Privacy Policy" effectiveDate="August 17, 2026">
+    <LegalLayout title="Privacy Policy" effectiveDate="August 24, 2026">
       <p style={{ marginBottom: 28, fontSize: "0.95rem", lineHeight: 1.7 }}>
         This Privacy Policy explains how ShabooAgri ("ShabooAgri," "we," "us," or "our") collects, uses, discloses,
-        and protects information when you use our website and software-as-a-service platform (collectively, the
-        "Service"). It applies to business owners who register for the Service, their staff and drivers who are
-        granted access, and visitors to our marketing website. By using the Service, you agree to the collection
-        and use of information as described in this Policy.
+        and protects information when you use our website, our software-as-a-service platform, and our mobile and
+        desktop applications — including the ShabooAgri Android application distributed through Google Play
+        (collectively, the "Service"). It applies to business owners who register for the Service, their staff,
+        drivers and farmers who are granted access, and visitors to our marketing website. The same practices
+        described here govern the Service whether you access it from a web browser or from the ShabooAgri app. By
+        using the Service, you agree to the collection and use of information as described in this Policy.
       </p>
 
       <Section number="1" title="Information We Collect">
         <p><strong>1.1 Account &amp; business information.</strong> When you register, we collect information such as your business name, contact person name, email address, phone number, business address, city, state, PIN code, and — where you provide them — GSTIN and PAN, for billing and tax-compliance purposes.</p>
-        <p><strong>1.2 Customer/farmer &amp; operational records.</strong> As part of using the Service, you and your staff may input records relating to your own customers or farmers (such as name, contact details, and village/location), your machines, drivers, employees, bookings, jobs, and invoices. This data is your Customer Data, as described in our <Link to="/terms">Terms of Service</Link>, and we process it on your behalf and at your direction.</p>
+        <p><strong>1.2 Customer/farmer &amp; operational records.</strong> As part of using the Service — whether from the website or the ShabooAgri app — you and your staff may input records relating to your own customers or farmers (such as name, contact details, and village/location), your machines, drivers, employees, bookings, jobs, payments, advances, and invoices. This data is your Customer Data, as described in our <Link to="/terms">Terms of Service</Link>, and we process it on your behalf and at your direction. Payment and advance records captured in the app are operational accounting entries (amount, method such as cash/UPI, date, and reference) — the app does not collect or store cardholder data (see Section 1.3).</p>
         <p><strong>1.3 Payment information.</strong> When you make a payment, your card, UPI, or other payment instrument details are collected and processed directly by our third-party payment gateway. We do not store your full card numbers or payment credentials on our own servers — we retain only transaction references, amounts, status, and metadata needed for invoicing, reconciliation, and support.</p>
-        <p><strong>1.4 Usage data.</strong> We automatically collect certain technical information when you use the Service, including IP address, browser type and version, device information, pages visited, timestamps, and general usage patterns, to help us operate, secure, and improve the Service.</p>
+        <p><strong>1.4 Usage &amp; technical data.</strong> When you use the Service, our servers automatically log certain technical information, including IP address, browser type and version, device/operating-system information, pages or endpoints accessed, timestamps, and general usage patterns, to help us operate, secure, troubleshoot, and improve the Service. The ShabooAgri app does <strong>not</strong> contain any third-party advertising, analytics, or tracking SDKs, and does not collect advertising identifiers; website analytics are limited to our marketing website as described in Section 6.</p>
         <p><strong>1.5 Communications.</strong> When you contact us through our Feedback form, Contact Us / support form, or by email, we collect the information you provide, including your name, email address, and the content of your message.</p>
+        <p><strong>1.6 Camera &amp; photos (app).</strong> The ShabooAgri app can, at your initiative, use your device camera or let you select an existing photo to attach images to bookings and jobs for operational documentation. Images are accessed only when you choose to add a photo, and are uploaded to and stored on our servers as part of the associated record. The app requests camera access for this purpose; it does not request device-location or background access.</p>
+        <p><strong>1.7 On-device storage (app).</strong> The ShabooAgri app is offline-first: your operational data and your authentication session are stored locally on your device (in an on-device database and in the platform's encrypted secure storage) so the app works without a connection, and are synchronized with our servers over an encrypted connection when you are online. This on-device data remains on your device until you log out or uninstall the app, or it is cleared by you or your device.</p>
       </Section>
 
       <Section number="2" title="How and Why We Use Your Data">
@@ -66,13 +70,21 @@ export const PrivacyPolicyPage: React.FC = () => {
         <ul>
           <li><strong>Payment gateway:</strong> to process subscription and machine add-on payments securely, in compliance with RBI and PCI-DSS requirements.</li>
           <li><strong>Cloud hosting &amp; infrastructure providers:</strong> to host our application, databases, and backups.</li>
-          <li><strong>Email/SMTP delivery providers:</strong> to send transactional emails such as password resets, invoices, and support notifications.</li>
-          <li><strong>Website analytics providers:</strong> to understand aggregate traffic and usage patterns on our marketing website (see Section 6, Cookies).</li>
+          <li><strong>Email/SMTP and SMS delivery providers:</strong> to send transactional messages such as one-time passwords (OTPs) for login, password resets, invoices, and support notifications, using the email address or mobile number associated with the relevant account.</li>
+          <li><strong>Website analytics providers:</strong> to understand aggregate traffic and usage patterns on our marketing website (see Section 6, Cookies). These are used on the website only and are not present in the ShabooAgri app.</li>
         </ul>
         <p>
           These providers are only given access to the data necessary to perform their function for us, and are
           contractually or otherwise required to protect your data and use it solely for the purposes we specify.
-          We do not permit these providers to use your data for their own independent purposes.
+          We do not permit these providers to use your data for their own independent purposes. We do not sell your
+          personal or operational data.
+        </p>
+        <p>
+          Separately, the ShabooAgri app includes convenience actions that, only when you tap them, hand off to
+          other apps you have installed — for example, opening WhatsApp to share an invoice or message, or opening a
+          maps application to navigate to a job location. When you use these actions, the information you send (such
+          as a phone number, message, or address) is passed to that third-party app and is then governed by that
+          app's own privacy policy. These hand-offs never happen automatically or in the background.
         </p>
       </Section>
 
@@ -92,6 +104,21 @@ export const PrivacyPolicyPage: React.FC = () => {
           you interact with (for example, if you are a farmer/customer whose details were entered by an equipment
           rental business using ShabooAgri), such requests should generally be directed to that business as the
           data controller, and we will assist them in fulfilling valid requests.
+        </p>
+        <p>
+          <strong>Account &amp; data deletion.</strong> If you hold a ShabooAgri account (including an account used
+          in the ShabooAgri app), you may request deletion of your account and its associated personal data at any
+          time by emailing <a href="mailto:support.shaboo@gmail.com">support.shaboo@gmail.com</a> from, or
+          identifying, the email address or mobile number on the account, or by using our{" "}
+          <Link to="/contact">Contact Us</Link> page. After we verify the request, we will delete or anonymize the
+          personal data associated with your account — such as your name, email, phone number, PIN/password
+          credentials, and profile — and any images you uploaded. Operational and financial records that we are
+          required to retain for legal, tax, or accounting purposes (for example, invoice and payment records under
+          Indian tax law), and Customer Data that belongs to a business you work for rather than to you personally,
+          may be retained for the period described in Section 3 or as required by law, after which it is securely
+          deleted or anonymized. Uninstalling the app or logging out clears the app's locally stored data from your
+          device, but does not by itself delete your account on our servers — use the deletion request above for
+          that.
         </p>
       </Section>
 

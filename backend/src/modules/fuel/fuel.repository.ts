@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../../db/prisma";
 
 // Only file in this module allowed to import the Prisma client.
@@ -42,8 +43,9 @@ export function create(
   litres: number,
   cost: number | undefined,
   recordedBy: string,
+  tx: Prisma.TransactionClient | typeof prisma = prisma,
 ) {
-  return prisma.jobFuelEntry.create({ data: { companyId, jobId, machineId, litres, cost, recordedBy } });
+  return tx.jobFuelEntry.create({ data: { companyId, jobId, machineId, litres, cost, recordedBy } });
 }
 
 export async function sumLitresForJob(companyId: string, jobId: string): Promise<number> {

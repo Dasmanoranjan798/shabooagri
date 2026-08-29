@@ -10,6 +10,12 @@ import 'core/storage/local_storage.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Warm the in-memory session cache from secure storage once, up front, so
+  // every later token read (the Dio interceptor reads one per request) is
+  // served from memory rather than a per-request disk read — the latter is
+  // unreliable under the dashboard's burst of concurrent requests on Windows.
+  await AuthStorage.hydrate();
+
   final slug = await TenantStorage.getSlug();
   AppUser? restoredUser;
   String initialLocation;

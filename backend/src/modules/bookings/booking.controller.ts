@@ -52,8 +52,8 @@ export async function assignDriver(req: Request, res: Response) {
 
 export async function assignPricing(req: Request, res: Response) {
   const user = requireUser(req);
-  const { pricingMethodId, rate } = assignPricingSchema.parse(req.body);
-  const booking = await bookingService.assignPricing(user.companyId, req.params.id, pricingMethodId, rate);
+  const { pricingMethodId, rate, minimumCharge } = assignPricingSchema.parse(req.body);
+  const booking = await bookingService.assignPricing(user.companyId, req.params.id, pricingMethodId, rate, minimumCharge);
   res.status(200).json(booking);
 }
 

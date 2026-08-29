@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/layout/responsive_form.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../villages/presentation/village_list_screen.dart';
 import '../data/team_models.dart';
 import 'team_screen.dart';
@@ -117,14 +119,16 @@ class _InviteStaffScreenState extends ConsumerState<InviteStaffScreen> {
     final selectedRole = selectedRoleMatches.isEmpty ? null : selectedRoleMatches.first;
     final isFarmerRole = selectedRole?.systemKey == 'farmer';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Invite Staff Member'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
-      ),
+    return AdaptiveScaffold(
+      currentRoute: '/team',
+      title: 'Invite Staff Member',
+      showBack: true,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: _result != null ? _buildResult(_result!) : _buildForm(rolesAsync, isFarmerRole),
+        child: DesktopFormContainer(
+          maxWidth: 720,
+          child: _result != null ? _buildResult(_result!) : _buildForm(rolesAsync, isFarmerRole),
+        ),
       ),
     );
   }
@@ -135,59 +139,60 @@ class _InviteStaffScreenState extends ConsumerState<InviteStaffScreen> {
       children: [
         if (_error != null)
           Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
-        TextField(
-          controller: _nameController,
-          decoration: const InputDecoration(labelText: 'Full Name *', hintText: 'e.g. Ramesh Kumar', border: OutlineInputBorder()),
-          enabled: !_saving,
-        ),
-        const SizedBox(height: 16),
-        rolesAsync.when(
-          data: (roles) => DropdownButtonFormField<String>(
-            initialValue: _roleId,
-            decoration: const InputDecoration(labelText: 'Role *', border: OutlineInputBorder()),
-            items: roles.map((r) => DropdownMenuItem(value: r.id, child: Text(r.name))).toList(),
-            onChanged: _saving ? null : (v) => setState(() => _roleId = v),
-          ),
-          loading: () => const LinearProgressIndicator(),
-          error: (e, s) => Text('Could not load roles: ${apiErrorMessage(e)}'),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _emailController,
-          decoration: const InputDecoration(labelText: 'Email (optional if phone given)', hintText: 'name@example.com', border: OutlineInputBorder()),
-          keyboardType: TextInputType.emailAddress,
-          enabled: !_saving,
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _phoneController,
-          decoration: const InputDecoration(labelText: 'Phone (optional if email given)', hintText: '9876543210', border: OutlineInputBorder()),
-          keyboardType: TextInputType.phone,
-          enabled: !_saving,
-        ),
-        if (isFarmerRole) ...[
-          const SizedBox(height: 16),
-          Consumer(builder: (context, ref, _) {
-            final villagesAsync = ref.watch(villagesListProvider);
-            return villagesAsync.when(
-              data: (villages) => DropdownButtonFormField<String>(
-                initialValue: _villageId,
-                decoration: const InputDecoration(labelText: 'Village *', border: OutlineInputBorder()),
-                items: villages.map((v) => DropdownMenuItem(value: v.id, child: Text(v.name))).toList(),
-                onChanged: _saving ? null : (v) => setState(() => _villageId = v),
+        ResponsiveFormGrid(
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: 'Full Name *', hintText: 'e.g. Ramesh Kumar', border: OutlineInputBorder()),
+              enabled: !_saving,
+            ),
+            rolesAsync.when(
+              data: (roles) => DropdownButtonFormField<String>(
+                initialValue: _roleId,
+                decoration: const InputDecoration(labelText: 'Role *', border: OutlineInputBorder()),
+                items: roles.map((r) => DropdownMenuItem(value: r.id, child: Text(r.name))).toList(),
+                onChanged: _saving ? null : (v) => setState(() => _roleId = v),
               ),
               loading: () => const LinearProgressIndicator(),
-              error: (e, s) => Text('Could not load villages: ${apiErrorMessage(e)}'),
-            );
-          }),
-        ],
+              error: (e, s) => Text('Could not load roles: ${apiErrorMessage(e)}'),
+            ),
+            TextField(
+              controller: _emailController,
+              decoration: const InputDecoration(labelText: 'Email (optional if phone given)', hintText: 'name@example.com', border: OutlineInputBorder()),
+              keyboardType: TextInputType.emailAddress,
+              enabled: !_saving,
+            ),
+            TextField(
+              controller: _phoneController,
+              decoration: const InputDecoration(labelText: 'Phone (optional if email given)', hintText: '9876543210', border: OutlineInputBorder()),
+              keyboardType: TextInputType.phone,
+              enabled: !_saving,
+            ),
+            if (isFarmerRole)
+              Consumer(builder: (context, ref, _) {
+                final villagesAsync = ref.watch(villagesListProvider);
+                return villagesAsync.when(
+                  data: (villages) => DropdownButtonFormField<String>(
+                    initialValue: _villageId,
+                    decoration: const InputDecoration(labelText: 'Village *', border: OutlineInputBorder()),
+                    items: villages.map((v) => DropdownMenuItem(value: v.id, child: Text(v.name))).toList(),
+                    onChanged: _saving ? null : (v) => setState(() => _villageId = v),
+                  ),
+                  loading: () => const LinearProgressIndicator(),
+                  error: (e, s) => Text('Could not load villages: ${apiErrorMessage(e)}'),
+                );
+              }),
+          ],
+        ),
         const SizedBox(height: 24),
-        ElevatedButton(
-          onPressed: _saving ? null : () => _submit(isFarmerRole),
-          style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-          child: _saving
-              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : const Text('Send Invite'),
+        DesktopFormActions(
+          child: ElevatedButton(
+            onPressed: _saving ? null : () => _submit(isFarmerRole),
+            style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32)),
+            child: _saving
+                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Text('Send Invite'),
+          ),
         ),
       ],
     );

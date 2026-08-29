@@ -68,6 +68,8 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({ summary }) => 
             value={formatCurrency(kpis.pendingCollection.current)}
             icon={<Clock size={18} />}
             badge={{ text: "Due", variant: "warning" }}
+            onClick={() => navigate("/payments?status=UNPAID&status=PARTIALLY_PAID")}
+            valueColor={kpis.pendingCollection.current > 0 ? "var(--color-danger)" : undefined}
           />
           <KpiCard
             title={`${machineTerm} Working`}
@@ -92,7 +94,7 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({ summary }) => 
         <button
           className="sa-action-btn"
           disabled={!canViewOperations}
-          onClick={() => navigate("/payments")}
+          onClick={() => navigate("/payments?status=UNPAID&status=PARTIALLY_PAID")}
         >
           <span className="sa-action-icon" style={{ display: "inline-flex", alignItems: "center" }}><CreditCard size={18} /></span>
           <span className="sa-action-label">Collect Payment</span>

@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/layout/responsive.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
-import '../../../core/widgets/app_drawer.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../data/team_models.dart';
 
 final teamUsersProvider = FutureProvider<List<TeamUser>>((ref) async {
@@ -126,20 +127,29 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
   Widget build(BuildContext context) {
     final usersAsync = ref.watch(teamUsersProvider);
     final invitesAsync = ref.watch(teamInvitesProvider);
+    final isDesktop = context.responsive.isDesktop;
 
-    return Scaffold(
-      drawer: const AppDrawer(currentRoute: '/team'),
-      appBar: AppBar(
-        title: const Text('Team'),
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _refresh),
+    return AdaptiveScaffold(
+      currentRoute: '/team',
+      title: 'Team',
+      actions: [
+        IconButton(icon: const Icon(Icons.refresh), onPressed: _refresh),
+        if (isDesktop)
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: FilledButton.icon(
+              onPressed: () => context.push('/team/invite'),
+              icon: const Icon(Icons.person_add_alt),
+              label: const Text('Invite Staff'),
+            ),
+          )
+        else
           IconButton(
             icon: const Icon(Icons.person_add_alt),
             tooltip: 'Invite Staff',
             onPressed: () => context.push('/team/invite'),
           ),
-        ],
-      ),
+      ],
       body: RefreshIndicator(
         onRefresh: () async => _refresh(),
         child: ListView(
@@ -154,7 +164,9 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
             usersAsync.when(
               data: (users) => users.isEmpty
                   ? const _EmptyState(text: 'No staff accounts yet.')
-                  : Column(
+                  : isDesktop
+                      ? _staffTable(context, users)
+                      : Column(
                       children: users
                           .map((u) => Card(
                                 margin: const EdgeInsets.only(bottom: 8),
@@ -193,7 +205,9 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
                     _sectionHeader('Pending Invites', pending.length),
                     pending.isEmpty
                         ? const _EmptyState(text: 'No pending invites.')
-                        : Column(
+                        : isDesktop
+                            ? _pendingInvitesTable(context, pending)
+                            : Column(
                             children: pending
                                 .map((i) => Card(
                                       margin: const EdgeInsets.only(bottom: 8),
@@ -215,18 +229,20 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
                     if (history.isNotEmpty) ...[
                       const SizedBox(height: 24),
                       _sectionHeader('Invite History', null),
-                      Column(
-                        children: history
-                            .map((i) => Card(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  child: ListTile(
-                                    title: Text(i.fullName),
-                                    subtitle: Text('${i.roleName} · ${i.email ?? i.phone ?? 'N/A'}'),
-                                    trailing: _statusBadge(i.status),
-                                  ),
-                                ))
-                            .toList(),
-                      ),
+                      isDesktop
+                          ? _historyTable(context, history)
+                          : Column(
+                              children: history
+                                  .map((i) => Card(
+                                        margin: const EdgeInsets.only(bottom: 8),
+                                        child: ListTile(
+                                          title: Text(i.fullName),
+                                          subtitle: Text('${i.roleName} · ${i.email ?? i.phone ?? 'N/A'}'),
+                                          trailing: _statusBadge(i.status),
+                                        ),
+                                      ))
+                                  .toList(),
+                            ),
                     ],
                   ],
                 );
@@ -237,6 +253,107 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // ---- Desktop tables (horizontal-scroll only; live inside the page ListView) ----
+
+  Widget _tableCard(BuildContext context, List<DataColumn> columns, List<DataRow> rows) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: (MediaQuery.sizeOf(context).width - Breakpoints.sidebarWidth - 96).clamp(0, double.infinity),
+          ),
+          child: DataTable(
+            headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
+            showCheckboxColumn: false,
+            columns: columns,
+            rows: rows,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _staffTable(BuildContext context, List<TeamUser> users) {
+    return _tableCard(
+      context,
+      const [
+        DataColumn(label: Text('Name')),
+        DataColumn(label: Text('Role')),
+        DataColumn(label: Text('Contact')),
+        DataColumn(label: Text('Last Login')),
+        DataColumn(label: Text('Status')),
+        DataColumn(label: Text('Actions')),
+      ],
+      [
+        for (final u in users)
+          DataRow(cells: [
+            DataCell(Text(u.fullName, style: const TextStyle(fontWeight: FontWeight.w600))),
+            DataCell(Text(u.roleName)),
+            DataCell(Text(u.email ?? u.mobileNumber ?? 'N/A')),
+            DataCell(Text(u.lastLoginAt != null ? u.lastLoginAt!.toIso8601String().split('T').first : 'Never')),
+            DataCell(_statusBadge(u.status)),
+            DataCell(IconButton(
+              icon: Icon(u.status == 'ACTIVE' ? Icons.block : Icons.restore, size: 20),
+              tooltip: u.status == 'ACTIVE' ? 'Deactivate' : 'Reactivate',
+              onPressed: _busyId == u.id ? null : () => _toggleUserStatus(u),
+            )),
+          ]),
+      ],
+    );
+  }
+
+  Widget _pendingInvitesTable(BuildContext context, List<StaffInvite> pending) {
+    return _tableCard(
+      context,
+      const [
+        DataColumn(label: Text('Name')),
+        DataColumn(label: Text('Role')),
+        DataColumn(label: Text('Contact')),
+        DataColumn(label: Text('Sent By')),
+        DataColumn(label: Text('Expires')),
+        DataColumn(label: Text('Actions')),
+      ],
+      [
+        for (final i in pending)
+          DataRow(cells: [
+            DataCell(Text(i.fullName, style: const TextStyle(fontWeight: FontWeight.w600))),
+            DataCell(Text(i.roleName)),
+            DataCell(Text(i.email ?? i.phone ?? 'N/A')),
+            DataCell(Text(i.invitedByName)),
+            DataCell(Text(i.expiresAt.toIso8601String().split('T').first)),
+            DataCell(IconButton(
+              icon: const Icon(Icons.block, size: 20, color: Colors.red),
+              tooltip: 'Revoke Invite',
+              onPressed: _busyId == i.id ? null : () => _revokeInvite(i),
+            )),
+          ]),
+      ],
+    );
+  }
+
+  Widget _historyTable(BuildContext context, List<StaffInvite> history) {
+    return _tableCard(
+      context,
+      const [
+        DataColumn(label: Text('Name')),
+        DataColumn(label: Text('Role')),
+        DataColumn(label: Text('Contact')),
+        DataColumn(label: Text('Status')),
+      ],
+      [
+        for (final i in history)
+          DataRow(cells: [
+            DataCell(Text(i.fullName)),
+            DataCell(Text(i.roleName)),
+            DataCell(Text(i.email ?? i.phone ?? 'N/A')),
+            DataCell(_statusBadge(i.status)),
+          ]),
+      ],
     );
   }
 

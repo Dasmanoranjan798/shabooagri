@@ -46,3 +46,7 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# P2-4 Windows installer build artifacts (produced/downloaded on CI, never committed)
+/installer/windows/vc_redist.x64.exe
+/installer/windows/Output/

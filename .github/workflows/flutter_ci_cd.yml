@@ -5,6 +5,10 @@ on:
     branches: [ "master", "main" ]
   pull_request:
     branches: [ "master", "main" ]
+  # Allow building the release artifacts (incl. the Windows installer) on any
+  # branch on demand — used to produce ShabooAgri-Setup-x64.exe for publishing
+  # without waiting for a merge to master.
+  workflow_dispatch:
 
 jobs:
   test:
@@ -57,11 +61,27 @@ jobs:
       - run: flutter config --enable-windows-desktop
       - run: flutter pub get
       - run: flutter build windows --release
-      - run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath shabooagri-windows.zip
+      # --- P2-4: package a proper user-facing installer instead of a loose zip ---
+      # Flutter Windows apps dynamically link the MSVC runtime, so a clean
+      # machine needs the VC++ 2015-2022 x64 Redistributable. Bundle the official
+      # redist and let the Inno Setup installer run it silently only if missing,
+      # so a normal user just downloads -> installs -> launches (no dev tools).
+      - name: Download Visual C++ Redistributable (x64) to bundle
+        run: Invoke-WebRequest -Uri https://aka.ms/vs/17/release/vc_redist.x64.exe -OutFile installer\windows\vc_redist.x64.exe
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          $ver = ([regex]::Match((Get-Content pubspec.yaml -Raw), 'version:\s*([0-9]+\.[0-9]+\.[0-9]+)')).Groups[1].Value
+          $src = "$PWD\build\windows\x64\runner\Release"
+          $vc  = "$PWD\installer\windows\vc_redist.x64.exe"
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          & "$iscc" "/DMyAppVersion=$ver" "/DSourceDir=$src" "/DVcRedistPath=$vc" "/Oinstaller\windows\Output" installer\windows\shabooagri.iss
       - uses: actions/upload-artifact@v4
         with:
-          name: windows-release
-          path: mobile-app/shabooagri-windows.zip
+          name: windows-installer
+          path: mobile-app/installer/windows/Output/ShabooAgri-Setup-x64.exe
 
   build_macos_ios:
     name: Build macOS and iOS

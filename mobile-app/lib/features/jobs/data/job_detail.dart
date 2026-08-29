@@ -19,6 +19,7 @@ class JobDetail {
   final String villageName;
   final String? location;
   final double? rate;
+  final double? minimumCharge; // §8.2 optional floor: final = max(metered, minimumCharge)
   final String? pricingUnit; // hour | minute | acre | null
   final String? pricingLabel;
   final String? machineRegistration;
@@ -41,6 +42,7 @@ class JobDetail {
     required this.villageName,
     required this.location,
     required this.rate,
+    required this.minimumCharge,
     required this.pricingUnit,
     required this.pricingLabel,
     required this.machineRegistration,
@@ -73,6 +75,7 @@ class JobDetail {
       villageName: village['name'] as String? ?? '—',
       location: booking['location'] as String?,
       rate: booking['rate'] != null ? double.tryParse(booking['rate'].toString()) : null,
+      minimumCharge: booking['minimumCharge'] != null ? double.tryParse(booking['minimumCharge'].toString()) : null,
       pricingUnit: pricingMethod?['unit'] as String?,
       pricingLabel: pricingMethod?['label'] as String?,
       machineRegistration: machine?['registrationNumber'] as String?,
@@ -95,9 +98,16 @@ class JobDetail {
   /// website shows the flat rate instead in that case.
   double? liveAmountFor(int elapsedSec) {
     if (rate == null) return null;
-    if (pricingUnit == 'hour') return rate! * (elapsedSec / 3600);
-    if (pricingUnit == 'minute') return rate! * (elapsedSec / 60);
+    if (pricingUnit == 'hour') return _withFloor(rate! * (elapsedSec / 3600));
+    if (pricingUnit == 'minute') return _withFloor(rate! * (elapsedSec / 60));
     return null;
+  }
+
+  /// §8.2 minimum billable floor — final = max(metered, minimumCharge). Null/0
+  /// minimum is a no-op. One place, mirrors backend pricing-calculator.ts.
+  double _withFloor(double amount) {
+    if (minimumCharge != null && minimumCharge! > amount) return minimumCharge!;
+    return amount;
   }
 
   /// Authoritative completed amount, matching the backend's invoice
@@ -117,6 +127,8 @@ class JobDetail {
     } else if (pricingUnit == 'acre') {
       raw = completedAcres != null ? rate! * completedAcres! : null;
     }
-    return raw == null ? null : (raw * 100).round() / 100;
+    if (raw == null) return null;
+    final floored = _withFloor(raw);
+    return (floored * 100).round() / 100;
   }
 }

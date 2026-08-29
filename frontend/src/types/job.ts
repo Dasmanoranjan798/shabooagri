@@ -53,6 +53,8 @@ export interface Job {
     workDescription: string | null;
     // Null until assigned on the Live Job screen right before Start.
     rate: number | null;
+    // Optional minimum billable floor (§8.2): final = max(metered, minimumCharge).
+    minimumCharge: number | null;
     pricingMethod: { id: string; key: string; label: string; unit: string | null } | null;
     location?: string | null;
     customer?: { id: string; name: string; village?: { id: string; name: string } };

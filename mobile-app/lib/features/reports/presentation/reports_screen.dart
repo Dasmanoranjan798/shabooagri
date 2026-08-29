@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart' show Share;
+import '../../../core/layout/responsive.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
-import '../../../core/widgets/app_drawer.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../dashboard/data/dashboard_summary.dart';
 
 class IncomePoint {
@@ -68,12 +69,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               pw.TableHelper.fromTextArray(
                 headers: ['Metric', 'Value'],
                 data: [
-                  ['Today\'s Revenue', '₹${summary.kpis.todayRevenue.current.toStringAsFixed(2)}'],
-                  ['This Month Revenue', '₹${summary.kpis.monthRevenue.current.toStringAsFixed(2)}'],
-                  ['Pending Collection', '₹${summary.kpis.pendingCollection.current.toStringAsFixed(2)}'],
-                  ['Machines Working', '${summary.kpis.machinesWorking.working}/${summary.kpis.machinesWorking.activeUsable}'],
-                  ['Drivers Active', '${summary.kpis.driversActive.current.toInt()}'],
-                  ['Jobs Completed', '${summary.kpis.jobsCompleted.current.toInt()}'],
+                  ['Today\'s Revenue', '₹${summary.kpis!.todayRevenue.current.toStringAsFixed(2)}'],
+                  ['This Month Revenue', '₹${summary.kpis!.monthRevenue.current.toStringAsFixed(2)}'],
+                  ['Pending Collection', '₹${summary.kpis!.pendingCollection.current.toStringAsFixed(2)}'],
+                  ['Machines Working', '${summary.kpis!.machinesWorking.working}/${summary.kpis!.machinesWorking.activeUsable}'],
+                  ['Drivers Active', '${summary.kpis!.driversActive.current.toInt()}'],
+                  ['Jobs Completed', '${summary.kpis!.jobsCompleted.current.toInt()}'],
                 ],
               ),
               pw.SizedBox(height: 20),
@@ -114,79 +115,143 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   Widget build(BuildContext context) {
     final summaryAsync = ref.watch(reportsSummaryProvider);
     final incomeAsync = ref.watch(incomeSeriesProvider(_range));
+    final isDesktop = context.responsive.isDesktop;
 
-    return Scaffold(
-      drawer: const AppDrawer(currentRoute: '/reports'),
-      appBar: AppBar(title: const Text('Reports')),
+    return AdaptiveScaffold(
+      currentRoute: '/reports',
+      title: 'Reports',
       body: summaryAsync.when(
-        data: (summary) => incomeAsync.when(
-          data: (income) => ListView(
-            padding: const EdgeInsets.all(16.0),
-            children: [
-              DropdownButtonFormField<String>(
-                initialValue: _range,
-                decoration: const InputDecoration(labelText: 'Range', border: OutlineInputBorder()),
-                items: _ranges.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
-                onChanged: (value) => setState(() => _range = value!),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.picture_as_pdf),
-                      label: const Text('Export PDF'),
-                      onPressed: _exporting ? null : () => _exportPdf(summary, income),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.table_chart),
-                      label: const Text('Export CSV'),
-                      onPressed: _exporting ? null : () => _exportCsv(income),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              const Text('Key Metrics', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Card(
+        // The dashboard/summary contract returns `kpis: null` for the narrow
+        // (driver/non-company) scope. Reports are a company-level view, so
+        // guard here instead of force-unwrapping `kpis!` further down (which
+        // would throw for a non-company caller).
+        data: (summary) => summary.kpis == null
+            ? const Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      _metricRow("Today's Revenue", '₹${summary.kpis.todayRevenue.current.toStringAsFixed(0)}'),
-                      _metricRow('This Month', '₹${summary.kpis.monthRevenue.current.toStringAsFixed(0)}'),
-                      _metricRow('Pending Collection', '₹${summary.kpis.pendingCollection.current.toStringAsFixed(0)}'),
-                      _metricRow('Machines Working',
-                          '${summary.kpis.machinesWorking.working}/${summary.kpis.machinesWorking.activeUsable}'),
-                      _metricRow('Drivers Active', '${summary.kpis.driversActive.current.toInt()}'),
-                      _metricRow('Jobs Completed', '${summary.kpis.jobsCompleted.current.toInt()}'),
-                    ],
+                  padding: EdgeInsets.all(24),
+                  child: Text(
+                    'Reports are available for owner and manager accounts.',
+                    textAlign: TextAlign.center,
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              const Text('Income Overview', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              if (income.isEmpty)
-                const Text('No income data for this range.')
-              else
-                ...income.map((p) => Card(
-                      child: ListTile(
-                        title: Text(p.label),
-                        trailing: Text('₹${p.amount.toStringAsFixed(0)}'),
-                      ),
-                    )),
-            ],
-          ),
+              )
+            : incomeAsync.when(
+          data: (income) {
+            final rangeField = DropdownButtonFormField<String>(
+              initialValue: _range,
+              decoration: const InputDecoration(labelText: 'Range', border: OutlineInputBorder()),
+              items: _ranges.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+              onChanged: (value) => setState(() => _range = value!),
+            );
+            final pdfButton = ElevatedButton.icon(
+              icon: const Icon(Icons.picture_as_pdf),
+              label: const Text('Export PDF'),
+              onPressed: _exporting ? null : () => _exportPdf(summary, income),
+            );
+            final csvButton = OutlinedButton.icon(
+              icon: const Icon(Icons.table_chart),
+              label: const Text('Export CSV'),
+              onPressed: _exporting ? null : () => _exportCsv(income),
+            );
+
+            return ListView(
+              padding: const EdgeInsets.all(16.0),
+              children: [
+                // Desktop: range + both export buttons in one compact toolbar
+                // row. Phone: range on its own line, buttons on the next.
+                if (isDesktop)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(width: 220, child: rangeField),
+                      const Spacer(),
+                      pdfButton,
+                      const SizedBox(width: 12),
+                      csvButton,
+                    ],
+                  )
+                else ...[
+                  rangeField,
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(child: pdfButton),
+                      const SizedBox(width: 12),
+                      Expanded(child: csvButton),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 24),
+                const Text('Key Metrics', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        _metricRow("Today's Revenue", '₹${summary.kpis!.todayRevenue.current.toStringAsFixed(0)}'),
+                        _metricRow('This Month', '₹${summary.kpis!.monthRevenue.current.toStringAsFixed(0)}'),
+                        _metricRow('Pending Collection', '₹${summary.kpis!.pendingCollection.current.toStringAsFixed(0)}'),
+                        _metricRow('Machines Working',
+                            '${summary.kpis!.machinesWorking.working}/${summary.kpis!.machinesWorking.activeUsable}'),
+                        _metricRow('Drivers Active', '${summary.kpis!.driversActive.current.toInt()}'),
+                        _metricRow('Jobs Completed', '${summary.kpis!.jobsCompleted.current.toInt()}'),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text('Income Overview', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                if (income.isEmpty)
+                  const Text('No income data for this range.')
+                else if (isDesktop)
+                  _incomeTable(context, income)
+                else
+                  ...income.map((p) => Card(
+                        child: ListTile(
+                          title: Text(p.label),
+                          trailing: Text('₹${p.amount.toStringAsFixed(0)}'),
+                        ),
+                      )),
+              ],
+            );
+          },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, s) => Center(child: Text('Could not load income data: ${apiErrorMessage(e)}')),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, s) => Center(child: Text('Could not load report: ${apiErrorMessage(e)}')),
+      ),
+    );
+  }
+
+  /// Desktop presentation of the income series: a proper data grid (horizontal
+  /// scroll only; lives inside the page ListView).
+  Widget _incomeTable(BuildContext context, List<IncomePoint> income) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: (MediaQuery.sizeOf(context).width - Breakpoints.sidebarWidth - 96).clamp(0, double.infinity),
+          ),
+          child: DataTable(
+            headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
+            columns: const [
+              DataColumn(label: Text('Period')),
+              DataColumn(label: Text('Amount'), numeric: true),
+            ],
+            rows: [
+              for (final p in income)
+                DataRow(cells: [
+                  DataCell(Text(p.label)),
+                  DataCell(Text('₹${p.amount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.w600))),
+                ]),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- iOS Universal Links for the emailed auth deep links
+	     (/accept-invite, /reset-password). To take effect this file must be
+	     referenced by CODE_SIGN_ENTITLEMENTS in the Xcode project, the app
+	     must be signed with an Apple Team, and each host must serve
+	     /.well-known/apple-app-site-association — steps that require
+	     macOS/Xcode and an Apple Developer account (not available in the Linux
+	     build environment). Until then the in-app manual token entry on the
+	     Reset Password / Activate Account screens is the working fallback. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:shabooagri.com</string>
+		<string>applinks:*.shabooagri.com</string>
+	</array>
+</dict>
+</plist>

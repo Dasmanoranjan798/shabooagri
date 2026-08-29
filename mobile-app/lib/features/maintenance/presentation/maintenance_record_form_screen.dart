@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/layout/responsive.dart';
+import '../../../core/layout/responsive_form.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../machines/presentation/machine_list_screen.dart';
 import 'maintenance_screen.dart';
 
@@ -107,98 +110,101 @@ class _MaintenanceRecordFormScreenState extends ConsumerState<MaintenanceRecordF
 
   @override
   Widget build(BuildContext context) {
-    if (_isEdit && !_prefilled) {
-      final recordAsync = ref.watch(maintenanceRecordByIdProvider(widget.recordId!));
-      return Scaffold(
-        appBar: AppBar(title: const Text('Edit Service Record')),
-        body: recordAsync.when(
-          data: (record) {
-            _prefillFrom(record);
-            return _buildForm();
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text('Could not load record: ${apiErrorMessage(e)}')),
-        ),
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? 'Edit Service Record' : 'Log Service Record'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/maintenance')),
-      ),
-      body: _buildForm(),
+    return AdaptiveScaffold(
+      currentRoute: '/maintenance',
+      title: _isEdit ? 'Edit Service Record' : 'Log Service Record',
+      showBack: true,
+      body: (_isEdit && !_prefilled)
+          ? ref.watch(maintenanceRecordByIdProvider(widget.recordId!)).when(
+              data: (record) {
+                _prefillFrom(record);
+                return _buildForm(context);
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, s) => Center(child: Text('Could not load record: ${apiErrorMessage(e)}')),
+            )
+          : _buildForm(context),
     );
   }
 
-  Widget _buildForm() {
+  Widget _buildForm(BuildContext context) {
     final machinesAsync = ref.watch(machinesListProvider);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(_error!, style: const TextStyle(color: Colors.red)),
-            ),
-          if (!_isEdit)
-            machinesAsync.when(
-              data: (machines) => DropdownButtonFormField<String>(
-                initialValue: _machineId,
-                decoration: const InputDecoration(labelText: 'Machine *', border: OutlineInputBorder()),
-                items: machines.map((m) => DropdownMenuItem(value: m.id, child: Text(m.registrationNumber))).toList(),
-                onChanged: _saving ? null : (value) => setState(() => _machineId = value),
+      padding: EdgeInsets.all(context.responsive.isDesktop ? 24.0 : 16.0),
+      child: DesktopFormContainer(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(_error!, style: const TextStyle(color: Colors.red)),
               ),
-              loading: () => const LinearProgressIndicator(),
-              error: (e, s) => Text('Could not load machines: ${apiErrorMessage(e)}'),
+            ResponsiveFormGrid(
+              children: [
+                if (!_isEdit)
+                  machinesAsync.when(
+                    data: (machines) => DropdownButtonFormField<String>(
+                      initialValue: _machineId,
+                      decoration: const InputDecoration(labelText: 'Machine *', border: OutlineInputBorder()),
+                      items: machines.map((m) => DropdownMenuItem(value: m.id, child: Text(m.registrationNumber))).toList(),
+                      onChanged: _saving ? null : (value) => setState(() => _machineId = value),
+                    ),
+                    loading: () => const LinearProgressIndicator(),
+                    error: (e, s) => Text('Could not load machines: ${apiErrorMessage(e)}'),
+                  ),
+                InputDecorator(
+                  decoration: const InputDecoration(labelText: 'Service Date', border: OutlineInputBorder()),
+                  child: InkWell(
+                    onTap: _saving ? null : _pickDate,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(_isoDate(_serviceDate)),
+                        const Icon(Icons.calendar_today, size: 18),
+                      ],
+                    ),
+                  ),
+                ),
+                TextField(
+                  controller: _hourMeterController,
+                  decoration: const InputDecoration(labelText: 'Hour Meter at Service', border: OutlineInputBorder()),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  enabled: !_saving,
+                ),
+                TextField(
+                  controller: _costController,
+                  decoration: const InputDecoration(labelText: 'Cost', border: OutlineInputBorder(), prefixText: '₹ '),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  enabled: !_saving,
+                ),
+                TextField(
+                  controller: _performedByController,
+                  decoration: const InputDecoration(labelText: 'Performed By', border: OutlineInputBorder()),
+                  enabled: !_saving,
+                ),
+              ],
             ),
-          const SizedBox(height: 16),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Service Date'),
-            subtitle: Text(_isoDate(_serviceDate)),
-            trailing: const Icon(Icons.calendar_today),
-            onTap: _saving ? null : _pickDate,
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _hourMeterController,
-            decoration: const InputDecoration(labelText: 'Hour Meter at Service', border: OutlineInputBorder()),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            enabled: !_saving,
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _costController,
-            decoration: const InputDecoration(labelText: 'Cost', border: OutlineInputBorder(), prefixText: '₹ '),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            enabled: !_saving,
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _performedByController,
-            decoration: const InputDecoration(labelText: 'Performed By', border: OutlineInputBorder()),
-            enabled: !_saving,
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _descriptionController,
-            decoration: const InputDecoration(labelText: 'Description / Notes', border: OutlineInputBorder()),
-            maxLines: 3,
-            enabled: !_saving,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: _saving ? null : _save,
-            style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-            child: _saving
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : Text(_isEdit ? 'Save Changes' : 'Log Service Record'),
-          ),
-        ],
+            const SizedBox(height: 16),
+            TextField(
+              controller: _descriptionController,
+              decoration: const InputDecoration(labelText: 'Description / Notes', border: OutlineInputBorder()),
+              maxLines: 3,
+              enabled: !_saving,
+            ),
+            const SizedBox(height: 24),
+            DesktopFormActions(
+              child: ElevatedButton(
+                onPressed: _saving ? null : _save,
+                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32)),
+                child: _saving
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Text(_isEdit ? 'Save Changes' : 'Log Service Record'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

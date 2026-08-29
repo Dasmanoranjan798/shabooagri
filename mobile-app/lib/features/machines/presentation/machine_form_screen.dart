@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/layout/responsive.dart';
+import '../../../core/layout/responsive_form.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../drivers/presentation/driver_list_screen.dart';
 import 'machine_list_screen.dart';
 
@@ -202,33 +205,51 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
   Widget build(BuildContext context) {
     final typesAsync = ref.watch(machineTypesProvider);
 
-    if (_isEdit && !_prefilled) {
-      final machineAsync = ref.watch(machineByIdProvider(widget.machineId!));
-      return Scaffold(
-        appBar: AppBar(title: const Text('Edit Machine')),
-        body: machineAsync.when(
-          data: (machine) {
-            _prefillFrom(machine);
-            return _buildForm(typesAsync);
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text('Could not load machine: ${apiErrorMessage(e)}')),
-        ),
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? 'Edit Machine' : 'New Machine'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.canPop() ? context.pop() : context.go('/machines')),
-      ),
-      body: _buildForm(typesAsync),
+    return AdaptiveScaffold(
+      currentRoute: '/machines',
+      title: _isEdit ? 'Edit Machine' : 'New Machine',
+      showBack: true,
+      body: (_isEdit && !_prefilled)
+          ? ref.watch(machineByIdProvider(widget.machineId!)).when(
+              data: (machine) {
+                _prefillFrom(machine);
+                return _buildForm(context, typesAsync);
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, s) => Center(child: Text('Could not load machine: ${apiErrorMessage(e)}')),
+            )
+          : _buildForm(context, typesAsync),
     );
   }
 
-  Widget _buildForm(AsyncValue<List<MachineTypeOption>> typesAsync) {
+  Widget _buildForm(BuildContext context, AsyncValue<List<MachineTypeOption>> typesAsync) {
+    final machineTypeField = typesAsync.when(
+      data: (types) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: DropdownButtonFormField<String>(
+              initialValue: _machineTypeId,
+              decoration: const InputDecoration(labelText: 'Machine Type *', border: OutlineInputBorder()),
+              items: types.map((t) => DropdownMenuItem(value: t.id, child: Text(t.name))).toList(),
+              onChanged: _saving ? null : (value) => setState(() => _machineTypeId = value),
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.add_circle, color: Colors.green, size: 40),
+            onPressed: _saving ? null : _showCreateMachineTypeDialog,
+            tooltip: 'Add new Machine Type',
+          ),
+        ],
+      ),
+      loading: () => const LinearProgressIndicator(),
+      error: (e, s) => Text('Could not load machine types: ${apiErrorMessage(e)}'),
+    );
+
     return SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+      padding: EdgeInsets.all(context.responsive.isDesktop ? 24.0 : 16.0),
+      child: DesktopFormContainer(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -237,118 +258,100 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Text(_error!, style: const TextStyle(color: Colors.red)),
               ),
-            typesAsync.when(
-              data: (types) => Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _machineTypeId,
-                      decoration: const InputDecoration(labelText: 'Machine Type *', border: OutlineInputBorder()),
-                      items: types.map((t) => DropdownMenuItem(value: t.id, child: Text(t.name))).toList(),
-                      onChanged: _saving ? null : (value) => setState(() => _machineTypeId = value),
+            machineTypeField,
+            const SizedBox(height: 16),
+            ResponsiveFormGrid(
+              children: [
+                TextField(
+                  controller: _registrationController,
+                  decoration: const InputDecoration(labelText: 'Registration Number *', border: OutlineInputBorder()),
+                  enabled: !_saving,
+                ),
+                TextField(
+                  controller: _brandController,
+                  decoration: const InputDecoration(labelText: 'Brand', border: OutlineInputBorder()),
+                  enabled: !_saving,
+                ),
+                TextField(
+                  controller: _modelController,
+                  decoration: const InputDecoration(labelText: 'Model', border: OutlineInputBorder()),
+                  enabled: !_saving,
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: _status,
+                  decoration: const InputDecoration(labelText: 'Status', border: OutlineInputBorder()),
+                  items: _statusOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                  onChanged: _saving ? null : (value) => setState(() => _status = value!),
+                ),
+                TextField(
+                  controller: _hourMeterController,
+                  decoration: const InputDecoration(labelText: 'Hour Meter Reading', border: OutlineInputBorder()),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  enabled: !_saving,
+                ),
+                Consumer(builder: (context, ref, _) {
+                  final driversAsync = ref.watch(driversListProvider);
+                  return driversAsync.when(
+                    data: (drivers) => DropdownButtonFormField<String>(
+                      initialValue: _assignedDriverId,
+                      decoration: const InputDecoration(labelText: 'Assigned Default Driver', border: OutlineInputBorder()),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('Unassigned')),
+                        ...drivers.map((d) => DropdownMenuItem(value: d.id, child: Text(d.name))),
+                      ],
+                      onChanged: _saving ? null : (value) => setState(() => _assignedDriverId = value),
+                    ),
+                    loading: () => const LinearProgressIndicator(),
+                    error: (e, s) => Text('Could not load drivers: ${apiErrorMessage(e)}'),
+                  );
+                }),
+                TextField(
+                  controller: _nextServiceDueController,
+                  decoration: const InputDecoration(labelText: 'Next Service Due (hrs)', border: OutlineInputBorder()),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  enabled: !_saving,
+                ),
+                TextField(
+                  controller: _insuranceNumberController,
+                  decoration: const InputDecoration(labelText: 'Insurance Number', border: OutlineInputBorder()),
+                  enabled: !_saving,
+                ),
+                InputDecorator(
+                  decoration: const InputDecoration(labelText: 'Insurance Expiry Date', border: OutlineInputBorder()),
+                  child: InkWell(
+                    onTap: _saving ? null : _pickInsuranceExpiry,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(_insuranceExpiryDate == null
+                            ? 'Not set'
+                            : _insuranceExpiryDate!.toIso8601String().split('T').first),
+                        const Icon(Icons.calendar_today, size: 18),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.add_circle, color: Colors.green, size: 40),
-                    onPressed: _saving ? null : _showCreateMachineTypeDialog,
-                    tooltip: 'Add new Machine Type',
-                  ),
-                ],
-              ),
-              loading: () => const LinearProgressIndicator(),
-              error: (e, s) => Text('Could not load machine types: ${apiErrorMessage(e)}'),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _registrationController,
-              decoration: const InputDecoration(labelText: 'Registration Number *', border: OutlineInputBorder()),
-              enabled: !_saving,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _brandController,
-              decoration: const InputDecoration(labelText: 'Brand', border: OutlineInputBorder()),
-              enabled: !_saving,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _modelController,
-              decoration: const InputDecoration(labelText: 'Model', border: OutlineInputBorder()),
-              enabled: !_saving,
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _status,
-              decoration: const InputDecoration(labelText: 'Status', border: OutlineInputBorder()),
-              items: _statusOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-              onChanged: _saving ? null : (value) => setState(() => _status = value!),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _hourMeterController,
-              decoration: const InputDecoration(labelText: 'Hour Meter Reading', border: OutlineInputBorder()),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              enabled: !_saving,
-            ),
-            const SizedBox(height: 16),
-            Consumer(builder: (context, ref, _) {
-              final driversAsync = ref.watch(driversListProvider);
-              return driversAsync.when(
-                data: (drivers) => DropdownButtonFormField<String>(
-                  initialValue: _assignedDriverId,
-                  decoration: const InputDecoration(labelText: 'Assigned Default Driver', border: OutlineInputBorder()),
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('Unassigned')),
-                    ...drivers.map((d) => DropdownMenuItem(value: d.id, child: Text(d.name))),
-                  ],
-                  onChanged: _saving ? null : (value) => setState(() => _assignedDriverId = value),
                 ),
-                loading: () => const LinearProgressIndicator(),
-                error: (e, s) => Text('Could not load drivers: ${apiErrorMessage(e)}'),
-              );
-            }),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _nextServiceDueController,
-              decoration: const InputDecoration(labelText: 'Next Service Due (hrs)', border: OutlineInputBorder()),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              enabled: !_saving,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _insuranceNumberController,
-              decoration: const InputDecoration(labelText: 'Insurance Number', border: OutlineInputBorder()),
-              enabled: !_saving,
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Insurance Expiry Date'),
-              subtitle: Text(_insuranceExpiryDate == null
-                  ? 'Not set'
-                  : _insuranceExpiryDate!.toIso8601String().split('T').first),
-              trailing: const Icon(Icons.calendar_today),
-              onTap: _saving ? null : _pickInsuranceExpiry,
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _purchaseYearController,
-              decoration: const InputDecoration(labelText: 'Purchase Year', border: OutlineInputBorder()),
-              keyboardType: TextInputType.number,
-              enabled: !_saving,
+                TextField(
+                  controller: _purchaseYearController,
+                  decoration: const InputDecoration(labelText: 'Purchase Year', border: OutlineInputBorder()),
+                  keyboardType: TextInputType.number,
+                  enabled: !_saving,
+                ),
+              ],
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _saving ? null : _save,
-              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-              child: _saving
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text(_isEdit ? 'Save Changes' : 'Create Machine'),
+            DesktopFormActions(
+              child: ElevatedButton(
+                onPressed: _saving ? null : _save,
+                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32)),
+                child: _saving
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Text(_isEdit ? 'Save Changes' : 'Create Machine'),
+              ),
             ),
           ],
         ),
-      );
+      ),
+    );
   }
 }

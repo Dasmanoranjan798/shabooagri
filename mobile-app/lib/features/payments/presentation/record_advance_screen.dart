@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/layout/responsive_form.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../customers/presentation/customer_list_screen.dart';
 import 'payment_list_screen.dart';
 
@@ -67,69 +69,78 @@ class _RecordAdvanceScreenState extends ConsumerState<RecordAdvanceScreen> {
   Widget build(BuildContext context) {
     final customersAsync = ref.watch(customersListProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Record Advance'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/payments')),
-      ),
+    return AdaptiveScaffold(
+      currentRoute: '/payments',
+      title: 'Record Advance',
+      showBack: true,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              "Use this to record money received from a customer that isn't tied to an invoice yet — an advance before a job starts, or a walk-in collection.",
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            if (_error != null)
-              Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
-            customersAsync.when(
-              data: (customers) => DropdownButtonFormField<String>(
-                initialValue: _customerId,
-                decoration: const InputDecoration(labelText: 'Customer *', border: OutlineInputBorder()),
-                items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-                onChanged: _saving ? null : (value) => setState(() => _customerId = value),
+        child: DesktopFormContainer(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                "Use this to record money received from a customer that isn't tied to an invoice yet — an advance before a job starts, or a walk-in collection.",
+                style: TextStyle(color: Colors.grey),
               ),
-              loading: () => const LinearProgressIndicator(),
-              error: (e, s) => Text('Could not load customers: ${apiErrorMessage(e)}'),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _amountController,
-              decoration: const InputDecoration(labelText: 'Amount Received (₹) *', border: OutlineInputBorder()),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              enabled: !_saving,
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              children: _paymentMethods.map((m) {
-                return ChoiceChip(label: Text(m), selected: _method == m, onSelected: (_) => setState(() => _method = m));
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _referenceController,
-              decoration: const InputDecoration(labelText: 'Reference Number (optional)', border: OutlineInputBorder()),
-              enabled: !_saving,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _notesController,
-              decoration: const InputDecoration(labelText: 'Notes (optional)', border: OutlineInputBorder()),
-              maxLines: 2,
-              enabled: !_saving,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _saving ? null : _save,
-              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-              child: _saving
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Record Advance'),
-            ),
-          ],
+              const SizedBox(height: 16),
+              if (_error != null)
+                Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
+              ResponsiveFormGrid(
+                children: [
+                  customersAsync.when(
+                    data: (customers) => DropdownButtonFormField<String>(
+                      initialValue: _customerId,
+                      decoration: const InputDecoration(labelText: 'Customer *', border: OutlineInputBorder()),
+                      items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                      onChanged: _saving ? null : (value) => setState(() => _customerId = value),
+                    ),
+                    loading: () => const LinearProgressIndicator(),
+                    error: (e, s) => Text('Could not load customers: ${apiErrorMessage(e)}'),
+                  ),
+                  TextField(
+                    controller: _amountController,
+                    decoration: const InputDecoration(labelText: 'Amount Received (₹) *', border: OutlineInputBorder()),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    enabled: !_saving,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                children: _paymentMethods.map((m) {
+                  return ChoiceChip(label: Text(m), selected: _method == m, onSelected: (_) => setState(() => _method = m));
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              ResponsiveFormGrid(
+                children: [
+                  TextField(
+                    controller: _referenceController,
+                    decoration: const InputDecoration(labelText: 'Reference Number (optional)', border: OutlineInputBorder()),
+                    enabled: !_saving,
+                  ),
+                  TextField(
+                    controller: _notesController,
+                    decoration: const InputDecoration(labelText: 'Notes (optional)', border: OutlineInputBorder()),
+                    maxLines: 2,
+                    enabled: !_saving,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              DesktopFormActions(
+                child: ElevatedButton(
+                  onPressed: _saving ? null : _save,
+                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32)),
+                  child: _saving
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Record Advance'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

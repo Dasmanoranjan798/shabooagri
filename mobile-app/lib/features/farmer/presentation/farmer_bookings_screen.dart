@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/layout/responsive_form.dart';
 import '../../../core/network/api_error.dart';
 import '../../jobs/data/job_detail.dart';
 import '../../jobs/presentation/job_list_screen.dart';
@@ -61,7 +62,8 @@ class _FarmerBookingsScreenState extends ConsumerState<FarmerBookingsScreen> {
           final filtered = bookings.where((b) => _matchesFilter(jobsById[b.id], _filter)).toList()
             ..sort((a, b) => b.scheduledDate.compareTo(a.scheduledDate));
 
-          return Column(
+          return DesktopContentColumn(
+            child: Column(
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -150,6 +152,7 @@ class _FarmerBookingsScreenState extends ConsumerState<FarmerBookingsScreen> {
                       ),
               ),
             ],
+          ),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),

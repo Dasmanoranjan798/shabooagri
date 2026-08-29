@@ -20,7 +20,17 @@ export function createRateLimiter(
   errorMessage: string = "Too many requests. Please try again later."
 ) {
   return (req: Request, _res: Response, next: NextFunction) => {
-    const key = `${req.ip || "unknown"}:${req.path}:${req.body?.email || ""}`;
+    // Bucket per (source IP, endpoint, account identifier) so a brute-force
+    // run against ONE account from ONE source is throttled, without letting a
+    // single shared NAT IP lock every user out at once. `email` keeps the
+    // existing password-reset/invite behavior; `identifier`/`mobileNumber`
+    // cover the login and OTP endpoints (see auth.validators). Lower-cased and
+    // trimmed so trivial casing/whitespace variations can't sidestep the
+    // bucket. The identifier is only used to build the key — it is never
+    // logged, and no password/PIN/OTP/token value is read here.
+    const rawIdentifier = req.body?.email || req.body?.identifier || req.body?.mobileNumber || "";
+    const identifier = String(rawIdentifier).toLowerCase().trim();
+    const key = `${req.ip || "unknown"}:${req.path}:${identifier}`;
     const now = Date.now();
     const record = store.get(key);
 

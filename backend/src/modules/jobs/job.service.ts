@@ -396,44 +396,61 @@ export async function createManualEntryJob(
   const calculatedHours = Math.round((durationSec / 3600) * 100) / 100;
   const actualHours = input.actualHours ?? calculatedHours;
 
-  const booking = await bookingRepository.create(companyId, {
-    customerId: input.customerId,
-    villageId: input.villageId,
-    location: input.location,
-    machineId: input.machineId,
-    driverId: input.driverId,
-    managerId: creatorUserId,
-    scheduledDate: input.scheduledDate,
-    pricingMethodId: input.pricingMethodId,
-    rate: input.rate,
-    notes: input.notes,
-    createdBy: creatorUserId,
+  // Booking creation, its COMPLETED transition, the Job row, its status-log
+  // entry, the fuel entry, and the invoice must all succeed together — same
+  // guarantee submit() gives the live path. Without one transaction a failure
+  // partway (e.g. invoice creation) could leave a COMPLETED booking/job with
+  // no invoice ever generated and no retry path (silent revenue loss). The tx
+  // client is threaded through every write below.
+  return prisma.$transaction(async (tx) => {
+    const booking = await bookingRepository.create(
+      companyId,
+      {
+        customerId: input.customerId,
+        villageId: input.villageId,
+        location: input.location,
+        machineId: input.machineId,
+        driverId: input.driverId,
+        managerId: creatorUserId,
+        scheduledDate: input.scheduledDate,
+        pricingMethodId: input.pricingMethodId,
+        rate: input.rate,
+        minimumCharge: input.minimumCharge,
+        notes: input.notes,
+        createdBy: creatorUserId,
+      },
+      tx,
+    );
+
+    await bookingRepository.updateScopedWithRelations(companyId, booking.id, { status: "COMPLETED" }, tx);
+
+    const job = await jobRepository.createManual(
+      companyId,
+      {
+        bookingId: booking.id,
+        machineId: input.machineId,
+        driverId: input.driverId,
+        executionMode: "MANUAL",
+        status: "COMPLETED",
+        startTime,
+        endTime,
+        totalPausedDurationSec: 0,
+        actualHours,
+        completedAcres: input.completedAcres,
+        fuelUsedLitres: input.fuelUsedLitres,
+        notes: input.notes,
+      },
+      tx,
+    );
+
+    await jobStatusLogRepository.create(companyId, job.id, "COMPLETED", creatorUserId, "Manual after-work entry", tx);
+
+    if (input.fuelUsedLitres && input.fuelUsedLitres > 0) {
+      await fuelService.addEntry(companyId, job.id, input.machineId, creatorUserId, input.fuelUsedLitres, undefined, tx);
+    }
+
+    const invoice = await paymentService.createInvoiceForCompletedJob(companyId, job, tx);
+
+    return { ...job, invoice };
   });
-
-  await bookingRepository.updateScopedWithRelations(companyId, booking.id, { status: "COMPLETED" });
-
-  const job = await jobRepository.createManual(companyId, {
-    bookingId: booking.id,
-    machineId: input.machineId,
-    driverId: input.driverId,
-    executionMode: "MANUAL",
-    status: "COMPLETED",
-    startTime,
-    endTime,
-    totalPausedDurationSec: 0,
-    actualHours,
-    completedAcres: input.completedAcres,
-    fuelUsedLitres: input.fuelUsedLitres,
-    notes: input.notes,
-  });
-
-  await jobStatusLogRepository.create(companyId, job.id, "COMPLETED", creatorUserId, "Manual after-work entry");
-
-  if (input.fuelUsedLitres && input.fuelUsedLitres > 0) {
-    await fuelService.addEntry(companyId, job.id, input.machineId, creatorUserId, input.fuelUsedLitres, undefined);
-  }
-
-  const invoice = await paymentService.createInvoiceForCompletedJob(companyId, job);
-
-  return { ...job, invoice };
 }
