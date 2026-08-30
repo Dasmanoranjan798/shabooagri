@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { subscribeDataRefreshMany } from "../../lib/dataRefreshBus";
 import type { Booking } from "../../types/booking";
 import type { Job } from "../../types/job";
 import { api } from "../../lib/api";
@@ -83,7 +84,7 @@ export const FarmerBookingsPage: React.FC = () => {
  }
  }, []);
 
- useEffect(() => { load(); }, [load]);
+ useEffect(() => { load(); return subscribeDataRefreshMany(["bookings"], load); }, [load]);
 
  const jobsByBookingId = new Map(jobs.map((j) => [j.bookingId, j]));
  const filtered = bookings.filter((b) => matchesFilter(jobsByBookingId.get(b.id), filter));

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import '../../../core/widgets/quick_action_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -25,6 +26,7 @@ class VillageSummary {
 /// Live list (not the offline cache) — `isActive` isn't on the flat
 /// offline table, and the Mark Inactive/Active action needs it.
 final villagesListProvider = FutureProvider<List<VillageSummary>>((ref) async {
+  syncOn(ref, {SyncEntity.village});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/villages');
   return (response.data as List<dynamic>).map((j) => VillageSummary.fromJson(j as Map<String, dynamic>)).toList();

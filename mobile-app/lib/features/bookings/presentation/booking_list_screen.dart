@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import '../../../core/widgets/quick_action_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +15,7 @@ import '../../../core/widgets/desktop_table.dart';
 import '../../../core/widgets/search_field.dart';
 
 final bookingsListProvider = FutureProvider<List<OfflineBooking>>((ref) async {
+  syncOn(ref, {SyncEntity.booking});
   final repository = ref.watch(bookingRepositoryProvider);
   await repository.refreshFromApi();
   return repository.getBookings();

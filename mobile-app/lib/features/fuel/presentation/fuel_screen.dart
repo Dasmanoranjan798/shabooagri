@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart' show Share;
 import '../../../core/layout/responsive.dart';
@@ -34,6 +35,7 @@ class FuelFilter {
 final fuelFilterProvider = StateProvider<FuelFilter>((ref) => const FuelFilter());
 
 final fuelEntriesProvider = FutureProvider<List<FuelEntry>>((ref) async {
+  syncOn(ref, {SyncEntity.fuel});
   final dio = ref.watch(apiClientProvider);
   final filter = ref.watch(fuelFilterProvider);
   final response = await dio.get('/fuel/entries', queryParameters: {

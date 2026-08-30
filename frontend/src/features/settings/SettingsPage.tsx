@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { subscribeDataRefreshMany } from "../../lib/dataRefreshBus";
 import "./settings.css";
 import type { CompanyProfile } from "../../types/settings";
 import { api } from "../../lib/api";
@@ -142,6 +143,7 @@ export const SettingsPage: React.FC = () => {
 
   useEffect(() => {
     loadProfile();
+    return subscribeDataRefreshMany(["settings"], loadProfile);
   }, []);
 
   const handleProfileSave = async (e: React.FormEvent) => {

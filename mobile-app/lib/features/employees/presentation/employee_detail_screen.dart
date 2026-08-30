@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/widgets/adaptive_scaffold.dart';
@@ -6,6 +7,7 @@ import '../../../core/widgets/info_row.dart';
 import 'employee_list_screen.dart';
 
 final employeeDetailProvider = FutureProvider.family<EmployeeSummary, String>((ref, id) async {
+  syncOn(ref, {SyncEntity.employee});
   final employees = await ref.watch(employeesListProvider.future);
   return employees.firstWhere((e) => e.id == id);
 });

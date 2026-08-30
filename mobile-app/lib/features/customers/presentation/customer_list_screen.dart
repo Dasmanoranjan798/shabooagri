@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import '../../../core/widgets/quick_action_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -31,6 +32,7 @@ class CustomerSummary {
 /// Live list (not the offline cache) — Village name, Address, Portal Access
 /// aren't on the flat offline table.
 final customersListProvider = FutureProvider<List<CustomerSummary>>((ref) async {
+  syncOn(ref, {SyncEntity.customer});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/customers');
   return (response.data as List<dynamic>).map((j) => CustomerSummary.fromJson(j as Map<String, dynamic>)).toList();

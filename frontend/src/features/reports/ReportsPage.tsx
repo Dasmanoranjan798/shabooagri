@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { subscribeDataRefreshMany } from "../../lib/dataRefreshBus";
 import { AlertTriangle, FileSpreadsheet, Printer } from "lucide-react";
 import "./reports.css";
 import type { DashboardSummaryResponse, IncomeSeriesResponse, FuelSeriesResponse, TimeRange } from "../../types/dashboard";
@@ -51,6 +52,7 @@ export const ReportsPage: React.FC = () => {
 
  useEffect(() => {
  loadData(timeRange);
+ return subscribeDataRefreshMany(["reports"], () => loadData(timeRange));
  }, []);
 
  const handleRangeChange = (range: TimeRange) => {

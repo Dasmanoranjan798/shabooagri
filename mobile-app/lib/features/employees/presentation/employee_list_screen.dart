@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/layout/responsive.dart';
@@ -33,6 +34,7 @@ class EmployeeSummary {
 }
 
 final employeesListProvider = FutureProvider<List<EmployeeSummary>>((ref) async {
+  syncOn(ref, {SyncEntity.employee});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/employees');
   return (response.data as List<dynamic>)

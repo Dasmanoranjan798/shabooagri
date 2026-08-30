@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/layout/responsive.dart';
@@ -9,6 +10,7 @@ import '../../../core/widgets/adaptive_scaffold.dart';
 import 'employee_list_screen.dart';
 
 final employeeByIdProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
+  syncOn(ref, {SyncEntity.employee});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/employees/$id');
   return response.data as Map<String, dynamic>;
@@ -23,6 +25,7 @@ class RoleOption {
 }
 
 final rolesProvider = FutureProvider<List<RoleOption>>((ref) async {
+  syncOn(ref, {SyncEntity.team});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/rbac/roles');
   return (response.data as List<dynamic>).map((j) => RoleOption.fromJson(j as Map<String, dynamic>)).toList();

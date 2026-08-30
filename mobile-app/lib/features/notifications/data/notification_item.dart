@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/providers/company_profile_provider.dart';
@@ -30,6 +31,7 @@ class NotificationItem {
 /// new backend endpoint — the website itself computes this entirely
 /// client-side from 5 existing list calls, so mobile does the same.
 final notificationsProvider = FutureProvider<List<NotificationItem>>((ref) async {
+  syncOn(ref, {SyncEntity.dashboard});
   final dio = ref.watch(apiClientProvider);
 
   final machines = await ref.watch(machinesListProvider.future);

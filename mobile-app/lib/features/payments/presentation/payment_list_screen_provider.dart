@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import '../../../core/network/api_client.dart';
 import '../data/invoice_analysis.dart';
 import 'payment_filters.dart';
@@ -20,6 +21,7 @@ final paymentFilterProvider = StateNotifierProvider<PaymentFilterNotifier, Payme
 });
 
 final invoicesAnalysisProvider = FutureProvider<InvoiceAnalysisResponse>((ref) async {
+  syncOn(ref, {SyncEntity.invoice, SyncEntity.payment});
   final filterState = ref.watch(paymentFilterProvider);
   final dio = ref.watch(apiClientProvider);
   final response = await dio.post('/invoices/filter', data: filterState.toJson());

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/layout/responsive_form.dart';
@@ -24,6 +25,7 @@ class PricingMethodOption {
 }
 
 final pricingMethodsListProvider = FutureProvider<List<PricingMethodOption>>((ref) async {
+  syncOn(ref, {SyncEntity.pricingMethod});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/pricing-methods');
   return (response.data as List<dynamic>).map((j) => PricingMethodOption.fromJson(j as Map<String, dynamic>)).toList();

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
+import { subscribeDataRefreshMany } from "../../lib/dataRefreshBus";
 import { Fuel, AlertTriangle, FileSpreadsheet } from "lucide-react";
 import "./fuel.css";
 import type { FuelEntry } from "../../types/fuel";
@@ -52,6 +53,7 @@ export const FuelPage: React.FC = () => {
 
  useEffect(() => {
  loadData();
+ return subscribeDataRefreshMany(["fuel"], loadData);
  }, []);
 
  const handleFilter = (e: React.FormEvent) => {

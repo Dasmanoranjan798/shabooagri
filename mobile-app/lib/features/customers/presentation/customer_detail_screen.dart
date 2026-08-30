@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/layout/responsive.dart';
@@ -9,12 +10,14 @@ import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/info_row.dart';
 
 final customerDetailProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
+  syncOn(ref, {SyncEntity.customer});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/customers/$id');
   return response.data as Map<String, dynamic>;
 });
 
 final customerInvoicesProvider = FutureProvider.family<List<dynamic>, String>((ref, customerId) async {
+  syncOn(ref, {SyncEntity.customer, SyncEntity.invoice, SyncEntity.payment});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.post('/invoices/filter', data: {
     'customerId': customerId,
@@ -24,6 +27,7 @@ final customerInvoicesProvider = FutureProvider.family<List<dynamic>, String>((r
 });
 
 final customerBookingsProvider = FutureProvider.family<List<dynamic>, String>((ref, customerId) async {
+  syncOn(ref, {SyncEntity.customer, SyncEntity.booking, SyncEntity.job});
   final dio = ref.watch(apiClientProvider);
   // Using the list and filtering locally or if the API supports it
   final response = await dio.get('/bookings');

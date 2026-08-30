@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart' show Share;
@@ -33,6 +34,7 @@ class ExpenseSummary {
 }
 
 final expensesListProvider = FutureProvider<List<ExpenseSummary>>((ref) async {
+  syncOn(ref, {SyncEntity.expense});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/expenses');
   return (response.data as List<dynamic>).map((j) => ExpenseSummary.fromJson(j as Map<String, dynamic>)).toList();

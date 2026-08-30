@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/layout/responsive.dart';
@@ -17,12 +18,14 @@ class EmployeeOption {
 }
 
 final employeeOptionsProvider = FutureProvider<List<EmployeeOption>>((ref) async {
+  syncOn(ref, {SyncEntity.employee});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/employees');
   return (response.data as List<dynamic>).map((j) => EmployeeOption.fromJson(j as Map<String, dynamic>)).toList();
 });
 
 final driverByIdProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
+  syncOn(ref, {SyncEntity.driver});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/drivers/$id');
   return response.data as Map<String, dynamic>;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart' show Share;
@@ -61,6 +62,7 @@ class AdvanceSummary {
 
 // Keep original provider for Farmer app etc if needed
 final invoicesListProvider = FutureProvider<List<InvoiceSummary>>((ref) async {
+  syncOn(ref, {SyncEntity.invoice, SyncEntity.payment});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/invoices');
   return (response.data as List<dynamic>)
@@ -69,6 +71,7 @@ final invoicesListProvider = FutureProvider<List<InvoiceSummary>>((ref) async {
 });
 
 final advancesListProvider = FutureProvider<List<AdvanceSummary>>((ref) async {
+  syncOn(ref, {SyncEntity.payment, SyncEntity.invoice});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/payments/advances');
   return (response.data as List<dynamic>).map((j) => AdvanceSummary.fromJson(j as Map<String, dynamic>)).toList();

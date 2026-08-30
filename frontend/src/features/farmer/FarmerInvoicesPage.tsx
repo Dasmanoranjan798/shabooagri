@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { subscribeDataRefreshMany } from "../../lib/dataRefreshBus";
 import type { Invoice, InvoiceStatus } from "../../types/payment";
 import { api } from "../../lib/api";
 import { Spinner } from "../../components/ui/Spinner";
@@ -52,7 +53,7 @@ export const FarmerInvoicesPage: React.FC = () => {
  }
  }, []);
 
- useEffect(() => { load(); }, [load]);
+ useEffect(() => { load(); return subscribeDataRefreshMany(["invoices"], load); }, [load]);
 
  const filtered = invoices.filter((inv) => filter === "ALL" || inv.status === filter);
  const sorted = [...filtered].sort(

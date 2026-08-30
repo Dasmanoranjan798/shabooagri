@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -18,12 +19,14 @@ class IncomePoint {
 }
 
 final reportsSummaryProvider = FutureProvider<DashboardSummary>((ref) async {
+  syncOn(ref, {SyncEntity.report});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/dashboard/summary');
   return DashboardSummary.fromJson(response.data as Map<String, dynamic>);
 });
 
 final incomeSeriesProvider = FutureProvider.family<List<IncomePoint>, String>((ref, range) async {
+  syncOn(ref, {SyncEntity.report});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/dashboard/income', queryParameters: {'range': range});
   final data = (response.data as Map<String, dynamic>)['data'] as List<dynamic>;

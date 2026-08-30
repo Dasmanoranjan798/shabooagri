@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { subscribeDataRefreshMany } from "../../lib/dataRefreshBus";
 import { useParams, useNavigate } from "react-router-dom";
 import type { Job } from "../../types/job";
 import { api } from "../../lib/api";
@@ -69,7 +70,7 @@ export const DriverJobDetailPage: React.FC = () => {
  }
  }, [id]);
 
- useEffect(() => { load(); }, [load]);
+ useEffect(() => { load(); return subscribeDataRefreshMany(["jobs"], load); }, [load]);
 
  const elapsed = useElapsedSec(
  job?.startTime ?? null,

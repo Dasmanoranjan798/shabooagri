@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { subscribeDataRefreshMany } from "../../lib/dataRefreshBus";
 import "./farmer-mobile.css";
 import { Link } from "react-router-dom";
 import type { Booking } from "../../types/booking";
@@ -39,7 +40,7 @@ export const FarmerHomePage: React.FC = () => {
  }
  }, []);
 
- useEffect(() => { load(); }, [load]);
+ useEffect(() => { load(); return subscribeDataRefreshMany(["bookings", "invoices"], load); }, [load]);
 
  const dateStr = new Date().toLocaleDateString("en-IN", {
  weekday: "long", day: "numeric", month: "long", year: "numeric",

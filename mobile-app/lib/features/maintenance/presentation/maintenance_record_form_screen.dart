@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/layout/responsive.dart';
@@ -10,6 +11,7 @@ import '../../machines/presentation/machine_list_screen.dart';
 import 'maintenance_screen.dart';
 
 final maintenanceRecordByIdProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
+  syncOn(ref, {SyncEntity.maintenance});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/maintenance/records/$id');
   return response.data as Map<String, dynamic>;

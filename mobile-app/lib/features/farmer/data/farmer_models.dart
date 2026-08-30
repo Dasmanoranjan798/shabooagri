@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../jobs/data/job_detail.dart';
@@ -63,12 +64,14 @@ class FarmerInvoice {
 }
 
 final farmerBookingsProvider = FutureProvider<List<FarmerBooking>>((ref) async {
+  syncOn(ref, {SyncEntity.booking, SyncEntity.job});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/bookings');
   return (response.data as List<dynamic>).map((j) => FarmerBooking.fromJson(j as Map<String, dynamic>)).toList();
 });
 
 final farmerInvoicesProvider = FutureProvider<List<FarmerInvoice>>((ref) async {
+  syncOn(ref, {SyncEntity.invoice, SyncEntity.payment});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/invoices');
   return (response.data as List<dynamic>).map((j) => FarmerInvoice.fromJson(j as Map<String, dynamic>)).toList();

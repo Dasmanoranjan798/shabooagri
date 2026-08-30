@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import '../../../core/widgets/quick_action_bar.dart';
 import '../../../core/widgets/status_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +18,7 @@ import '../data/job_detail.dart';
 /// customer name / machine, matching the website's Jobs list — the flat
 /// offline `OfflineJob` table doesn't carry those fields.
 final jobsListProvider = FutureProvider<List<JobDetail>>((ref) async {
+  syncOn(ref, {SyncEntity.job});
   return ref.watch(jobActionsRepositoryProvider).list();
 });
 

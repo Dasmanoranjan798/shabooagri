@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,12 +12,14 @@ import '../../drivers/presentation/driver_list_screen.dart';
 import '../../machines/presentation/machine_list_screen.dart';
 
 final bookingDetailProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
+  syncOn(ref, {SyncEntity.booking, SyncEntity.job});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/bookings/$id');
   return response.data as Map<String, dynamic>;
 });
 
 final bookingAttachmentsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, id) async {
+  syncOn(ref, {SyncEntity.booking});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/bookings/$id/attachments');
   return (response.data as List<dynamic>).cast<Map<String, dynamic>>();

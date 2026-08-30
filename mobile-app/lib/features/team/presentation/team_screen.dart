@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,12 +10,14 @@ import '../../../core/widgets/adaptive_scaffold.dart';
 import '../data/team_models.dart';
 
 final teamUsersProvider = FutureProvider<List<TeamUser>>((ref) async {
+  syncOn(ref, {SyncEntity.team});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/team/users');
   return (response.data as List<dynamic>).map((j) => TeamUser.fromJson(j as Map<String, dynamic>)).toList();
 });
 
 final teamInvitesProvider = FutureProvider<List<StaffInvite>>((ref) async {
+  syncOn(ref, {SyncEntity.team});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/team/invites');
   return (response.data as List<dynamic>).map((j) => StaffInvite.fromJson(j as Map<String, dynamic>)).toList();

@@ -1,4 +1,5 @@
 import React from "react";
+import { subscribeDataRefreshMany } from "../../lib/dataRefreshBus";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
@@ -28,6 +29,7 @@ export const DriverProfilePage: React.FC = () => {
  }
  }
  loadComp();
+ return subscribeDataRefreshMany(["drivers", "jobs"], loadComp);
  }, [user]);
 
  const handleLogout = () => {

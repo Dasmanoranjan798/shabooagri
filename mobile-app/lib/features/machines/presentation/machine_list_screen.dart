@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import '../../../core/widgets/quick_action_bar.dart';
 import '../../../core/widgets/status_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,6 +42,7 @@ class MachineSummary {
 /// `nextServiceDueHours`/`insuranceExpiryDate`, which the flat offline
 /// table doesn't carry.
 final machinesListProvider = FutureProvider<List<MachineSummary>>((ref) async {
+  syncOn(ref, {SyncEntity.machine});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/machines');
   return (response.data as List<dynamic>).map((j) => MachineSummary.fromJson(j as Map<String, dynamic>)).toList();
