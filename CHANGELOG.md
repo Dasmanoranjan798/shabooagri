@@ -5,6 +5,31 @@ mobile app (`mobile-app/pubspec.yaml`); backend and web changes ship alongside
 the release they support. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.8.8+21] — 2026-08-30
+
+Phase 2 + 3 of offline-first: genuine two-way sync and multi-user convergence.
+
+### Added
+- **Cloud→device pull** (`SyncPullService`): on login, launch, and every
+  reconnect, the authoritative snapshot of the core collections is pulled into
+  the local SQLite database (server-authoritative; the outbox is flushed first).
+  A fresh install now has offline data app-wide after login without visiting
+  each screen, and a change another device made while you were offline reaches
+  you on reconnect.
+- **Client-authoritative UUID identity**: an offline-created record carries a
+  stable client-generated UUID before it ever syncs (backend honours it for
+  villages, customers, machines, drivers, employees, bookings), so offline
+  relationships survive synchronization and records are never duplicated. Human
+  booking numbers remain server-allocated and collision-free.
+- Explicit, documented conflict policy: independent field edits merge
+  (partial PATCH); financial records stay strictly idempotent.
+
+### Verified
+- Multi-user convergence (a device offline + a device online, with restart and
+  reconnect) converges with no data loss, no overwrite, no duplicate booking
+  number, and no duplicate payment — proven by automated + live-backend tests.
+- Physical-device runtime testing remains outstanding (no device available).
+
 ## [0.8.7+20] — 2026-08-30
 
 Phase 1 of the global offline-first remediation, after real-device testing
