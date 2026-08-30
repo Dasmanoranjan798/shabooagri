@@ -6,6 +6,8 @@ import 'core/models/app_user.dart';
 import 'core/providers/session_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/storage/local_storage.dart';
+import 'core/sync/outbox.dart';
+import 'core/sync/sync_status_banner.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,6 +42,12 @@ Future<void> main() async {
     ],
   );
 
+  // Bring the durable offline outbox to life at launch. Reading it starts its
+  // connectivity listener (fireImmediately), so any writes queued in a previous
+  // session begin draining as soon as the device has a network path — the user
+  // doesn't have to open any particular screen for a pending payment to sync.
+  container.read(outboxServiceProvider);
+
   runApp(
     UncontrolledProviderScope(
       container: container,
@@ -59,6 +67,10 @@ class MyApp extends StatelessWidget {
       title: 'ShabooAgri',
       theme: AppTheme.themeData,
       routerConfig: router,
+      // Wrap every route in the app-wide offline/sync status banner. It lives
+      // above the Navigator so it shows on any screen and reserves its own
+      // space rather than overlapping page content.
+      builder: (context, child) => SyncOverlay(child: child ?? const SizedBox.shrink()),
     );
   }
 }

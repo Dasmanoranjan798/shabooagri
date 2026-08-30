@@ -3905,6 +3905,971 @@ class SyncQueueCompanion extends UpdateCompanion<OfflineSyncQueue> {
   }
 }
 
+class $OutboxOpsTable extends OutboxOps
+    with TableInfo<$OutboxOpsTable, OutboxOp> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $OutboxOpsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _idempotencyKeyMeta = const VerificationMeta(
+    'idempotencyKey',
+  );
+  @override
+  late final GeneratedColumn<String> idempotencyKey = GeneratedColumn<String>(
+    'idempotency_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _methodMeta = const VerificationMeta('method');
+  @override
+  late final GeneratedColumn<String> method = GeneratedColumn<String>(
+    'method',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pathMeta = const VerificationMeta('path');
+  @override
+  late final GeneratedColumn<String> path = GeneratedColumn<String>(
+    'path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bodyJsonMeta = const VerificationMeta(
+    'bodyJson',
+  );
+  @override
+  late final GeneratedColumn<String> bodyJson = GeneratedColumn<String>(
+    'body_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _entitiesMeta = const VerificationMeta(
+    'entities',
+  );
+  @override
+  late final GeneratedColumn<String> entities = GeneratedColumn<String>(
+    'entities',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('pending'),
+  );
+  static const VerificationMeta _retryCountMeta = const VerificationMeta(
+    'retryCount',
+  );
+  @override
+  late final GeneratedColumn<int> retryCount = GeneratedColumn<int>(
+    'retry_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _nextAttemptAtMeta = const VerificationMeta(
+    'nextAttemptAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> nextAttemptAt =
+      GeneratedColumn<DateTime>(
+        'next_attempt_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _lastErrorMeta = const VerificationMeta(
+    'lastError',
+  );
+  @override
+  late final GeneratedColumn<String> lastError = GeneratedColumn<String>(
+    'last_error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    idempotencyKey,
+    method,
+    path,
+    bodyJson,
+    entities,
+    label,
+    status,
+    retryCount,
+    nextAttemptAt,
+    lastError,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'outbox_ops';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<OutboxOp> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('idempotency_key')) {
+      context.handle(
+        _idempotencyKeyMeta,
+        idempotencyKey.isAcceptableOrUnknown(
+          data['idempotency_key']!,
+          _idempotencyKeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_idempotencyKeyMeta);
+    }
+    if (data.containsKey('method')) {
+      context.handle(
+        _methodMeta,
+        method.isAcceptableOrUnknown(data['method']!, _methodMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_methodMeta);
+    }
+    if (data.containsKey('path')) {
+      context.handle(
+        _pathMeta,
+        path.isAcceptableOrUnknown(data['path']!, _pathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pathMeta);
+    }
+    if (data.containsKey('body_json')) {
+      context.handle(
+        _bodyJsonMeta,
+        bodyJson.isAcceptableOrUnknown(data['body_json']!, _bodyJsonMeta),
+      );
+    }
+    if (data.containsKey('entities')) {
+      context.handle(
+        _entitiesMeta,
+        entities.isAcceptableOrUnknown(data['entities']!, _entitiesMeta),
+      );
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('retry_count')) {
+      context.handle(
+        _retryCountMeta,
+        retryCount.isAcceptableOrUnknown(data['retry_count']!, _retryCountMeta),
+      );
+    }
+    if (data.containsKey('next_attempt_at')) {
+      context.handle(
+        _nextAttemptAtMeta,
+        nextAttemptAt.isAcceptableOrUnknown(
+          data['next_attempt_at']!,
+          _nextAttemptAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_error')) {
+      context.handle(
+        _lastErrorMeta,
+        lastError.isAcceptableOrUnknown(data['last_error']!, _lastErrorMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  OutboxOp map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return OutboxOp(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      idempotencyKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}idempotency_key'],
+      )!,
+      method: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}method'],
+      )!,
+      path: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}path'],
+      )!,
+      bodyJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body_json'],
+      ),
+      entities: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entities'],
+      ),
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      retryCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}retry_count'],
+      )!,
+      nextAttemptAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}next_attempt_at'],
+      ),
+      lastError: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_error'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $OutboxOpsTable createAlias(String alias) {
+    return $OutboxOpsTable(attachedDatabase, alias);
+  }
+}
+
+class OutboxOp extends DataClass implements Insertable<OutboxOp> {
+  final int id;
+  final String idempotencyKey;
+  final String method;
+  final String path;
+  final String? bodyJson;
+  final String? entities;
+  final String? label;
+  final String status;
+  final int retryCount;
+  final DateTime? nextAttemptAt;
+  final String? lastError;
+  final DateTime createdAt;
+  const OutboxOp({
+    required this.id,
+    required this.idempotencyKey,
+    required this.method,
+    required this.path,
+    this.bodyJson,
+    this.entities,
+    this.label,
+    required this.status,
+    required this.retryCount,
+    this.nextAttemptAt,
+    this.lastError,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['idempotency_key'] = Variable<String>(idempotencyKey);
+    map['method'] = Variable<String>(method);
+    map['path'] = Variable<String>(path);
+    if (!nullToAbsent || bodyJson != null) {
+      map['body_json'] = Variable<String>(bodyJson);
+    }
+    if (!nullToAbsent || entities != null) {
+      map['entities'] = Variable<String>(entities);
+    }
+    if (!nullToAbsent || label != null) {
+      map['label'] = Variable<String>(label);
+    }
+    map['status'] = Variable<String>(status);
+    map['retry_count'] = Variable<int>(retryCount);
+    if (!nullToAbsent || nextAttemptAt != null) {
+      map['next_attempt_at'] = Variable<DateTime>(nextAttemptAt);
+    }
+    if (!nullToAbsent || lastError != null) {
+      map['last_error'] = Variable<String>(lastError);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  OutboxOpsCompanion toCompanion(bool nullToAbsent) {
+    return OutboxOpsCompanion(
+      id: Value(id),
+      idempotencyKey: Value(idempotencyKey),
+      method: Value(method),
+      path: Value(path),
+      bodyJson: bodyJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bodyJson),
+      entities: entities == null && nullToAbsent
+          ? const Value.absent()
+          : Value(entities),
+      label: label == null && nullToAbsent
+          ? const Value.absent()
+          : Value(label),
+      status: Value(status),
+      retryCount: Value(retryCount),
+      nextAttemptAt: nextAttemptAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nextAttemptAt),
+      lastError: lastError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastError),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory OutboxOp.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return OutboxOp(
+      id: serializer.fromJson<int>(json['id']),
+      idempotencyKey: serializer.fromJson<String>(json['idempotencyKey']),
+      method: serializer.fromJson<String>(json['method']),
+      path: serializer.fromJson<String>(json['path']),
+      bodyJson: serializer.fromJson<String?>(json['bodyJson']),
+      entities: serializer.fromJson<String?>(json['entities']),
+      label: serializer.fromJson<String?>(json['label']),
+      status: serializer.fromJson<String>(json['status']),
+      retryCount: serializer.fromJson<int>(json['retryCount']),
+      nextAttemptAt: serializer.fromJson<DateTime?>(json['nextAttemptAt']),
+      lastError: serializer.fromJson<String?>(json['lastError']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'idempotencyKey': serializer.toJson<String>(idempotencyKey),
+      'method': serializer.toJson<String>(method),
+      'path': serializer.toJson<String>(path),
+      'bodyJson': serializer.toJson<String?>(bodyJson),
+      'entities': serializer.toJson<String?>(entities),
+      'label': serializer.toJson<String?>(label),
+      'status': serializer.toJson<String>(status),
+      'retryCount': serializer.toJson<int>(retryCount),
+      'nextAttemptAt': serializer.toJson<DateTime?>(nextAttemptAt),
+      'lastError': serializer.toJson<String?>(lastError),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  OutboxOp copyWith({
+    int? id,
+    String? idempotencyKey,
+    String? method,
+    String? path,
+    Value<String?> bodyJson = const Value.absent(),
+    Value<String?> entities = const Value.absent(),
+    Value<String?> label = const Value.absent(),
+    String? status,
+    int? retryCount,
+    Value<DateTime?> nextAttemptAt = const Value.absent(),
+    Value<String?> lastError = const Value.absent(),
+    DateTime? createdAt,
+  }) => OutboxOp(
+    id: id ?? this.id,
+    idempotencyKey: idempotencyKey ?? this.idempotencyKey,
+    method: method ?? this.method,
+    path: path ?? this.path,
+    bodyJson: bodyJson.present ? bodyJson.value : this.bodyJson,
+    entities: entities.present ? entities.value : this.entities,
+    label: label.present ? label.value : this.label,
+    status: status ?? this.status,
+    retryCount: retryCount ?? this.retryCount,
+    nextAttemptAt: nextAttemptAt.present
+        ? nextAttemptAt.value
+        : this.nextAttemptAt,
+    lastError: lastError.present ? lastError.value : this.lastError,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  OutboxOp copyWithCompanion(OutboxOpsCompanion data) {
+    return OutboxOp(
+      id: data.id.present ? data.id.value : this.id,
+      idempotencyKey: data.idempotencyKey.present
+          ? data.idempotencyKey.value
+          : this.idempotencyKey,
+      method: data.method.present ? data.method.value : this.method,
+      path: data.path.present ? data.path.value : this.path,
+      bodyJson: data.bodyJson.present ? data.bodyJson.value : this.bodyJson,
+      entities: data.entities.present ? data.entities.value : this.entities,
+      label: data.label.present ? data.label.value : this.label,
+      status: data.status.present ? data.status.value : this.status,
+      retryCount: data.retryCount.present
+          ? data.retryCount.value
+          : this.retryCount,
+      nextAttemptAt: data.nextAttemptAt.present
+          ? data.nextAttemptAt.value
+          : this.nextAttemptAt,
+      lastError: data.lastError.present ? data.lastError.value : this.lastError,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OutboxOp(')
+          ..write('id: $id, ')
+          ..write('idempotencyKey: $idempotencyKey, ')
+          ..write('method: $method, ')
+          ..write('path: $path, ')
+          ..write('bodyJson: $bodyJson, ')
+          ..write('entities: $entities, ')
+          ..write('label: $label, ')
+          ..write('status: $status, ')
+          ..write('retryCount: $retryCount, ')
+          ..write('nextAttemptAt: $nextAttemptAt, ')
+          ..write('lastError: $lastError, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    idempotencyKey,
+    method,
+    path,
+    bodyJson,
+    entities,
+    label,
+    status,
+    retryCount,
+    nextAttemptAt,
+    lastError,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is OutboxOp &&
+          other.id == this.id &&
+          other.idempotencyKey == this.idempotencyKey &&
+          other.method == this.method &&
+          other.path == this.path &&
+          other.bodyJson == this.bodyJson &&
+          other.entities == this.entities &&
+          other.label == this.label &&
+          other.status == this.status &&
+          other.retryCount == this.retryCount &&
+          other.nextAttemptAt == this.nextAttemptAt &&
+          other.lastError == this.lastError &&
+          other.createdAt == this.createdAt);
+}
+
+class OutboxOpsCompanion extends UpdateCompanion<OutboxOp> {
+  final Value<int> id;
+  final Value<String> idempotencyKey;
+  final Value<String> method;
+  final Value<String> path;
+  final Value<String?> bodyJson;
+  final Value<String?> entities;
+  final Value<String?> label;
+  final Value<String> status;
+  final Value<int> retryCount;
+  final Value<DateTime?> nextAttemptAt;
+  final Value<String?> lastError;
+  final Value<DateTime> createdAt;
+  const OutboxOpsCompanion({
+    this.id = const Value.absent(),
+    this.idempotencyKey = const Value.absent(),
+    this.method = const Value.absent(),
+    this.path = const Value.absent(),
+    this.bodyJson = const Value.absent(),
+    this.entities = const Value.absent(),
+    this.label = const Value.absent(),
+    this.status = const Value.absent(),
+    this.retryCount = const Value.absent(),
+    this.nextAttemptAt = const Value.absent(),
+    this.lastError = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  OutboxOpsCompanion.insert({
+    this.id = const Value.absent(),
+    required String idempotencyKey,
+    required String method,
+    required String path,
+    this.bodyJson = const Value.absent(),
+    this.entities = const Value.absent(),
+    this.label = const Value.absent(),
+    this.status = const Value.absent(),
+    this.retryCount = const Value.absent(),
+    this.nextAttemptAt = const Value.absent(),
+    this.lastError = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : idempotencyKey = Value(idempotencyKey),
+       method = Value(method),
+       path = Value(path);
+  static Insertable<OutboxOp> custom({
+    Expression<int>? id,
+    Expression<String>? idempotencyKey,
+    Expression<String>? method,
+    Expression<String>? path,
+    Expression<String>? bodyJson,
+    Expression<String>? entities,
+    Expression<String>? label,
+    Expression<String>? status,
+    Expression<int>? retryCount,
+    Expression<DateTime>? nextAttemptAt,
+    Expression<String>? lastError,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
+      if (method != null) 'method': method,
+      if (path != null) 'path': path,
+      if (bodyJson != null) 'body_json': bodyJson,
+      if (entities != null) 'entities': entities,
+      if (label != null) 'label': label,
+      if (status != null) 'status': status,
+      if (retryCount != null) 'retry_count': retryCount,
+      if (nextAttemptAt != null) 'next_attempt_at': nextAttemptAt,
+      if (lastError != null) 'last_error': lastError,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  OutboxOpsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? idempotencyKey,
+    Value<String>? method,
+    Value<String>? path,
+    Value<String?>? bodyJson,
+    Value<String?>? entities,
+    Value<String?>? label,
+    Value<String>? status,
+    Value<int>? retryCount,
+    Value<DateTime?>? nextAttemptAt,
+    Value<String?>? lastError,
+    Value<DateTime>? createdAt,
+  }) {
+    return OutboxOpsCompanion(
+      id: id ?? this.id,
+      idempotencyKey: idempotencyKey ?? this.idempotencyKey,
+      method: method ?? this.method,
+      path: path ?? this.path,
+      bodyJson: bodyJson ?? this.bodyJson,
+      entities: entities ?? this.entities,
+      label: label ?? this.label,
+      status: status ?? this.status,
+      retryCount: retryCount ?? this.retryCount,
+      nextAttemptAt: nextAttemptAt ?? this.nextAttemptAt,
+      lastError: lastError ?? this.lastError,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (idempotencyKey.present) {
+      map['idempotency_key'] = Variable<String>(idempotencyKey.value);
+    }
+    if (method.present) {
+      map['method'] = Variable<String>(method.value);
+    }
+    if (path.present) {
+      map['path'] = Variable<String>(path.value);
+    }
+    if (bodyJson.present) {
+      map['body_json'] = Variable<String>(bodyJson.value);
+    }
+    if (entities.present) {
+      map['entities'] = Variable<String>(entities.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (retryCount.present) {
+      map['retry_count'] = Variable<int>(retryCount.value);
+    }
+    if (nextAttemptAt.present) {
+      map['next_attempt_at'] = Variable<DateTime>(nextAttemptAt.value);
+    }
+    if (lastError.present) {
+      map['last_error'] = Variable<String>(lastError.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OutboxOpsCompanion(')
+          ..write('id: $id, ')
+          ..write('idempotencyKey: $idempotencyKey, ')
+          ..write('method: $method, ')
+          ..write('path: $path, ')
+          ..write('bodyJson: $bodyJson, ')
+          ..write('entities: $entities, ')
+          ..write('label: $label, ')
+          ..write('status: $status, ')
+          ..write('retryCount: $retryCount, ')
+          ..write('nextAttemptAt: $nextAttemptAt, ')
+          ..write('lastError: $lastError, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $HttpCacheTable extends HttpCache
+    with TableInfo<$HttpCacheTable, CachedResponse> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $HttpCacheTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _pathMeta = const VerificationMeta('path');
+  @override
+  late final GeneratedColumn<String> path = GeneratedColumn<String>(
+    'path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bodyJsonMeta = const VerificationMeta(
+    'bodyJson',
+  );
+  @override
+  late final GeneratedColumn<String> bodyJson = GeneratedColumn<String>(
+    'body_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [path, bodyJson, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'http_cache';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CachedResponse> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('path')) {
+      context.handle(
+        _pathMeta,
+        path.isAcceptableOrUnknown(data['path']!, _pathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pathMeta);
+    }
+    if (data.containsKey('body_json')) {
+      context.handle(
+        _bodyJsonMeta,
+        bodyJson.isAcceptableOrUnknown(data['body_json']!, _bodyJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bodyJsonMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {path};
+  @override
+  CachedResponse map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CachedResponse(
+      path: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}path'],
+      )!,
+      bodyJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body_json'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $HttpCacheTable createAlias(String alias) {
+    return $HttpCacheTable(attachedDatabase, alias);
+  }
+}
+
+class CachedResponse extends DataClass implements Insertable<CachedResponse> {
+  final String path;
+  final String bodyJson;
+  final DateTime updatedAt;
+  const CachedResponse({
+    required this.path,
+    required this.bodyJson,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['path'] = Variable<String>(path);
+    map['body_json'] = Variable<String>(bodyJson);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  HttpCacheCompanion toCompanion(bool nullToAbsent) {
+    return HttpCacheCompanion(
+      path: Value(path),
+      bodyJson: Value(bodyJson),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory CachedResponse.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CachedResponse(
+      path: serializer.fromJson<String>(json['path']),
+      bodyJson: serializer.fromJson<String>(json['bodyJson']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'path': serializer.toJson<String>(path),
+      'bodyJson': serializer.toJson<String>(bodyJson),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  CachedResponse copyWith({
+    String? path,
+    String? bodyJson,
+    DateTime? updatedAt,
+  }) => CachedResponse(
+    path: path ?? this.path,
+    bodyJson: bodyJson ?? this.bodyJson,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  CachedResponse copyWithCompanion(HttpCacheCompanion data) {
+    return CachedResponse(
+      path: data.path.present ? data.path.value : this.path,
+      bodyJson: data.bodyJson.present ? data.bodyJson.value : this.bodyJson,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CachedResponse(')
+          ..write('path: $path, ')
+          ..write('bodyJson: $bodyJson, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(path, bodyJson, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CachedResponse &&
+          other.path == this.path &&
+          other.bodyJson == this.bodyJson &&
+          other.updatedAt == this.updatedAt);
+}
+
+class HttpCacheCompanion extends UpdateCompanion<CachedResponse> {
+  final Value<String> path;
+  final Value<String> bodyJson;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const HttpCacheCompanion({
+    this.path = const Value.absent(),
+    this.bodyJson = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  HttpCacheCompanion.insert({
+    required String path,
+    required String bodyJson,
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : path = Value(path),
+       bodyJson = Value(bodyJson);
+  static Insertable<CachedResponse> custom({
+    Expression<String>? path,
+    Expression<String>? bodyJson,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (path != null) 'path': path,
+      if (bodyJson != null) 'body_json': bodyJson,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  HttpCacheCompanion copyWith({
+    Value<String>? path,
+    Value<String>? bodyJson,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return HttpCacheCompanion(
+      path: path ?? this.path,
+      bodyJson: bodyJson ?? this.bodyJson,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (path.present) {
+      map['path'] = Variable<String>(path.value);
+    }
+    if (bodyJson.present) {
+      map['body_json'] = Variable<String>(bodyJson.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('HttpCacheCompanion(')
+          ..write('path: $path, ')
+          ..write('bodyJson: $bodyJson, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3915,6 +4880,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CustomersTable customers = $CustomersTable(this);
   late final $VillagesTable villages = $VillagesTable(this);
   late final $SyncQueueTable syncQueue = $SyncQueueTable(this);
+  late final $OutboxOpsTable outboxOps = $OutboxOpsTable(this);
+  late final $HttpCacheTable httpCache = $HttpCacheTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3927,6 +4894,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     customers,
     villages,
     syncQueue,
+    outboxOps,
+    httpCache,
   ];
 }
 
@@ -5832,6 +6801,491 @@ typedef $$SyncQueueTableProcessedTableManager =
       OfflineSyncQueue,
       PrefetchHooks Function()
     >;
+typedef $$OutboxOpsTableCreateCompanionBuilder = OutboxOpsCompanion Function({
+  Value<int> id,
+  required String idempotencyKey,
+  required String method,
+  required String path,
+  Value<String?> bodyJson,
+  Value<String?> entities,
+  Value<String?> label,
+  Value<String> status,
+  Value<int> retryCount,
+  Value<DateTime?> nextAttemptAt,
+  Value<String?> lastError,
+  Value<DateTime> createdAt,
+});
+typedef $$OutboxOpsTableUpdateCompanionBuilder = OutboxOpsCompanion Function({
+  Value<int> id,
+  Value<String> idempotencyKey,
+  Value<String> method,
+  Value<String> path,
+  Value<String?> bodyJson,
+  Value<String?> entities,
+  Value<String?> label,
+  Value<String> status,
+  Value<int> retryCount,
+  Value<DateTime?> nextAttemptAt,
+  Value<String?> lastError,
+  Value<DateTime> createdAt,
+});
+
+class $$OutboxOpsTableFilterComposer
+    extends Composer<_$AppDatabase, $OutboxOpsTable> {
+  $$OutboxOpsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get idempotencyKey => $composableBuilder(
+    column: $table.idempotencyKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get method => $composableBuilder(
+    column: $table.method,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bodyJson => $composableBuilder(
+    column: $table.bodyJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get entities => $composableBuilder(
+    column: $table.entities,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get retryCount => $composableBuilder(
+    column: $table.retryCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get nextAttemptAt => $composableBuilder(
+    column: $table.nextAttemptAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$OutboxOpsTableOrderingComposer
+    extends Composer<_$AppDatabase, $OutboxOpsTable> {
+  $$OutboxOpsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get idempotencyKey => $composableBuilder(
+    column: $table.idempotencyKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get method => $composableBuilder(
+    column: $table.method,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bodyJson => $composableBuilder(
+    column: $table.bodyJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get entities => $composableBuilder(
+    column: $table.entities,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get retryCount => $composableBuilder(
+    column: $table.retryCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get nextAttemptAt => $composableBuilder(
+    column: $table.nextAttemptAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$OutboxOpsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $OutboxOpsTable> {
+  $$OutboxOpsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get idempotencyKey => $composableBuilder(
+    column: $table.idempotencyKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get method =>
+      $composableBuilder(column: $table.method, builder: (column) => column);
+
+  GeneratedColumn<String> get path =>
+      $composableBuilder(column: $table.path, builder: (column) => column);
+
+  GeneratedColumn<String> get bodyJson =>
+      $composableBuilder(column: $table.bodyJson, builder: (column) => column);
+
+  GeneratedColumn<String> get entities =>
+      $composableBuilder(column: $table.entities, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get retryCount => $composableBuilder(
+    column: $table.retryCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get nextAttemptAt => $composableBuilder(
+    column: $table.nextAttemptAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastError =>
+      $composableBuilder(column: $table.lastError, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$OutboxOpsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $OutboxOpsTable,
+          OutboxOp,
+          $$OutboxOpsTableFilterComposer,
+          $$OutboxOpsTableOrderingComposer,
+          $$OutboxOpsTableAnnotationComposer,
+          $$OutboxOpsTableCreateCompanionBuilder,
+          $$OutboxOpsTableUpdateCompanionBuilder,
+          (OutboxOp, BaseReferences<_$AppDatabase, $OutboxOpsTable, OutboxOp>),
+          OutboxOp,
+          PrefetchHooks Function()
+        > {
+  $$OutboxOpsTableTableManager(_$AppDatabase db, $OutboxOpsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$OutboxOpsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$OutboxOpsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$OutboxOpsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> idempotencyKey = const Value.absent(),
+                Value<String> method = const Value.absent(),
+                Value<String> path = const Value.absent(),
+                Value<String?> bodyJson = const Value.absent(),
+                Value<String?> entities = const Value.absent(),
+                Value<String?> label = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> retryCount = const Value.absent(),
+                Value<DateTime?> nextAttemptAt = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => OutboxOpsCompanion(
+                id: id,
+                idempotencyKey: idempotencyKey,
+                method: method,
+                path: path,
+                bodyJson: bodyJson,
+                entities: entities,
+                label: label,
+                status: status,
+                retryCount: retryCount,
+                nextAttemptAt: nextAttemptAt,
+                lastError: lastError,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String idempotencyKey,
+                required String method,
+                required String path,
+                Value<String?> bodyJson = const Value.absent(),
+                Value<String?> entities = const Value.absent(),
+                Value<String?> label = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> retryCount = const Value.absent(),
+                Value<DateTime?> nextAttemptAt = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => OutboxOpsCompanion.insert(
+                id: id,
+                idempotencyKey: idempotencyKey,
+                method: method,
+                path: path,
+                bodyJson: bodyJson,
+                entities: entities,
+                label: label,
+                status: status,
+                retryCount: retryCount,
+                nextAttemptAt: nextAttemptAt,
+                lastError: lastError,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$OutboxOpsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $OutboxOpsTable,
+      OutboxOp,
+      $$OutboxOpsTableFilterComposer,
+      $$OutboxOpsTableOrderingComposer,
+      $$OutboxOpsTableAnnotationComposer,
+      $$OutboxOpsTableCreateCompanionBuilder,
+      $$OutboxOpsTableUpdateCompanionBuilder,
+      (OutboxOp, BaseReferences<_$AppDatabase, $OutboxOpsTable, OutboxOp>),
+      OutboxOp,
+      PrefetchHooks Function()
+    >;
+typedef $$HttpCacheTableCreateCompanionBuilder = HttpCacheCompanion Function({
+  required String path,
+  required String bodyJson,
+  Value<DateTime> updatedAt,
+  Value<int> rowid,
+});
+typedef $$HttpCacheTableUpdateCompanionBuilder = HttpCacheCompanion Function({
+  Value<String> path,
+  Value<String> bodyJson,
+  Value<DateTime> updatedAt,
+  Value<int> rowid,
+});
+
+class $$HttpCacheTableFilterComposer
+    extends Composer<_$AppDatabase, $HttpCacheTable> {
+  $$HttpCacheTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bodyJson => $composableBuilder(
+    column: $table.bodyJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$HttpCacheTableOrderingComposer
+    extends Composer<_$AppDatabase, $HttpCacheTable> {
+  $$HttpCacheTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bodyJson => $composableBuilder(
+    column: $table.bodyJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$HttpCacheTableAnnotationComposer
+    extends Composer<_$AppDatabase, $HttpCacheTable> {
+  $$HttpCacheTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get path =>
+      $composableBuilder(column: $table.path, builder: (column) => column);
+
+  GeneratedColumn<String> get bodyJson =>
+      $composableBuilder(column: $table.bodyJson, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$HttpCacheTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $HttpCacheTable,
+          CachedResponse,
+          $$HttpCacheTableFilterComposer,
+          $$HttpCacheTableOrderingComposer,
+          $$HttpCacheTableAnnotationComposer,
+          $$HttpCacheTableCreateCompanionBuilder,
+          $$HttpCacheTableUpdateCompanionBuilder,
+          (
+            CachedResponse,
+            BaseReferences<_$AppDatabase, $HttpCacheTable, CachedResponse>,
+          ),
+          CachedResponse,
+          PrefetchHooks Function()
+        > {
+  $$HttpCacheTableTableManager(_$AppDatabase db, $HttpCacheTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$HttpCacheTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$HttpCacheTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$HttpCacheTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> path = const Value.absent(),
+                Value<String> bodyJson = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => HttpCacheCompanion(
+                path: path,
+                bodyJson: bodyJson,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String path,
+                required String bodyJson,
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => HttpCacheCompanion.insert(
+                path: path,
+                bodyJson: bodyJson,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$HttpCacheTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $HttpCacheTable,
+      CachedResponse,
+      $$HttpCacheTableFilterComposer,
+      $$HttpCacheTableOrderingComposer,
+      $$HttpCacheTableAnnotationComposer,
+      $$HttpCacheTableCreateCompanionBuilder,
+      $$HttpCacheTableUpdateCompanionBuilder,
+      (
+        CachedResponse,
+        BaseReferences<_$AppDatabase, $HttpCacheTable, CachedResponse>,
+      ),
+      CachedResponse,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5849,4 +7303,8 @@ class $AppDatabaseManager {
       $$VillagesTableTableManager(_db, _db.villages);
   $$SyncQueueTableTableManager get syncQueue =>
       $$SyncQueueTableTableManager(_db, _db.syncQueue);
+  $$OutboxOpsTableTableManager get outboxOps =>
+      $$OutboxOpsTableTableManager(_db, _db.outboxOps);
+  $$HttpCacheTableTableManager get httpCache =>
+      $$HttpCacheTableTableManager(_db, _db.httpCache);
 }

@@ -26,6 +26,7 @@ import { teamRouter } from "./modules/team/staffInvite.routes";
 import { internalRouter } from "./modules/internal/internal.routes";
 import { internalApiKeyMiddleware } from "./middleware/internalApiKey.middleware";
 import { requestLoggerMiddleware } from "./middleware/requestLogger.middleware";
+import { idempotencyMiddleware } from "./middleware/idempotency.middleware";
 
 // Express app assembly only. Module routers are mounted here once they exist —
 // this file must never contain business logic itself.
@@ -92,6 +93,11 @@ app.use("/uploads/job-photos", authMiddleware, express.static(JOB_PHOTO_UPLOAD_R
 app.use("/internal", internalApiKeyMiddleware, internalRouter);
 
 app.use(tenantResolverMiddleware);
+
+// Offline-first safety: dedupe replayed mutations by Idempotency-Key so the
+// mobile outbox can retry after a lost ack without ever duplicating a record
+// or a payment. No-ops for requests without the header (e.g. the web app).
+app.use(idempotencyMiddleware);
 
 app.use("/auth", authRouter);
 app.use("/villages", villageRouter);

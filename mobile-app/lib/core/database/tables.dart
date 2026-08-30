@@ -116,3 +116,49 @@ class SyncQueue extends Table {
   IntColumn get retryCount => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
+
+/// The durable outbox for offline-first writes. Every mutation made while
+/// offline is captured here as the exact HTTP request to replay, and drained
+/// FIFO when connectivity returns. Rows survive app close/restart (this is a
+/// real SQLite table, never an in-memory queue), so a pending transaction is
+/// never lost. The `idempotencyKey` is sent as the `Idempotency-Key` header on
+/// every replay, so a retry after a lost acknowledgement can never create a
+/// duplicate record or a double payment (the backend dedupes on it).
+///
+/// `status`: `pending` (awaiting/eligible for sync) or `failed` (permanently
+/// rejected by the server — a dead-letter surfaced to the user, never silently
+/// dropped). `nextAttemptAt` implements exponential backoff between retries.
+@DataClassName('OutboxOp')
+class OutboxOps extends Table {
+  // Auto-increment id doubles as the FIFO sequence — earlier ops sync first,
+  // so a create is sent before an edit that depends on it.
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get idempotencyKey => text()();
+  TextColumn get method => text()(); // POST | PATCH | PUT | DELETE
+  TextColumn get path => text()(); // e.g. /payments, /jobs/abc/start
+  TextColumn get bodyJson => text().nullable()();
+  // Entity topics this op affects (comma-separated SyncEntity names), so the
+  // real-time bus can refresh the right screens after the op syncs.
+  TextColumn get entities => text().nullable()();
+  // Human label for the pending/failed list, e.g. "Record payment".
+  TextColumn get label => text().nullable()();
+  TextColumn get status => text().withDefault(const Constant('pending'))();
+  IntColumn get retryCount => integer().withDefault(const Constant(0))();
+  DateTimeColumn get nextAttemptAt => dateTime().nullable()();
+  TextColumn get lastError => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+/// Offline read cache: the body of every successful GET, keyed by full path
+/// (including query string). When a GET fails because the device is offline,
+/// the interceptor serves the last cached body so lists and detail screens keep
+/// working with the most recent data instead of showing a network error.
+@DataClassName('CachedResponse')
+class HttpCache extends Table {
+  TextColumn get path => text()(); // full request path incl. query
+  TextColumn get bodyJson => text()();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {path};
+}

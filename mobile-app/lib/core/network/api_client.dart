@@ -6,16 +6,11 @@ import '../storage/local_storage.dart';
 import 'package:go_router/go_router.dart';
 import '../router/app_router.dart';
 import '../sync/data_sync.dart';
+import '../sync/offline_interceptor.dart';
 
-/// Dio instance scoped to the current tenant. Rebuilds (cheap) whenever the
-/// company slug changes, e.g. right after the Company Setup screen saves it.
-/// Base URL is `https://{slug}.shabooagri.com`, matching the wildcard
-/// subdomain -> tenantResolver middleware the web app already relies on —
-/// no backend changes needed to support this.
-final apiClientProvider = Provider<Dio>((ref) {
+Dio _buildDio(Ref ref) {
   final slug = ref.watch(tenantSlugProvider);
-
-  final dio = Dio(
+  return Dio(
     BaseOptions(
       baseUrl: slug != null ? 'https://$slug.shabooagri.com' : 'https://shabooagri.com',
       connectTimeout: const Duration(seconds: 10),
@@ -25,14 +20,9 @@ final apiClientProvider = Provider<Dio>((ref) {
       },
     ),
   );
+}
 
-  dio.interceptors.add(_AuthInterceptor(dio, ref));
-
-  // Global real-time sync: every successful mutation bumps the affected
-  // entities' revisions, so all open screens that show related data refetch
-  // authoritative results from the backend — no manual per-screen refresh.
-  dio.interceptors.add(DataSyncInterceptor(ref));
-
+void _addDebugLogging(Dio dio) {
   // Full request/response logging (headers + bodies) prints the Bearer token
   // and login/OTP payloads to the platform log. That is a development aid only
   // — it must never run in a production/release build (it would leak
@@ -47,7 +37,36 @@ final apiClientProvider = Provider<Dio>((ref) {
       error: true,
     ));
   }
+}
 
+/// Dio instance scoped to the current tenant. Rebuilds (cheap) whenever the
+/// company slug changes, e.g. right after the Company Setup screen saves it.
+/// Base URL is `https://{slug}.shabooagri.com`, matching the wildcard
+/// subdomain -> tenantResolver middleware the web app already relies on —
+/// no backend changes needed to support this.
+///
+/// This is the client every screen uses. It carries three interceptors:
+///   * [_AuthInterceptor] — attaches the token, refreshes on 401.
+///   * [OfflineInterceptor] — serves GETs from the local cache when offline and
+///     captures offline writes into the durable outbox (offline-first).
+///   * [DataSyncInterceptor] — bumps the real-time bus on a successful mutation
+///     so every open screen refetches.
+final apiClientProvider = Provider<Dio>((ref) {
+  final dio = _buildDio(ref);
+  dio.interceptors.add(_AuthInterceptor(dio, ref));
+  dio.interceptors.add(OfflineInterceptor(ref));
+  dio.interceptors.add(DataSyncInterceptor(ref));
+  _addDebugLogging(dio);
+  return dio;
+});
+
+/// A tenant client with auth but WITHOUT the offline/real-time interceptors.
+/// The sync outbox sends with this so a failed replay can't recurse back into
+/// the offline interceptor and re-enqueue itself.
+final rawApiClientProvider = Provider<Dio>((ref) {
+  final dio = _buildDio(ref);
+  dio.interceptors.add(_AuthInterceptor(dio, ref));
+  _addDebugLogging(dio);
   return dio;
 });
 

@@ -925,3 +925,24 @@ model AuditLog {
 
   @@map("audit_log")
 }
+
+// ---------- Idempotency (offline-first sync safety) ----------
+// Dedupes mutating requests replayed by the mobile offline sync outbox, so a
+// retry after a lost acknowledgement can never create a duplicate record or a
+// double payment. `key` is a client-generated UUID sent as the
+// `Idempotency-Key` header; the first completed response is stored and replayed
+// verbatim for any later request carrying the same key. Rows are disposable and
+// safe to prune by age.
+model IdempotencyKey {
+  key        String   @id
+  companyId  String?  @map("company_id") @db.Uuid
+  method     String
+  path       String
+  statusCode Int?     @map("status_code")
+  response   Json?
+  status     String   @default("in_progress")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("idempotency_keys")
+}
