@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../database/database.dart';
+import '../network/api_error.dart';
 import '../providers/database_provider.dart';
 import 'data_sync.dart';
 import 'outbox.dart';
@@ -122,8 +123,15 @@ class OfflineInterceptor extends Interceptor {
         ));
         return;
       }
-      // Nothing cached yet — let the caller see the offline error.
-      handler.next(err);
+      // Nothing cached yet (first run / never synced). Replace the raw
+      // connection error with a tagged one so the shared error UX shows a
+      // clean "not downloaded yet" message instead of a DioException string.
+      handler.reject(DioException(
+        requestOptions: o,
+        type: DioExceptionType.connectionError,
+        error: const OfflineNoData(),
+        message: 'Offline: this screen has not been downloaded to the device yet.',
+      ));
       return;
     }
 
