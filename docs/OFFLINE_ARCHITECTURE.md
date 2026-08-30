@@ -129,11 +129,17 @@ synced — only what has actually been downloaded is served.
 - Globally-unique internal identity: locally-created records use a client
   **UUID** as their permanent id (never a human business number), so two devices
   creating records offline always represent two distinct records.
+- **Cloud → device pull** (`core/sync/sync_pull.dart`): on login, on launch, and
+  on every reconnect, `SyncPullService` pulls the authoritative snapshot of the
+  core collections (customers, villages, machines, drivers, jobs, bookings,
+  employees, pricing-methods, machine-types) into the local SQLite mirror + read
+  cache. It is **server-authoritative** (a pull overwrites local cached reads,
+  never the reverse) and **flushes the outbox first** (`pullAfterDrain`) so a
+  still-pending local write is never transiently hidden. This gives fresh-install
+  offline data (no need to visit each screen online first) and multi-user
+  convergence when another device changed something while this one was offline.
 
 **Planned (Phase 2 — not yet implemented)**
-- **Cloud → device pull:** a general reconciliation pass on reconnect that pulls
-  authoritative server changes into the local DB for every entity (today, reads
-  refresh per-screen; there is no global background pull).
 - **Business-number conflict reconciliation:** if two offline devices mint the
   same human-readable number (e.g. a booking number), detect the conflict,
   preserve both records, let the server assign the authoritative number, and
@@ -182,7 +188,8 @@ and must be run on a device (see the remediation spec's 25-step checklist).
 | No raw network exceptions in UI | ✅ Implemented |
 | One sync engine | ✅ Implemented (legacy removed) |
 | Reactive dependent-screen refresh | ✅ Implemented |
-| Cloud→device global pull | ⏳ Phase 2 |
-| Business-number conflict reconciliation | ⏳ Phase 2 (UUID identity foundation done) |
+| Cloud→device global pull | ✅ Implemented (`SyncPullService`, server-authoritative, flush-before-pull) |
+| Multi-user convergence (read side) | ✅ Implemented (re-pull on reconnect) |
+| Business-number conflict reconciliation | ⏳ Phase 2 (UUID identity foundation done; moot for booking numbers — server allocates atomically) |
 | Per-entity conflict policy | ⏳ Phase 2 |
 | Physical-device acceptance (4 platforms) | ⏳ Owner/device verification |
