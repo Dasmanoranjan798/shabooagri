@@ -177,10 +177,18 @@ safe rather than a general CRDT:
 - **Financial records → strictest.** Idempotency key end-to-end; the client
   never recomputes balances (server authority); "no response" is treated as
   "maybe committed" and the same-key replay makes that safe.
-- **Concurrent edits to the same existing record** currently resolve as
-  server-authoritative on the next pull (last successful server write wins, and
-  local un-synced edits are applied on top when they sync). Field-level merge and
-  a user-visible conflict prompt are **not** implemented — see Phase 3 backlog.
+- **Concurrent edits to DIFFERENT fields of the same record → both survive.**
+  Every update screen sends a *partial* PATCH carrying only the fields it
+  changed (many are field-scoped endpoints, e.g. `/bookings/:id/machine`). So if
+  device A changes a customer's phone offline while device B renames the same
+  customer online, both PATCHes apply independently and neither field is lost —
+  field-level merge is a property of the partial-update architecture, verified in
+  `multi_user_convergence_test.dart`.
+- **Concurrent edits to the SAME field** resolve server-authoritative (the later
+  successful server write wins). This is a defined, safe policy — never a silent
+  *local* overwrite. A user-visible conflict prompt for this narrow same-field
+  case would need backend version/etag support and a UI; it is a documented
+  Phase 3+ enhancement, not yet implemented.
 
 ## 8. Authentication offline (IMPLEMENTED / to audit in Phase 2)
 
@@ -222,7 +230,10 @@ and must be run on a device (see the remediation spec's 25-step checklist).
 | Client-authoritative UUID identity | ✅ Implemented + live-verified (villages, customers, machines, drivers, employees, bookings); client injects id on offline create |
 | Business-number reconciliation | ✅ Implemented (server allocates atomically; stable client id reconciles the number via pull — live-verified graph) |
 | Explicit conflict policy | ✅ Documented + implemented (server-authoritative pull, flush-before-pull, idempotent creates/financials) |
-| Field-level merge / user-visible conflict prompt | ⏳ Phase 3 backlog |
-| Client-authoritative id for payments/invoices/expenses/manual-jobs | ⏳ Phase 3 (idempotency already protects them) |
-| True per-entity reactive drift streams | ⏳ Phase 3 (real-time bus achieves the no-refresh outcome today) |
+| Field-level merge (different fields) | ✅ Implemented via partial PATCH; verified in multi-user convergence test |
+| Multi-user convergence (A offline + B online → converge) | ✅ Verified — `multi_user_convergence_test.dart` (both survive, distinct numbers, payment once, restart-durable, idempotent repeat) |
+| Initial offline bootstrap on login | ✅ Implemented (`pull` on login/launch; no per-screen priming needed) |
+| User-visible conflict prompt (same-field concurrent edit) | ⏳ Phase 3+ (needs backend version/etag + UI) |
+| Client-authoritative id for payments/invoices/expenses/manual-jobs | ⏳ Phase 3+ (idempotency already protects them) |
+| True typed per-entity drift streams | ⏳ optional refinement — reactive no-refresh outcome already delivered by the real-time bus + local SQLite cache/mirror |
 | Physical-device acceptance (4 platforms) | ⏳ Owner/device verification |
