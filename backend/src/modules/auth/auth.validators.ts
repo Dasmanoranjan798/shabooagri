@@ -66,6 +66,15 @@ export const confirmPasswordResetSchema = z.object({
   newPassword: z.string().min(8, "Password must be at least 8 characters long"),
 });
 
+// Set/replace the caller's own PIN. The caller is already authenticated
+// (authMiddleware) — reached either from an existing session or, for the
+// Create-PIN / Forgot-PIN flows, right after an OTP login. No old PIN is
+// required: OTP (or the live session) is the identity proof, so a forgotten
+// PIN can be replaced without knowing it. Same 4-6 digit rule as registration.
+export const setPinSchema = z.object({
+  pin: z.string().regex(/^\d{4,6}$/, "PIN must be 4-6 digits"),
+});
+
 export const changePasswordSchema = z.object({
   // Optional: a user who only ever logged in via PIN/OTP may not have a
   // password set yet — see auth.service.changePassword for the check.
@@ -84,5 +93,6 @@ export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetSchem
 export type VerifyPasswordResetTokenInput = z.infer<typeof verifyPasswordResetTokenSchema>;
 export type ConfirmPasswordResetInput = z.infer<typeof confirmPasswordResetSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type SetPinInput = z.infer<typeof setPinSchema>;
 export type SsoExchangeInput = z.infer<typeof ssoExchangeSchema>;
 

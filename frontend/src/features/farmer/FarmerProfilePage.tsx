@@ -2,6 +2,7 @@ import React from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { ChangePasswordCard } from "../../components/ChangePasswordCard";
+import { ChangePinCard } from "../../components/ChangePinCard";
 import { Button } from "../../components/ui/Button";
 import { getTerm } from "../../lib/terminology";
 
@@ -43,6 +44,10 @@ export const FarmerProfilePage: React.FC = () => {
 
  <div style={{ marginTop: "20px" }}>
  <ChangePasswordCard />
+ </div>
+
+ <div style={{ marginTop: "20px" }}>
+ <ChangePinCard />
  </div>
 
  <Button

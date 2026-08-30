@@ -36,8 +36,22 @@ class AuthRepository {
       refreshToken: data['refreshToken'] as String,
       user: data['user'] as Map<String, dynamic>,
     );
+    // Prime PIN quick-login: remember who just authenticated so a later PIN
+    // login on this device needs only the PIN. The backend still resolves the
+    // user from this identifier + tenant subdomain and enforces isolation.
+    await _rememberPinIdentifier(user);
     _ref.read(currentUserProvider.notifier).state = user;
     return user;
+  }
+
+  // Stores the user's email (or phone) as the remembered PIN-login identifier.
+  Future<void> _rememberPinIdentifier(AppUser user) async {
+    final identifier = (user.email != null && user.email!.isNotEmpty)
+        ? user.email!
+        : (user.mobileNumber ?? '');
+    if (identifier.isNotEmpty) {
+      await PinLoginStorage.setIdentifier(identifier);
+    }
   }
 
   // Maps backend auth errors to safe, user-facing messages. `on401` lets each
@@ -82,6 +96,38 @@ class AuthRepository {
       return await _completeLogin(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       _mapError(e, 'Incorrect PIN.');
+    }
+  }
+
+  /// Create or reset the caller's own PIN — POST /auth/set-pin { pin }.
+  /// Requires an authenticated session: the Create-PIN / Forgot-PIN wizard
+  /// reaches here immediately after an OTP login, so identity is already proven
+  /// and no old PIN is needed. The server hashes and stores the PIN; the raw
+  /// PIN is never persisted or returned. On success we (re)remember this user's
+  /// identifier so the very next quick-login needs only the PIN.
+  Future<void> setPin(String pin) async {
+    final dio = _ref.read(apiClientProvider);
+    try {
+      final response = await dio.post('/auth/set-pin', data: {'pin': pin});
+      // The backend returns the updated public user (hasPin=true, no PIN hash).
+      // Reflect that authoritative state into the live session so any UI reading
+      // `hasPin` updates immediately, and re-remember the identifier.
+      final data = response.data as Map<String, dynamic>;
+      final userJson = data['user'] as Map<String, dynamic>?;
+      if (userJson != null) {
+        final updated = AppUser.fromJson(userJson);
+        _ref.read(currentUserProvider.notifier).state = updated;
+        final cached = await AuthStorage.getUser();
+        if (cached != null) {
+          await AuthStorage.updateUser({...cached, ...userJson});
+        }
+        await _rememberPinIdentifier(updated);
+      } else {
+        final user = _ref.read(currentUserProvider);
+        if (user != null) await _rememberPinIdentifier(user);
+      }
+    } on DioException catch (e) {
+      _mapError(e, 'Could not save your PIN. Please sign in again and retry.');
     }
   }
 

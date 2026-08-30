@@ -8,7 +8,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
-    "test": "tsx tests/test-dashboard.ts && tsx tests/test-farmer-portal-security.ts && tsx tests/test-password-reset.ts && tsx tests/test-payments.ts && tsx tests/test-phase2-security.ts && tsx tests/test-phase3a-operations.ts && tsx tests/test-pricing-methods.ts",
+    "test": "tsx tests/test-dashboard.ts && tsx tests/test-farmer-portal-security.ts && tsx tests/test-password-reset.ts && tsx tests/test-pin-auth.ts && tsx tests/test-payments.ts && tsx tests/test-phase2-security.ts && tsx tests/test-phase3a-operations.ts && tsx tests/test-pricing-methods.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",

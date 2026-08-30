@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import type { User } from "@prisma/client";
 import { env } from "../../config/env";
 import { AppError } from "../../shared/errors/AppError";
+import { logger } from "../../shared/logger";
 import * as authRepository from "./auth.repository";
 import * as rbacService from "../rbac/rbac.service";
 import { sendOtpEmail, sendPasswordResetEmail } from "../../shared/services/mail.service";
@@ -20,6 +21,7 @@ import type {
   RefreshInput,
   RegisterInput,
   RequestPasswordResetInput,
+  SetPinInput,
   VerifyPasswordResetTokenInput,
 } from "./auth.validators";
 
@@ -57,8 +59,11 @@ function generateOtpCode(): string {
 }
 
 function toPublicUser(user: User) {
-  const { passwordHash: _passwordHash, pinHash: _pinHash, ...publicUser } = user;
-  return publicUser;
+  const { passwordHash, pinHash, ...rest } = user;
+  // Never return the hashes. Expose only booleans so a client can tell whether
+  // a PIN/password is already configured (drives "Create PIN" vs "Forgot PIN?"
+  // on the login screen) without the UI guessing from local storage.
+  return { ...rest, hasPin: pinHash != null, hasPassword: passwordHash != null };
 }
 
 async function issueTokenPair(user: User): Promise<TokenPair> {
@@ -196,8 +201,17 @@ export async function register(input: RegisterInput, requestingUser?: Authentica
 export async function requestOtp(input: OtpRequestInput, tenantCompany?: any) {
   const company = tenantCompany || (await authRepository.findSingleTenantCompany());
   const user = await authRepository.findUserByIdentifier(company.id, input.identifier);
+
+  // Anti-enumeration: this endpoint backs both OTP login and the Create-PIN /
+  // Forgot-PIN flows, so it must not reveal whether an arbitrary identifier
+  // maps to an account (§ "Do NOT reveal whether arbitrary accounts exist").
+  // We always return the same generic response; a code is only generated and
+  // sent when the account actually exists. A genuine send FAILURE for a real
+  // account still surfaces (502) so users aren't left waiting silently.
+  const genericResponse = { message: "If an account exists for that identifier, a verification code has been sent." };
+
   if (!user) {
-    throw new AppError(404, "No account found for this identifier");
+    return genericResponse;
   }
 
   const code = generateOtpCode();
@@ -209,11 +223,9 @@ export async function requestOtp(input: OtpRequestInput, tenantCompany?: any) {
   });
 
   // Actually confirm delivery succeeded before telling the caller "OTP sent".
-  // Previously the send result was ignored, so a failed SMS/email (or an
-  // unconfigured provider) still returned success and the user waited for a
-  // code that never arrived. sendOtpSms throws in production when no real
-  // provider is configured (never silently mocks); a false result here means a
-  // genuine provider/delivery failure.
+  // sendOtpSms throws in production when no real provider is configured (never
+  // silently mocks); a false result here means a genuine provider/delivery
+  // failure for a known account, worth surfacing.
   const delivered = input.identifier.includes("@")
     ? await sendOtpEmail(input.identifier, code)
     : await sendOtpSms(input.identifier, code);
@@ -228,7 +240,7 @@ export async function requestOtp(input: OtpRequestInput, tenantCompany?: any) {
     console.log(`[dev-only] OTP for ${input.identifier}: ${code}`);
   }
   return {
-    message: "OTP sent",
+    ...genericResponse,
     devOtp: env.NODE_ENV !== "production" ? code : undefined,
   };
 }
@@ -351,6 +363,35 @@ export async function getUserForCompany(companyId: string, userId: string) {
     throw new AppError(404, "User not found");
   }
   return toPublicUser(user);
+}
+
+// Create or replace the caller's own PIN. One authenticated operation backs
+// both the first-time "Create PIN" and the "Forgot PIN" reset — in both flows
+// the caller has already proven identity (an existing session, or an OTP login
+// immediately before this call), so no old PIN is required and a forgotten PIN
+// can simply be overwritten. Replacing pinHash atomically invalidates the old
+// PIN. The raw PIN is hashed with bcrypt, never stored or returned in clear,
+// and never logged.
+export async function setPin(userId: string, input: SetPinInput) {
+  const user = await authRepository.findUserById(userId);
+  if (!user) {
+    throw new AppError(404, "User not found");
+  }
+
+  const pinHash = await bcrypt.hash(input.pin, BCRYPT_ROUNDS);
+  const updated = await authRepository.updateUserPin(userId, pinHash);
+
+  // Security event log — records that a PIN was set/reset, with who and which
+  // tenant, but never the PIN itself (structured logger redacts nothing here
+  // because nothing sensitive is passed). Distinguishes first-time create from
+  // a reset via the prior hash state.
+  logger.info("auth.pin_set", {
+    userId: user.id,
+    companyId: user.companyId,
+    event: user.pinHash ? "reset" : "create",
+  });
+
+  return { message: "PIN saved successfully.", user: toPublicUser(updated) };
 }
 
 const PASSWORD_RESET_EXPIRY_MINUTES = 15;

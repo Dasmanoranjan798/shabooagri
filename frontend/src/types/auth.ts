@@ -26,6 +26,9 @@ export interface User {
   mobileNumber: string | null;
   status: "ACTIVE" | "INACTIVE";
   role: Role;
+  // Authoritative PIN state from the backend (`toPublicUser`'s `hasPin`) — the
+  // UI reads this instead of inferring PIN configuration from local storage.
+  hasPin?: boolean;
 }
 
 export interface LoginResponse {

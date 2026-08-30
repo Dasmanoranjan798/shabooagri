@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import "./login.css";
 import { Tractor, Key, Hash, Smartphone } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { defaultTheme } from "../../lib/theme";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
-import { api } from "../../lib/api";
+import { api, getStoredPinIdentifier } from "../../lib/api";
 
 type LoginMode = "password" | "pin" | "otp";
 
@@ -18,6 +18,12 @@ export const LoginPage: React.FC = () => {
   const [identifier, setIdentifier] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [pin, setPin] = useState<string>("");
+  // Identifier of the last user to sign in on this device, so PIN mode is
+  // PIN-only. Null when nobody has set up a PIN here yet, in which case PIN mode
+  // shows a Create-PIN prompt instead of a login form. This is a form
+  // convenience only — the authoritative PIN state lives on the backend, which
+  // rejects a wrong/absent PIN regardless of what the client shows.
+  const pinIdentifier = getStoredPinIdentifier();
 
   // OTP step
   const [otpSent, setOtpSent] = useState<boolean>(false);
@@ -75,6 +81,29 @@ export const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // PIN mode is PIN-only, keyed off the remembered identifier. When none is
+    // stored, PIN mode renders the Create-PIN prompt instead of this form, so
+    // this branch only runs with a valid remembered identifier.
+    if (mode === "pin") {
+      if (!pinIdentifier) return;
+      if (pin.trim().length < 4) {
+        setError("Enter your 4-6 digit PIN.");
+        return;
+      }
+      setIsLoading(true);
+      setError(null);
+      try {
+        await login(pinIdentifier, undefined, pin);
+        navigate("/");
+      } catch (err: any) {
+        setError(err.message || "Incorrect PIN. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     if (!identifier.trim()) {
       setError("Please enter your email or mobile number");
       return;
@@ -84,9 +113,7 @@ export const LoginPage: React.FC = () => {
     setError(null);
 
     try {
-      if (mode === "pin") {
-        await login(identifier, undefined, pin);
-      } else if (mode === "otp") {
+      if (mode === "otp") {
         if (!otpSent) {
           await handleRequestOtp();
           return;
@@ -147,16 +174,20 @@ export const LoginPage: React.FC = () => {
         <form onSubmit={handleSubmit} className="sa-login-form">
           {error && <div className="sa-alert sa-alert-danger">{error}</div>}
 
-          <Input
-            label="Email or Mobile Number"
-            type="text"
-            placeholder="e.g. owner@example.com or 9876543210"
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            required
-            disabled={otpSent}
-            autoFocus
-          />
+          {/* The identifier field is hidden in PIN mode: PIN login is
+              PIN-only, keyed off the remembered identifier shown below. */}
+          {mode !== "pin" && (
+            <Input
+              label="Email or Mobile Number"
+              type="text"
+              placeholder="e.g. owner@example.com or 9876543210"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              required
+              disabled={otpSent}
+              autoFocus
+            />
+          )}
 
           {mode === "password" && (
             <div>
@@ -193,16 +224,51 @@ export const LoginPage: React.FC = () => {
             </div>
           )}
 
-          {mode === "pin" && (
-            <Input
-              label="4-Digit PIN"
-              type="password"
-              placeholder="••••"
-              maxLength={4}
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              required
-            />
+          {mode === "pin" && pinIdentifier && (
+            <>
+              <div style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", margin: "0 0 10px" }}>
+                Signing in as <strong>{pinIdentifier}</strong>
+              </div>
+              <Input
+                label="PIN (4-6 digits)"
+                type="password"
+                placeholder="••••"
+                maxLength={6}
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+                required
+                autoFocus
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "4px", marginBottom: "12px" }}>
+                <Link
+                  to="/pin-setup?reset=1"
+                  style={{ color: "var(--color-primary, #1B7A3E)", fontSize: "0.82rem", textDecoration: "underline" }}
+                >
+                  Forgot PIN?
+                </Link>
+                <Link
+                  to="/pin-setup"
+                  style={{ color: "var(--color-primary, #1B7A3E)", fontSize: "0.82rem", textDecoration: "underline" }}
+                >
+                  Use a different account
+                </Link>
+              </div>
+            </>
+          )}
+
+          {mode === "pin" && !pinIdentifier && (
+            <div style={{ textAlign: "center", padding: "8px 0 4px" }}>
+              <Hash size={32} style={{ color: "var(--color-primary, #1B7A3E)" }} />
+              <p style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", margin: "8px 0 16px" }}>
+                Set up a PIN for quick sign-in on this device. We'll verify your identity
+                with a one-time code first.
+              </p>
+              <Link to="/pin-setup" style={{ textDecoration: "none" }}>
+                <Button type="button" variant="primary" size="lg" style={{ width: "100%" }}>
+                  Create PIN
+                </Button>
+              </Link>
+            </div>
           )}
 
           {mode === "otp" && (
@@ -236,9 +302,11 @@ export const LoginPage: React.FC = () => {
             </>
           )}
 
-          <Button type="submit" variant="primary" size="lg" isLoading={isLoading} style={{ width: "100%" }}>
-            {mode === "otp" && !otpSent ? "Request OTP" : "Log In"}
-          </Button>
+          {!(mode === "pin" && !pinIdentifier) && (
+            <Button type="submit" variant="primary" size="lg" isLoading={isLoading} style={{ width: "100%" }}>
+              {mode === "otp" && !otpSent ? "Request OTP" : "Log In"}
+            </Button>
+          )}
         </form>
 
         <div className="sa-login-footer">
