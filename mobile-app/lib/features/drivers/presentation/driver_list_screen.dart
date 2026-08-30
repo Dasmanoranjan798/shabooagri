@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import '../../../core/widgets/quick_action_bar.dart';
 import '../../../core/widgets/status_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,6 +37,7 @@ class DriverSummary {
 /// Live list (not the offline cache) — license expiry warnings need
 /// `licenseExpiryDate`, which the flat offline table doesn't carry.
 final driversListProvider = FutureProvider<List<DriverSummary>>((ref) async {
+  syncOn(ref, {SyncEntity.driver});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/drivers');
   return (response.data as List<dynamic>).map((j) => DriverSummary.fromJson(j as Map<String, dynamic>)).toList();

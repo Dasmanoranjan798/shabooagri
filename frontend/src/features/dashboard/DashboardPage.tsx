@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { subscribeDataRefreshMany } from "../../lib/dataRefreshBus";
 import "./dashboard.css";
 import { AlertTriangle, RotateCcw, Wrench, ShieldAlert, BadgeAlert, X } from "lucide-react";
 import type {
@@ -109,6 +110,9 @@ export const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     loadSummary();
+    // KPI cards must reflect every mutation anywhere in the app; the bus
+    // bumps "dashboard" on any successful write (see dataRefreshBus).
+    return subscribeDataRefreshMany(["dashboard"], loadSummary);
   }, []);
 
   const handleIncomeRangeChange = (range: TimeRange) => {

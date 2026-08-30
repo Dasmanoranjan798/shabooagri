@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import '../../../core/widgets/quick_action_bar.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../core/widgets/adaptive_scaffold.dart';
@@ -22,6 +23,7 @@ import '../data/dashboard_summary.dart';
 /// endpoint the website's Dashboard and Reports pages both already use.
 /// Replaces the old client-side "count locally-synced jobs" placeholder.
 final dashboardSummaryProvider = FutureProvider<DashboardSummary>((ref) async {
+  syncOn(ref, {SyncEntity.dashboard});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/dashboard/summary');
   return DashboardSummary.fromJson(response.data as Map<String, dynamic>);
@@ -33,6 +35,7 @@ final dashboardSummaryProvider = FutureProvider<DashboardSummary>((ref) async {
 /// three counts client-side (no dedicated warning-count endpoint exists on
 /// either platform).
 final _opsWarningCountsProvider = FutureProvider<(int service, int insurance, int license)>((ref) async {
+  syncOn(ref, {SyncEntity.maintenance, SyncEntity.dashboard});
   final machines = await ref.watch(machinesListProvider.future);
   final drivers = await ref.watch(driversListProvider.future);
   final company = await ref.watch(companyProfileProvider.future);

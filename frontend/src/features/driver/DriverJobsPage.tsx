@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { subscribeDataRefreshMany } from "../../lib/dataRefreshBus";
 import { Link } from "react-router-dom";
 import type { Job } from "../../types/job";
 import { api } from "../../lib/api";
@@ -45,7 +46,7 @@ export const DriverJobsPage: React.FC = () => {
  }
  }, []);
 
- useEffect(() => { load(); }, [load]);
+ useEffect(() => { load(); return subscribeDataRefreshMany(["jobs"], load); }, [load]);
 
  const today = new Date().toISOString().slice(0, 10);
 

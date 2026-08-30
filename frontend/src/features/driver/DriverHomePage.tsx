@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { subscribeDataRefreshMany } from "../../lib/dataRefreshBus";
 import "./driver-mobile.css";
 import { Link } from "react-router-dom";
 import type { Job } from "../../types/job";
@@ -163,7 +164,7 @@ export const DriverHomePage: React.FC = () => {
  }
  }, []);
 
- useEffect(() => { load(); }, [load]);
+ useEffect(() => { load(); return subscribeDataRefreshMany(["jobs"], load); }, [load]);
 
  const today = new Date().toISOString().slice(0, 10);
  const todayJobs = jobs.filter((j) => j.booking.scheduledDate === today && j.status !== "COMPLETED");

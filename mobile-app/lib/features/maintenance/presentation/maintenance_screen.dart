@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/layout/responsive.dart';
@@ -39,12 +40,14 @@ class MaintenanceRecord {
 }
 
 final maintenanceAlertsProvider = FutureProvider<List<MaintenanceAlert>>((ref) async {
+  syncOn(ref, {SyncEntity.maintenance});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/maintenance/alerts');
   return (response.data as List<dynamic>).map((j) => MaintenanceAlert.fromJson(j as Map<String, dynamic>)).toList();
 });
 
 final maintenanceRecordsProvider = FutureProvider<List<MaintenanceRecord>>((ref) async {
+  syncOn(ref, {SyncEntity.maintenance});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/maintenance/records');
   return (response.data as List<dynamic>).map((j) => MaintenanceRecord.fromJson(j as Map<String, dynamic>)).toList();

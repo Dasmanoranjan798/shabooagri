@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/layout/responsive.dart';
 import '../../../core/network/api_client.dart';
@@ -26,6 +27,7 @@ class MaintenanceSchedule {
 }
 
 final maintenanceSchedulesProvider = FutureProvider<List<MaintenanceSchedule>>((ref) async {
+  syncOn(ref, {SyncEntity.maintenance});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/maintenance/schedules');
   return (response.data as List<dynamic>).map((j) => MaintenanceSchedule.fromJson(j as Map<String, dynamic>)).toList();

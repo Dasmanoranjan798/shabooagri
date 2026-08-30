@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import '../models/company_profile.dart';
 import '../network/api_client.dart';
 
 final companyProfileProvider = FutureProvider<CompanyProfile>((ref) async {
+  syncOn(ref, {SyncEntity.settings});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/settings/profile');
   return CompanyProfile.fromJson(response.data as Map<String, dynamic>);

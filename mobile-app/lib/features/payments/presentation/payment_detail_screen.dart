@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -13,6 +14,7 @@ import '../data/receipt.dart';
 import 'payment_list_screen.dart';
 
 final receiptProvider = FutureProvider.family<Receipt, String>((ref, id) async {
+  syncOn(ref, {SyncEntity.payment, SyncEntity.invoice});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/invoices/$id/receipt');
   return Receipt.fromJson(response.data as Map<String, dynamic>);

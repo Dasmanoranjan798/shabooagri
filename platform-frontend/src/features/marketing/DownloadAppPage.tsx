@@ -59,8 +59,8 @@ export const DownloadAppPage: React.FC = () => {
                 </h3>
                 <div style={{ display: "flex", justifyContent: "center" }}>
                   <a
-                    href="/downloads/shabooagri-v0.8.4.apk"
-                    download="shabooagri-v0.8.4.apk"
+                    href="/downloads/shabooagri-v0.8.5.apk"
+                    download="shabooagri-v0.8.5.apk"
                     className="pf-btn pf-btn-primary"
                     style={{
                       textDecoration: "none",
@@ -70,7 +70,7 @@ export const DownloadAppPage: React.FC = () => {
                     }}
                   >
                     <Download size={20} />
-                    Download APK (v0.8.4)
+                    Download APK (v0.8.5)
                   </a>
                 </div>
               </div>
@@ -82,7 +82,7 @@ export const DownloadAppPage: React.FC = () => {
                   iPhone / iPad
                 </h3>
                 <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem", margin: 0 }}>
-                  <em>v0.8.4 submission pending. Will be available via TestFlight / App Store.</em>
+                  <em>v0.8.5 submission pending. Will be available via TestFlight / App Store.</em>
                 </p>
               </div>
 
@@ -159,7 +159,7 @@ export const DownloadAppPage: React.FC = () => {
                 }}
               >
                 <Info size={24} color="var(--color-primary)" />
-                What's New in v0.8.4
+                What's New in v0.8.5
               </h2>
               <ul
                 style={{
@@ -171,11 +171,11 @@ export const DownloadAppPage: React.FC = () => {
                   gap: 8,
                 }}
               >
-                <li>Complete quick-login PIN experience: set a PIN, then sign in with only your PIN</li>
-                <li>Create PIN and Forgot PIN flows, both verified by a one-time code — no old PIN needed</li>
-                <li>Manage your PIN any time from Settings &rsaquo; My Account &amp; Security</li>
+                <li>Live data everywhere: record a payment, booking or job and every open screen — dashboard KPIs, lists, ledgers, reports — updates instantly, no manual refresh</li>
+                <li>Changes made on one screen now flow through to all related screens automatically</li>
+                <li>Quick-login PIN: set a PIN, then sign in with only your PIN (Create &amp; Forgot PIN verified by a one-time code)</li>
                 <li>Full sign-in parity with the web app: password, PIN, and OTP</li>
-                <li>Bug fixes</li>
+                <li>Performance &amp; bug fixes</li>
               </ul>
               <div
                 style={{

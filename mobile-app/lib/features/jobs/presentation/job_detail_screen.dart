@@ -1,4 +1,5 @@
 import '../../../core/widgets/status_badge.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import '../../../core/theme/app_theme.dart';
 import 'dart:async';
 
@@ -18,16 +19,19 @@ import '../data/job_actions_repository.dart';
 import '../data/job_detail.dart';
 
 final jobDetailLiveProvider = FutureProvider.family<JobDetail, String>((ref, id) async {
+  syncOn(ref, {SyncEntity.job});
   return ref.watch(jobActionsRepositoryProvider).getById(id);
 });
 
 /// Only fetched while STOPPED (the one state the missing-photo/missing-fuel
 /// warning banners apply to) — see `_buildActionButtons`'s STOPPED case.
 final _jobFuelCountProvider = FutureProvider.family<int, String>((ref, id) async {
+  syncOn(ref, {SyncEntity.job, SyncEntity.fuel});
   return ref.watch(jobActionsRepositoryProvider).countFuelEntries(id);
 });
 
 final _jobPhotoCountProvider = FutureProvider.family<int, String>((ref, id) async {
+  syncOn(ref, {SyncEntity.job});
   return ref.watch(jobActionsRepositoryProvider).countPhotos(id);
 });
 
@@ -816,6 +820,7 @@ class _SetPricingDialogState extends ConsumerState<_SetPricingDialog> {
 }
 
 final _pricingMethodsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  syncOn(ref, {SyncEntity.pricingMethod});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/pricing-methods');
   return (response.data as List<dynamic>).cast<Map<String, dynamic>>();

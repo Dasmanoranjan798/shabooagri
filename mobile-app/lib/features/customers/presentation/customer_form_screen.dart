@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/layout/responsive.dart';
@@ -10,6 +11,7 @@ import '../../villages/presentation/village_list_screen.dart';
 import 'customer_list_screen.dart';
 
 final customerByIdProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
+  syncOn(ref, {SyncEntity.customer});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/customers/$id');
   return response.data as Map<String, dynamic>;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,7 @@ import '../data/team_models.dart';
 import 'team_screen.dart';
 
 final _rolesProvider = FutureProvider<List<RoleOption>>((ref) async {
+  syncOn(ref, {SyncEntity.team});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/rbac/roles');
   return (response.data as List<dynamic>).map((j) => RoleOption.fromJson(j as Map<String, dynamic>)).toList();

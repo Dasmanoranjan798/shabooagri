@@ -30,6 +30,8 @@ import type { CompanyProfile, UpdateCompanyProfilePayload } from "../types/setti
 import type { Role, Permission } from "../types/rbac";
 import type { TeamUser, StaffInvite, CreateInvitePayload, CreateInviteResponse, InviteVerifyResult } from "../types/team";
 
+import { notifyPathChanged } from "./dataRefreshBus";
+
 const TOKEN_KEY = "shabooagri_token";
 const REFRESH_TOKEN_KEY = "shabooagri_refresh_token";
 // Identifier (email/mobile) of the last user to authenticate on this device, so
@@ -123,6 +125,14 @@ async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Re
         clearStoredTokens();
       }
     }
+  }
+
+  // Global real-time sync: a successful mutation fans out to every page that
+  // shows the affected entities (cascade + dashboard/reports), so all open
+  // screens refetch authoritative data without a manual refresh. `url` is the
+  // request path (e.g. "/bookings", "/invoices/x/payments").
+  if (response.ok) {
+    notifyPathChanged(options.method ?? "GET", url);
   }
 
   return response;

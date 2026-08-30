@@ -5,6 +5,7 @@ import '../providers/session_provider.dart';
 import '../storage/local_storage.dart';
 import 'package:go_router/go_router.dart';
 import '../router/app_router.dart';
+import '../sync/data_sync.dart';
 
 /// Dio instance scoped to the current tenant. Rebuilds (cheap) whenever the
 /// company slug changes, e.g. right after the Company Setup screen saves it.
@@ -26,6 +27,11 @@ final apiClientProvider = Provider<Dio>((ref) {
   );
 
   dio.interceptors.add(_AuthInterceptor(dio, ref));
+
+  // Global real-time sync: every successful mutation bumps the affected
+  // entities' revisions, so all open screens that show related data refetch
+  // authoritative results from the backend — no manual per-screen refresh.
+  dio.interceptors.add(DataSyncInterceptor(ref));
 
   // Full request/response logging (headers + bodies) prints the Bearer token
   // and login/OTP payloads to the platform log. That is a development aid only

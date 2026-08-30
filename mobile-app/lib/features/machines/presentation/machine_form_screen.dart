@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/layout/responsive.dart';
@@ -18,6 +19,7 @@ class MachineTypeOption {
 }
 
 final machineTypesProvider = FutureProvider<List<MachineTypeOption>>((ref) async {
+  syncOn(ref, {SyncEntity.machine});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/machine-types');
   return (response.data as List<dynamic>).map((j) => MachineTypeOption.fromJson(j as Map<String, dynamic>)).toList();
@@ -28,6 +30,7 @@ final machineTypesProvider = FutureProvider<List<MachineTypeOption>>((ref) async
 /// fresh from the server rather than risk prefilling from stale/partial
 /// local data.
 final machineByIdProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
+  syncOn(ref, {SyncEntity.machine});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.get('/machines/$id');
   return response.data as Map<String, dynamic>;
