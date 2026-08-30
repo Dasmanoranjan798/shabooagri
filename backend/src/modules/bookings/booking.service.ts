@@ -160,6 +160,10 @@ export async function create(companyId: string, creatorId: string, input: Create
   }
 
   const booking = await bookingRepository.create(companyId, {
+    // Honour a client-authoritative offline id when supplied (the validator
+    // already accepts it) so an offline-created booking keeps a stable identity
+    // through sync; the server still assigns the authoritative bookingNumber.
+    ...(input.id ? { id: input.id } : {}),
     customerId: input.customerId,
     villageId: input.villageId,
     location: input.location,
