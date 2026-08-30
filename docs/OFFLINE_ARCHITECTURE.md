@@ -153,6 +153,35 @@ synced — only what has actually been downloaded is served.
 
 ---
 
+## 7b. Conflict-resolution policy (IMPLEMENTED, explicit)
+
+The backend is the business authority, so the policy is deliberately simple and
+safe rather than a general CRDT:
+
+- **Reads / pull → server-authoritative.** A cloud→device pull overwrites the
+  local *cached read* with the authoritative snapshot. The local cache never
+  overwrites the server.
+- **Local writes are never lost to a pull.** Pending writes live in the durable
+  outbox (separate from the read cache) and are flushed *before* a reconnect
+  pull (`pullAfterDrain`), so an authoritative snapshot can't erase a local
+  change that hasn't been sent yet.
+- **Creates → no conflict by construction.** Client-authoritative UUIDs mean two
+  devices creating offline always yield two distinct records; a replay of the
+  same op carries the same id + idempotency key, so the backend dedupes instead
+  of duplicating. A colliding id fails the unique constraint (never overwrites).
+- **Human business numbers → server-authoritative allocation.** Booking/invoice
+  numbers are minted by the backend atomically at create time; the client never
+  mints them, so two offline creates cannot collide. The stable client UUID lets
+  the server-assigned number reconcile back into the local record on the next
+  pull without breaking relationships.
+- **Financial records → strictest.** Idempotency key end-to-end; the client
+  never recomputes balances (server authority); "no response" is treated as
+  "maybe committed" and the same-key replay makes that safe.
+- **Concurrent edits to the same existing record** currently resolve as
+  server-authoritative on the next pull (last successful server write wins, and
+  local un-synced edits are applied on top when they sync). Field-level merge and
+  a user-visible conflict prompt are **not** implemented — see Phase 3 backlog.
+
 ## 8. Authentication offline (IMPLEMENTED / to audit in Phase 2)
 
 A previously authenticated session continues to work offline: the token is
@@ -190,6 +219,10 @@ and must be run on a device (see the remediation spec's 25-step checklist).
 | Reactive dependent-screen refresh | ✅ Implemented |
 | Cloud→device global pull | ✅ Implemented (`SyncPullService`, server-authoritative, flush-before-pull) |
 | Multi-user convergence (read side) | ✅ Implemented (re-pull on reconnect) |
-| Business-number conflict reconciliation | ⏳ Phase 2 (UUID identity foundation done; moot for booking numbers — server allocates atomically) |
-| Per-entity conflict policy | ⏳ Phase 2 |
+| Client-authoritative UUID identity | ✅ Implemented + live-verified (villages, customers, machines, drivers, employees, bookings); client injects id on offline create |
+| Business-number reconciliation | ✅ Implemented (server allocates atomically; stable client id reconciles the number via pull — live-verified graph) |
+| Explicit conflict policy | ✅ Documented + implemented (server-authoritative pull, flush-before-pull, idempotent creates/financials) |
+| Field-level merge / user-visible conflict prompt | ⏳ Phase 3 backlog |
+| Client-authoritative id for payments/invoices/expenses/manual-jobs | ⏳ Phase 3 (idempotency already protects them) |
+| True per-entity reactive drift streams | ⏳ Phase 3 (real-time bus achieves the no-refresh outcome today) |
 | Physical-device acceptance (4 platforms) | ⏳ Owner/device verification |
