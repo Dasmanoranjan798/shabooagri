@@ -4,6 +4,8 @@ const employmentStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 const compensationTypeSchema = z.enum(["HOURLY", "MONTHLY", "YEARLY"]);
 
 export const createEmployeeSchema = z.object({
+  // Client-authoritative offline id (see villages validator); optional + UUID.
+  id: z.string().uuid().optional(),
   name: z.string().min(1),
   phone: z.string().optional(),
   roleTitle: z.string().optional(),

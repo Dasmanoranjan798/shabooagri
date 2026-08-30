@@ -17,7 +17,7 @@ export async function getById(companyId: string, id: string) {
 }
 
 export function create(companyId: string, input: CreateVillageInput) {
-  return villageRepository.create(companyId, input.name);
+  return villageRepository.create(companyId, input.name, input.id);
 }
 
 export async function update(companyId: string, id: string, input: UpdateVillageInput) {

@@ -13,8 +13,8 @@ export function findByIdScoped(companyId: string, id: string) {
   return scoped.findByIdScoped(companyId, id);
 }
 
-export function create(companyId: string, name: string) {
-  return prisma.village.create({ data: { companyId, name } });
+export function create(companyId: string, name: string, id?: string) {
+  return prisma.village.create({ data: { ...(id ? { id } : {}), companyId, name } });
 }
 
 export function updateScoped(companyId: string, id: string, data: Prisma.VillageUncheckedUpdateInput) {

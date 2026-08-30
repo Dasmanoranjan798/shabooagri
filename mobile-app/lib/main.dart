@@ -7,6 +7,7 @@ import 'core/providers/session_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/storage/local_storage.dart';
 import 'core/sync/outbox.dart';
+import 'core/sync/sync_pull.dart';
 import 'core/sync/sync_status_banner.dart';
 
 Future<void> main() async {
@@ -47,6 +48,19 @@ Future<void> main() async {
   // session begin draining as soon as the device has a network path — the user
   // doesn't have to open any particular screen for a pending payment to sync.
   container.read(outboxServiceProvider);
+
+  // Bring cloud→device pull to life: warms the offline database at launch (if
+  // online) and re-converges on every reconnect (after the outbox drains).
+  container.read(syncPullServiceProvider);
+
+  // And pull the moment a user signs in, so a freshly-authenticated session has
+  // its data available offline without visiting every screen first. Covers all
+  // login paths (password / PIN / invite) at one shared point.
+  container.listen<AppUser?>(currentUserProvider, (prev, next) {
+    if (prev == null && next != null) {
+      container.read(syncPullServiceProvider).pullAll();
+    }
+  });
 
   runApp(
     UncontrolledProviderScope(

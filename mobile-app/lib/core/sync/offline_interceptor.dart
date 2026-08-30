@@ -140,7 +140,22 @@ class OfflineInterceptor extends Interceptor {
       try {
         final key = (o.headers['Idempotency-Key'] as String?) ?? const Uuid().v4();
         final entities = entitiesForPath(o.path);
-        final body = _decodeBody(o.data);
+        var body = _decodeBody(o.data);
+
+        // Client-authoritative identity: on an offline CREATE, stamp the body
+        // with a real client-generated UUID as `id` (the backend honours it).
+        // This gives the record a stable, globally-unique identity BEFORE it
+        // ever syncs — so it isn't replaced by a different server id on the next
+        // pull, and any relationship formed offline (e.g. a booking created for
+        // a just-created customer) still resolves after sync. The same id is
+        // used for the optimistic record the UI shows now.
+        String? clientId;
+        if (_isCreate(method, o.path) && body is Map && body['id'] == null) {
+          clientId = const Uuid().v4();
+          body = {...body, 'id': clientId};
+        } else if (body is Map && body['id'] is String) {
+          clientId = body['id'] as String;
+        }
 
         await _ref.read(outboxServiceProvider).enqueue(OutboxRequest(
               method: method,
@@ -151,7 +166,7 @@ class OfflineInterceptor extends Interceptor {
               idempotencyKey: key,
             ));
 
-        final optimistic = _optimisticBody(method, body);
+        final optimistic = _optimisticBody(method, body, clientId: clientId);
         // Reflect the change in local lists/detail immediately.
         await _patchCache(method, o.path, optimistic);
         // Refresh every open screen that shows the affected entities.
@@ -307,17 +322,36 @@ class OfflineInterceptor extends Interceptor {
     return data;
   }
 
+  /// True when this request creates a new record in a collection (as opposed to
+  /// a sub-resource action like `/jobs/:id/start` or `/bookings/:id/cancel`).
+  /// A create's last path segment is a known collection noun; an action's is a
+  /// verb, and an id-targeted mutation's is a UUID.
+  bool _isCreate(String method, String path) {
+    if (method.toUpperCase() != 'POST') return false;
+    final segs = path.split('?').first.split('/').where((s) => s.isNotEmpty).toList();
+    if (segs.isEmpty) return false;
+    return _collectionSegments.contains(segs.last);
+  }
+
+  static const _collectionSegments = {
+    'customers', 'villages', 'machines', 'drivers', 'employees',
+    'bookings', 'jobs', 'payments', 'invoices', 'expenses', 'maintenance',
+    'fuel', 'pricing-methods', 'machine-types',
+  };
+
   /// The body handed back to the caller (and appended to lists) for an offline
-  /// write. Echoes the request payload with a temporary client id and an
-  /// `offlinePending` marker so screens can badge unsynced rows if they wish.
-  dynamic _optimisticBody(String method, Object? body) {
+  /// write. Echoes the request payload, keyed by the stable client id when one
+  /// was assigned (so the optimistic row and the eventual server row share an
+  /// identity), plus an `offlinePending` marker so screens can badge unsynced
+  /// rows if they wish.
+  dynamic _optimisticBody(String method, Object? body, {String? clientId}) {
     if (method == 'DELETE') {
       return {'success': true, 'offlinePending': true};
     }
     final map = body is Map
         ? Map<String, dynamic>.from(body)
         : <String, dynamic>{};
-    map['id'] ??= 'offline-${const Uuid().v4()}';
+    map['id'] ??= clientId ?? 'offline-${const Uuid().v4()}';
     map['offlinePending'] = true;
     return map;
   }

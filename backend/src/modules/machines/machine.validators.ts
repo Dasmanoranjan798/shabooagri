@@ -4,6 +4,8 @@ const fuelTypeSchema = z.enum(["DIESEL", "PETROL", "ELECTRIC", "OTHER"]);
 const machineStatusSchema = z.enum(["WORKING", "AVAILABLE", "REPAIR", "OFFLINE"]);
 
 export const createMachineSchema = z.object({
+  // Client-authoritative offline id (see villages validator); optional + UUID.
+  id: z.string().uuid().optional(),
   machineTypeId: z.string().uuid(),
   registrationNumber: z.string().min(1),
   brand: z.string().optional(),

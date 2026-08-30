@@ -142,6 +142,29 @@ void main() {
     expect(names, containsAll(['Asha', 'Bhola']));
   });
 
+  test('(#8) an offline CREATE gets a stable client UUID id (not a temp offline- id)', () async {
+    adapter.online = false;
+    final resp = await dio.post('/customers', data: {'name': 'Bhola', 'villageId': 'v1'});
+    final id = resp.data['id'] as String;
+    // A real UUID (v4), not the placeholder "offline-..." scheme.
+    expect(id, matches(RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-')));
+    expect(id, isNot(startsWith('offline-')));
+
+    // The SAME id is what will be sent to the server (backend honours it), so
+    // identity is stable across sync.
+    final op = await db.select(db.outboxOps).getSingle();
+    final body = op.bodyJson!;
+    expect(body, contains(id));
+  });
+
+  test('(#8) an offline sub-resource ACTION is NOT given an id (only creates are)', () async {
+    adapter.online = false;
+    await dio.post('/jobs/job-1/start', data: {});
+    final op = await db.select(db.outboxOps).getSingle();
+    // No injected id for an action endpoint.
+    expect(op.bodyJson == null || !op.bodyJson!.contains('"id"'), isTrue);
+  });
+
   test('a real server error (not offline) is NOT queued — it propagates', () async {
     adapter.online = true;
     adapter.status = 400;

@@ -95,12 +95,22 @@ class OutboxService {
     return key;
   }
 
-  void _kickDrain() {
-    _drainChain = _drainChain.then((_) => drain());
+  void _kickDrain({bool immediate = false}) {
+    _drainChain = _drainChain.then((_) => drain(immediate: immediate));
   }
 
-  /// Awaits any in-flight/queued drain. For tests only — production code must
-  /// never block on this.
+  /// Kicks a drain onto the serialized chain and returns a future that
+  /// completes when it (and anything already queued ahead of it) finishes.
+  /// Used by the cloud→device pull service to flush local writes *before* it
+  /// overwrites the read cache with an authoritative snapshot, and by the
+  /// reconnect listener. Fire-and-forget is fine; awaiting is optional.
+  Future<void> flush({bool immediate = true}) {
+    _kickDrain(immediate: immediate);
+    return _drainChain;
+  }
+
+  /// Awaits any in-flight/queued drain. For tests only — production code should
+  /// use [flush].
   @visibleForTesting
   Future<void> get idle => _drainChain;
 
@@ -270,7 +280,7 @@ final outboxServiceProvider = Provider<OutboxService>((ref) {
   // `immediate` so a queued write attempts the instant the link is back, rather
   // than waiting out a backoff accrued while offline.
   ref.listen<bool>(isOnlineProvider, (prev, next) {
-    if (next) svc.drain(immediate: true);
+    if (next) svc.flush(immediate: true);
   }, fireImmediately: true);
   return svc;
 });
