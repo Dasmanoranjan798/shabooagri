@@ -79,7 +79,7 @@ void main() {
       addTearDown(container.dispose);
 
       // Keep the provider alive so dependency changes trigger a rebuild.
-      final sub = container.listen(probe, (_, __) {});
+      final sub = container.listen(probe, (_, _) {});
       addTearDown(sub.close);
 
       await container.read(probe.future);
