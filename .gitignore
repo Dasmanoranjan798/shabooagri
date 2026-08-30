@@ -23,3 +23,17 @@ tmp/
 # Mobile App — distributable binaries are published to the server, not committed
 platform-frontend/public/downloads/*.apk
 platform-frontend/public/downloads/*.exe
+
+# Local-only working files (kept out of the repo intentionally).
+# NOTE: docs/ and backend/scripts/ contain tracked files — ignore only the
+# specific untracked ones below, never the whole directory.
+/scripts/
+/backend/scripts/provision-review-account.ts
+/docs/mockups/
+/docs/ANTIGRAVITY_CLAUDE_SYNC.md
+/docs/CLEANUP.md
+/docs/DATABASE.md
+/docs/REQUIREMENTS.md
+/docs/SHABOOAGRI_CODEBASE_AUDIT.md
+/docs/STRUCTURE.md
+/docs/TESTING.md
