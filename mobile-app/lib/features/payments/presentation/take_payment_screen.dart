@@ -134,7 +134,7 @@ class _TakePaymentScreenState extends ConsumerState<TakePaymentScreen> {
            );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text(e.toString())),
+        error: (e, s) => Center(child: Text(apiErrorMessage(e))),
       ),
     );
   }

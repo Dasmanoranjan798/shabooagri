@@ -4,6 +4,7 @@ import "package:dio/dio.dart";
 import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../customers/presentation/customer_list_screen.dart';
@@ -97,7 +98,7 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
       }
       
       setState(() {
-        _error = 'Failed to create job: ${e.toString()}';
+        _error = apiErrorMessage(e, forRead: false);
         _saving = false;
       });
       return;
@@ -298,16 +299,16 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
                 ],
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, s) => Center(child: Text(e.toString())),
+              error: (e, s) => Center(child: Text(apiErrorMessage(e))),
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, s) => Center(child: Text(e.toString())),
+            error: (e, s) => Center(child: Text(apiErrorMessage(e))),
           ),
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text(e.toString())),
+          error: (e, s) => Center(child: Text(apiErrorMessage(e))),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text(e.toString())),
+        error: (e, s) => Center(child: Text(apiErrorMessage(e))),
       ),
     );
   }

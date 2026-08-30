@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shabooagri_mobile/core/sync/data_sync.dart';
+import 'package:shabooagri_mobile/core/network/api_error.dart';
 import '../../../core/widgets/quick_action_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -154,7 +155,7 @@ class _BookingListScreenState extends ConsumerState<BookingListScreen> {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(child: Text('Error: $error')),
+              error: (error, stack) => Center(child: Text(apiErrorMessage(error))),
             ),
           ),
         ],

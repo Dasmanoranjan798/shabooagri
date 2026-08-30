@@ -1,25 +1,23 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart';
-import 'package:uuid/uuid.dart';
 import '../database/database.dart';
 import '../network/api_client.dart';
 import '../providers/database_provider.dart';
-import '../services/sync_service.dart';
 
 final villageRepositoryProvider = Provider<VillageRepository>((ref) {
   final db = ref.watch(databaseProvider);
-  final syncService = ref.watch(syncServiceProvider);
   final dio = ref.watch(apiClientProvider);
-  return VillageRepository(db, syncService, dio);
+  return VillageRepository(db, dio);
 });
 
+/// Local-first read for villages. Offline writes go through the shared offline
+/// interceptor + durable outbox (the single sync engine).
 class VillageRepository {
   final AppDatabase _db;
-  final SyncService _syncService;
   final Dio _dio;
 
-  VillageRepository(this._db, this._syncService, this._dio);
+  VillageRepository(this._db, this._dio);
 
   Future<List<OfflineVillage>> getVillages() async {
     return await _db.select(_db.villages).get();
@@ -50,21 +48,4 @@ class VillageRepository {
     }
   }
 
-  Future<void> createVillageOffline(VillagesCompanion villageData) async {
-    final villageId = const Uuid().v4();
-    final newVillage = villageData.copyWith(
-      id: Value(villageId),
-      updatedAt: Value(DateTime.now()),
-    );
-
-    await _db.into(_db.villages).insert(newVillage);
-
-    final payload = {
-      'id': villageId,
-      'companyId': newVillage.companyId.value,
-      'name': newVillage.name.value,
-    };
-
-    await _syncService.enqueueSync('village', villageId, 'CREATE', payload);
-  }
 }

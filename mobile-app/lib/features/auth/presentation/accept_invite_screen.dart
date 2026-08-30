@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/network/api_error.dart';
 import '../../../core/repositories/auth_repository.dart';
 
 /// Staff/farmer invite activation — mirrors the website's
@@ -48,7 +49,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
     try {
       await action();
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = apiErrorMessage(e, forRead: false));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

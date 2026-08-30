@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shabooagri_mobile/core/database/database.dart';
+import 'package:shabooagri_mobile/core/network/api_error.dart';
 import 'package:shabooagri_mobile/core/providers/database_provider.dart';
 import 'package:shabooagri_mobile/core/sync/offline_interceptor.dart';
 import 'package:shabooagri_mobile/core/sync/outbox.dart';
@@ -93,12 +94,17 @@ void main() {
     expect((cached.data as List).first['name'], 'Asha');
   });
 
-  test('an offline GET with nothing cached surfaces the offline error', () async {
+  test('an offline GET with nothing cached surfaces a tagged OfflineNoData (not a raw error)', () async {
     adapter.online = false;
-    await expectLater(
-      dio.get('/villages'),
-      throwsA(isA<DioException>()),
-    );
+    try {
+      await dio.get('/villages');
+      fail('expected a DioException');
+    } on DioException catch (e) {
+      // Tagged so the shared error UX shows "not downloaded yet", never a raw
+      // SocketException / DioException string.
+      expect(e.error, isA<OfflineNoData>());
+      expect(apiErrorMessage(e).toLowerCase(), contains('downloaded'));
+    }
   });
 
   test('an offline write is queued and returns an optimistic success', () async {

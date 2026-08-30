@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/repositories/auth_repository.dart';
 import '../../../core/services/update_service.dart';
 import '../../../core/storage/local_storage.dart';
@@ -80,7 +81,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       await action();
     } catch (e) {
-      if (mounted) setState(() => _errorText = e.toString());
+      if (mounted) setState(() => _errorText = apiErrorMessage(e, forRead: false));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

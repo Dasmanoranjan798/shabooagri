@@ -1,25 +1,23 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart';
-import 'package:uuid/uuid.dart';
 import '../database/database.dart';
 import '../network/api_client.dart';
 import '../providers/database_provider.dart';
-import '../services/sync_service.dart';
 
 final jobRepositoryProvider = Provider<JobRepository>((ref) {
   final db = ref.watch(databaseProvider);
-  final syncService = ref.watch(syncServiceProvider);
   final dio = ref.watch(apiClientProvider);
-  return JobRepository(db, syncService, dio);
+  return JobRepository(db, dio);
 });
 
+/// Local-first read for jobs. Offline writes go through the shared offline
+/// interceptor + durable outbox (the single sync engine).
 class JobRepository {
   final AppDatabase _db;
-  final SyncService _syncService;
   final Dio _dio;
 
-  JobRepository(this._db, this._syncService, this._dio);
+  JobRepository(this._db, this._dio);
 
   Future<List<OfflineJob>> getJobs() async {
     return await _db.select(_db.jobs).get();
@@ -72,26 +70,4 @@ class JobRepository {
   double? _parseDouble(dynamic value) =>
       value == null ? null : (value is num ? value.toDouble() : double.tryParse(value.toString()));
 
-  Future<void> createJobOffline(JobsCompanion jobData) async {
-    final jobId = const Uuid().v4();
-    final newJob = jobData.copyWith(
-      id: Value(jobId),
-      isSynced: const Value(false),
-      updatedAt: Value(DateTime.now()),
-    );
-    
-    await _db.into(_db.jobs).insert(newJob);
-    
-    // Prepare payload for backend
-    final payload = {
-      'id': jobId,
-      'companyId': newJob.companyId.value,
-      'bookingId': newJob.bookingId.value,
-      'machineId': newJob.machineId.value,
-      'driverId': newJob.driverId.value,
-      'status': newJob.status.value,
-    };
-    
-    await _syncService.enqueueSync('job', jobId, 'CREATE', payload);
-  }
 }
