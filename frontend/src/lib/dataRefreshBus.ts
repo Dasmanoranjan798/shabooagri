@@ -120,12 +120,31 @@ export function topicsForPath(path: string): string[] {
   return [...out];
 }
 
+/// Sub-action segments that mean a POST is really a READ (a query whose filter
+/// travels in the body), e.g. `POST /invoices/filter`. Treating these as writes
+/// makes the bus invalidate the very page that issued the read, which reloads,
+/// which invalidates again — an infinite reload loop (the payments-ledger bug).
+const READ_ONLY_POST_SEGMENTS = new Set([
+  "filter", "search", "query", "analysis", "analytics",
+  "report", "reports", "summary", "export", "lookup", "preview",
+]);
+
+/// True when method+path is really a read despite using POST.
+export function isReadOnlyRequest(method: string, path: string): boolean {
+  if (method.toUpperCase() !== "POST") return false;
+  const segs = path.split("?")[0].split("/").filter(Boolean);
+  if (segs.length === 0) return false;
+  return READ_ONLY_POST_SEGMENTS.has(segs[segs.length - 1].toLowerCase());
+}
+
 /// Called by the HTTP layer after every successful non-GET request. Turns the
 /// request path into a cascade-aware refresh. Unrecognized writes still refresh
 /// the aggregate dashboard/reports rather than going silently stale.
 export function notifyPathChanged(method: string, path: string): void {
   const m = method.toUpperCase();
   if (m === "GET" || m === "HEAD" || m === "OPTIONS") return;
+  // A query-POST is a read: never let it invalidate the screen that issued it.
+  if (isReadOnlyRequest(m, path)) return;
   const topics = topicsForPath(path);
   notifyEntitiesChanged(topics.length ? topics : ["dashboard"]);
 }

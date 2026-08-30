@@ -67,12 +67,30 @@ class OfflineInterceptor extends Interceptor {
     }
   }
 
-  /// Full request key including query string, used both as the cache key and as
-  /// the replay path stored in the outbox.
+  /// Full request key including query string, used as the replay path stored in
+  /// the outbox.
   String _key(RequestOptions o) {
     final base = o.path.split('?').first;
     final q = o.uri.query;
     return q.isEmpty ? base : '$base?$q';
+  }
+
+  /// A GET, or a POST used purely as a query (e.g. `/invoices/filter`). Reads
+  /// are cached and served offline; they are never queued as writes.
+  bool _isRead(RequestOptions o) {
+    final m = o.method.toUpperCase();
+    return m == 'GET' || isReadOnlyRequest(m, o.path);
+  }
+
+  /// Cache key for a read. For a query-POST it folds in the request body, so two
+  /// different filters (e.g. status=PAID vs status=ALL) cache separately and a
+  /// stable key survives app restart.
+  String _readCacheKey(RequestOptions o) {
+    final k = _key(o);
+    if (o.method.toUpperCase() == 'GET') return k;
+    final d = o.data;
+    final body = d == null ? '' : (d is String ? d : jsonEncode(d));
+    return body.isEmpty ? k : '$k#$body';
   }
 
   @override
@@ -81,6 +99,7 @@ class OfflineInterceptor extends Interceptor {
     // attempt and any later offline replay share one key (dedupe safety).
     if (_isMutation(options.method) &&
         !_isAuthPath(options.path) &&
+        !isReadOnlyRequest(options.method, options.path) &&
         !options.headers.containsKey('Idempotency-Key')) {
       options.headers['Idempotency-Key'] = const Uuid().v4();
     }
@@ -91,9 +110,10 @@ class OfflineInterceptor extends Interceptor {
   void onResponse(Response response, ResponseInterceptorHandler handler) {
     final o = response.requestOptions;
     final status = response.statusCode ?? 0;
-    if (o.method.toUpperCase() == 'GET' && status >= 200 && status < 300) {
+    if (_isRead(o) && status >= 200 && status < 300) {
+      // Cache every read (GET or query-POST) so it can be served offline.
       // Best-effort — a cache write must never break a real response.
-      _cacheGet(_key(o), response.data);
+      _cacheGet(_readCacheKey(o), response.data);
     }
     handler.next(response);
   }
@@ -108,9 +128,9 @@ class OfflineInterceptor extends Interceptor {
       return;
     }
 
-    // ---- Offline GET: serve the last cached body -------------------------
-    if (method == 'GET') {
-      final cached = await _readCache(_key(o));
+    // ---- Offline READ (GET or query-POST): serve the last cached body ----
+    if (_isRead(o)) {
+      final cached = await _readCache(_readCacheKey(o));
       if (cached != null) {
         handler.resolve(Response(
           requestOptions: o,
