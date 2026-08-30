@@ -5,6 +5,18 @@ mobile app (`mobile-app/pubspec.yaml`); backend and web changes ship alongside
 the release they support. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.8.9+22] — 2026-08-30
+
+### Fixed
+- **Payments ledger stuck on "Loading…" (Android + web).** A POST used purely as
+  a read (`POST /invoices/filter`) was misclassified as a mutation by the
+  real-time refresh bus, so the payments screen invalidated and re-loaded itself
+  in an infinite loop. Query-POSTs (filter/search/query/analysis/report/summary/
+  export) are now treated as reads at the shared layer in both apps: they no
+  longer invalidate the screen that issued them, and offline they are cached and
+  served like a GET (never queued as a write). No financial logic or idempotency
+  guarantee was changed; real mutations still refresh screens.
+
 ## [0.8.8+21] — 2026-08-30
 
 Phase 2 + 3 of offline-first: genuine two-way sync and multi-user convergence.

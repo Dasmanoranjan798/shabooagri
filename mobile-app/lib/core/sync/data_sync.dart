@@ -95,6 +95,38 @@ const Map<String, SyncEntity> _segmentEntity = {
   'rbac': SyncEntity.team,
 };
 
+/// Sub-action segments that mean a request is a READ even though it uses POST.
+/// The backend exposes several *query* endpoints over POST (so a rich filter can
+/// travel in the body), e.g. `POST /invoices/filter`. These must NOT be treated
+/// as mutations: doing so makes the real-time bus invalidate the very screen
+/// that issued the read, which re-issues it, which invalidates again — an
+/// infinite reload loop that shows as an endless spinner (the payments-ledger
+/// bug). Kept as a shared classifier so the write-bus, the offline outbox and
+/// the offline read-cache all agree on what "a write" is.
+const Set<String> _readOnlyPostSegments = {
+  'filter',
+  'search',
+  'query',
+  'analysis',
+  'analytics',
+  'report',
+  'reports',
+  'summary',
+  'export',
+  'lookup',
+  'preview',
+};
+
+/// True when [method]+[path] is really a read, so it must not bump the sync bus
+/// or be queued as an offline write. Only POST is considered (GET/HEAD/OPTIONS
+/// are already reads; PUT/PATCH/DELETE are always writes).
+bool isReadOnlyRequest(String method, String path) {
+  if (method.toUpperCase() != 'POST') return false;
+  final segs = path.split('?').first.split('/').where((s) => s.isNotEmpty).toList();
+  if (segs.isEmpty) return false;
+  return _readOnlyPostSegments.contains(segs.last.toLowerCase());
+}
+
 /// Parses a request path into the set of entities it mutated. Returns an empty
 /// set only when nothing recognizable is found (the caller still refreshes the
 /// aggregates, so an unmapped write is safe rather than silently stale).
@@ -164,8 +196,15 @@ class DataSyncInterceptor extends Interceptor {
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
     final method = response.requestOptions.method.toUpperCase();
+    final path = response.requestOptions.path;
     final status = response.statusCode ?? 0;
-    final isMutation = method != 'GET' && method != 'HEAD' && method != 'OPTIONS';
+    // A POST used purely as a query (e.g. /invoices/filter) is a read, not a
+    // mutation — bumping the bus for it would invalidate the screen that just
+    // read, causing an infinite reload loop.
+    final isMutation = method != 'GET' &&
+        method != 'HEAD' &&
+        method != 'OPTIONS' &&
+        !isReadOnlyRequest(method, path);
     final isSuccess = status >= 200 && status < 300;
     if (isMutation && isSuccess) {
       // Never let a bookkeeping failure break a real API response.
