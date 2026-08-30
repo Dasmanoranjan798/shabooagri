@@ -15,13 +15,28 @@ part 'database.g.dart';
   Customers,
   Villages,
   SyncQueue,
+  OutboxOps,
+  HttpCache,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          // v2 adds the offline-first durable outbox + read cache. Purely
+          // additive — existing mirror tables and their data are untouched.
+          if (from < 2) {
+            await m.createTable(outboxOps);
+            await m.createTable(httpCache);
+          }
+        },
+      );
 }
 
 LazyDatabase _openConnection() {
