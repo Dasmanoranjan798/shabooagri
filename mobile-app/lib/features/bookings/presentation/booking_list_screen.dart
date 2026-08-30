@@ -67,7 +67,7 @@ class _BookingListScreenState extends ConsumerState<BookingListScreen> {
                 await Share.share(buffer.toString(), subject: 'Bookings Export');
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Export failed. Please try again.')));
                 }
               }
             },
