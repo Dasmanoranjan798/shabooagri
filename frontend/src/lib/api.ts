@@ -32,9 +32,27 @@ import type { TeamUser, StaffInvite, CreateInvitePayload, CreateInviteResponse, 
 
 const TOKEN_KEY = "shabooagri_token";
 const REFRESH_TOKEN_KEY = "shabooagri_refresh_token";
+// Identifier (email/mobile) of the last user to authenticate on this device, so
+// PIN quick-login needs only the PIN. The backend still resolves the user from
+// this identifier + the tenant host and enforces isolation — a PIN never
+// crosses companies. Convenience only, never a secret and never the PIN itself;
+// it intentionally outlives logout so a user can log out and quick-PIN back in.
+const PIN_IDENTIFIER_KEY = "shabooagri_pin_identifier";
 
 export function getStoredToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
+}
+
+export function getStoredPinIdentifier(): string | null {
+  return localStorage.getItem(PIN_IDENTIFIER_KEY);
+}
+
+export function setStoredPinIdentifier(identifier: string): void {
+  if (identifier.trim()) localStorage.setItem(PIN_IDENTIFIER_KEY, identifier.trim());
+}
+
+export function clearStoredPinIdentifier(): void {
+  localStorage.removeItem(PIN_IDENTIFIER_KEY);
 }
 
 export function getStoredRefreshToken(): string | null {
@@ -147,7 +165,25 @@ export const api = {
 
     const data: LoginResponse = await res.json();
     setStoredTokens(data.accessToken, data.refreshToken);
+    // Prime PIN quick-login for next time (both password and PIN logins).
+    setStoredPinIdentifier(identifier);
     return data;
+  },
+
+  // Create or reset the caller's own PIN — POST /auth/set-pin { pin }. Requires
+  // an authenticated session (a live session, or an OTP login moments earlier
+  // in the Create-PIN / Forgot-PIN flow). Returns the updated public user
+  // (hasPin=true, no PIN hash). The raw PIN is never persisted or logged.
+  async setPin(pin: string): Promise<{ message: string; user: User }> {
+    const res = await fetchWithAuth("/auth/set-pin", {
+      method: "POST",
+      body: JSON.stringify({ pin }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to save PIN" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to save PIN");
+    }
+    return res.json();
   },
 
   async requestOtp(identifier: string): Promise<{ message: string; devOtp?: string }> {
@@ -173,6 +209,9 @@ export const api = {
     }
     const data: LoginResponse = await res.json();
     setStoredTokens(data.accessToken, data.refreshToken);
+    // OTP login also proves this identifier belongs to the user — remember it
+    // so a PIN they set in this session can later be used PIN-only.
+    setStoredPinIdentifier(identifier);
     return data;
   },
 

@@ -27,6 +27,7 @@ interface AuthContextType {
   requestOtp: (identifier: string) => Promise<{ message: string; devOtp?: string }>;
   verifyOtp: (identifier: string, code: string) => Promise<void>;
   acceptInvite: (token: string, password: string) => Promise<void>;
+  setPin: (pin: string) => Promise<void>;
   logout: () => void;
   hasPermission: (permissionKey: string) => boolean;
 }
@@ -130,6 +131,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Create or reset the authenticated caller's own PIN. The backend returns the
+  // updated public user (hasPin=true); we reflect that authoritative state into
+  // context so any UI reading `user.hasPin` updates immediately.
+  const setPin = async (pin: string) => {
+    setError(null);
+    try {
+      const res = await api.setPin(pin);
+      setUser((prev) => (prev ? { ...prev, ...res.user } : res.user));
+    } catch (err: any) {
+      const message = err.message || "Failed to save PIN";
+      setError(message);
+      throw err;
+    }
+  };
+
   const logout = () => {
     api.logout();
     setUser(null);
@@ -159,6 +175,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         requestOtp,
         verifyOtp,
         acceptInvite,
+        setPin,
         logout,
         hasPermission,
       }}

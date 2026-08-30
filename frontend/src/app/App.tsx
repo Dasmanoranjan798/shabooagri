@@ -12,6 +12,7 @@ import { Spinner } from "../components/ui/Spinner";
 import { LoginPage } from "../features/auth/LoginPage";
 import { AcceptInvitePage } from "../features/auth/AcceptInvitePage";
 import { ResetPasswordPage } from "../features/auth/ResetPasswordPage";
+import { PinSetupPage } from "../features/auth/PinSetupPage";
 import { SsoExchangePage } from "../features/auth/SsoExchangePage";
 import { DashboardPage } from "../features/dashboard/DashboardPage";
 import { BookingsPage } from "../features/bookings/BookingsPage";
@@ -92,6 +93,7 @@ export function App() {
         <Routes>
           {/* Operational Login & Password Reset */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/pin-setup" element={<PinSetupPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/accept-invite" element={<AcceptInvitePage />} />
           <Route path="/sso" element={<SsoExchangePage />} />

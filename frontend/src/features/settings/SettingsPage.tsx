@@ -9,6 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 import { setCustomTerms } from "../../lib/terminology";
 import { setGlobalCompanyBranding, setGlobalCurrency } from "../../lib/theme";
 import { ChangePasswordCard } from "../../components/ChangePasswordCard";
+import { ChangePinCard } from "../../components/ChangePinCard";
 import {
   Settings,
   Building2,
@@ -779,7 +780,12 @@ export const SettingsPage: React.FC = () => {
         )}
 
         {/* TAB 4: MY ACCOUNT & SECURITY */}
-        {activeTab === "account" && <ChangePasswordCard />}
+        {activeTab === "account" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <ChangePasswordCard />
+            <ChangePinCard />
+          </div>
+        )}
       </div>
     </div>
   );

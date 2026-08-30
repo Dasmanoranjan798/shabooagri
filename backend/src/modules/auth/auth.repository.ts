@@ -169,3 +169,23 @@ export function updateUserPassword(userId: string, passwordHash: string) {
   });
 }
 
+// Set/replace a user's PIN hash. Mirrors updateUserPassword — the only place
+// the Auth module touches the pin_hash column outside registration. Returns
+// the updated row with the role graph so the caller can build the same public
+// user shape as /auth/me (hasPin included, hash stripped by toPublicUser).
+export function updateUserPin(userId: string, pinHash: string) {
+  return prisma.user.update({
+    where: { id: userId },
+    data: { pinHash },
+    include: {
+      role: {
+        include: {
+          rolePermissions: {
+            include: { permission: true },
+          },
+        },
+      },
+    },
+  });
+}
+

@@ -12,6 +12,7 @@ import {
   refreshSchema,
   registerSchema,
   requestPasswordResetSchema,
+  setPinSchema,
   ssoExchangeSchema,
   verifyPasswordResetTokenSchema,
 } from "./auth.validators";
@@ -101,6 +102,18 @@ export async function changePassword(req: Request, res: Response) {
   }
   const input = changePasswordSchema.parse(req.body);
   const result = await authService.changePassword(req.user.id, input);
+  res.status(200).json(result);
+}
+
+// Create or reset the caller's own PIN. Authenticated: the caller reaches here
+// either from a live session or right after an OTP login in the Create-PIN /
+// Forgot-PIN flow — so identity is already proven and no old PIN is needed.
+export async function setPin(req: Request, res: Response) {
+  if (!req.user) {
+    throw new AppError(401, "Not authenticated");
+  }
+  const input = setPinSchema.parse(req.body);
+  const result = await authService.setPin(req.user.id, input);
   res.status(200).json(result);
 }
 

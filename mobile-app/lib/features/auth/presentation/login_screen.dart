@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/repositories/auth_repository.dart';
 import '../../../core/services/update_service.dart';
+import '../../../core/storage/local_storage.dart';
 
 enum _LoginMode { password, pin, otp }
 
@@ -25,13 +26,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _otpSent = false;
   String? _errorText;
   String? _infoText;
+  // Identifier of the last user who signed in on this device (email/phone),
+  // remembered by AuthRepository so PIN mode can be PIN-only. Null on a device
+  // where nobody has a PIN set up yet. This is a convenience for the login
+  // form only — the authoritative PIN state lives on the backend and is checked
+  // there; a wrong/absent PIN is rejected server-side regardless.
+  String? _pinIdentifier;
 
   @override
   void initState() {
     super.initState();
+    _loadPinIdentifier();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(updateServiceProvider).checkForUpdates(context);
     });
+  }
+
+  Future<void> _loadPinIdentifier() async {
+    // A failed secure-storage read must never break the login form — fall back
+    // to no remembered identifier (password/OTP login stay fully available).
+    String? id;
+    try {
+      id = await PinLoginStorage.getIdentifier();
+    } catch (_) {
+      id = null;
+    }
+    if (mounted) setState(() => _pinIdentifier = id);
   }
 
   @override
@@ -67,12 +87,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    final repo = ref.read(authRepositoryProvider);
+
+    // PIN mode is PIN-only when a remembered identifier exists: the user types
+    // just the PIN and the backend resolves them from the remembered identifier
+    // + tenant subdomain. When there's no remembered identifier yet, PIN mode
+    // shows the Create-PIN prompt instead of this form, so we never reach here.
+    if (_mode == _LoginMode.pin) {
+      final pinIdentifier = _pinIdentifier;
+      if (pinIdentifier == null) return;
+      if (_pinController.text.trim().length < 4) {
+        setState(() => _errorText = 'Enter your 4-6 digit PIN.');
+        return;
+      }
+      await _run(() async {
+        final user = await repo.loginWithPin(pinIdentifier, _pinController.text.trim());
+        if (mounted) context.go(user.homeRoute);
+      });
+      return;
+    }
+
     final identifier = _identifierController.text.trim();
     if (identifier.isEmpty) {
       setState(() => _errorText = 'Enter your email or phone number.');
       return;
     }
-    final repo = ref.read(authRepositoryProvider);
 
     switch (_mode) {
       case _LoginMode.password:
@@ -86,15 +125,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         });
         break;
       case _LoginMode.pin:
-        if (_pinController.text.trim().length < 4) {
-          setState(() => _errorText = 'Enter your 4-6 digit PIN.');
-          return;
-        }
-        await _run(() async {
-          final user = await repo.loginWithPin(identifier, _pinController.text.trim());
-          if (mounted) context.go(user.homeRoute);
-        });
-        break;
+        break; // handled above
       case _LoginMode.otp:
         if (!_otpSent) {
           await _run(() async {
@@ -147,17 +178,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   onSelectionChanged: _busy ? null : (s) => _switchMode(s.first),
                 ),
                 const SizedBox(height: 20),
-                TextField(
-                  controller: _identifierController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email or Phone Number',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person),
+                // The identifier field is hidden in PIN mode: PIN login is
+                // PIN-only, keyed off the remembered identifier below.
+                if (_mode != _LoginMode.pin) ...[
+                  TextField(
+                    controller: _identifierController,
+                    decoration: const InputDecoration(
+                      labelText: 'Email or Phone Number',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.person),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                    enabled: !_busy && !(_mode == _LoginMode.otp && _otpSent),
                   ),
-                  keyboardType: TextInputType.emailAddress,
-                  enabled: !_busy && !(_mode == _LoginMode.otp && _otpSent),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
+                ],
+                // PIN mode, device with no PIN yet: prompt to create one rather
+                // than showing a login form that could only ever fail.
+                if (_mode == _LoginMode.pin && _pinIdentifier == null) ...[
+                  const Icon(Icons.dialpad, size: 40),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Set up a PIN for quick sign-in on this device. '
+                    "We'll verify your identity with a one-time code first.",
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                if (_mode == _LoginMode.pin && _pinIdentifier != null) ...[
+                  Text('Signing in as $_pinIdentifier',
+                      style: const TextStyle(fontWeight: FontWeight.w600), textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                ],
                 if (_mode == _LoginMode.password)
                   TextField(
                     controller: _passwordController,
@@ -167,7 +219,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     enabled: !_busy,
                     onSubmitted: (_) => _submit(),
                   ),
-                if (_mode == _LoginMode.pin)
+                if (_mode == _LoginMode.pin && _pinIdentifier != null)
                   TextField(
                     controller: _pinController,
                     decoration: const InputDecoration(
@@ -199,23 +251,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: Text(_errorText!, style: const TextStyle(color: Colors.red)),
                   ),
                 const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _busy ? null : _submit,
-                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-                  child: _busy
-                      ? const SizedBox(
-                          height: 20, width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : Text(
-                          _mode == _LoginMode.otp && !_otpSent ? 'SEND CODE' : 'LOGIN',
-                          style: const TextStyle(fontSize: 16)),
-                ),
+                if (_mode == _LoginMode.pin && _pinIdentifier == null)
+                  // No PIN on this device yet: primary action is Create PIN.
+                  ElevatedButton(
+                    onPressed: _busy ? null : () => context.push('/pin-setup'),
+                    style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                    child: const Text('CREATE PIN', style: TextStyle(fontSize: 16)),
+                  )
+                else
+                  ElevatedButton(
+                    onPressed: _busy ? null : _submit,
+                    style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                    child: _busy
+                        ? const SizedBox(
+                            height: 20, width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : Text(
+                            _mode == _LoginMode.otp && !_otpSent ? 'SEND CODE' : 'LOGIN',
+                            style: const TextStyle(fontSize: 16)),
+                  ),
                 const SizedBox(height: 8),
                 if (_mode == _LoginMode.password)
                   TextButton(
                     onPressed: _busy ? null : () => context.push('/reset-password'),
                     child: const Text('Forgot password?'),
                   ),
+                if (_mode == _LoginMode.pin && _pinIdentifier != null) ...[
+                  TextButton(
+                    onPressed: _busy ? null : () => context.push('/pin-setup?reset=1'),
+                    child: const Text('Forgot PIN?'),
+                  ),
+                  TextButton(
+                    onPressed: _busy ? null : () => context.push('/pin-setup'),
+                    child: const Text('Set up PIN for a different account'),
+                  ),
+                ],
                 if (_mode == _LoginMode.otp && _otpSent)
                   TextButton(
                     onPressed: _busy ? null : () => setState(() { _otpSent = false; _otpController.clear(); _infoText = null; }),

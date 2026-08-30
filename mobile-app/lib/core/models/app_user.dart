@@ -9,6 +9,9 @@ class AppUser {
   final String roleSystemKey; // "owner" | "manager" | "driver" | "farmer"
   final String roleName;
   final String status; // "ACTIVE" | "INACTIVE"
+  // Authoritative PIN state from the backend (`toPublicUser`'s `hasPin`) — the
+  // UI reads this instead of guessing PIN configuration from local storage.
+  final bool hasPin;
 
   const AppUser({
     required this.id,
@@ -19,6 +22,7 @@ class AppUser {
     required this.roleSystemKey,
     required this.roleName,
     this.status = 'ACTIVE',
+    this.hasPin = false,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
@@ -32,6 +36,7 @@ class AppUser {
       roleSystemKey: role['systemKey'] as String? ?? '',
       roleName: role['name'] as String? ?? '',
       status: json['status'] as String? ?? 'ACTIVE',
+      hasPin: json['hasPin'] as bool? ?? false,
     );
   }
 
@@ -43,6 +48,7 @@ class AppUser {
         'mobileNumber': mobileNumber,
         'role': {'systemKey': roleSystemKey, 'name': roleName},
         'status': status,
+        'hasPin': hasPin,
       };
 
   bool get isOwnerOrManager => roleSystemKey == 'owner' || roleSystemKey == 'manager';

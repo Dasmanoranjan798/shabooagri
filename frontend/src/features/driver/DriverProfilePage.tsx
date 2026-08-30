@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { ChangePasswordCard } from "../../components/ChangePasswordCard";
+import { ChangePinCard } from "../../components/ChangePinCard";
 import { Button } from "../../components/ui/Button";
 import { getTerm } from "../../lib/terminology";
 
@@ -82,6 +83,10 @@ export const DriverProfilePage: React.FC = () => {
 
  <div style={{ marginTop: "20px" }}>
  <ChangePasswordCard />
+ </div>
+
+ <div style={{ marginTop: "20px" }}>
+ <ChangePinCard />
  </div>
 
  <Button

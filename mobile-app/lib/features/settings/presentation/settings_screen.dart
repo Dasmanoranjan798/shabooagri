@@ -9,6 +9,7 @@ import '../../../core/providers/company_profile_provider.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/change_password_card.dart';
+import '../../../core/widgets/change_pin_card.dart';
 
 /// Settings Control Center — mirrors `SettingsPage.tsx`'s 4 tabs exactly.
 /// Gated server-side by `settings.manage` on the PATCH (confirmed
@@ -72,7 +73,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     _BusinessProfileTab(profile: profile, canManage: canManage),
                     _InvoicingTab(profile: profile, canManage: canManage),
                     _OperationsTab(profile: profile, canManage: canManage),
-                    const SingleChildScrollView(padding: EdgeInsets.all(16.0), child: ChangePasswordCard()),
+                    const SingleChildScrollView(
+                      padding: EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          ChangePasswordCard(),
+                          SizedBox(height: 16),
+                          ChangePinCard(),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
                 loading: () => const Center(child: CircularProgressIndicator()),

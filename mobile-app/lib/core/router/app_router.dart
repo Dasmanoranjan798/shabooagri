@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/auth/presentation/pin_setup_screen.dart';
 import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/auth/presentation/accept_invite_screen.dart';
 import '../../features/bookings/presentation/booking_detail_screen.dart';
@@ -73,6 +74,16 @@ GoRouter buildAppRouter(String initialLocation) {
         builder: (context, state) => ResetPasswordScreen(
           initialEmail: state.uri.queryParameters['email'],
           initialToken: state.uri.queryParameters['token'],
+        ),
+      ),
+      // Create / Forgot PIN wizard (identity via OTP, then set the PIN).
+      // ?reset=1 flips the wording to the Forgot-PIN variant; the flow is the
+      // same. Optional ?identifier= prefills the email/phone field.
+      GoRoute(
+        path: '/pin-setup',
+        builder: (context, state) => PinSetupScreen(
+          isReset: state.uri.queryParameters['reset'] == '1',
+          initialIdentifier: state.uri.queryParameters['identifier'],
         ),
       ),
       // Deep-link + in-app entry: the emailed/SMSed invite link is

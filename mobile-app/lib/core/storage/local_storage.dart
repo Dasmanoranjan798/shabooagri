@@ -109,6 +109,14 @@ class AuthStorage {
     return _user;
   }
 
+  /// Replaces the cached user profile (e.g. after the backend returns an
+  /// updated public user from set-pin) without touching the token pair.
+  static Future<void> updateUser(Map<String, dynamic> user) async {
+    await _ensureHydrated();
+    _user = user;
+    await _storage.write(key: _userKey, value: jsonEncode(user));
+  }
+
   static Future<void> clear() async {
     // Authoritatively empty in memory; mark hydrated so a subsequent read
     // never falls back to a (possibly flaky) disk read of just-deleted keys.
@@ -158,4 +166,22 @@ class ProfileStorage {
   static Future<String?> getProfileImagePath() => _storage.read(key: _profileImagePathKey);
 
   static Future<void> setProfileImagePath(String path) => _storage.write(key: _profileImagePathKey, value: path);
+}
+
+/// Remembers the identifier (email/phone) of the last user who authenticated on
+/// this device, so PIN quick-login needs only the PIN. The backend still
+/// authoritatively resolves the user from this identifier plus the tenant
+/// subdomain and enforces tenant isolation — a PIN never crosses companies. It
+/// is a device-local convenience, never a secret and NEVER the PIN itself; it
+/// intentionally survives logout so a user can log out and quick-PIN back in.
+/// Cleared only when the device is re-pointed at a different company (setup).
+class PinLoginStorage {
+  static const _identifierKey = 'pin_login_identifier';
+
+  static Future<String?> getIdentifier() => _storage.read(key: _identifierKey);
+
+  static Future<void> setIdentifier(String identifier) =>
+      _storage.write(key: _identifierKey, value: identifier);
+
+  static Future<void> clear() => _storage.delete(key: _identifierKey);
 }

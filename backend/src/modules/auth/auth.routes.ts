@@ -46,6 +46,11 @@ authRouter.post("/password-reset/confirm", asyncHandler(authController.confirmPa
 
 authRouter.post("/change-password", authMiddleware, asyncHandler(authController.changePassword));
 
+// Create/reset the caller's own PIN. Authenticated (a live session, or an OTP
+// login moments earlier in the Create-PIN/Forgot-PIN flow). Rate-limited on
+// top of the auth requirement to cap abuse of repeated PIN writes.
+authRouter.post("/set-pin", authMiddleware, resetRateLimiter, asyncHandler(authController.setPin));
+
 // Staff invite acceptance routes (public — invitee has no account yet)
 authRouter.post("/invite/verify-token", asyncHandler(staffInviteController.verifyToken));
 authRouter.post("/invite/accept", resetRateLimiter, asyncHandler(staffInviteController.accept));
