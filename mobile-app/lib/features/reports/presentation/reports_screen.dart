@@ -93,7 +93,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       );
       await Printing.sharePdf(bytes: await doc.save(), filename: 'shabooagri-report-$_range.pdf');
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Export failed. Please try again.')));
     } finally {
       if (mounted) setState(() => _exporting = false);
     }
@@ -108,7 +108,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       }
       await Share.share(buffer.toString(), subject: 'ShabooAgri Income Report ($_range)');
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Export failed. Please try again.')));
     } finally {
       if (mounted) setState(() => _exporting = false);
     }

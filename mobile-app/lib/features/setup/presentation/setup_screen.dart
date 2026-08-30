@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/storage/local_storage.dart';
 
@@ -65,9 +66,14 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
 
       if (!mounted) return;
       context.go('/login');
-    } catch (_) {
+    } catch (e) {
       setState(() {
-        _errorText = "Couldn't find a company with that ID. Check with your ShabooAgri admin.";
+        // Company setup genuinely needs the server (it validates the slug), so
+        // this is one of the few flows that can't complete offline — but say so
+        // honestly instead of blaming the company ID when the user is offline.
+        _errorText = isOfflineError(e)
+            ? "You're offline. Connect to the internet once to set up your company, then you can work offline."
+            : "Couldn't find a company with that ID. Check with your ShabooAgri admin.";
       });
     } finally {
       if (mounted) setState(() => _isChecking = false);
