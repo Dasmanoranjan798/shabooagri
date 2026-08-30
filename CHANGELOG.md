@@ -5,6 +5,31 @@ mobile app (`mobile-app/pubspec.yaml`); backend and web changes ship alongside
 the release they support. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.8.7+20] — 2026-08-30
+
+Phase 1 of the global offline-first remediation, after real-device testing
+showed ordinary screens still failing offline. Fixes at shared layers, not
+per-screen patches.
+
+### Added
+- **Global professional error UX** — every connectivity failure (connection
+  error/timeout, host lookup, socket) is translated to plain language; genuine
+  server errors still show the backend's real message. No screen can surface a
+  raw `DioException` / "Failed host lookup" anymore.
+- **First-run offline handling** — a never-synced screen shows "connect once to
+  download this" instead of a technical error or an endless spinner.
+- `docs/OFFLINE_ARCHITECTURE.md` documenting the offline/sync design and
+  honestly separating implemented (Phase 1) from planned (Phase 2).
+
+### Changed
+- **One sync engine** — removed the orphaned legacy `SyncService` + `SyncQueue`
+  (dead code that competed with the durable outbox); repositories keep only
+  their local SQLite read + API refresh.
+
+### Notes
+- Phase 2 (cloud→device pull, business-number conflict reconciliation,
+  per-entity conflict policy) is documented as pending, not yet implemented.
+
 ## [0.8.6+19] — 2026-08-30
 
 Production-grade **offline-first** across the mobile app. Every normal write
