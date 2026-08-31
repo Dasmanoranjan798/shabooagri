@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../network/api_client.dart';
+import '../storage/local_storage.dart';
 import '../repositories/booking_repository.dart';
 import '../repositories/customer_repository.dart';
 import '../repositories/driver_repository.dart';
@@ -57,6 +58,14 @@ class SyncPullService {
   /// fail and the interceptor keeps serving the last snapshot).
   Future<void> pullAll() async {
     if (_pulling) return;
+    // Cloud→device pull is authenticated, server-authoritative business data, so
+    // it only makes sense once this device has a session. On a fresh install the
+    // reconnect listener fires `fireImmediately` at launch while the user is
+    // still on Company Setup (no company, no token); pulling then would only
+    // send guaranteed-401 background traffic. Skip until there's a session — the
+    // login path (main.dart) re-invokes pullAll the moment one exists.
+    final token = await AuthStorage.getAccessToken();
+    if (token == null) return;
     _pulling = true;
     try {
       // Mirror-backed entities: refreshFromApi() upserts into the SQLite mirror

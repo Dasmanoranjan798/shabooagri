@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shabooagri_mobile/core/database/database.dart';
 import 'package:shabooagri_mobile/core/network/api_client.dart';
 import 'package:shabooagri_mobile/core/providers/database_provider.dart';
+import 'package:shabooagri_mobile/core/storage/local_storage.dart';
 import 'package:shabooagri_mobile/core/sync/offline_interceptor.dart';
 import 'package:shabooagri_mobile/core/sync/outbox.dart';
 import 'package:shabooagri_mobile/core/sync/sync_pull.dart';
@@ -62,6 +63,25 @@ class FakePullServer implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
+/// Counts every request that reaches the wire, so a test can assert that a
+/// signed-out pull sends nothing at all. Any request would return 401 in
+/// production (the very thing that triggered the redirect bug).
+class _CountingServer implements HttpClientAdapter {
+  final void Function() onRequest;
+  _CountingServer(this.onRequest);
+
+  @override
+  Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? s, Future<void>? c) async {
+    onRequest();
+    return ResponseBody.fromString('[]', 200, headers: {
+      Headers.contentTypeHeader: [Headers.jsonContentType],
+    });
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
 void main() {
   late AppDatabase db;
   late FakePullServer server;
@@ -69,6 +89,10 @@ void main() {
   late SyncPullService pull;
 
   setUp(() {
+    // Cloud→device pull runs only for a signed-in device; represent one so the
+    // token gate in pullAll() is satisfied (fresh-install/no-session behaviour
+    // is covered by its own test below).
+    AuthStorage.debugSetSession(accessToken: 'test-token');
     db = AppDatabase.forTesting(NativeDatabase.memory());
     server = FakePullServer();
     final rawDio = Dio(BaseOptions(baseUrl: 'https://demo.shabooagri.com'))..httpClientAdapter = server;
@@ -92,6 +116,7 @@ void main() {
     await o.idle;
     container.dispose();
     await db.close();
+    AuthStorage.debugReset();
   });
 
   test('(#1 #6) pullAll populates the local SQLite mirror for every core entity', () async {
@@ -154,6 +179,34 @@ void main() {
       reason: 'local write synced before the authoritative snapshot overwrote the cache',
     );
     expect((await db.select(db.customers).get()), isNotEmpty, reason: 'pull populated the mirror');
+  });
+
+  test('(fresh install) pullAll is a no-op with no session — fires ZERO requests', () async {
+    // Regression: on a fresh install the reconnect listener fires pullAll at
+    // launch while the user is still on Company Setup (no company, no token).
+    // Those unauthenticated GETs returned 401, and the auth interceptor's
+    // 401→/login redirect kicked the user off Setup to Sign In the instant the
+    // launch pull's round-trip landed. pullAll must not run at all without a
+    // session, so no such request (and no redirect) can happen.
+    AuthStorage.debugSetSession(); // signed out
+    var requests = 0;
+    final countingServer = _CountingServer(() => requests++);
+    final signedOutContainer = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+      apiClientProvider.overrideWith((ref) {
+        final d = Dio(BaseOptions(baseUrl: 'https://demo.shabooagri.com'))..httpClientAdapter = countingServer;
+        d.interceptors.add(OfflineInterceptor(ref));
+        return d;
+      }),
+      outboxServiceProvider.overrideWith((ref) => OutboxService(db, Dio()..httpClientAdapter = countingServer, ref)),
+    ]);
+    addTearDown(signedOutContainer.dispose);
+    final signedOutPull = signedOutContainer.read(Provider((ref) => SyncPullService(ref)));
+
+    await signedOutPull.pullAll();
+
+    expect(requests, 0, reason: 'no authenticated pull traffic before login');
+    expect((await db.select(db.customers).get()), isEmpty);
   });
 
   test('offline pullAll is a safe no-op (keeps last snapshot, never throws)', () async {

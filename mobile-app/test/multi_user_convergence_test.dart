@@ -11,6 +11,7 @@ import 'package:path/path.dart' as p;
 import 'package:shabooagri_mobile/core/database/database.dart';
 import 'package:shabooagri_mobile/core/network/api_client.dart';
 import 'package:shabooagri_mobile/core/providers/database_provider.dart';
+import 'package:shabooagri_mobile/core/storage/local_storage.dart';
 import 'package:shabooagri_mobile/core/sync/offline_interceptor.dart';
 import 'package:shabooagri_mobile/core/sync/outbox.dart';
 import 'package:shabooagri_mobile/core/sync/sync_pull.dart';
@@ -142,6 +143,11 @@ class SimDevice {
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
+  // These simulate signed-in devices; satisfy pullAll()'s session gate (the
+  // signed-out no-op is covered in sync_pull_test).
+  setUp(() => AuthStorage.debugSetSession(accessToken: 'test-token'));
+  tearDown(AuthStorage.debugReset);
 
   test('MOST IMPORTANT: two-device offline/online convergence, no loss/overwrite/dup', () async {
     final backend = FakeBackend();
