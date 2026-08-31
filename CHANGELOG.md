@@ -5,6 +5,26 @@ mobile app (`mobile-app/pubspec.yaml`); backend and web changes ship alongside
 the release they support. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.8.11+24] — 2026-08-31
+
+### Fixed
+- **Fresh-install Company Setup jumped to Sign In while typing the Company ID
+  (Android).** The screen itself never navigated on keystroke — the cause was a
+  global auth-failure redirect firing for background sync. On a fresh install
+  (no company, no session) the cloud→device pull service fired at launch, sent
+  unauthenticated GETs to the apex host, and every one returned `401`; the Dio
+  auth interceptor treated that 401 as an expired session and force-navigated to
+  `/login`. The round-trip landed a second or two after launch — right as the
+  user began typing — so it looked keystroke-triggered. Two fixes: (1) the
+  interceptor now only clears the session and redirects to `/login` on a 401 for
+  a request that actually carried a token (a real expired session); a 401 on a
+  tokenless request is the normal "not signed in yet" state and passes through
+  untouched, protecting every pre-auth screen (Company Setup, Sign In, PIN setup,
+  reset, accept-invite). (2) `SyncPullService.pullAll()` is a no-op with no
+  session, so no authenticated pull traffic runs before login. One cross-platform
+  codebase, backend stays authoritative, existing APIs reused — no changes to
+  iOS/Windows/macOS behaviour and no Android-specific flow.
+
 ## [0.8.9+22] — 2026-08-30
 
 ### Fixed

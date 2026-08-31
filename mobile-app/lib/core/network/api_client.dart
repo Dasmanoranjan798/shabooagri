@@ -102,6 +102,20 @@ class _AuthInterceptor extends Interceptor {
       return;
     }
 
+    // A 401 on a request that never carried a token is NOT an expired session —
+    // it's the normal "not signed in yet" state. This happens on every pre-auth
+    // screen (Company Setup, Sign In, PIN setup, reset/accept-invite) and for
+    // background sync that fires before login. `onRequest` only attaches an
+    // Authorization header when a token exists, so its absence means there was
+    // no session to lose. Pass the error straight through: never clear stored
+    // auth and never force-navigate to /login, or the Setup screen gets kicked
+    // to Sign In the moment launch-time sync gets its (expected) 401.
+    final hadSession = err.requestOptions.headers.containsKey('Authorization');
+    if (!hadSession) {
+      handler.next(err);
+      return;
+    }
+
     if (_isRefreshing) {
       // Queue the failed request to be retried after refresh
       _retryQueue.add(err.requestOptions);

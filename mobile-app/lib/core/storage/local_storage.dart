@@ -140,6 +140,22 @@ class AuthStorage {
     _user = null;
     _hydrated = false;
   }
+
+  /// Seeds the in-memory session for tests WITHOUT touching the platform
+  /// secure-storage channel (which isn't mocked under flutter_test). Marks the
+  /// cache authoritative so getters never fall back to disk. Not used in
+  /// production. Pass all-null to represent a signed-out (fresh-install) device.
+  @visibleForTesting
+  static void debugSetSession({
+    String? accessToken,
+    String? refreshToken,
+    Map<String, dynamic>? user,
+  }) {
+    _accessToken = accessToken;
+    _refreshToken = refreshToken;
+    _user = user;
+    _hydrated = true;
+  }
 }
 
 /// Mirrors `DashboardPage.tsx`'s `OPS_WARNING_DISMISS_KEY` — the "Hide for
