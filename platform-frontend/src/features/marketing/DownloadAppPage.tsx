@@ -59,8 +59,8 @@ export const DownloadAppPage: React.FC = () => {
                 </h3>
                 <div style={{ display: "flex", justifyContent: "center" }}>
                   <a
-                    href="/downloads/shabooagri-v0.8.9.apk"
-                    download="shabooagri-v0.8.9.apk"
+                    href="/downloads/shabooagri-v0.8.10.apk"
+                    download="shabooagri-v0.8.10.apk"
                     className="pf-btn pf-btn-primary"
                     style={{
                       textDecoration: "none",
@@ -70,7 +70,7 @@ export const DownloadAppPage: React.FC = () => {
                     }}
                   >
                     <Download size={20} />
-                    Download APK (v0.8.5)
+                    Download APK (v0.8.10)
                   </a>
                 </div>
               </div>
@@ -82,7 +82,7 @@ export const DownloadAppPage: React.FC = () => {
                   iPhone / iPad
                 </h3>
                 <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem", margin: 0 }}>
-                  <em>v0.8.5 submission pending. Will be available via TestFlight / App Store.</em>
+                  <em>v0.8.10 submission pending. Will be available via TestFlight / App Store.</em>
                 </p>
               </div>
 
@@ -159,7 +159,7 @@ export const DownloadAppPage: React.FC = () => {
                 }}
               >
                 <Info size={24} color="var(--color-primary)" />
-                What's New in v0.8.5
+                What's New in v0.8.10
               </h2>
               <ul
                 style={{
@@ -171,10 +171,11 @@ export const DownloadAppPage: React.FC = () => {
                   gap: 8,
                 }}
               >
+                <li>Works offline: view your data and record payments, bookings and jobs with no internet — everything syncs automatically when you reconnect, with no duplicates or lost entries</li>
+                <li>Fixed the Payments ledger getting stuck on "Loading…"</li>
+                <li>Clearer sign-in: sign-in errors now tell you exactly what went wrong, and you can see and switch which company this device is connected to</li>
                 <li>Live data everywhere: record a payment, booking or job and every open screen — dashboard KPIs, lists, ledgers, reports — updates instantly, no manual refresh</li>
-                <li>Changes made on one screen now flow through to all related screens automatically</li>
-                <li>Quick-login PIN: set a PIN, then sign in with only your PIN (Create &amp; Forgot PIN verified by a one-time code)</li>
-                <li>Full sign-in parity with the web app: password, PIN, and OTP</li>
+                <li>Quick-login PIN and full sign-in parity with the web app: password, PIN, and OTP</li>
                 <li>Performance &amp; bug fixes</li>
               </ul>
               <div
