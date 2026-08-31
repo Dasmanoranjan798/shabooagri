@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/providers/session_provider.dart';
 import '../../../core/repositories/auth_repository.dart';
 import '../../../core/services/update_service.dart';
 import '../../../core/storage/local_storage.dart';
@@ -62,6 +63,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _pinController.dispose();
     _otpController.dispose();
     super.dispose();
+  }
+
+  // The device is set up for one company (its subdomain is the API base URL).
+  // If the person in front of the phone belongs to a *different* company, their
+  // real credentials will be rejected with a 401 that looks exactly like a wrong
+  // password — so give them a way to see and switch the company. This clears the
+  // per-device slug and returns to Company Setup; it does NOT touch any pending
+  // offline outbox data, which is keyed to whatever company it was created under.
+  Future<void> _changeCompany() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Change company?'),
+        content: const Text(
+          "You'll be asked for your company ID again. Use this only if you're "
+          'signing in to a different ShabooAgri company on this device.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Change')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await TenantStorage.clear();
+    ref.read(tenantSlugProvider.notifier).state = null;
+    if (mounted) context.go('/setup');
   }
 
   void _switchMode(_LoginMode m) {
@@ -168,7 +196,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               children: [
                 const Text('Sign In',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-                const SizedBox(height: 24),
+                // Which company this device is connected to. Shown so a person
+                // whose account is in a different company can tell at a glance
+                // why their (correct) credentials are being rejected, and fix it.
+                Builder(builder: (context) {
+                  final slug = ref.watch(tenantSlugProvider);
+                  if (slug == null || slug.isEmpty) return const SizedBox(height: 8);
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Company: $slug',
+                          style: const TextStyle(fontSize: 13, color: Colors.grey),
+                          textAlign: TextAlign.center,
+                        ),
+                        TextButton(
+                          onPressed: _busy ? null : _changeCompany,
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            minimumSize: const Size(0, 32),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text('Not your company? Change'),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                const SizedBox(height: 16),
                 SegmentedButton<_LoginMode>(
                   segments: const [
                     ButtonSegment(value: _LoginMode.password, label: Text('Password')),

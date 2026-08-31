@@ -2,6 +2,15 @@ import 'dart:io' show SocketException;
 
 import 'package:dio/dio.dart';
 
+/// An exception that already carries a clear, user-facing message — one that was
+/// deliberately composed for display (e.g. `AuthException`). [apiErrorMessage]
+/// surfaces its [message] verbatim instead of collapsing it to a generic
+/// fallback, so intentional copy like "Incorrect email/phone or password" is
+/// never masked.
+abstract class UserFacingError implements Exception {
+  String get message;
+}
+
 /// Sentinel attached by the offline interceptor to a GET that failed because the
 /// device is offline AND nothing was ever cached for that screen (first-run /
 /// never-synced). Lets [apiErrorMessage] show the right professional copy —
@@ -53,6 +62,11 @@ bool isOfflineError(Object? error) {
 /// [forRead] tailors the offline copy: a read that has no local data yet says
 /// "not downloaded", while a failed action says "saved and will retry".
 String apiErrorMessage(Object error, {bool forRead = true}) {
+  // An error that was already given a deliberate, user-facing message (e.g. an
+  // auth failure phrased for the sign-in screen). Surface it verbatim — never
+  // collapse intentional copy into the generic fallback below.
+  if (error is UserFacingError) return error.message;
+
   // Offline, and this screen has never been synced to the device.
   if (error is OfflineNoData ||
       (error is DioException && error.error is OfflineNoData)) {

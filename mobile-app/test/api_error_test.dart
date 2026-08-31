@@ -6,6 +6,14 @@ import 'package:shabooagri_mobile/core/network/api_error.dart';
 
 RequestOptions _ro() => RequestOptions(path: '/customers');
 
+/// Stands in for AuthException without importing the auth layer: any
+/// UserFacingError must have its message surfaced verbatim.
+class _FakeAuthError implements UserFacingError {
+  @override
+  final String message;
+  _FakeAuthError(this.message);
+}
+
 void main() {
   group('apiErrorMessage — no raw technical exceptions ever leak', () {
     test('a Failed host lookup (offline) becomes professional copy', () {
@@ -63,6 +71,22 @@ void main() {
     test('forRead:false gives the "saved and will sync" copy for a failed action', () {
       final e = DioException(requestOptions: _ro(), type: DioExceptionType.connectionError);
       expect(apiErrorMessage(e, forRead: false).toLowerCase(), contains('sync'));
+    });
+  });
+
+  group('UserFacingError — deliberate messages are surfaced verbatim', () {
+    // A regression guard: auth flows throw AuthException (a UserFacingError)
+    // rather than a DioException, and its message is composed for the user
+    // ("Incorrect email/phone or password."). apiErrorMessage must NOT collapse
+    // that into the generic fallback — doing so masked the real login failure.
+    test('surfaces the message of a UserFacingError, not the generic fallback', () {
+      final e = _FakeAuthError('Incorrect email/phone or password.');
+      expect(apiErrorMessage(e, forRead: false), 'Incorrect email/phone or password.');
+      expect(apiErrorMessage(e), isNot(contains('Something went wrong')));
+    });
+
+    test('a bare Exception (not user-facing) still gets the generic fallback', () {
+      expect(apiErrorMessage(Exception('boom')), 'Something went wrong. Please try again.');
     });
   });
 

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/app_user.dart';
 import '../network/api_client.dart';
+import '../network/api_error.dart';
 import '../providers/session_provider.dart';
 import '../storage/local_storage.dart';
 
@@ -9,7 +10,8 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(ref);
 });
 
-class AuthException implements Exception {
+class AuthException implements UserFacingError {
+  @override
   final String message;
   AuthException(this.message);
   @override
