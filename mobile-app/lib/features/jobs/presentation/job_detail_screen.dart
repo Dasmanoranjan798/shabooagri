@@ -46,6 +46,7 @@ class JobDetailScreen extends ConsumerStatefulWidget {
 
 class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTickerProviderStateMixin {
   Timer? _ticker;
+  Timer? _poll;
   late AnimationController _pulseController;
   late Animation<double> _animation;
   bool _acting = false;
@@ -61,12 +62,36 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
   @override
   void dispose() {
     _ticker?.cancel();
+    _poll?.cancel();
     _pulseController.dispose();
     _acresController.dispose();
     super.dispose();
   }
 
-  void _ensureTicker(String status) {
+  /// Non-terminal statuses can still be changed by *another* device
+  /// (Owner/Manager/Driver on their own phone). While the job is in any of
+  /// these states this screen must keep reconciling against the authoritative
+  /// server state; once COMPLETED/CANCELLED the state is frozen and there is
+  /// nothing left to reconcile.
+  static const _liveStatuses = {'NOT_STARTED', 'WORKING', 'PAUSED', 'STOPPED'};
+
+  /// Drives two independent timers off the authoritative status:
+  ///
+  ///  * the 1-second **render** tick — only while WORKING, purely so the
+  ///    locally-derived elapsed counter (recomputed from the server's
+  ///    `startTime`, never an independent stopwatch) advances smoothly;
+  ///
+  ///  * the 5-second **poll** — while the job is in any non-terminal state,
+  ///    re-fetches `GET /jobs/:id` so a transition made on another device
+  ///    (Start/Pause/Resume/Stop/Submit) is reflected here automatically with
+  ///    no manual refresh. Because every control, badge and the timer freeze
+  ///    are driven by `job.status`, reconciling the fetched status updates the
+  ///    whole screen; if another device completes/stops the job, the WORKING
+  ///    render tick is cancelled here on the next poll and the timer freezes at
+  ///    the authoritative final duration. Riverpod keeps the previous data on
+  ///    screen during the refetch (skipLoadingOnRefresh), so there is no
+  ///    spinner flash.
+  void _syncTimers(String status) {
     if (status == 'WORKING') {
       _ticker ??= Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() {});
@@ -74,6 +99,16 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
     } else {
       _ticker?.cancel();
       _ticker = null;
+    }
+
+    if (_liveStatuses.contains(status)) {
+      _poll ??= Timer.periodic(const Duration(seconds: 5), (_) {
+        // Don't fight an action that's mid-flight; it refreshes on completion.
+        if (mounted && !_acting) _refresh();
+      });
+    } else {
+      _poll?.cancel();
+      _poll = null;
     }
   }
 
@@ -92,8 +127,16 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
       await action();
       _refresh();
     } catch (e) {
+      // Always reconcile against the authoritative server state after a failed
+      // action — most importantly when another device changed the job first
+      // (a stale Start/Pause/Resume/Stop the backend safely rejected). Without
+      // this the screen would keep showing the contradictory stale state.
+      _refresh();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+        final message = isJobStateConflict(e)
+            ? 'This job was updated by another user. The latest job status has been loaded.'
+            : apiErrorMessage(e);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
       }
     } finally {
       if (mounted) setState(() => _acting = false);
@@ -376,7 +419,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
 
     final content = jobAsync.when(
         data: (job) {
-          _ensureTicker(job.status);
+          _syncTimers(job.status);
           final elapsedSec = job.status == 'WORKING' ? job.elapsedSecondsNow() : null;
           final liveAmount = elapsedSec != null ? job.liveAmountFor(elapsedSec) : null;
 

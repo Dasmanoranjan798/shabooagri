@@ -50,6 +50,24 @@ bool isOfflineError(Object? error) {
   return false;
 }
 
+/// True when [error] is the backend rejecting a job lifecycle action because
+/// the job's authoritative status already moved on — i.e. another device
+/// (Owner/Manager/Driver) changed the job first. The backend guards every
+/// transition with `assertStatus` (`job.service.ts`), which 400s with
+/// `Cannot {action} a job that is currently {STATUS}`. This is the existing
+/// optimistic-concurrency mechanism (a status state-machine, not a version
+/// integer): a stale Start/Pause/Resume/Stop/Submit is always safely rejected.
+/// Detecting it lets the Job Details screen replace the raw rejection with a
+/// clear "updated by another user" message and reconcile to the latest state,
+/// instead of leaving the user on a contradictory stale screen.
+bool isJobStateConflict(Object? error) {
+  if (error is! DioException) return false;
+  if (error.response?.statusCode != 400) return false;
+  final data = error.response?.data;
+  final msg = (data is Map && data['error'] is String) ? data['error'] as String : '';
+  return msg.contains('a job that is currently');
+}
+
 /// Turns any thrown error into a clear, professional, user-facing message.
 ///
 /// A normal user must NEVER see `DioException`, `SocketException`,

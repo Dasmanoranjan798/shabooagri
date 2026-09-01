@@ -5,6 +5,33 @@ mobile app (`mobile-app/pubspec.yaml`); backend and web changes ship alongside
 the release they support. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.8.12+25] — 2026-09-01
+
+### Fixed
+- **Job Execution V2 cross-device state went stale between phones.** When one
+  authorized device (Manager/Owner/Driver) had a job open and *another* device
+  changed it — Start/Pause/Resume/Stop/Complete — the first device kept showing
+  the old status and kept its timer running. If it then acted on that stale
+  state the backend correctly rejected it ("Cannot stop a job that is currently
+  COMPLETED"), but the screen never reconciled, so two phones could contradict
+  each other. Root cause was purely cross-device transport, not calculation: the
+  backend `jobs` row was already the single source of truth and the timer was
+  already derived from the server's `startTime` (not an independent stopwatch),
+  but the real-time invalidation bus is in-process only — it bumps on *this*
+  device's own mutations, and there was no server push or polling, so a second
+  device never learned of a transition. Fix, entirely client-side, reusing the
+  existing REST + provider architecture (no backend change, no schema/version
+  column, no second source of truth, no change to any pricing/duration
+  calculation): while a Job Details screen is open on a non-terminal job it now
+  polls `GET /jobs/:id` every 5s and reconciles the authoritative status —
+  controls, badges and the timer-freeze are all `status`-driven, so another
+  device's Stop/Complete freezes this device's timer at the authoritative final
+  duration automatically; the driver home's active-job card reconciles the same
+  way. Any failed lifecycle action now refetches server state and, on a
+  stale-state rejection, shows "This job was updated by another user. The latest
+  job status has been loaded." The backend's `assertStatus` state-machine remains
+  the (already-existing) concurrency guard that safely rejects stale mutations.
+
 ## [0.8.11+24] — 2026-08-31
 
 ### Fixed
