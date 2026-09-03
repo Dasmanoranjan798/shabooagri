@@ -706,6 +706,23 @@ model TransportType {
   @@map("transport_types")
 }
 
+// Company-scoped master of pause reasons shown in the Live Job "Why are you
+// pausing?" dropdown. Managed as data (not hardcoded in the client): Owner/
+// Manager can add new reasons, which then appear for everyone. Mirrors the
+// TransportType master pattern. Resume has NO reason — the pause reason on the
+// JobStatusLog is the record the Owner reviews.
+model PauseReason {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  label     String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([companyId, label])
+  @@map("pause_reasons")
+}
+
 // A structured transportation charge attached to a job/booking — separate
 // from the harvesting work timer and from work pricing. total = trips ×
 // ratePerTrip (computed and stored). Optional and added before submit; the
