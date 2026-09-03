@@ -17,6 +17,13 @@ jobRouter.get("/", asyncHandler(jobController.list));
 jobRouter.get("/:id", asyncHandler(jobController.getById));
 jobRouter.get("/:id/fuel-entries", asyncHandler(jobController.listFuelEntries));
 jobRouter.get("/:id/photos", asyncHandler(jobController.listPhotos));
+// Work-session history, assignment-change audit, transportation, and the
+// customer-facing work summary — all reads, scoped inside job.service like
+// getById (Owner/Manager see all, Driver own jobs, Farmer own booking's job).
+jobRouter.get("/:id/work-sessions", asyncHandler(jobController.listWorkSessions));
+jobRouter.get("/:id/assignment-changes", asyncHandler(jobController.listAssignmentChanges));
+jobRouter.get("/:id/work-summary", asyncHandler(jobController.workSummary));
+jobRouter.get("/:id/transport", asyncHandler(jobController.listTransportCharges));
 
 // No POST / — a Job is only ever created internally by booking.service.ts
 // the instant a Booking is saved. Every write below is gated by
@@ -51,3 +58,13 @@ jobRouter.post(
   asyncHandler(jobController.addPhoto),
 );
 jobRouter.post("/manual", requirePermission("booking.create"), asyncHandler(jobController.createManualJob));
+
+// Machine/Driver reassignment while PAUSED — gated by the existing
+// assignment permissions (Manager/Owner), not job.update_status. The service
+// additionally enforces that the job must be PAUSED and requires a reason.
+jobRouter.post("/:id/machine", requirePermission("machine.assign"), asyncHandler(jobController.changeMachine));
+jobRouter.post("/:id/driver", requirePermission("driver.assign"), asyncHandler(jobController.changeDriver));
+
+// Transportation: an optional structured charge added before final submission.
+jobRouter.post("/:id/transport", requirePermission("job.update_status"), asyncHandler(jobController.addTransportCharge));
+jobRouter.delete("/:id/transport/:chargeId", requirePermission("job.update_status"), asyncHandler(jobController.deleteTransportCharge));

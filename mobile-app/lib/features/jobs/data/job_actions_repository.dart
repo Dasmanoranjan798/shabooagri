@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import 'job_detail.dart';
+import 'job_execution_models.dart';
 
 final jobActionsRepositoryProvider = Provider<JobActionsRepository>((ref) {
   final dio = ref.watch(apiClientProvider);
@@ -39,8 +40,10 @@ class JobActionsRepository {
     return JobDetail.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<JobDetail> pause(String id) async {
-    final response = await _dio.post('/jobs/$id/pause');
+  /// Pause now requires a reason (Job Execution V2). Pausing releases the
+  /// machine/driver and closes the current work session server-side.
+  Future<JobDetail> pause(String id, String reason) async {
+    final response = await _dio.post('/jobs/$id/pause', data: {'note': reason});
     return JobDetail.fromJson(response.data as Map<String, dynamic>);
   }
 
@@ -99,5 +102,66 @@ class JobActionsRepository {
   Future<JobDetail> updateNotes(String id, String notes) async {
     final response = await _dio.patch('/jobs/$id', data: {'notes': notes});
     return JobDetail.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  // ---- Job Execution V2: reassignment, history, transportation -------------
+  // Reason is mandatory; only valid while PAUSED and for authorised users
+  // (backend enforces both). The new resource is not occupied until Resume.
+  Future<JobDetail> changeMachine(String id, String machineId, String reason) async {
+    final response = await _dio.post('/jobs/$id/machine', data: {'machineId': machineId, 'reason': reason});
+    return JobDetail.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<JobDetail> changeDriver(String id, String driverId, String reason) async {
+    final response = await _dio.post('/jobs/$id/driver', data: {'driverId': driverId, 'reason': reason});
+    return JobDetail.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<List<JobWorkSession>> listWorkSessions(String id) async {
+    final response = await _dio.get('/jobs/$id/work-sessions');
+    return (response.data as List<dynamic>).map((s) => JobWorkSession.fromJson(s as Map<String, dynamic>)).toList();
+  }
+
+  Future<List<JobAssignmentChange>> listAssignmentChanges(String id) async {
+    final response = await _dio.get('/jobs/$id/assignment-changes');
+    return (response.data as List<dynamic>).map((c) => JobAssignmentChange.fromJson(c as Map<String, dynamic>)).toList();
+  }
+
+  Future<List<JobTransportCharge>> listTransportCharges(String id) async {
+    final response = await _dio.get('/jobs/$id/transport');
+    return (response.data as List<dynamic>).map((c) => JobTransportCharge.fromJson(c as Map<String, dynamic>)).toList();
+  }
+
+  /// total is computed server-side (trips × rate) — never sent by the client.
+  Future<void> addTransportCharge(String id, String transportTypeId, int trips, double ratePerTrip) async {
+    await _dio.post('/jobs/$id/transport', data: {
+      'transportTypeId': transportTypeId,
+      'trips': trips,
+      'ratePerTrip': ratePerTrip,
+    });
+  }
+
+  Future<void> deleteTransportCharge(String jobId, String chargeId) async {
+    await _dio.delete('/jobs/$jobId/transport/$chargeId');
+  }
+
+  Future<List<TransportType>> listTransportTypes() async {
+    final response = await _dio.get('/transport-types');
+    return (response.data as List<dynamic>).map((t) => TransportType.fromJson(t as Map<String, dynamic>)).toList();
+  }
+
+  Future<List<ResourceOption>> listMachines() async {
+    final response = await _dio.get('/machines');
+    return (response.data as List<dynamic>)
+        .map((m) => ResourceOption(id: m['id'] as String, label: m['registrationNumber'] as String? ?? 'Machine'))
+        .toList();
+  }
+
+  Future<List<ResourceOption>> listDrivers() async {
+    final response = await _dio.get('/drivers');
+    return (response.data as List<dynamic>).map((d) {
+      final employee = d['employee'] as Map<String, dynamic>?;
+      return ResourceOption(id: d['id'] as String, label: employee?['name'] as String? ?? 'Driver');
+    }).toList();
   }
 }

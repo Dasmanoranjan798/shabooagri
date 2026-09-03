@@ -9,7 +9,7 @@ import type {
   UpdateBookingPayload,
   VillageOption,
 } from "../types/booking";
-import type { Job, JobFuelEntry, JobPhoto, StopJobPayload, SubmitJobPayload, UpdateJobPayload } from "../types/job";
+import type { Job, JobFuelEntry, JobPhoto, StopJobPayload, SubmitJobPayload, UpdateJobPayload, JobWorkSession, JobAssignmentChange, JobWorkSummary, JobTransportCharge, AddTransportChargePayload, TransportType } from "../types/job";
 import type { Machine, MachineType, CreateMachinePayload, UpdateMachinePayload } from "../types/machine";
 import type { Driver, CreateDriverPayload, UpdateDriverPayload } from "../types/driver";
 import type { Customer, CreateCustomerPayload, UpdateCustomerPayload } from "../types/customer";
@@ -847,6 +847,98 @@ export const api = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Failed to cancel job" }));
       throw new ApiError(res.status, (err.error || err.message) || "Failed to cancel job");
+    }
+    return res.json();
+  },
+
+  // ---- Job Execution V2: PAUSED reassignment, work history, transportation --
+  // Reason is mandatory (backend 400s without it); only valid while PAUSED and
+  // for users with machine.assign / driver.assign (backend 403s otherwise).
+  async changeJobMachine(id: string, machineId: string, reason: string): Promise<Job> {
+    const res = await fetchWithAuth(`/jobs/${id}/machine`, {
+      method: "POST",
+      body: JSON.stringify({ machineId, reason }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to change machine" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to change machine");
+    }
+    return res.json();
+  },
+
+  async changeJobDriver(id: string, driverId: string, reason: string): Promise<Job> {
+    const res = await fetchWithAuth(`/jobs/${id}/driver`, {
+      method: "POST",
+      body: JSON.stringify({ driverId, reason }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to change driver" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to change driver");
+    }
+    return res.json();
+  },
+
+  async listJobWorkSessions(id: string): Promise<JobWorkSession[]> {
+    const res = await fetchWithAuth(`/jobs/${id}/work-sessions`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load work sessions" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load work sessions");
+    }
+    return res.json();
+  },
+
+  async listJobAssignmentChanges(id: string): Promise<JobAssignmentChange[]> {
+    const res = await fetchWithAuth(`/jobs/${id}/assignment-changes`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load assignment history" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load assignment history");
+    }
+    return res.json();
+  },
+
+  async getJobWorkSummary(id: string): Promise<JobWorkSummary> {
+    const res = await fetchWithAuth(`/jobs/${id}/work-summary`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load work summary" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load work summary");
+    }
+    return res.json();
+  },
+
+  async listJobTransportCharges(id: string): Promise<JobTransportCharge[]> {
+    const res = await fetchWithAuth(`/jobs/${id}/transport`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load transportation" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load transportation");
+    }
+    return res.json();
+  },
+
+  async addJobTransportCharge(id: string, payload: AddTransportChargePayload): Promise<JobTransportCharge> {
+    const res = await fetchWithAuth(`/jobs/${id}/transport`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to add transportation" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to add transportation");
+    }
+    return res.json();
+  },
+
+  async deleteJobTransportCharge(id: string, chargeId: string): Promise<void> {
+    const res = await fetchWithAuth(`/jobs/${id}/transport/${chargeId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to remove transportation" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to remove transportation");
+    }
+  },
+
+  async listTransportTypes(): Promise<TransportType[]> {
+    const res = await fetchWithAuth(`/transport-types`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Failed to load transport types" }));
+      throw new ApiError(res.status, (err.error || err.message) || "Failed to load transport types");
     }
     return res.json();
   },

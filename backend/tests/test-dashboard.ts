@@ -387,6 +387,7 @@ async function runTests() {
     // (created solely for this run), so it's safe to clear by companyId.
     if (fuelEntry) await prisma.jobFuelEntry.deleteMany({ where: { id: fuelEntry.id } });
     if (job) await prisma.jobStatusLog.deleteMany({ where: { jobId: job.id } });
+    if (job) await prisma.jobWorkSession.deleteMany({ where: { jobId: job.id } });
     if (payment) await prisma.payment.deleteMany({ where: { id: payment.id } });
     if (invoice) await prisma.invoice.deleteMany({ where: { id: invoice.id } });
     if (job) await prisma.job.deleteMany({ where: { id: job.id } });

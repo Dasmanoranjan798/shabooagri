@@ -74,6 +74,79 @@ export interface Job {
   photos?: JobPhoto[];
 }
 
+// ---- Job Execution V2: work sessions, assignment changes, transportation ----
+
+// One continuous WORKING interval (Machine+Driver+duration). Read-only; the
+// backend is authoritative. Used to build the Job Timeline and per-resource
+// attribution — never reconstruct history from the job's current machine/driver.
+export interface JobWorkSession {
+  id: string;
+  jobId: string;
+  machineId: string;
+  driverId: string;
+  startedAt: string;
+  endedAt: string | null;
+  durationSec: number | null;
+  machine?: { id: string; registrationNumber: string } | null;
+  driver?: { id: string; employee: { id: string; name: string } } | null;
+}
+
+export interface JobAssignmentChange {
+  id: string;
+  jobId: string;
+  field: "MACHINE" | "DRIVER";
+  oldMachineId: string | null;
+  newMachineId: string | null;
+  oldDriverId: string | null;
+  newDriverId: string | null;
+  reason: string;
+  changedBy: string;
+  changedAt: string;
+}
+
+export interface TransportType {
+  id: string;
+  companyId: string;
+  name: string;
+  isActive: boolean;
+}
+
+export interface JobTransportCharge {
+  id: string;
+  jobId: string;
+  bookingId: string;
+  transportTypeId: string | null;
+  transportTypeName: string;
+  trips: number;
+  ratePerTrip: number;
+  totalAmount: number;
+  recordedBy: string;
+  recordedAt: string;
+  notes: string | null;
+}
+
+export interface AddTransportChargePayload {
+  transportTypeId?: string;
+  transportTypeName?: string;
+  trips: number;
+  ratePerTrip: number;
+  notes?: string;
+}
+
+// Server-computed per-resource attribution + transport totals for a job.
+export interface JobWorkSummary {
+  jobId: string;
+  bookingNumber: string;
+  status: JobStatus;
+  actualHours: number;
+  totalWorkedSeconds: number;
+  sessionCount: number;
+  perDriver: Array<{ driverId: string; driverName: string; seconds: number; hours: number }>;
+  perMachine: Array<{ machineId: string; registrationNumber: string; seconds: number; hours: number }>;
+  transportTotal: number;
+  transportChargeCount: number;
+}
+
 export interface StopJobPayload {
   endTime?: string;
   actualHours?: number;

@@ -34,6 +34,55 @@ steps matching the mockup's two separate confirmations:
   photo/fuel-log checks, generates the invoice, and is the actual point
   of no return — once submitted, only the Owner can edit the job.
 
+## Resource occupancy, reassignment, work-session history & transportation (Job Execution V2)
+
+**Resource occupancy — only WORKING occupies.** A physical Machine and a
+Driver may each be on only ONE active job at a time, where *active* =
+`ACTIVE_RESOURCE_OCCUPANCY = [WORKING]` (`job.repository.ts`). **PAUSED does
+NOT occupy** — pausing releases the Machine and Driver so another booking can
+start on them meanwhile. NOT_STARTED/STOPPED/COMPLETED/CANCELLED hold nothing.
+Creating a *booking* for a busy resource stays allowed (that soft warning lives
+at booking creation); the hard rule is enforced at **Start and Resume**.
+
+- **`start()` / `resume()`** both run their check-and-flip in one
+  `prisma.$transaction` that first locks the Machine and Driver rows
+  `FOR UPDATE` (machine-then-driver, a fixed order → no deadlock), then rejects
+  with **409** (naming the exact blocking booking) if either resource is
+  WORKING elsewhere. This serialises two devices racing to activate jobs that
+  share a resource — exactly one wins. `resume()` re-checks availability from
+  scratch: a resource free when the job paused may have been taken since.
+- **Reassignment while PAUSED** — `changeMachine()` / `changeDriver()`
+  (routes `POST /jobs/:id/machine|driver`, gated by `machine.assign` /
+  `driver.assign`) let an authorised Manager/Owner swap the Machine/Driver of a
+  **PAUSED** job (never while WORKING). A **reason is required**; each change is
+  audited in `job_assignment_changes` (old, new, reason, user, time). The new
+  resource is not considered occupied until the job actually resumes.
+
+**Work sessions (`job_work_sessions`)** — one row per continuous WORKING
+interval, opened on start/resume and closed on pause/stop, recording exactly
+which Machine + Driver did that stretch. A job whose resources changed mid-way
+keeps a truthful per-resource history. The **sum of a job's session durations
+equals its `actualHours`** — the existing duration/pricing calculation is
+unchanged; sessions only make the same worked time *attributable*. Driver pay
+(`driverCompensation.service`) and machine utilisation (`jobReport.service`)
+attribute each job's authoritative `actualHours` across its sessions
+proportionally to per-resource session time — **never** from the job's current
+`machineId`/`driverId`, so a reassignment can't misattribute history. Jobs with
+no sessions (MANUAL entries, pre-feature legacy) fall back to the current FK.
+
+**Transportation (`job_transport_charges` + `transport_types`)** — an optional,
+structured charge on the same job (`POST /jobs/:id/transport`), separate from
+the harvesting timer: `total = trips × ratePerTrip` (server-computed). Added
+before submit; at submit the invoice `totalAmount = work subtotal + Σ transport`
+(new `invoices.transport_amount` column), so work vs transport stay a clean
+two-line breakdown. Transport types are a company-configurable master
+(`/transport-types`, seeded Tractor/Tipper/Pickup/Trailer/Truck). **Pause now
+requires a reason** (`pauseJobSchema`) — clients must send one.
+
+Read endpoints for the timeline/reports: `GET /jobs/:id/work-sessions`,
+`/assignment-changes`, `/transport`, `/work-summary` (per-driver & per-machine
+hours + transport totals, from history).
+
 ## Architecture
 
 ```

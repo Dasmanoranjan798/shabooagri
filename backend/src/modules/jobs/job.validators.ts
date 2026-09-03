@@ -10,8 +10,37 @@ export const startJobSchema = z.object({
   startTime: z.coerce.date().optional(),
 });
 
+// A pause reason is REQUIRED (Part 6): the client sends the chosen quick-pick
+// category, or the free-text explanation when "Other" is picked. The backend
+// only enforces non-empty; the "Other ⇒ explanation" rule is a client concern
+// (whatever text arrives is what gets stored in the pause's JobStatusLog note).
 export const pauseJobSchema = z.object({
-  note: z.string().optional(),
+  note: z.string().trim().min(1, "A reason is required to pause"),
+});
+
+// Reassigning a PAUSED job's Machine/Driver (Parts 7/8). Reason mandatory,
+// same non-empty rule as pause/resume.
+export const changeMachineSchema = z.object({
+  machineId: z.string().uuid(),
+  reason: z.string().trim().min(1, "A reason is required to change the machine"),
+});
+
+export const changeDriverSchema = z.object({
+  driverId: z.string().uuid(),
+  reason: z.string().trim().min(1, "A reason is required to change the driver"),
+});
+
+// Transportation is a separate, optional, structured charge on the same job
+// (Parts 16-21). total is computed server-side as trips × ratePerTrip — the
+// client's value is never trusted for money.
+export const addTransportChargeSchema = z.object({
+  // Prefer a configured transport type; a free-text name is accepted as a
+  // fallback so the master list never blocks recording a real charge.
+  transportTypeId: z.string().uuid().optional(),
+  transportTypeName: z.string().trim().min(1).optional(),
+  trips: z.coerce.number().int().positive(),
+  ratePerTrip: z.coerce.number().nonnegative(),
+  notes: z.string().optional(),
 });
 
 // Required, unlike pause's note: resuming from a pause must state why the
@@ -89,6 +118,9 @@ export const createManualJobSchema = z.object({
 
 export type StartJobInput = z.infer<typeof startJobSchema>;
 export type PauseJobInput = z.infer<typeof pauseJobSchema>;
+export type ChangeMachineInput = z.infer<typeof changeMachineSchema>;
+export type ChangeDriverInput = z.infer<typeof changeDriverSchema>;
+export type AddTransportChargeInput = z.infer<typeof addTransportChargeSchema>;
 export type ResumeJobInput = z.infer<typeof resumeJobSchema>;
 export type StopJobInput = z.infer<typeof stopJobSchema>;
 export type SubmitJobInput = z.infer<typeof submitJobSchema>;

@@ -94,8 +94,15 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
               : (todayJobs.isNotEmpty ? todayJobs.first : null);
           final upcomingJobs = jobs.where((j) => j.scheduledDate != null && j.scheduledDate!.isAfter(DateTime(now.year, now.month, now.day))).toList();
 
+          // Re-fetch the authoritative job list every 5s so a transition made
+          // on another device (a Manager/Owner starting, pausing, resuming or
+          // stopping this driver's job) is reconciled here automatically — the
+          // active-job card status and its elapsed counter (derived from the
+          // server's startTime, not an independent stopwatch) both follow the
+          // refetched state. Riverpod keeps the current list on screen during
+          // the refetch, so there is no spinner flash.
           _ticker ??= Timer.periodic(const Duration(seconds: 5), (_) {
-            if (mounted && activeJob?.status == 'WORKING') setState(() {});
+            if (mounted) ref.invalidate(jobsListProvider);
           });
 
           return RefreshIndicator(

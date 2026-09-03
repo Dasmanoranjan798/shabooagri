@@ -185,6 +185,7 @@ async function runPricingTests() {
   await prisma.payment.deleteMany({ where: { companyId: company.id } });
   await prisma.invoice.deleteMany({ where: { companyId: company.id } });
   await prisma.jobStatusLog.deleteMany({ where: { companyId: company.id } });
+  await prisma.jobWorkSession.deleteMany({ where: { companyId: company.id } });
   await prisma.job.deleteMany({ where: { companyId: company.id } });
   await prisma.booking.deleteMany({ where: { companyId: company.id } });
   await prisma.machine.deleteMany({ where: { companyId: company.id } });

@@ -109,4 +109,36 @@ void main() {
       expect(isOfflineError(e), isFalse);
     });
   });
+
+  group('isJobStateConflict — another device changed the job first', () {
+    DioException conflict(String message) => DioException(
+          requestOptions: _ro(),
+          response: Response(requestOptions: _ro(), statusCode: 400, data: {'error': message}),
+          type: DioExceptionType.badResponse,
+        );
+
+    test('true for the backend assertStatus rejection of a stale action', () {
+      // Manager acts on WORKING (v12) after Owner already completed it (v13):
+      // the backend's status state-machine safely rejects the stale mutation.
+      expect(isJobStateConflict(conflict('Cannot stop a job that is currently COMPLETED')), isTrue);
+      expect(isJobStateConflict(conflict('Cannot pause a job that is currently STOPPED')), isTrue);
+      expect(isJobStateConflict(conflict('Cannot resume a job that is currently WORKING')), isTrue);
+    });
+
+    test('false for an unrelated validation error (still shows its real copy)', () {
+      expect(isJobStateConflict(conflict('Assign a machine and driver before starting this job')), isFalse);
+      expect(isJobStateConflict(conflict('Phone number already exists')), isFalse);
+    });
+
+    test('false for a non-400 and for non-Dio errors', () {
+      final notFound = DioException(
+        requestOptions: _ro(),
+        response: Response(requestOptions: _ro(), statusCode: 404, data: {'error': 'a job that is currently gone'}),
+        type: DioExceptionType.badResponse,
+      );
+      expect(isJobStateConflict(notFound), isFalse);
+      expect(isJobStateConflict(Exception('a job that is currently WORKING')), isFalse);
+      expect(isJobStateConflict(const OfflineNoData()), isFalse);
+    });
+  });
 }

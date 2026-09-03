@@ -1,4 +1,4 @@
-import type { JobStatus } from "@prisma/client";
+import type { JobStatus, Prisma } from "@prisma/client";
 import { prisma } from "../../db/prisma";
 import type { AuthenticatedUser } from "../auth/auth.types";
 import * as fuelService from "../fuel/fuel.service";
@@ -8,15 +8,19 @@ import { AppError } from "../../shared/errors/AppError";
 import { assertNoNonVoidedPayments } from "../../shared/utils/dependencyGuard";
 import * as jobPhotoRepository from "./jobPhoto.repository";
 import * as jobRepository from "./job.repository";
+import * as jobWorkSessionRepository from "./jobWorkSession.repository";
+import * as jobAssignmentChangeRepository from "./jobAssignmentChange.repository";
+import * as jobTransportChargeRepository from "./jobTransportCharge.repository";
 import * as bookingRepository from "../bookings/booking.repository";
 import * as jobStatusLogRepository from "./jobStatusLog.repository";
 import * as customerService from "../customers/customer.service";
 import * as driverService from "../drivers/driver.service";
 import * as machineService from "../machines/machine.service";
+import * as transportTypeService from "../transport-types/transportType.service";
 import * as pricingMethodService from "../pricing-methods/pricingMethod.service";
 import * as villageService from "../villages/village.service";
 import * as settingsRepo from "../settings/settings.repository";
-import type { CreateManualJobInput, PauseJobInput, ResumeJobInput, StartJobInput, StopJobInput, SubmitJobInput, UpdateJobInput } from "./job.validators";
+import type { AddTransportChargeInput, ChangeDriverInput, ChangeMachineInput, CreateManualJobInput, PauseJobInput, ResumeJobInput, StartJobInput, StopJobInput, SubmitJobInput, UpdateJobInput } from "./job.validators";
 
 // Called from booking.service.ts's create() the instant a Booking is
 // saved — there is no separate "convert to job" step or client-facing
@@ -130,6 +134,99 @@ function computeActualHours(startTime: Date, endTime: Date, totalPausedDurationS
   return Math.round((Math.max(0, elapsedSec) / 3600) * 100) / 100;
 }
 
+// Builds the Start-rejection message from whichever active job(s) already
+// hold this job's Machine and/or Driver. One blocking job may hold both;
+// two different jobs may hold one each — each conflicting booking is named
+// explicitly so the operator knows exactly what to wait on. `machine`/`driver`
+// are this job's own (already-loaded) relations, used for the resource label.
+function buildResourceConflictMessage(
+  machine: { registrationNumber: string } | null,
+  driver: { employee: { name: string } } | null,
+  actives: Array<{
+    id: string;
+    machineId: string | null;
+    driverId: string | null;
+    booking: { bookingNumber: string };
+  }>,
+  machineId: string,
+  driverId: string,
+): string | null {
+  const machineConflict = actives.find((a) => a.machineId === machineId);
+  const driverConflict = actives.find((a) => a.driverId === driverId);
+  if (!machineConflict && !driverConflict) return null;
+
+  const machineLabel = machine?.registrationNumber ?? "This machine";
+  const driverLabel = driver?.employee.name ?? "This driver";
+
+  if (machineConflict && driverConflict) {
+    // Both held by the same job → single combined sentence.
+    if (machineConflict.id === driverConflict.id) {
+      return `Cannot start this job. Machine ${machineLabel} and Driver ${driverLabel} are currently working on ${machineConflict.booking.bookingNumber}.`;
+    }
+    // Held by two different jobs → name each conflict on its own line.
+    return (
+      `Cannot start this job.\n` +
+      `Machine ${machineLabel} is working on ${machineConflict.booking.bookingNumber}.\n` +
+      `Driver ${driverLabel} is working on ${driverConflict.booking.bookingNumber}.`
+    );
+  }
+  if (machineConflict) {
+    return `Cannot start this job. Machine ${machineLabel} is currently working on ${machineConflict.booking.bookingNumber}.`;
+  }
+  return `Cannot start this job. Driver ${driverLabel} is currently working on ${driverConflict!.booking.bookingNumber}.`;
+}
+
+// The authoritative availability gate shared by start() AND resume(): a job
+// may only become WORKING if BOTH its assigned Machine and Driver are free
+// (not WORKING on any other job). Must run inside a transaction — it locks the
+// machine and driver rows FOR UPDATE first, so two devices racing to activate
+// jobs that share a resource are serialised (exactly one wins; the other sees
+// the now-active job and is rejected). Occupancy is read from the authoritative
+// jobs table via ACTIVE_RESOURCE_OCCUPANCY = [WORKING] — PAUSED does NOT block.
+// The freshly re-read job (under the lock) is passed in so the caller has
+// already re-validated status.
+async function assertResourcesAvailableForActivation(
+  companyId: string,
+  fresh: { id: string; machineId: string | null; driverId: string | null; machine: { registrationNumber: string } | null; driver: { employee: { name: string } } | null },
+  tx: Prisma.TransactionClient,
+) {
+  const machineId = fresh.machineId;
+  const driverId = fresh.driverId;
+  if (!machineId || !driverId) {
+    throw new AppError(400, "Assign a machine and driver before starting this job");
+  }
+  const actives = await jobRepository.findActiveJobsForResources(companyId, machineId, driverId, fresh.id, tx);
+  const conflictMessage = buildResourceConflictMessage(fresh.machine, fresh.driver, actives, machineId, driverId);
+  if (conflictMessage) {
+    throw new AppError(409, conflictMessage);
+  }
+}
+
+// Opens a new work session for the interval that starts now — records exactly
+// which Machine and Driver are doing this stretch of work (Part 11). Called on
+// start and on each resume, so a job whose resources changed mid-way keeps a
+// truthful per-resource history that reporting sums from.
+function openWorkSession(
+  companyId: string,
+  job: { id: string; machineId: string | null; driverId: string | null },
+  startedAt: Date,
+  userId: string,
+  tx: Prisma.TransactionClient,
+) {
+  // Unreachable without machine+driver: activation already asserted both.
+  return jobWorkSessionRepository.open(companyId, job.id, job.machineId!, job.driverId!, startedAt, userId, tx);
+}
+
+// Closes the job's currently-open work session (if any), stamping its end and
+// exact duration. Called on pause and stop. No-op if none is open (e.g. stop
+// from PAUSED, whose session pause() already closed).
+async function closeOpenWorkSession(companyId: string, jobId: string, endedAt: Date, userId: string, tx: Prisma.TransactionClient) {
+  const open = await jobWorkSessionRepository.findOpen(companyId, jobId, tx);
+  if (!open) return;
+  const durationSec = Math.max(0, Math.floor((endedAt.getTime() - open.startedAt.getTime()) / 1000));
+  await jobWorkSessionRepository.close(companyId, open.id, endedAt, durationSec, userId, tx);
+}
+
 export async function start(companyId: string, id: string, user: AuthenticatedUser, input: StartJobInput) {
   const job = await jobRepository.findByIdScopedWithRelations(companyId, id);
   if (!job) throw new AppError(404, "Job not found");
@@ -146,37 +243,92 @@ export async function start(companyId: string, id: string, user: AuthenticatedUs
     throw new AppError(400, "Set a pricing method and rate before starting this job");
   }
 
+  const machineId = job.machineId;
+  const driverId = job.driverId;
   const startTime = input.startTime ?? new Date();
-  const updated = await jobRepository.updateScopedWithRelations(companyId, id, { status: "WORKING", startTime });
-  await bookingRepository.updateScopedWithRelations(companyId, job.bookingId, { status: "WORKING" });
-  await jobStatusLogRepository.create(companyId, id, "WORKING", user.id);
-  return updated;
+
+  // Creating a future booking for a busy resource stays allowed (that guard
+  // lives at booking creation); the line is drawn here, at Start. The whole
+  // check-and-flip runs in one transaction that locks the machine and driver
+  // rows FOR UPDATE — no second source of truth, no client-side timing check.
+  return prisma.$transaction(async (tx) => {
+    await jobRepository.lockResourceRowsForUpdate(companyId, machineId, driverId, tx);
+
+    // Re-read under the lock so a same-job double-Start (or any status change
+    // since the pre-transaction read) is caught authoritatively.
+    const fresh = await jobRepository.findByIdScopedWithRelations(companyId, id, tx);
+    if (!fresh) throw new AppError(404, "Job not found");
+    assertStatus(fresh, ["NOT_STARTED"], "start");
+
+    await assertResourcesAvailableForActivation(companyId, fresh, tx);
+
+    const updated = await jobRepository.updateScopedWithRelations(companyId, id, { status: "WORKING", startTime }, tx);
+    await bookingRepository.updateScopedWithRelations(companyId, job.bookingId, { status: "WORKING" }, tx);
+    await jobStatusLogRepository.create(companyId, id, "WORKING", user.id, undefined, tx);
+    await openWorkSession(companyId, fresh, startTime, user.id, tx);
+    return updated;
+  });
 }
 
+// WORKING → PAUSED. A pause reason is required (validator). Pausing CLOSES the
+// current work session (freezing its exact worked duration) and RELEASES the
+// Machine and Driver — a paused job no longer occupies them, so they can start
+// another booking meanwhile. The paused job keeps all its accumulated history
+// and can be resumed later (with a fresh availability check).
 export async function pause(companyId: string, id: string, user: AuthenticatedUser, input: PauseJobInput) {
   const job = await jobRepository.findByIdScopedWithRelations(companyId, id);
   if (!job) throw new AppError(404, "Job not found");
   await assertCanWriteJob(companyId, job, user);
   assertStatus(job, ["WORKING"], "pause");
 
-  const updated = await jobRepository.updateScopedWithRelations(companyId, id, { status: "PAUSED" });
-  await jobStatusLogRepository.create(companyId, id, "PAUSED", user.id, input.note);
-  return updated;
+  const pausedAt = new Date();
+  return prisma.$transaction(async (tx) => {
+    const updated = await jobRepository.updateScopedWithRelations(companyId, id, { status: "PAUSED" }, tx);
+    await jobStatusLogRepository.create(companyId, id, "PAUSED", user.id, input.note, tx);
+    await closeOpenWorkSession(companyId, id, pausedAt, user.id, tx);
+    return updated;
+  });
 }
 
+// PAUSED → WORKING. Performs a FRESH authoritative availability check — the
+// Machine/Driver may have been taken by another job while this one was paused,
+// so we never assume they are still free. Concurrency-safe via the same
+// FOR UPDATE row locks as start(). On success, opens a NEW work session for
+// the job's CURRENT machine/driver (which may have been reassigned while
+// paused), so worked time is attributed to whoever actually resumes it.
 export async function resume(companyId: string, id: string, user: AuthenticatedUser, input: ResumeJobInput) {
   const job = await jobRepository.findByIdScopedWithRelations(companyId, id);
   if (!job) throw new AppError(404, "Job not found");
   await assertCanWriteJob(companyId, job, user);
   assertStatus(job, ["PAUSED"], "resume");
+  if (!job.machineId || !job.driverId) {
+    throw new AppError(400, "Assign a machine and driver before resuming this job");
+  }
 
-  const pausedDurationSec = await currentPauseDurationSec(companyId, id);
-  const updated = await jobRepository.updateScopedWithRelations(companyId, id, {
-    status: "WORKING",
-    totalPausedDurationSec: job.totalPausedDurationSec + pausedDurationSec,
+  const resumedAt = new Date();
+  return prisma.$transaction(async (tx) => {
+    await jobRepository.lockResourceRowsForUpdate(companyId, job.machineId!, job.driverId!, tx);
+
+    const fresh = await jobRepository.findByIdScopedWithRelations(companyId, id, tx);
+    if (!fresh) throw new AppError(404, "Job not found");
+    assertStatus(fresh, ["PAUSED"], "resume");
+
+    await assertResourcesAvailableForActivation(companyId, fresh, tx);
+
+    const pausedDurationSec = await currentPauseDurationSec(companyId, id);
+    const updated = await jobRepository.updateScopedWithRelations(
+      companyId,
+      id,
+      {
+        status: "WORKING",
+        totalPausedDurationSec: fresh.totalPausedDurationSec + pausedDurationSec,
+      },
+      tx,
+    );
+    await jobStatusLogRepository.create(companyId, id, "WORKING", user.id, input.note, tx);
+    await openWorkSession(companyId, fresh, resumedAt, user.id, tx);
+    return updated;
   });
-  await jobStatusLogRepository.create(companyId, id, "WORKING", user.id, input.note);
-  return updated;
 }
 
 // Stop freezes the clock (endTime/actualHours computed the same way
@@ -201,15 +353,23 @@ export async function stop(companyId: string, id: string, user: AuthenticatedUse
   // job.startTime is guaranteed set: assertStatus above only allows
   // WORKING/PAUSED, both unreachable without start() having run first.
   const actualHours = input.actualHours ?? computeActualHours(job.startTime!, endTime, totalPausedDurationSec);
+  const wasWorking = job.status === "WORKING";
 
-  const updated = await jobRepository.updateScopedWithRelations(companyId, id, {
-    status: "STOPPED",
-    endTime,
-    totalPausedDurationSec,
-    actualHours,
+  return prisma.$transaction(async (tx) => {
+    const updated = await jobRepository.updateScopedWithRelations(
+      companyId,
+      id,
+      { status: "STOPPED", endTime, totalPausedDurationSec, actualHours },
+      tx,
+    );
+    await jobStatusLogRepository.create(companyId, id, "STOPPED", user.id, undefined, tx);
+    // Close the session still open when stopping directly from WORKING; a stop
+    // from PAUSED has no open session (pause() already closed it).
+    if (wasWorking) {
+      await closeOpenWorkSession(companyId, id, endTime, user.id, tx);
+    }
+    return updated;
   });
-  await jobStatusLogRepository.create(companyId, id, "STOPPED", user.id);
-  return updated;
 }
 
 // Only legal from STOPPED (a second, distinct confirmation from Stop on
@@ -286,12 +446,146 @@ export async function cancel(companyId: string, id: string, user: AuthenticatedU
   const paymentCount = await paymentService.countNonVoidedPaymentsForBooking(companyId, job.bookingId);
   assertNoNonVoidedPayments(paymentCount);
 
+  const wasWorking = job.status === "WORKING";
+  const cancelledAt = new Date();
   return prisma.$transaction(async (tx) => {
     const updated = await jobRepository.updateScopedWithRelations(companyId, id, { status: "CANCELLED" }, tx);
     await bookingRepository.updateScopedWithRelations(companyId, job.bookingId, { status: "CANCELLED" }, tx);
     await jobStatusLogRepository.create(companyId, id, "CANCELLED", user.id, reason, tx);
+    // Cancelling from WORKING releases the resources; close the open session so
+    // it doesn't dangle open forever and its worked interval stays recorded.
+    if (wasWorking) {
+      await closeOpenWorkSession(companyId, id, cancelledAt, user.id, tx);
+    }
     return updated;
   });
+}
+
+// ---- Machine/Driver reassignment while PAUSED (Parts 4-10) -----------------
+// Only allowed while the job is PAUSED (never mid-WORKING), by a user the route
+// gated with machine.assign / driver.assign. Requires a reason (validator).
+// Does NOT overwrite history: past work sessions already recorded the old
+// resource, so updating the job's CURRENT machineId/driverId is safe — the new
+// resource is used only for the NEXT session (opened on resume). The new
+// resource is NOT considered occupied until the job actually resumes; that is
+// why there is no availability check here (only at resume). Every change is
+// audit-logged (old, new, reason, who, when).
+export async function changeMachine(companyId: string, id: string, user: AuthenticatedUser, input: ChangeMachineInput) {
+  const job = await jobRepository.findByIdScopedWithRelations(companyId, id);
+  if (!job) throw new AppError(404, "Job not found");
+  await assertCanWriteJob(companyId, job, user);
+  assertStatus(job, ["PAUSED"], "change the machine on");
+
+  await machineService.getById(companyId, input.machineId); // 404s if not in this company
+  const oldMachineId = job.machineId;
+  if (oldMachineId === input.machineId) {
+    throw new AppError(400, "That machine is already assigned to this job");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await jobRepository.updateScopedWithRelations(companyId, id, { machineId: input.machineId }, tx);
+    // Keep the booking's assignment in lockstep with the job's, as status is.
+    await bookingRepository.updateScopedWithRelations(companyId, job.bookingId, { machineId: input.machineId }, tx);
+    await jobAssignmentChangeRepository.create(
+      companyId,
+      id,
+      { field: "MACHINE", oldMachineId, newMachineId: input.machineId, reason: input.reason, changedBy: user.id },
+      tx,
+    );
+    return updated;
+  });
+}
+
+export async function changeDriver(companyId: string, id: string, user: AuthenticatedUser, input: ChangeDriverInput) {
+  const job = await jobRepository.findByIdScopedWithRelations(companyId, id);
+  if (!job) throw new AppError(404, "Job not found");
+  await assertCanWriteJob(companyId, job, user);
+  assertStatus(job, ["PAUSED"], "change the driver on");
+
+  await driverService.getById(companyId, input.driverId); // 404s if not in this company
+  const oldDriverId = job.driverId;
+  if (oldDriverId === input.driverId) {
+    throw new AppError(400, "That driver is already assigned to this job");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await jobRepository.updateScopedWithRelations(companyId, id, { driverId: input.driverId }, tx);
+    await bookingRepository.updateScopedWithRelations(companyId, job.bookingId, { driverId: input.driverId }, tx);
+    await jobAssignmentChangeRepository.create(
+      companyId,
+      id,
+      { field: "DRIVER", oldDriverId, newDriverId: input.driverId, reason: input.reason, changedBy: user.id },
+      tx,
+    );
+    return updated;
+  });
+}
+
+export async function listAssignmentChanges(companyId: string, id: string, user: AuthenticatedUser) {
+  await getById(companyId, id, user); // enforces the same read-visibility scoping as the job
+  return jobAssignmentChangeRepository.listForJob(companyId, id);
+}
+
+export async function listWorkSessions(companyId: string, id: string, user: AuthenticatedUser) {
+  await getById(companyId, id, user);
+  return jobWorkSessionRepository.listForJob(companyId, id);
+}
+
+// ---- Transportation: a separate, optional, structured charge (Parts 16-21) --
+// Added before final submission; must NOT touch the harvesting timer, and is
+// stored structurally (never in free-text notes). total = trips × ratePerTrip,
+// computed server-side (the client's total is never trusted).
+export async function addTransportCharge(companyId: string, id: string, user: AuthenticatedUser, input: AddTransportChargeInput) {
+  const job = await jobRepository.findByIdScopedWithRelations(companyId, id);
+  if (!job) throw new AppError(404, "Job not found");
+  await assertCanWriteJob(companyId, job, user);
+  // Optional and pre-submission: allowed any time before the invoice is
+  // generated (i.e. not COMPLETED) and not on a dead job (CANCELLED).
+  if (job.status === "COMPLETED" || job.status === "CANCELLED") {
+    throw new AppError(400, "Cannot add transportation to a completed or cancelled job");
+  }
+
+  let transportTypeId: string | null = null;
+  let transportTypeName: string;
+  if (input.transportTypeId) {
+    const type = await transportTypeService.getById(companyId, input.transportTypeId);
+    transportTypeId = type.id;
+    transportTypeName = type.name;
+  } else if (input.transportTypeName && input.transportTypeName.trim()) {
+    transportTypeName = input.transportTypeName.trim();
+  } else {
+    throw new AppError(400, "Select a transport type");
+  }
+
+  const totalAmount = Math.round(input.trips * input.ratePerTrip * 100) / 100;
+  return jobTransportChargeRepository.create(companyId, {
+    jobId: id,
+    bookingId: job.bookingId,
+    transportTypeId,
+    transportTypeName,
+    trips: input.trips,
+    ratePerTrip: input.ratePerTrip,
+    totalAmount,
+    recordedBy: user.id,
+    notes: input.notes,
+  });
+}
+
+export async function listTransportCharges(companyId: string, id: string, user: AuthenticatedUser) {
+  await getById(companyId, id, user);
+  return jobTransportChargeRepository.listForJob(companyId, id);
+}
+
+export async function deleteTransportCharge(companyId: string, id: string, chargeId: string, user: AuthenticatedUser) {
+  const job = await jobRepository.findByIdScoped(companyId, id);
+  if (!job) throw new AppError(404, "Job not found");
+  await assertCanWriteJob(companyId, job, user);
+  if (job.status === "COMPLETED" || job.status === "CANCELLED") {
+    throw new AppError(400, "Cannot change transportation on a completed or cancelled job");
+  }
+  const deleted = await jobTransportChargeRepository.deleteScoped(companyId, chargeId);
+  if (!deleted || deleted.jobId !== id) throw new AppError(404, "Transport charge not found");
+  return deleted;
 }
 
 // Rule 3 dependency-guard support: does this booking have a Job that

@@ -6,6 +6,7 @@ import { AppError } from "../../shared/errors/AppError";
 import { calculateAmount, type PricingUnit } from "../../shared/pricing/pricing-calculator";
 import * as customerService from "../customers/customer.service";
 import * as invoiceRepository from "./invoice.repository";
+import * as jobTransportChargeRepository from "../jobs/jobTransportCharge.repository";
 import * as paymentRepository from "./payment.repository";
 import * as customerAdvanceRepository from "./customerAdvance.repository";
 import * as settingsRepo from "../settings/settings.repository";
@@ -71,15 +72,21 @@ export async function createInvoiceForCompletedJob(
     calculatedAmount = minimumCharge != null && minimumCharge > base ? Math.round(minimumCharge * 100) / 100 : base;
   }
 
+  // Transportation is a separate, optional, structured charge on the same job
+  // (Parts 16-21). It is ADDED to the invoice total but does NOT change how
+  // work is priced — calculatedAmount above (the work/harvesting charge) is
+  // untouched. Final total = work charges + Σ transport charges.
+  const transportAmount = await jobTransportChargeRepository.sumForJob(companyId, job.id, tx);
+
   // Phase B Default: GST is OFF for normal farmer transactions unless explicitly toggled ON
-  const subtotalAmount = calculatedAmount;
+  const subtotalAmount = calculatedAmount; // work/harvesting subtotal (unchanged)
   const taxRate = 0;
   const taxAmount = 0;
   const cgstAmount = 0;
   const sgstAmount = 0;
   const igstAmount = 0;
   const isGstApplicable = false;
-  const totalAmount = calculatedAmount;
+  const totalAmount = Math.round((calculatedAmount + transportAmount) * 100) / 100;
 
   return invoiceRepository.create(
     companyId,
@@ -87,6 +94,7 @@ export async function createInvoiceForCompletedJob(
       bookingId: job.bookingId,
       customerId: job.booking.customerId,
       subtotalAmount,
+      transportAmount,
       taxRate,
       taxAmount,
       cgstAmount,

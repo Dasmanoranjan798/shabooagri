@@ -66,6 +66,12 @@ enum JobExecutionMode {
   MANUAL
 }
 
+// Which assignment field a JobAssignmentChange audit row refers to.
+enum JobAssignmentField {
+  MACHINE
+  DRIVER
+}
+
 enum CompensationType {
   HOURLY
   MONTHLY
@@ -366,6 +372,7 @@ model Driver {
   assignedMachines Machine[] @relation("MachineAssignedDriver")
   bookings         Booking[]
   jobs             Job[]
+  workSessions     JobWorkSession[]
 
   @@map("drivers")
 }
@@ -431,6 +438,7 @@ model Machine {
   bookings             Booking[]
   jobs                 Job[]
   jobFuelEntries       JobFuelEntry[]
+  jobWorkSessions      JobWorkSession[]
   maintenanceSchedules MaintenanceSchedule[]
   maintenanceRecords   MaintenanceRecord[]
   expenses             Expense[]
@@ -555,9 +563,12 @@ model Job {
   machine Machine? @relation(fields: [machineId], references: [id])
   driver  Driver?  @relation(fields: [driverId], references: [id])
 
-  statusLogs  JobStatusLog[]
-  photos      JobPhoto[]
-  fuelEntries JobFuelEntry[]
+  statusLogs        JobStatusLog[]
+  photos            JobPhoto[]
+  fuelEntries       JobFuelEntry[]
+  workSessions      JobWorkSession[]
+  assignmentChanges JobAssignmentChange[]
+  transportCharges  JobTransportCharge[]
 
   @@index([companyId, status])
   @@map("jobs")
@@ -613,6 +624,114 @@ model JobFuelEntry {
   recorder User    @relation(fields: [recordedBy], references: [id])
 
   @@map("job_fuel_entries")
+}
+
+// One continuous WORKING interval of a job. Opened when a job goes WORKING
+// (start OR resume) and closed when it leaves WORKING (pause/stop). Records
+// exactly which Machine and Driver did the work in that interval, so a job
+// whose Machine/Driver changed mid-way (via a paused reassignment) keeps a
+// truthful per-resource history — driver pay and machine utilisation are
+// summed from these sessions, never from the job's *current* machineId /
+// driverId (which only reflect the latest/next assignment). This is NOT a
+// second source of truth for job status (the jobs row stays authoritative);
+// it is the structured record of worked intervals that the schema did not
+// capture before. The sum of a job's session durations equals the job's
+// existing actualHours — the pricing/duration calculation is unchanged; these
+// rows only make the same worked time attributable per resource and per
+// session. `machineId`/`driverId` are non-null: a session can only exist
+// while a job is WORKING, which requires both to be assigned.
+model JobWorkSession {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String    @map("company_id") @db.Uuid
+  jobId       String    @map("job_id") @db.Uuid
+  machineId   String    @map("machine_id") @db.Uuid
+  driverId    String    @map("driver_id") @db.Uuid
+  startedAt   DateTime  @map("started_at")
+  // Null while the session is still open (job currently WORKING). Set, along
+  // with durationSec, the moment the job pauses/stops.
+  endedAt     DateTime? @map("ended_at")
+  durationSec Int?      @map("duration_sec")
+  // Audit stamps kept as plain columns (like other audit FKs) — resolved to
+  // names at read time; no relation needed for a historical attribution row.
+  startedBy   String    @map("started_by") @db.Uuid
+  endedBy     String?   @map("ended_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  job     Job     @relation(fields: [jobId], references: [id])
+  machine Machine @relation(fields: [machineId], references: [id])
+  driver  Driver  @relation(fields: [driverId], references: [id])
+
+  @@index([companyId, jobId])
+  @@index([companyId, driverId])
+  @@index([companyId, machineId])
+  @@map("job_work_sessions")
+}
+
+// Audit row: an authorised Manager/Owner changed a PAUSED job's Machine or
+// Driver. Old/new stored as plain UUID snapshots (no relation — a pure
+// historical record); the current assignment continues to live on the jobs
+// row, so this is an audit log, not a second source of truth. Reason is
+// mandatory at the service layer.
+model JobAssignmentChange {
+  id           String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId    String             @map("company_id") @db.Uuid
+  jobId        String             @map("job_id") @db.Uuid
+  field        JobAssignmentField
+  oldMachineId String?            @map("old_machine_id") @db.Uuid
+  newMachineId String?            @map("new_machine_id") @db.Uuid
+  oldDriverId  String?            @map("old_driver_id") @db.Uuid
+  newDriverId  String?            @map("new_driver_id") @db.Uuid
+  reason       String
+  changedBy    String             @map("changed_by") @db.Uuid
+  changedAt    DateTime           @default(now()) @map("changed_at")
+
+  job Job @relation(fields: [jobId], references: [id])
+
+  @@index([companyId, jobId])
+  @@map("job_assignment_changes")
+}
+
+// Company-configurable transport master (mirrors MachineType). Seeded with
+// sensible defaults per company; new ones are inserts, not code changes.
+model TransportType {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String  @map("company_id") @db.Uuid
+  name      String
+  isActive  Boolean @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  charges JobTransportCharge[]
+
+  @@unique([companyId, name])
+  @@map("transport_types")
+}
+
+// A structured transportation charge attached to a job/booking — separate
+// from the harvesting work timer and from work pricing. total = trips ×
+// ratePerTrip (computed and stored). Optional and added before submit; the
+// job's invoice total = work charges + Σ transport charges. Stored
+// structurally (never as free-text notes) so transport revenue is reportable.
+// transportTypeName is a snapshot so history stays readable even if the
+// master type is renamed.
+model JobTransportCharge {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId         String   @map("company_id") @db.Uuid
+  jobId             String   @map("job_id") @db.Uuid
+  bookingId         String   @map("booking_id") @db.Uuid
+  transportTypeId   String?  @map("transport_type_id") @db.Uuid
+  transportTypeName String   @map("transport_type_name")
+  trips             Int
+  ratePerTrip       Decimal  @map("rate_per_trip") @db.Decimal(10, 2)
+  totalAmount       Decimal  @map("total_amount") @db.Decimal(10, 2)
+  recordedBy        String   @map("recorded_by") @db.Uuid
+  recordedAt        DateTime @default(now()) @map("recorded_at")
+  notes             String?
+
+  job           Job            @relation(fields: [jobId], references: [id])
+  transportType TransportType? @relation(fields: [transportTypeId], references: [id])
+
+  @@index([companyId, jobId])
+  @@map("job_transport_charges")
 }
 
 model MaintenanceSchedule {
@@ -734,6 +853,11 @@ model Invoice {
   isGstApplicable     Boolean       @default(false) @map("is_gst_applicable")
   hsnSacCode          String?       @map("hsn_sac_code")
   subtotalAmount      Decimal?      @map("subtotal_amount") @db.Decimal(10, 2)
+  // Additive transport component (Σ job_transport_charges) folded into
+  // totalAmount alongside the work subtotal. Defaults to 0 so every existing
+  // invoice stays valid and unchanged; the work-pricing calculation itself is
+  // untouched — transport is a separate line, not a change to how work is priced.
+  transportAmount     Decimal?      @default(0) @map("transport_amount") @db.Decimal(10, 2)
   taxRate             Decimal?      @default(0) @map("tax_rate") @db.Decimal(5, 2)
   taxAmount           Decimal?      @default(0) @map("tax_amount") @db.Decimal(10, 2)
   cgstAmount          Decimal?      @default(0) @map("cgst_amount") @db.Decimal(10, 2)
