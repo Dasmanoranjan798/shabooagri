@@ -5,6 +5,59 @@ mobile app (`mobile-app/pubspec.yaml`); backend and web changes ship alongside
 the release they support. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added / Changed — Job Execution V2 (backend, Pass 1)
+- **Corrected resource occupancy to WORKING-only.** The earlier fix treated
+  WORKING *and* PAUSED as occupying a Machine/Driver; for ShabooAgri a PAUSED
+  job ("continue later") RELEASES both resources so another booking can start on
+  them. `ACTIVE_RESOURCE_OCCUPANCY = [WORKING]`.
+- **RESUME now re-checks availability** (concurrency-safe, same `FOR UPDATE`
+  row-lock transaction as Start): a paused job can only resume if its Machine
+  and Driver are still free, else it stays PAUSED with a 409 naming the blocker.
+- **Machine/Driver reassignment while PAUSED** (`POST /jobs/:id/machine|driver`,
+  gated by `machine.assign`/`driver.assign`): swap a paused job's Machine/Driver
+  with a **mandatory reason**, audited in `job_assignment_changes`. Never allowed
+  while WORKING. **Pause now also requires a reason.**
+- **Work-session history** (`job_work_sessions`): one row per continuous WORKING
+  interval (Machine+Driver+duration), so a job whose resources changed mid-way
+  keeps a truthful per-resource record. Sum of a job's sessions equals its
+  `actualHours` — the pricing/duration calc is unchanged. Driver pay and machine
+  utilisation now attribute worked time from sessions, not the current FK.
+- **Transportation** (`job_transport_charges` + configurable `transport_types`
+  master): optional structured charge (`trips × ratePerTrip`) added before
+  submit, folded into the invoice as a separate `transport_amount` line so
+  work vs transport stay clearly split. Work pricing itself unchanged.
+- Additive, backward-compatible migration (4 new tables + `invoices.transport_amount`
+  default 0); existing jobs/invoices untouched, no fabricated history. New tests
+  `test-job-execution-v2.ts` (53 assertions) + updated `test-job-resource-conflict.ts`
+  (23); full backend suite green. **Not yet deployed;** web + Flutter UI is Pass 2
+  (and the Flutter/web pause/reassign/transport UI must send the now-required reasons).
+
+### Fixed
+- **A Machine or Driver could be started on two active jobs at once.** Creating a
+  second booking for a machine/driver that is already working stays allowed (the
+  booking-time warning offers "book anyway" for a *future* slot), but pressing
+  **Start** on that second job must be refused while the resource is still busy.
+  It wasn't: `job.service.ts:start()` only checked *this* job's own status,
+  never whether the assigned machine or driver was already on another active
+  job, so both jobs could become WORKING simultaneously. Fix enforces the rule
+  in the operational backend (the single authority): Start now runs its
+  check-and-flip inside one transaction that first locks the machine and driver
+  rows `FOR UPDATE` (machine-then-driver, a fixed order — no deadlock) and
+  rejects with **409** if any *other* job in `WORKING`/`PAUSED` already holds the
+  machine or driver — reusing the same authoritative `jobs`-table occupancy
+  definition the dashboard uses (no second status system; PAUSED still reserves,
+  COMPLETED/CANCELLED release). The message names the exact blocking booking(s)
+  — machine-only, driver-only, both-on-one-job, or both-on-different-jobs. The
+  row locks serialise two devices racing to Start on the same resource: exactly
+  one wins, the other is safely rejected and reconciles via the existing
+  cross-device error-refresh path (no new sync mechanism). No pricing/duration
+  calculation changed; no Flutter business logic added (the UI already surfaces
+  the backend message and refreshes on any error). New backend test
+  `test-job-resource-conflict.ts` covers 22 assertions incl. the concurrent-Start
+  race; existing operations/pricing/payments suites unchanged and green.
+
 ## [0.8.12+25] — 2026-09-01
 
 ### Fixed

@@ -21,17 +21,52 @@ export async function getDriverCompensationSummary(
 ): Promise<DriverCompensationSummary> {
   const driver = await prisma.driver.findFirst({
     where: { id: driverId, companyId },
-    include: {
-      employee: true,
-      jobs: {
-        where: { status: "COMPLETED" },
-        select: { actualHours: true },
-      },
-    },
+    include: { employee: true },
   });
 
   if (!driver) {
     throw new AppError(404, "Driver not found");
+  }
+
+  // Attribute worked time from the authoritative WORK-SESSION history, never
+  // from the job's current driverId — otherwise reassigning a driver mid-job
+  // would misattribute the whole job to whoever finished it (Part 13). Each
+  // completed job's authoritative actualHours (the existing, unchanged
+  // calculation) is split across its sessions PROPORTIONALLY to per-driver
+  // session time, so the per-driver hours always reconcile to the job total
+  // and single-driver jobs are unchanged. Jobs with no sessions (MANUAL
+  // after-work entries and pre-feature legacy jobs) fall back to the current
+  // driverId — the only signal available, and correct since those cannot be
+  // reassigned.
+  const jobs = await prisma.job.findMany({
+    where: {
+      companyId,
+      status: "COMPLETED",
+      OR: [{ driverId }, { workSessions: { some: { driverId } } }],
+    },
+    select: {
+      driverId: true,
+      actualHours: true,
+      workSessions: { where: { endedAt: { not: null } }, select: { driverId: true, durationSec: true } },
+    },
+  });
+
+  let totalWorkedHours = 0;
+  let totalCompletedJobs = 0;
+  for (const j of jobs) {
+    const jobHours = j.actualHours ? Number(j.actualHours) : 0;
+    const totalSec = j.workSessions.reduce((s, w) => s + (w.durationSec ?? 0), 0);
+    let attributed: number;
+    if (totalSec > 0) {
+      const driverSec = j.workSessions
+        .filter((w) => w.driverId === driverId)
+        .reduce((s, w) => s + (w.durationSec ?? 0), 0);
+      attributed = jobHours * (driverSec / totalSec);
+    } else {
+      attributed = j.driverId === driverId ? jobHours : 0;
+    }
+    if (attributed > 0 || j.driverId === driverId) totalCompletedJobs += 1;
+    totalWorkedHours += attributed;
   }
 
   const emp = driver.employee;
@@ -40,8 +75,6 @@ export async function getDriverCompensationSummary(
   const monthlySalary = emp.monthlySalary ? Number(emp.monthlySalary) : null;
   const yearlySalary = emp.yearlySalary ? Number(emp.yearlySalary) : null;
 
-  const totalCompletedJobs = driver.jobs.length;
-  const totalWorkedHours = driver.jobs.reduce((sum, j) => sum + (j.actualHours ? Number(j.actualHours) : 0), 0);
   const roundedHours = Math.round(totalWorkedHours * 100) / 100;
 
   let calculatedEarnings = 0;

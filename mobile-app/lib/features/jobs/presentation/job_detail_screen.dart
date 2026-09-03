@@ -17,10 +17,50 @@ import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/info_row.dart';
 import '../data/job_actions_repository.dart';
 import '../data/job_detail.dart';
+import '../data/job_execution_models.dart';
 
 final jobDetailLiveProvider = FutureProvider.family<JobDetail, String>((ref, id) async {
   syncOn(ref, {SyncEntity.job});
   return ref.watch(jobActionsRepositoryProvider).getById(id);
+});
+
+/// Bundled Job Execution V2 history — work sessions, assignment-change audit,
+/// and transportation charges — the authoritative data behind the timeline,
+/// per-resource attribution, and the final breakdown. Invalidated by the same
+/// 5s reconcile poll as the job itself (see _refresh), so another device's
+/// pause/reassign/transport edits reconcile here too.
+class JobHistory {
+  final List<JobWorkSession> sessions;
+  final List<JobAssignmentChange> changes;
+  final List<JobTransportCharge> transport;
+  const JobHistory(this.sessions, this.changes, this.transport);
+
+  double get transportTotal => transport.fold(0.0, (s, c) => s + c.totalAmount);
+}
+
+final jobHistoryProvider = FutureProvider.family<JobHistory, String>((ref, id) async {
+  syncOn(ref, {SyncEntity.job});
+  final repo = ref.watch(jobActionsRepositoryProvider);
+  final results = await Future.wait([
+    repo.listWorkSessions(id),
+    repo.listAssignmentChanges(id),
+    repo.listTransportCharges(id),
+  ]);
+  return JobHistory(
+    results[0] as List<JobWorkSession>,
+    results[1] as List<JobAssignmentChange>,
+    results[2] as List<JobTransportCharge>,
+  );
+});
+
+final _transportTypesProvider = FutureProvider<List<TransportType>>((ref) async {
+  return ref.watch(jobActionsRepositoryProvider).listTransportTypes();
+});
+final _machinesProvider = FutureProvider<List<ResourceOption>>((ref) async {
+  return ref.watch(jobActionsRepositoryProvider).listMachines();
+});
+final _driversProvider = FutureProvider<List<ResourceOption>>((ref) async {
+  return ref.watch(jobActionsRepositoryProvider).listDrivers();
 });
 
 /// Only fetched while STOPPED (the one state the missing-photo/missing-fuel
@@ -112,7 +152,10 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
     }
   }
 
-  void _refresh() => ref.invalidate(jobDetailLiveProvider(widget.jobId));
+  void _refresh() {
+    ref.invalidate(jobDetailLiveProvider(widget.jobId));
+    ref.invalidate(jobHistoryProvider(widget.jobId));
+  }
 
   Future<void> _navigate(JobDetail job) async {
     final query = job.location ?? job.villageName;
@@ -181,15 +224,100 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
   }
 
   Future<void> _handlePause() async {
+    final reason = await _showReasonDialog(
+      title: 'Why are you pausing?',
+      label: 'Pause reason *',
+      quickOptions: const [
+        'Customer requested pause',
+        'Weather',
+        'Machine issue',
+        'Driver issue',
+        'Field/access problem',
+        'Waiting for customer',
+        'Work postponed',
+      ],
+      confirmLabel: 'Confirm & Pause',
+      helper: 'Pausing releases the machine and driver for other jobs. The elapsed time is preserved.',
+    );
+    if (reason == null) return;
     final repo = ref.read(jobActionsRepositoryProvider);
-    await _runAction(() => repo.pause(widget.jobId));
+    await _runAction(() => repo.pause(widget.jobId, reason));
   }
 
   Future<void> _handleResume() async {
-    final reason = await _showResumeReasonDialog();
+    final reason = await _showReasonDialog(
+      title: 'Why the delay?',
+      label: 'Reason to Resume *',
+      quickOptions: const ['Machine breakdown', 'Lunch break', 'Rain'],
+      confirmLabel: 'Confirm & Resume',
+    );
     if (reason == null) return;
     final repo = ref.read(jobActionsRepositoryProvider);
     await _runAction(() => repo.resume(widget.jobId, reason));
+  }
+
+  Future<void> _handleChangeMachine() async {
+    final machines = await ref.read(_machinesProvider.future);
+    final job = ref.read(jobDetailLiveProvider(widget.jobId)).valueOrNull;
+    final options = machines.where((m) => m.id != job?.machineId).toList();
+    final result = await _showReassignDialog(
+      title: 'Change Machine',
+      currentLabel: job?.machineRegistration ?? '—',
+      options: options,
+      quickReasons: const [
+        'Machine breakdown',
+        'Machine unavailable',
+        'Maintenance',
+        'Machine reassigned',
+        'Customer requested machine change',
+        'Emergency',
+      ],
+    );
+    if (result == null) return;
+    final repo = ref.read(jobActionsRepositoryProvider);
+    await _runAction(() => repo.changeMachine(widget.jobId, result.$1, result.$2));
+  }
+
+  Future<void> _handleChangeDriver() async {
+    final drivers = await ref.read(_driversProvider.future);
+    final job = ref.read(jobDetailLiveProvider(widget.jobId)).valueOrNull;
+    final options = drivers.where((d) => d.id != job?.driverId).toList();
+    final result = await _showReassignDialog(
+      title: 'Change Driver',
+      currentLabel: job?.driverName ?? '—',
+      options: options,
+      quickReasons: const [
+        'Driver unavailable',
+        'Driver reassigned',
+        'Driver illness',
+        'Customer requested driver change',
+        'Emergency',
+      ],
+    );
+    if (result == null) return;
+    final repo = ref.read(jobActionsRepositoryProvider);
+    await _runAction(() => repo.changeDriver(widget.jobId, result.$1, result.$2));
+  }
+
+  Future<void> _handleAddTransport() async {
+    final types = await ref.read(_transportTypesProvider.future);
+    if (!mounted) return;
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => _AddTransportDialog(types: types),
+    );
+    if (result == null) return;
+    final typeId = result['transportTypeId'];
+    final trips = int.tryParse(result['trips'] ?? '');
+    final rate = double.tryParse(result['ratePerTrip'] ?? '');
+    if (typeId == null || trips == null || trips <= 0 || rate == null || rate < 0) return;
+    final repo = ref.read(jobActionsRepositoryProvider);
+    await _runAction(() => repo.addTransportCharge(widget.jobId, typeId, trips, rate));
+  }
+
+  Future<void> _handleDeleteTransport(String chargeId) async {
+    final repo = ref.read(jobActionsRepositoryProvider);
+    await _runAction(() => repo.deleteTransportCharge(widget.jobId, chargeId));
   }
 
   Future<void> _handleStop() async {
@@ -288,43 +416,126 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
     await _runAction(() => repo.updateNotes(widget.jobId, note));
   }
 
-  Future<String?> _showResumeReasonDialog() {
+  /// Shared reason prompt (quick-pick chips + free text). Used by Pause and
+  /// Resume — a non-empty reason is required, matching the backend. "Other" is
+  /// simply free text, so no special-casing is needed here.
+  Future<String?> _showReasonDialog({
+    required String title,
+    required String label,
+    required List<String> quickOptions,
+    required String confirmLabel,
+    String? helper,
+  }) {
     final controller = TextEditingController();
     return showDialog<String>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Why the delay?'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                spacing: 8,
-                children: ['Machine breakdown', 'Lunch break', 'Rain'].map((chip) {
-                  return ActionChip(
-                    label: Text(chip),
-                    onPressed: () {
-                      controller.text = chip;
-                      setDialogState(() {});
-                    },
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: controller,
-                decoration: const InputDecoration(labelText: 'Reason to Resume *', border: OutlineInputBorder()),
-                onChanged: (_) => setDialogState(() {}),
-                autofocus: true,
-              ),
-            ],
+          title: Text(title),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 8,
+                  children: quickOptions.map((chip) {
+                    return ActionChip(
+                      label: Text(chip),
+                      onPressed: () {
+                        controller.text = chip;
+                        setDialogState(() {});
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
+                  onChanged: (_) => setDialogState(() {}),
+                  autofocus: true,
+                ),
+                if (helper != null) ...[
+                  const SizedBox(height: 8),
+                  Text(helper, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ],
+            ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
             ElevatedButton(
               onPressed: controller.text.trim().isEmpty ? null : () => Navigator.pop(context, controller.text.trim()),
-              child: const Text('Confirm & Resume'),
+              child: Text(confirmLabel),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Machine/Driver reassignment prompt: pick a new resource + mandatory
+  /// reason. Returns (newId, reason). Shows the current assignment for context.
+  Future<(String, String)?> _showReassignDialog({
+    required String title,
+    required String currentLabel,
+    required List<ResourceOption> options,
+    required List<String> quickReasons,
+  }) {
+    final reasonController = TextEditingController();
+    String? selectedId;
+    return showDialog<(String, String)>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(title),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Current: $currentLabel', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                const SizedBox(height: 12),
+                if (options.isEmpty)
+                  const Text('No other resources available.', style: TextStyle(color: Colors.red))
+                else
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'New *', border: OutlineInputBorder()),
+                    items: options.map((o) => DropdownMenuItem(value: o.id, child: Text(o.label))).toList(),
+                    onChanged: (v) => setDialogState(() => selectedId = v),
+                  ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  children: quickReasons.map((chip) {
+                    return ActionChip(
+                      label: Text(chip),
+                      onPressed: () {
+                        reasonController.text = chip;
+                        setDialogState(() {});
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: reasonController,
+                  decoration: const InputDecoration(labelText: 'Reason *', border: OutlineInputBorder()),
+                  onChanged: (_) => setDialogState(() {}),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: (selectedId == null || reasonController.text.trim().isEmpty)
+                  ? null
+                  : () => Navigator.pop(context, (selectedId!, reasonController.text.trim())),
+              child: const Text('Confirm'),
             ),
           ],
         ),
@@ -413,6 +624,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
   @override
   Widget build(BuildContext context) {
     final jobAsync = ref.watch(jobDetailLiveProvider(widget.jobId));
+    final history = ref.watch(jobHistoryProvider(widget.jobId)).valueOrNull;
     final user = ref.watch(currentUserProvider);
     final isOwnerOrManager = user?.isOwnerOrManager ?? false;
     final isOwner = user?.roleSystemKey == 'owner';
@@ -478,6 +690,10 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
                 ],
                 if (job.status == 'COMPLETED') ...[
                   _buildCompletionGrid(job, displaySeconds: job.actualHours != null ? (job.actualHours! * 3600).round() : 0),
+                  if (history != null && history.transport.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _buildFinalBreakdown(job, history),
+                  ],
                   const SizedBox(height: 16),
                   const Card(
                     color: Color(0xFFF5F5F5),
@@ -491,10 +707,20 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
                   ),
                   const SizedBox(height: 16),
                 ],
+                // Transportation editor — shown during finalization (STOPPED),
+                // before Submit. Optional; server computes the authoritative total.
+                if (job.status == 'STOPPED') ...[
+                  _buildTransportSection(job, history, editable: true),
+                  const SizedBox(height: 16),
+                ],
                 _buildActionButtons(job, isOwnerOrManager, isOwner),
                 if (isOwnerOrManager && !['COMPLETED', 'CANCELLED'].contains(job.status)) ...[
                   const Divider(height: 32),
                   _buildQuickActions(job),
+                ],
+                if (history != null && history.sessions.isNotEmpty) ...[
+                  const Divider(height: 32),
+                  _buildTimeline(job, history),
                 ],
               ],
             ),
@@ -655,6 +881,29 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
           _primaryButton('▶ Start', Colors.green, _acting ? null : _handleResume),
           const SizedBox(height: 12),
           _primaryButton('Stop', Colors.red, _acting ? null : _handleStop),
+          // Reassignment is only offered while PAUSED (resources released) and
+          // only to authorised Owner/Manager users. The new resource stays idle
+          // until Resume, which re-checks availability on the backend.
+          if (isOwnerOrManager) ...[
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _acting ? null : _handleChangeMachine,
+                  icon: const Icon(Icons.swap_horiz, size: 18),
+                  label: const Text('Change Machine'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _acting ? null : _handleChangeDriver,
+                  icon: const Icon(Icons.swap_horiz, size: 18),
+                  label: const Text('Change Driver'),
+                ),
+              ),
+            ]),
+          ],
         ]);
       case 'STOPPED':
         return _buildStoppedActions(job, isOwner);
@@ -752,6 +1001,232 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
         onPressed: onPressed,
         child: Text(label, style: const TextStyle(fontSize: 16, color: Colors.white)),
       ),
+    );
+  }
+
+  String _formatClock(DateTime dt) {
+    final l = dt.toLocal();
+    final h = l.hour.toString().padLeft(2, '0');
+    final m = l.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
+  String _durWords(int sec) {
+    final h = sec ~/ 3600;
+    final m = (sec % 3600) ~/ 60;
+    return '${h}h ${m}m';
+  }
+
+  // Transportation — optional, structured, separate from the work timer. The
+  // server computes each charge's total (trips × rate); the client only lists
+  // and sums the authoritative values.
+  Widget _buildTransportSection(JobDetail job, JobHistory? history, {required bool editable}) {
+    final charges = history?.transport ?? const [];
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Transportation', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                if (editable)
+                  TextButton.icon(
+                    onPressed: _acting ? null : _handleAddTransport,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add'),
+                  ),
+              ],
+            ),
+            if (charges.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(top: 4),
+                child: Text('Optional. Add a transport charge (e.g. hauling produce) if the customer is being charged for it.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey)),
+              )
+            else ...[
+              for (final c in charges)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(child: Text('${c.transportTypeName} · ${c.trips} × ₹${c.ratePerTrip.toStringAsFixed(0)}')),
+                      Text('₹${c.totalAmount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                      if (editable)
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 16),
+                          onPressed: _acting ? null : () => _handleDeleteTransport(c.id),
+                        ),
+                    ],
+                  ),
+                ),
+              const Divider(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Transportation total', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text('₹${(history?.transportTotal ?? 0).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Final customer breakdown: Work + Transportation + Total. Work amount comes
+  // from the same authoritative formula as the invoice (job.finalAmount);
+  // transport totals are the server's structured charges. No recalculation.
+  Widget _buildFinalBreakdown(JobDetail job, JobHistory history) {
+    final work = job.finalAmount;
+    final transport = history.transportTotal;
+    final grand = work != null ? work + transport : null;
+    Widget row(String label, String value, {bool bold = false}) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label, style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
+              Text(value, style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.w600, fontSize: bold ? 18 : 14)),
+            ],
+          ),
+        );
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Charge Breakdown', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            const SizedBox(height: 8),
+            row('Work charges', work != null ? '₹${work.toStringAsFixed(2)}' : '—'),
+            for (final c in history.transport)
+              row('Transportation · ${c.transportTypeName} (${c.trips} × ₹${c.ratePerTrip.toStringAsFixed(0)})',
+                  '₹${c.totalAmount.toStringAsFixed(0)}'),
+            const Divider(),
+            row('Total', grand != null ? '₹${grand.toStringAsFixed(2)}' : '—', bold: true),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Job Timeline built from the authoritative work sessions + assignment
+  // changes (never the current machine/driver). Sessions are worked intervals;
+  // assignment changes are point events with a reason.
+  Widget _buildTimeline(JobDetail job, JobHistory history) {
+    // Resolve resource ids to labels using the sessions' embedded names.
+    final machineLabels = <String, String>{};
+    final driverLabels = <String, String>{};
+    for (final s in history.sessions) {
+      if (s.machineRegistration != null) machineLabels[s.machineId] = s.machineRegistration!;
+      if (s.driverName != null) driverLabels[s.driverId] = s.driverName!;
+    }
+
+    final events = <(DateTime, String, String, Color)>[];
+    final terminal = ['STOPPED', 'COMPLETED', 'CANCELLED'].contains(job.status);
+    for (var i = 0; i < history.sessions.length; i++) {
+      final s = history.sessions[i];
+      events.add((
+        s.startedAt,
+        i == 0 ? 'Work started' : 'Work resumed',
+        '${s.machineRegistration ?? '—'} · ${s.driverName ?? '—'}',
+        Colors.green,
+      ));
+      if (s.endedAt != null) {
+        final isLast = i == history.sessions.length - 1;
+        events.add((
+          s.endedAt!,
+          isLast && terminal ? 'Work stopped' : 'Work paused',
+          s.durationSec != null ? _durWords(s.durationSec!) : '',
+          Colors.orange,
+        ));
+      }
+    }
+    for (final c in history.changes) {
+      final isMachine = c.field == 'MACHINE';
+      final from = isMachine ? (machineLabels[c.oldMachineId] ?? '—') : (driverLabels[c.oldDriverId] ?? '—');
+      final to = isMachine ? (machineLabels[c.newMachineId] ?? '—') : (driverLabels[c.newDriverId] ?? '—');
+      events.add((
+        c.changedAt,
+        isMachine ? 'Machine changed' : 'Driver changed',
+        '$from → $to · ${c.reason}',
+        Colors.red,
+      ));
+    }
+    events.sort((a, b) => a.$1.compareTo(b.$1));
+
+    // Per-resource attribution from sessions (Parts I/J) — actual worked time,
+    // never the current/final assignment.
+    final byDriver = <String, ({String name, int sec})>{};
+    final byMachine = <String, ({String name, int sec})>{};
+    for (final s in history.sessions) {
+      final sec = s.durationSec ?? 0;
+      final d = byDriver[s.driverId];
+      byDriver[s.driverId] = (name: s.driverName ?? '—', sec: (d?.sec ?? 0) + sec);
+      final m = byMachine[s.machineId];
+      byMachine[s.machineId] = (name: s.machineRegistration ?? '—', sec: (m?.sec ?? 0) + sec);
+    }
+    String h(int sec) => '${(sec / 3600).toStringAsFixed(2)}h';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Job Timeline', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+        const SizedBox(height: 10),
+        for (final e in events)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.circle, size: 10, color: e.$4),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 46,
+                  child: Text(_formatClock(e.$1), style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.grey)),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(e.$2, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      if (e.$3.isNotEmpty) Text(e.$3, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (byDriver.length > 1 || byMachine.length > 1) ...[
+          const SizedBox(height: 10),
+          const Divider(),
+          Wrap(
+            spacing: 24,
+            runSpacing: 8,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Driver time', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                  for (final d in byDriver.values) Text('${d.name}: ${h(d.sec)}', style: const TextStyle(fontSize: 13)),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Machine time', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                  for (final m in byMachine.values) Text('${m.name}: ${h(m.sec)}', style: const TextStyle(fontSize: 13)),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }
@@ -868,6 +1343,85 @@ final _pricingMethodsProvider = FutureProvider<List<Map<String, dynamic>>>((ref)
   final response = await dio.get('/pricing-methods');
   return (response.data as List<dynamic>).cast<Map<String, dynamic>>();
 });
+
+class _AddTransportDialog extends StatefulWidget {
+  final List<TransportType> types;
+  const _AddTransportDialog({required this.types});
+
+  @override
+  State<_AddTransportDialog> createState() => _AddTransportDialogState();
+}
+
+class _AddTransportDialogState extends State<_AddTransportDialog> {
+  final _tripsController = TextEditingController();
+  final _rateController = TextEditingController();
+  String? _typeId;
+
+  @override
+  void dispose() {
+    _tripsController.dispose();
+    _rateController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final trips = int.tryParse(_tripsController.text.trim());
+    final rate = double.tryParse(_rateController.text.trim());
+    final preview = (trips != null && trips > 0 && rate != null && rate >= 0) ? trips * rate : null;
+    final valid = _typeId != null && preview != null;
+    return AlertDialog(
+      title: const Text('Add Transportation'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: _typeId,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Transportation Type *', border: OutlineInputBorder()),
+              items: widget.types.map((t) => DropdownMenuItem(value: t.id, child: Text(t.name))).toList(),
+              onChanged: (v) => setState(() => _typeId = v),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _tripsController,
+              decoration: const InputDecoration(labelText: 'Number of Trips *', border: OutlineInputBorder()),
+              keyboardType: TextInputType.number,
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _rateController,
+              decoration: const InputDecoration(labelText: 'Rate per Trip *', border: OutlineInputBorder(), prefixText: '₹ '),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              onChanged: (_) => setState(() {}),
+            ),
+            if (preview != null) ...[
+              const SizedBox(height: 12),
+              Text('Total: ₹${preview.toStringAsFixed(0)}  (confirmed by server on save)',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        ElevatedButton(
+          onPressed: valid
+              ? () => Navigator.pop(context, {
+                    'transportTypeId': _typeId!,
+                    'trips': _tripsController.text.trim(),
+                    'ratePerTrip': _rateController.text.trim(),
+                  })
+              : null,
+          child: const Text('Add'),
+        ),
+      ],
+    );
+  }
+}
 
 class _AddFuelDialog extends StatefulWidget {
   const _AddFuelDialog();

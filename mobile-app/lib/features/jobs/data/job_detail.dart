@@ -22,6 +22,8 @@ class JobDetail {
   final double? minimumCharge; // §8.2 optional floor: final = max(metered, minimumCharge)
   final String? pricingUnit; // hour | minute | acre | null
   final String? pricingLabel;
+  final String? machineId;
+  final String? driverId;
   final String? machineRegistration;
   final String? driverName;
 
@@ -45,6 +47,8 @@ class JobDetail {
     required this.minimumCharge,
     required this.pricingUnit,
     required this.pricingLabel,
+    required this.machineId,
+    required this.driverId,
     required this.machineRegistration,
     required this.driverName,
   });
@@ -78,6 +82,8 @@ class JobDetail {
       minimumCharge: booking['minimumCharge'] != null ? double.tryParse(booking['minimumCharge'].toString()) : null,
       pricingUnit: pricingMethod?['unit'] as String?,
       pricingLabel: pricingMethod?['label'] as String?,
+      machineId: json['machineId'] as String?,
+      driverId: json['driverId'] as String?,
       machineRegistration: machine?['registrationNumber'] as String?,
       driverName: employee?['name'] as String?,
     );

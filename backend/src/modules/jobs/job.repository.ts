@@ -1,9 +1,21 @@
-import type { Prisma } from "@prisma/client";
+import type { JobStatus, Prisma } from "@prisma/client";
 import { prisma } from "../../db/prisma";
 import { createScopedRepository } from "../../shared/db/scopedRepository";
 
 // Only file in this module allowed to import the Prisma client.
 const scoped = createScopedRepository(prisma.job);
+
+// Canonical "this resource is physically occupied right now" set. For
+// ShabooAgri ONLY a WORKING job occupies its Machine and Driver. A PAUSED job
+// is temporarily stopped ("continue later") and RELEASES both resources so
+// they can work another booking meanwhile — a paused job re-checks
+// availability when it resumes. NOT_STARTED, STOPPED, COMPLETED and CANCELLED
+// likewise hold nothing. This is the single source of truth for occupancy —
+// there is deliberately no second status system on machines/drivers.
+// (Note: the dashboard's own "drivers active today" KPI keeps its separate
+// WORKING+PAUSED count — that is an in-progress-jobs metric, not this
+// resource-conflict rule.)
+export const ACTIVE_RESOURCE_OCCUPANCY: JobStatus[] = ["WORKING"];
 
 // `booking: true` is a shallow include of Booking's own scalar columns
 // only (customerId, managerId, etc. as raw FK strings) — it does NOT
@@ -51,8 +63,62 @@ export function findAllForCompany(companyId: string, filter: JobListFilter = {})
   });
 }
 
-export function findByIdScopedWithRelations(companyId: string, id: string) {
-  return prisma.job.findFirst({ where: { id, companyId }, include: includeRelations });
+export function findByIdScopedWithRelations(
+  companyId: string,
+  id: string,
+  tx: Prisma.TransactionClient | typeof prisma = prisma,
+) {
+  return tx.job.findFirst({ where: { id, companyId }, include: includeRelations });
+}
+
+// Serialise concurrent Start attempts that share a Machine or Driver: taking
+// a row lock on the machine (and then the driver) row means two transactions
+// racing to start jobs on the same resource cannot both run their conflict
+// check simultaneously — the second blocks until the first commits/rolls
+// back, then sees the now-active job. Locks are always taken machine-first
+// then driver-first (a fixed global order across disjoint tables), so the
+// wait graph has only machine→driver edges and can never form a deadlock
+// cycle. Must be called inside the same transaction as the conflict check
+// and the WORKING write.
+export async function lockResourceRowsForUpdate(
+  companyId: string,
+  machineId: string,
+  driverId: string,
+  tx: Prisma.TransactionClient,
+) {
+  await tx.$queryRaw`SELECT id FROM machines WHERE id = ${machineId}::uuid AND company_id = ${companyId}::uuid FOR UPDATE`;
+  await tx.$queryRaw`SELECT id FROM drivers WHERE id = ${driverId}::uuid AND company_id = ${companyId}::uuid FOR UPDATE`;
+}
+
+// Authoritative occupancy query: any OTHER job in this company that is
+// currently WORKING (see ACTIVE_RESOURCE_OCCUPANCY) and shares this job's
+// Machine or Driver. Returns
+// just the fields the Start-conflict error message needs (booking number,
+// machine registration, driver name) so the caller can name the exact
+// blocking job(s). Run inside the Start transaction, after the row locks.
+export function findActiveJobsForResources(
+  companyId: string,
+  machineId: string,
+  driverId: string,
+  excludeJobId: string,
+  tx: Prisma.TransactionClient | typeof prisma = prisma,
+) {
+  return tx.job.findMany({
+    where: {
+      companyId,
+      id: { not: excludeJobId },
+      status: { in: ACTIVE_RESOURCE_OCCUPANCY },
+      OR: [{ machineId }, { driverId }],
+    },
+    select: {
+      id: true,
+      machineId: true,
+      driverId: true,
+      booking: { select: { bookingNumber: true } },
+      machine: { select: { registrationNumber: true } },
+      driver: { select: { employee: { select: { name: true } } } },
+    },
+  });
 }
 
 export function findByIdScoped(companyId: string, id: string) {

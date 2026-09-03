@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import type { Job, JobFuelEntry, JobPhoto } from "../../types/job";
+import type { Job, JobFuelEntry, JobPhoto, JobWorkSession, JobAssignmentChange, JobTransportCharge, TransportType } from "../../types/job";
 import type { PricingMethodOption } from "../../types/booking";
+import type { Machine } from "../../types/machine";
+import type { Driver } from "../../types/driver";
 import type { CompanyProfile } from "../../types/settings";
 import type { PricingUnit } from "../../lib/pricing";
 import { calculateAmount } from "../../lib/pricing";
@@ -8,11 +10,12 @@ import { api } from "../../lib/api";
 import { formatCurrency } from "../../lib/theme";
 import { getTerm } from "../../lib/terminology";
 import { notifyDataRefresh, subscribeDataRefresh } from "../../lib/dataRefreshBus";
+import { useAuth } from "../../context/AuthContext";
 import { useTaskDraft, useTaskTray, type TaskContentComponent } from "../../context/TaskTrayContext";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
-import { Camera, Fuel, StickyNote, X } from "lucide-react";
+import { Camera, Fuel, StickyNote, Truck, ArrowLeftRight, X } from "lucide-react";
 
 // Migrated onto the shared task-tray system (Pass 2, Batch 3) — see
 // BookingFormModal.tsx for the full explanation of the new contract. The
@@ -46,7 +49,18 @@ export interface JobExecutionInitProps {
   canCancel?: boolean;
 }
 
-type SubDialog = null | "fuel" | "photo" | "note" | "resumeReason" | "stopConfirm" | "submitConfirm";
+type SubDialog =
+  | null
+  | "fuel"
+  | "photo"
+  | "note"
+  | "resumeReason"
+  | "pauseReason"
+  | "changeMachine"
+  | "changeDriver"
+  | "transport"
+  | "stopConfirm"
+  | "submitConfirm";
 
 export interface JobExecutionDraft {
   activeSubDialog: SubDialog;
@@ -55,6 +69,14 @@ export interface JobExecutionDraft {
   photoCaption: string;
   noteText: string;
   resumeReason: string;
+  pauseReason: string;
+  changeMachineId: string;
+  changeMachineReason: string;
+  changeDriverId: string;
+  changeDriverReason: string;
+  transportTypeId: string;
+  transportTrips: string;
+  transportRate: string;
   submitAcres: string;
   pricingMethodId: string;
   pricingRate: string;
@@ -69,6 +91,14 @@ export function defaultJobExecutionDraft(): JobExecutionDraft {
     photoCaption: "",
     noteText: "",
     resumeReason: "",
+    pauseReason: "",
+    changeMachineId: "",
+    changeMachineReason: "",
+    changeDriverId: "",
+    changeDriverReason: "",
+    transportTypeId: "",
+    transportTrips: "",
+    transportRate: "",
     submitAcres: "",
     pricingMethodId: "",
     pricingRate: "",
@@ -77,6 +107,32 @@ export function defaultJobExecutionDraft(): JobExecutionDraft {
 }
 
 const RESUME_REASON_QUICK_OPTIONS = ["Machine breakdown", "Lunch break", "Rain"];
+// Reason quick-picks (Parts 6-8). "Other" is just free text — whatever the
+// user types is stored; the backend only requires a non-empty reason.
+const PAUSE_REASON_QUICK_OPTIONS = [
+  "Customer requested pause",
+  "Weather",
+  "Machine issue",
+  "Driver issue",
+  "Field/access problem",
+  "Waiting for customer",
+  "Work postponed",
+];
+const MACHINE_CHANGE_REASON_OPTIONS = [
+  "Machine breakdown",
+  "Machine unavailable",
+  "Maintenance",
+  "Machine reassigned",
+  "Customer requested machine change",
+  "Emergency",
+];
+const DRIVER_CHANGE_REASON_OPTIONS = [
+  "Driver unavailable",
+  "Driver reassigned",
+  "Driver illness",
+  "Customer requested driver change",
+  "Emergency",
+];
 
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
@@ -133,6 +189,12 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
 }) => {
   const { jobId, bookingNumber, canCancel = false } = initProps;
   const taskTray = useTaskTray();
+  const { roleKey, hasPermission } = useAuth();
+  // Machine/Driver reassignment is an authorised Manager/Owner action (backend
+  // gates on machine.assign / driver.assign). Hide the controls otherwise so
+  // the UI never implies an operation the backend will reject.
+  const canManageAssignments =
+    roleKey === "owner" || hasPermission("machine.assign") || hasPermission("driver.assign");
   const [draft, setDraft] = useTaskDraft<JobExecutionDraft>(taskId, defaultJobExecutionDraft());
 
   const customerTerm = getTerm("customer");
@@ -144,10 +206,35 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
   const [company, setCompany] = useState<CompanyProfile | null>(null);
   const [pricingMethods, setPricingMethods] = useState<PricingMethodOption[]>([]);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  // Job Execution V2 data — all read from the authoritative backend.
+  const [machines, setMachines] = useState<Machine[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [transportTypes, setTransportTypes] = useState<TransportType[]>([]);
+  const [transportCharges, setTransportCharges] = useState<JobTransportCharge[]>([]);
+  const [workSessions, setWorkSessions] = useState<JobWorkSession[]>([]);
+  const [assignmentChanges, setAssignmentChanges] = useState<JobAssignmentChange[]>([]);
 
   const [elapsedSec, setElapsedSec] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Work-session history, assignment-change audit, and transport charges — the
+  // Job Timeline and final breakdown are built ENTIRELY from these authoritative
+  // records, never reconstructed from the job's current machine/driver.
+  const loadExecutionHistory = async () => {
+    try {
+      const [sessions, changes, charges] = await Promise.all([
+        api.listJobWorkSessions(jobId).catch(() => []),
+        api.listJobAssignmentChanges(jobId).catch(() => []),
+        api.listJobTransportCharges(jobId).catch(() => []),
+      ]);
+      setWorkSessions(sessions);
+      setAssignmentChanges(changes);
+      setTransportCharges(charges);
+    } catch {
+      /* non-fatal: the timeline just stays empty */
+    }
+  };
 
   const loadJob = async () => {
     try {
@@ -157,6 +244,7 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
       // draft.noteText the user is mid-typing must never be clobbered by a
       // background "jobs" refresh, so this only fires once (empty check).
       setDraft((prev) => (prev.noteText ? {} : { noteText: j.notes || "" }));
+      await loadExecutionHistory();
     } catch (err: any) {
       console.error("Failed to load job", err);
     }
@@ -167,12 +255,15 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
     let cancelled = false;
     async function loadAll() {
       try {
-        const [j, fList, pList, comp, pmList] = await Promise.all([
+        const [j, fList, pList, comp, pmList, mList, dList, ttList] = await Promise.all([
           api.getJobById(jobId),
           api.listJobFuelEntries(jobId),
           api.listJobPhotos(jobId),
           api.getCompanyProfile().catch(() => null),
           api.listPricingMethods().catch(() => []),
+          api.listMachines().catch(() => []),
+          api.listDrivers().catch(() => []),
+          api.listTransportTypes().catch(() => []),
         ]);
         if (cancelled) return;
         setJob(j);
@@ -180,7 +271,11 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
         setPhotos(pList);
         setCompany(comp);
         setPricingMethods(pmList);
+        setMachines(mList);
+        setDrivers(dList);
+        setTransportTypes(ttList);
         setDraft((prev) => (prev.noteText ? {} : { noteText: j.notes || "" }));
+        await loadExecutionHistory();
       } catch (err: any) {
         if (!cancelled) setError(err.message || "Failed to load job");
       }
@@ -248,6 +343,60 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
   const liveAmount = hasPricing ? computeLiveAmount(pricingUnit, job.booking.rate!, displaySec, job.booking.minimumCharge) : null;
   const finalAmount = computeFinalAmount(job);
 
+  // Transportation is a separate additive charge; the server is authoritative
+  // for each charge's total (trips × rate). We only SUM the server totals here
+  // for display — never recompute the work price or invent a grand total the
+  // backend won't also produce (invoice total = work + Σ transport).
+  const transportTotal = round2(transportCharges.reduce((sum, c) => sum + Number(c.totalAmount), 0));
+  const grandTotal = finalAmount != null ? round2(finalAmount + transportTotal) : null;
+
+  // Job Timeline built ENTIRELY from the authoritative work-session and
+  // assignment-change records (never from the current machine/driver). Each
+  // session is a worked interval; the gaps between them are pauses; assignment
+  // changes are point events. Resolve resource ids to labels via the loaded
+  // machine/driver lists (falling back to the session's own embedded names).
+  const machineLabel = (id: string | null) =>
+    (id && machines.find((m) => m.id === id)?.registrationNumber) || "—";
+  const driverLabel = (id: string | null) =>
+    (id && drivers.find((d) => d.id === id)?.employee?.name) || "—";
+  const timeMs = (iso: string) => new Date(iso).getTime();
+  const timeLabel = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const terminalStatus = ["STOPPED", "COMPLETED", "CANCELLED"].includes(job.status);
+
+  type TimelineEvent = { at: string; title: string; detail?: string; tone: "start" | "stop" | "change" };
+  const timelineEvents: TimelineEvent[] = [];
+  workSessions.forEach((s, i) => {
+    const mReg = s.machine?.registrationNumber ?? machineLabel(s.machineId);
+    const dName = s.driver?.employee?.name ?? driverLabel(s.driverId);
+    timelineEvents.push({
+      at: s.startedAt,
+      title: i === 0 ? "Work started" : "Work resumed",
+      detail: `${mReg} · ${dName}`,
+      tone: "start",
+    });
+    if (s.endedAt) {
+      const isLast = i === workSessions.length - 1;
+      timelineEvents.push({
+        at: s.endedAt,
+        title: isLast && terminalStatus ? "Work stopped" : "Work paused",
+        detail: s.durationSec != null ? formatDurationWords(s.durationSec) : undefined,
+        tone: "stop",
+      });
+    }
+  });
+  assignmentChanges.forEach((c) => {
+    const isMachine = c.field === "MACHINE";
+    const from = isMachine ? machineLabel(c.oldMachineId) : driverLabel(c.oldDriverId);
+    const to = isMachine ? machineLabel(c.newMachineId) : driverLabel(c.newDriverId);
+    timelineEvents.push({
+      at: c.changedAt,
+      title: isMachine ? "Machine changed" : "Driver changed",
+      detail: `${from} → ${to} · ${c.reason}`,
+      tone: "change",
+    });
+  });
+  timelineEvents.sort((a, b) => timeMs(a.at) - timeMs(b.at));
+
   const handleStart = async () => {
     setIsSubmitting(true);
     setError(null);
@@ -262,15 +411,90 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
     }
   };
 
-  const handlePause = async () => {
+  // Pause now requires a reason (Part 6) — same quick-pick + free-text pattern
+  // as resume. A pause CLOSES the current work session and RELEASES the
+  // Machine/Driver server-side; the frozen elapsed time is unaffected.
+  const handleConfirmPause = async () => {
+    if (!draft.pauseReason.trim()) return;
     setIsSubmitting(true);
     setError(null);
     try {
-      await api.pauseJob(job.id);
+      await api.pauseJob(job.id, draft.pauseReason.trim());
+      setDraft({ activeSubDialog: null, pauseReason: "" });
       notifyDataRefresh("jobs");
       await loadJob();
     } catch (err: any) {
       setError(err.message || "Failed to pause job");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Reassign the PAUSED job's Machine — authoritative; the new machine is NOT
+  // occupied until the job actually resumes. Reason mandatory; audited server-side.
+  const handleConfirmChangeMachine = async () => {
+    if (!draft.changeMachineId || !draft.changeMachineReason.trim()) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await api.changeJobMachine(job.id, draft.changeMachineId, draft.changeMachineReason.trim());
+      setDraft({ activeSubDialog: null, changeMachineId: "", changeMachineReason: "" });
+      notifyDataRefresh("jobs");
+      await loadJob();
+    } catch (err: any) {
+      setError(err.message || "Failed to change machine");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleConfirmChangeDriver = async () => {
+    if (!draft.changeDriverId || !draft.changeDriverReason.trim()) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await api.changeJobDriver(job.id, draft.changeDriverId, draft.changeDriverReason.trim());
+      setDraft({ activeSubDialog: null, changeDriverId: "", changeDriverReason: "" });
+      notifyDataRefresh("jobs");
+      await loadJob();
+    } catch (err: any) {
+      setError(err.message || "Failed to change driver");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Transportation: optional structured charge. The server computes the
+  // authoritative total (trips × rate) — the client never sends a total.
+  const handleAddTransport = async () => {
+    const trips = parseInt(draft.transportTrips, 10);
+    const ratePerTrip = parseFloat(draft.transportRate);
+    if (!draft.transportTypeId || !Number.isFinite(trips) || trips <= 0 || !Number.isFinite(ratePerTrip) || ratePerTrip < 0) {
+      return;
+    }
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await api.addJobTransportCharge(job.id, { transportTypeId: draft.transportTypeId, trips, ratePerTrip });
+      setDraft({ activeSubDialog: null, transportTypeId: "", transportTrips: "", transportRate: "" });
+      await loadExecutionHistory();
+      notifyDataRefresh("jobs");
+    } catch (err: any) {
+      setError(err.message || "Failed to add transportation");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteTransport = async (chargeId: string) => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await api.deleteJobTransportCharge(job.id, chargeId);
+      await loadExecutionHistory();
+      notifyDataRefresh("jobs");
+    } catch (err: any) {
+      setError(err.message || "Failed to remove transportation");
     } finally {
       setIsSubmitting(false);
     }
@@ -609,6 +833,268 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
       );
     }
 
+    // Pause requires a reason (Part 6). Same quick-pick + free-text pattern
+    // as resume; "Other" is simply a free-text reason.
+    if (draft.activeSubDialog === "pauseReason") {
+      return (
+        <div className="sa-job-subdialog-overlay">
+          <div className="sa-job-subdialog">
+            <div className="sa-job-subdialog-header">
+              <h4>Why are you pausing?</h4>
+              <button type="button" className="sa-icon-action" onClick={() => setDraft({ activeSubDialog: null })}>
+                <X size={16} />
+              </button>
+            </div>
+            <div className="sa-resume-reason-chips">
+              {PAUSE_REASON_QUICK_OPTIONS.map((opt) => (
+                <button
+                  type="button"
+                  key={opt}
+                  className={`sa-segmented-btn ${draft.pauseReason === opt ? "is-active" : ""}`}
+                  onClick={() => setDraft({ pauseReason: opt })}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+            <Input
+              label="Pause reason *"
+              value={draft.pauseReason}
+              onChange={(e) => setDraft({ pauseReason: e.target.value })}
+              placeholder="Or type a custom reason (required)"
+            />
+            <p className="sa-input-hint">Pausing releases the machine and driver for other jobs. The elapsed time is preserved.</p>
+            <div className="sa-form-actions">
+              <Button type="button" variant="secondary" onClick={() => setDraft({ activeSubDialog: null })}>
+                Cancel
+              </Button>
+              <Button type="button" variant="warning" isLoading={isSubmitting} disabled={!draft.pauseReason.trim()} onClick={handleConfirmPause}>
+                Confirm &amp; Pause
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Change Machine while PAUSED. New machine stays idle until Resume.
+    if (draft.activeSubDialog === "changeMachine") {
+      return (
+        <div className="sa-job-subdialog-overlay">
+          <div className="sa-job-subdialog">
+            <div className="sa-job-subdialog-header">
+              <h4>Change Machine</h4>
+              <button type="button" className="sa-icon-action" onClick={() => setDraft({ activeSubDialog: null })}>
+                <X size={16} />
+              </button>
+            </div>
+            <div className="sa-input-group">
+              <label className="sa-input-label">Current Machine</label>
+              <div className="sa-readonly-field">{job.machine?.registrationNumber ?? "—"}</div>
+            </div>
+            <div className="sa-input-group">
+              <label className="sa-input-label">New Machine *</label>
+              <select
+                className="sa-input"
+                value={draft.changeMachineId}
+                onChange={(e) => setDraft({ changeMachineId: e.target.value })}
+              >
+                <option value="">Select a machine…</option>
+                {machines
+                  .filter((m) => m.id !== job.machineId)
+                  .map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.registrationNumber}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div className="sa-resume-reason-chips">
+              {MACHINE_CHANGE_REASON_OPTIONS.map((opt) => (
+                <button
+                  type="button"
+                  key={opt}
+                  className={`sa-segmented-btn ${draft.changeMachineReason === opt ? "is-active" : ""}`}
+                  onClick={() => setDraft({ changeMachineReason: opt })}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+            <Input
+              label="Reason *"
+              value={draft.changeMachineReason}
+              onChange={(e) => setDraft({ changeMachineReason: e.target.value })}
+              placeholder="Reason for the change (required)"
+            />
+            <div className="sa-form-actions">
+              <Button type="button" variant="secondary" onClick={() => setDraft({ activeSubDialog: null })}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                isLoading={isSubmitting}
+                disabled={!draft.changeMachineId || !draft.changeMachineReason.trim()}
+                onClick={handleConfirmChangeMachine}
+              >
+                Change Machine
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Change Driver while PAUSED. New driver stays idle until Resume.
+    if (draft.activeSubDialog === "changeDriver") {
+      return (
+        <div className="sa-job-subdialog-overlay">
+          <div className="sa-job-subdialog">
+            <div className="sa-job-subdialog-header">
+              <h4>Change Driver</h4>
+              <button type="button" className="sa-icon-action" onClick={() => setDraft({ activeSubDialog: null })}>
+                <X size={16} />
+              </button>
+            </div>
+            <div className="sa-input-group">
+              <label className="sa-input-label">Current Driver</label>
+              <div className="sa-readonly-field">{job.driver?.employee?.name ?? "—"}</div>
+            </div>
+            <div className="sa-input-group">
+              <label className="sa-input-label">New Driver *</label>
+              <select
+                className="sa-input"
+                value={draft.changeDriverId}
+                onChange={(e) => setDraft({ changeDriverId: e.target.value })}
+              >
+                <option value="">Select a driver…</option>
+                {drivers
+                  .filter((d) => d.id !== job.driverId)
+                  .map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.employee?.name ?? "Driver"}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div className="sa-resume-reason-chips">
+              {DRIVER_CHANGE_REASON_OPTIONS.map((opt) => (
+                <button
+                  type="button"
+                  key={opt}
+                  className={`sa-segmented-btn ${draft.changeDriverReason === opt ? "is-active" : ""}`}
+                  onClick={() => setDraft({ changeDriverReason: opt })}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+            <Input
+              label="Reason *"
+              value={draft.changeDriverReason}
+              onChange={(e) => setDraft({ changeDriverReason: e.target.value })}
+              placeholder="Reason for the change (required)"
+            />
+            <div className="sa-form-actions">
+              <Button type="button" variant="secondary" onClick={() => setDraft({ activeSubDialog: null })}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                isLoading={isSubmitting}
+                disabled={!draft.changeDriverId || !draft.changeDriverReason.trim()}
+                onClick={handleConfirmChangeDriver}
+              >
+                Change Driver
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Add a transportation charge. Total is server-computed (trips × rate);
+    // the preview here is display-only.
+    if (draft.activeSubDialog === "transport") {
+      const previewTrips = parseInt(draft.transportTrips, 10);
+      const previewRate = parseFloat(draft.transportRate);
+      const previewTotal =
+        Number.isFinite(previewTrips) && Number.isFinite(previewRate) && previewTrips > 0 && previewRate >= 0
+          ? round2(previewTrips * previewRate)
+          : null;
+      return (
+        <div className="sa-job-subdialog-overlay">
+          <div className="sa-job-subdialog">
+            <div className="sa-job-subdialog-header">
+              <h4>Add Transportation</h4>
+              <button type="button" className="sa-icon-action" onClick={() => setDraft({ activeSubDialog: null })}>
+                <X size={16} />
+              </button>
+            </div>
+            <div className="sa-input-group">
+              <label className="sa-input-label">Transportation Type *</label>
+              <select
+                className="sa-input"
+                value={draft.transportTypeId}
+                onChange={(e) => setDraft({ transportTypeId: e.target.value })}
+              >
+                <option value="">Select a type…</option>
+                {transportTypes.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Input
+              label="Number of Trips *"
+              type="number"
+              min="1"
+              step="1"
+              value={draft.transportTrips}
+              onChange={(e) => setDraft({ transportTrips: e.target.value })}
+              placeholder="e.g. 2"
+            />
+            <Input
+              label="Rate per Trip (₹) *"
+              type="number"
+              min="0"
+              step="0.01"
+              value={draft.transportRate}
+              onChange={(e) => setDraft({ transportRate: e.target.value })}
+              placeholder="e.g. 1000"
+            />
+            {previewTotal != null && (
+              <div className="sa-price-live" style={{ marginTop: 4 }}>
+                <div>
+                  <div className="sa-price-amt">{formatCurrency(previewTotal)}</div>
+                  <div className="sa-price-method">
+                    {previewTrips} trips × {formatCurrency(previewRate)} — confirmed by server on save
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="sa-form-actions">
+              <Button type="button" variant="secondary" onClick={() => setDraft({ activeSubDialog: null })}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                isLoading={isSubmitting}
+                disabled={!draft.transportTypeId || !previewTotal}
+                onClick={handleAddTransport}
+              >
+                Add Transportation
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (draft.activeSubDialog === "stopConfirm") {
       return (
         <div className="sa-job-subdialog-overlay">
@@ -783,7 +1269,11 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
               variant={job.status === "WORKING" ? "warning" : "primary"}
               size="lg"
               isLoading={isSubmitting}
-              onClick={job.status === "WORKING" ? handlePause : () => setDraft({ activeSubDialog: "resumeReason" })}
+              onClick={
+                job.status === "WORKING"
+                  ? () => setDraft({ activeSubDialog: "pauseReason" })
+                  : () => setDraft({ activeSubDialog: "resumeReason" })
+              }
             >
               {job.status === "WORKING" ? "⏸ Pause" : "▶ Start"}
             </Button>
@@ -794,6 +1284,32 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
               onClick={() => setDraft({ activeSubDialog: "stopConfirm" })}
             >
               ⏹ Stop
+            </Button>
+          </div>
+        )}
+
+        {/* Machine/Driver reassignment — only while PAUSED (resources released),
+            only for authorised users. The new resource stays idle until Resume,
+            which re-checks availability server-side. */}
+        {job.status === "PAUSED" && canManageAssignments && (
+          <div className="sa-btn-row-half">
+            <Button
+              variant="secondary"
+              isLoading={isSubmitting}
+              onClick={() =>
+                setDraft({ activeSubDialog: "changeMachine", changeMachineId: job.machineId || "", changeMachineReason: "" })
+              }
+            >
+              <ArrowLeftRight size={15} style={{ marginRight: 6 }} /> Change Machine
+            </Button>
+            <Button
+              variant="secondary"
+              isLoading={isSubmitting}
+              onClick={() =>
+                setDraft({ activeSubDialog: "changeDriver", changeDriverId: job.driverId || "", changeDriverReason: "" })
+              }
+            >
+              <ArrowLeftRight size={15} style={{ marginRight: 6 }} /> Change Driver
             </Button>
           </div>
         )}
@@ -821,6 +1337,51 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
                 <Fuel size={16} /> A fuel-log entry is required before submitting this job.
               </div>
             )}
+
+            {/* Transportation — optional, added before final submission. Separate
+                from the work timer/pricing; the invoice total will be
+                work + Σ transport. */}
+            <div className="sa-transport-section">
+              <div className="sa-transport-head">
+                <h4 style={{ margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                  <Truck size={16} /> Transportation
+                </h4>
+                <Button type="button" variant="secondary" size="sm" onClick={() => setDraft({ activeSubDialog: "transport" })}>
+                  + Add
+                </Button>
+              </div>
+              {transportCharges.length === 0 ? (
+                <p className="sa-input-hint" style={{ margin: "4px 0 0" }}>
+                  Optional. Add a transport charge (e.g. hauling produce) if the customer is being charged for it.
+                </p>
+              ) : (
+                <div className="sa-transport-list">
+                  {transportCharges.map((c) => (
+                    <div key={c.id} className="sa-transport-item">
+                      <span>
+                        {c.transportTypeName} · {c.trips} × {formatCurrency(c.ratePerTrip)}
+                      </span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <b>{formatCurrency(c.totalAmount)}</b>
+                        <button
+                          type="button"
+                          className="sa-icon-action"
+                          title="Remove"
+                          onClick={() => handleDeleteTransport(c.id)}
+                        >
+                          <X size={14} />
+                        </button>
+                      </span>
+                    </div>
+                  ))}
+                  <div className="sa-transport-item" style={{ fontWeight: 600 }}>
+                    <span>Transportation total</span>
+                    <span>{formatCurrency(transportTotal)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <Button
               variant="danger"
               size="lg"
@@ -863,9 +1424,21 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
             </span>
           </div>
           <div className="sa-finfo-item" style={{ gridColumn: "1 / -1" }}>
+            <span className="sa-finfo-label">Work charges</span>
+            <span className="sa-finfo-val">{finalAmount != null ? formatCurrency(finalAmount) : "—"}</span>
+          </div>
+          {transportCharges.map((c) => (
+            <div className="sa-finfo-item" style={{ gridColumn: "1 / -1" }} key={c.id}>
+              <span className="sa-finfo-label">
+                Transportation · {c.transportTypeName} ({c.trips} × {formatCurrency(c.ratePerTrip)})
+              </span>
+              <span className="sa-finfo-val">{formatCurrency(c.totalAmount)}</span>
+            </div>
+          ))}
+          <div className="sa-finfo-item" style={{ gridColumn: "1 / -1" }}>
             <span className="sa-finfo-label">Total</span>
             <span className="sa-finfo-val sa-amount-bold">
-              {finalAmount != null ? formatCurrency(finalAmount) : "—"}
+              {grandTotal != null ? formatCurrency(grandTotal) : "—"}
             </span>
           </div>
         </div>
@@ -949,6 +1522,60 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
               </a>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Job Timeline — authoritative execution history (sessions + changes) */}
+      {timelineEvents.length > 0 && (
+        <div className="sa-timeline-section">
+          <h4>Job Timeline</h4>
+          <ol className="sa-timeline">
+            {timelineEvents.map((ev, idx) => (
+              <li key={idx} className={`sa-timeline-item is-${ev.tone}`}>
+                <span className="sa-timeline-time">{timeLabel(ev.at)}</span>
+                <span className="sa-timeline-body">
+                  <b>{ev.title}</b>
+                  {ev.detail ? <span className="sa-timeline-detail"> — {ev.detail}</span> : null}
+                </span>
+              </li>
+            ))}
+          </ol>
+
+          {/* Per-resource attribution from sessions (Parts I/J) — actual worked
+              time per Machine / Driver, never the current/final assignment. */}
+          {(() => {
+            const byDriver = new Map<string, { name: string; sec: number }>();
+            const byMachine = new Map<string, { name: string; sec: number }>();
+            for (const s of workSessions) {
+              const sec = s.durationSec ?? 0;
+              const dName = s.driver?.employee?.name ?? driverLabel(s.driverId);
+              const mName = s.machine?.registrationNumber ?? machineLabel(s.machineId);
+              byDriver.set(s.driverId, { name: dName, sec: (byDriver.get(s.driverId)?.sec ?? 0) + sec });
+              byMachine.set(s.machineId, { name: mName, sec: (byMachine.get(s.machineId)?.sec ?? 0) + sec });
+            }
+            const fmtH = (sec: number) => `${Math.round((sec / 3600) * 100) / 100}h`;
+            if (byDriver.size <= 1 && byMachine.size <= 1) return null;
+            return (
+              <div className="sa-attribution">
+                <div>
+                  <span className="sa-finfo-label">Driver time</span>
+                  {[...byDriver.values()].map((d, i) => (
+                    <span key={i} className="sa-attribution-row">
+                      {d.name}: <b>{fmtH(d.sec)}</b>
+                    </span>
+                  ))}
+                </div>
+                <div>
+                  <span className="sa-finfo-label">Machine time</span>
+                  {[...byMachine.values()].map((m, i) => (
+                    <span key={i} className="sa-attribution-row">
+                      {m.name}: <b>{fmtH(m.sec)}</b>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 

@@ -387,3 +387,86 @@
   flex-wrap: wrap;
   margin-bottom: 10px;
 }
+
+/* ---- Job Execution V2: reassignment, transportation, timeline ---- */
+.sa-readonly-field {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface-muted, #f6f6f6);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.sa-transport-section {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 12px;
+  margin: 6px 0;
+}
+.sa-transport-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sa-transport-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+.sa-transport-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--color-surface-muted, #f6f6f6);
+}
+
+.sa-timeline-section { margin-top: 18px; }
+.sa-timeline-section h4 { margin: 0 0 10px; font-size: 0.9rem; }
+.sa-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-left: 2px solid var(--color-border);
+}
+.sa-timeline-item {
+  position: relative;
+  padding: 4px 0 12px 16px;
+  font-size: 0.82rem;
+}
+.sa-timeline-item::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 8px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+.sa-timeline-item.is-start::before { background: var(--color-primary, #2e7d32); }
+.sa-timeline-item.is-stop::before { background: #e0a100; }
+.sa-timeline-item.is-change::before { background: #c0392b; }
+.sa-timeline-time {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+  margin-right: 8px;
+  font-weight: 600;
+}
+.sa-timeline-detail { color: var(--color-text-muted); }
+
+.sa-attribution {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--color-border);
+  font-size: 0.82rem;
+}
+.sa-attribution .sa-attribution-row { display: block; }

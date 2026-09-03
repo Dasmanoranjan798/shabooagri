@@ -341,6 +341,9 @@ async function runSecurityAuditTests() {
   await prisma.invoice.deleteMany({ where: { companyId: { in: [companyA.id, companyB.id] } } });
   await prisma.jobPhoto.deleteMany({ where: { companyId: { in: [companyA.id, companyB.id] } } });
   await prisma.jobStatusLog.deleteMany({ where: { companyId: { in: [companyA.id, companyB.id] } } });
+  await prisma.jobWorkSession.deleteMany({ where: { companyId: { in: [companyA.id, companyB.id] } } });
+  await prisma.jobAssignmentChange.deleteMany({ where: { companyId: { in: [companyA.id, companyB.id] } } });
+  await prisma.jobTransportCharge.deleteMany({ where: { companyId: { in: [companyA.id, companyB.id] } } });
   await prisma.job.deleteMany({ where: { companyId: { in: [companyA.id, companyB.id] } } });
   await prisma.bookingAttachment.deleteMany({ where: { companyId: { in: [companyA.id, companyB.id] } } });
   await prisma.booking.deleteMany({ where: { companyId: { in: [companyA.id, companyB.id] } } });
