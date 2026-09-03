@@ -1172,6 +1172,10 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
       byMachine[s.machineId] = (name: s.machineRegistration ?? '—', sec: (m?.sec ?? 0) + sec);
     }
     String h(int sec) => '${(sec / 3600).toStringAsFixed(2)}h';
+    // Total worked time / session count across all sessions — mirrors the web
+    // JobExecutionModal's work-summary line and the backend rollup.
+    final totalWorkedSec = history.sessions.fold<int>(0, (s, w) => s + (w.durationSec ?? 0));
+    final sessionCount = history.sessions.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1202,6 +1206,13 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
               ],
             ),
           ),
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: Text(
+            'Total worked: ${_durWords(totalWorkedSec)} · $sessionCount ${sessionCount == 1 ? 'session' : 'sessions'}',
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+        ),
         if (byDriver.length > 1 || byMachine.length > 1) ...[
           const SizedBox(height: 10),
           const Divider(),
