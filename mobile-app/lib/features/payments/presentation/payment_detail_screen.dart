@@ -66,6 +66,33 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
     }
   }
 
+  Future<void> _handleEditTax(Map<String, dynamic> inv) async {
+    final currentGst = inv['isGstApplicable'] as bool? ?? false;
+    final currentRate = double.tryParse(inv['taxRate']?.toString() ?? '') ?? 18.0;
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => _EditTaxDialog(isGstApplicable: currentGst, taxRate: currentRate),
+    );
+    if (result == null) return;
+
+    setState(() => _acting = true);
+    try {
+      final dio = ref.read(apiClientProvider);
+      final gst = result['isGstApplicable'] as bool;
+      await dio.patch('/invoices/${widget.invoiceId}/tax', data: {
+        'isGstApplicable': gst,
+        // Backend recomputes the total; send 0 when GST is off, mirroring the web ReceiptModal.
+        'taxRate': gst ? (result['taxRate'] as double) : 0,
+      });
+      _refresh();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tax updated.')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+    } finally {
+      if (mounted) setState(() => _acting = false);
+    }
+  }
+
   Future<String?> _promptVoidReason(String title) {
     final reasonController = TextEditingController();
     return showDialog<String>(
@@ -256,6 +283,17 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
                 InfoRow('Total Amount', '₹${(double.tryParse(inv['totalAmount'].toString()) ?? 0.0).toStringAsFixed(2)}'),
                 InfoRow('Amount Received', '₹${(double.tryParse(inv['paidAmount'].toString()) ?? 0.0).toStringAsFixed(2)}'),
                 InfoRow('Balance Due', '₹${balance.toStringAsFixed(2)}'),
+                if (canReceivePayment && !isVoided) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      icon: Icon(isGstApplicable ? Icons.edit : Icons.add, size: 18),
+                      label: Text(isGstApplicable ? 'Edit GST Settings' : 'Add GST / Tax to Invoice'),
+                      onPressed: _acting ? null : () => _handleEditTax(inv),
+                    ),
+                  ),
+                ],
                 if (receipt.company['bankName'] != null || receipt.company['upiId'] != null) ...[
                   const Divider(height: 32),
                   const Text('Bank & Payment Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -383,6 +421,73 @@ class _ReceivePaymentDialogState extends State<_ReceivePaymentDialog> {
             'notes': _notesController.text.trim(),
           }),
           child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
+class _EditTaxDialog extends StatefulWidget {
+  final bool isGstApplicable;
+  final double taxRate;
+  const _EditTaxDialog({required this.isGstApplicable, required this.taxRate});
+
+  @override
+  State<_EditTaxDialog> createState() => _EditTaxDialogState();
+}
+
+class _EditTaxDialogState extends State<_EditTaxDialog> {
+  late bool _gst = widget.isGstApplicable;
+  late final _rateController =
+      TextEditingController(text: (widget.taxRate <= 0 ? 18 : widget.taxRate).toString());
+
+  @override
+  void dispose() {
+    _rateController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Invoice Tax'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Apply GST to this Invoice'),
+            value: _gst,
+            onChanged: (v) => setState(() => _gst = v),
+          ),
+          if (_gst) ...[
+            const SizedBox(height: 8),
+            TextField(
+              controller: _rateController,
+              decoration: const InputDecoration(
+                labelText: 'GST Tax Rate (%)',
+                border: OutlineInputBorder(),
+                suffixText: '%',
+              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        ElevatedButton(
+          onPressed: () {
+            final rate = double.tryParse(_rateController.text.trim());
+            if (_gst && (rate == null || rate < 0 || rate > 100)) {
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(const SnackBar(content: Text('Enter a tax rate between 0 and 100.')));
+              return;
+            }
+            Navigator.pop(context, {'isGstApplicable': _gst, 'taxRate': rate ?? 0.0});
+          },
+          child: const Text('Apply Tax Changes'),
         ),
       ],
     );
