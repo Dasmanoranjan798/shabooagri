@@ -19,17 +19,16 @@ function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-// Same tenant-subdomain resolution auth.service.requestPasswordReset already
-// uses, so invite links land on the same host password-reset links do.
-function resolveBaseUrl(companySlug: string, requestHost?: string): string {
-  if (requestHost && (requestHost.includes(".shabooagri.com") || requestHost.includes(".localhost"))) {
-    const protocol = requestHost.includes("localhost") ? "http" : "https";
-    return `${protocol}://${requestHost}`;
+// Same handoff base as auth.service.requestPasswordReset, so invite links land
+// on the always-served platform host (Android App Links deep-link an installed
+// app straight into Flutter; the platform /accept-invite page handles everyone
+// else). The retired operational web app is never targeted; local dev can still
+// override via the calling host.
+function resolveBaseUrl(requestHost?: string): string {
+  if (requestHost && requestHost.includes("localhost")) {
+    return `http://${requestHost}`;
   }
-  if (companySlug && companySlug !== "pilot" && env.APP_URL.includes("shabooagri.com")) {
-    return `https://${companySlug}.shabooagri.com`;
-  }
-  return env.APP_URL;
+  return env.AUTH_LINK_BASE_URL;
 }
 
 export async function createInvite(
@@ -107,12 +106,13 @@ export async function createInvite(
 
   const company = await settingsRepo.findCompanyById(companyId);
   const inviter = await prisma.user.findUnique({ where: { id: invitedByUserId } });
-  const baseUrl = resolveBaseUrl(company!.slug, requestHost);
+  const baseUrl = resolveBaseUrl(requestHost);
   const inviteLink = `${baseUrl}/accept-invite?token=${rawToken}`;
 
   let emailSent = false;
   if (input.email) {
-    emailSent = await sendStaffInviteEmail(input.email, inviteLink, company!.name, role.name, inviter!.fullName);
+    // Pass the raw token too for the email's copy/paste fallback into the app.
+    emailSent = await sendStaffInviteEmail(input.email, inviteLink, company!.name, role.name, inviter!.fullName, rawToken);
   }
 
   let smsSent = false;

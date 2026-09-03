@@ -429,18 +429,21 @@ export async function requestPasswordReset(
       expiresAt,
     });
 
-    let baseUrl = env.APP_URL;
+    // Emailed reset links hand off to the Flutter app via Android App Links on
+    // the always-served platform host (or the platform /reset-password handoff
+    // page if the app isn't installed). The retired operational web app is never
+    // targeted, so we no longer build a *.shabooagri.com URL. Local dev can still
+    // override via the calling host.
+    let baseUrl = env.AUTH_LINK_BASE_URL;
+    if (requestHost && requestHost.includes("localhost")) {
+      baseUrl = `http://${requestHost}`;
+    }
     const tenantSlug = targetCompany.slug || "";
 
-    if (requestHost && (requestHost.includes(".shabooagri.com") || requestHost.includes(".localhost"))) {
-      const protocol = requestHost.includes("localhost") ? "http" : "https";
-      baseUrl = `${protocol}://${requestHost}`;
-    } else if (tenantSlug && tenantSlug !== "pilot" && env.APP_URL.includes("shabooagri.com")) {
-      baseUrl = `https://${tenantSlug}.shabooagri.com`;
-    }
-
     const resetLink = `${baseUrl}/reset-password?token=${rawToken}&email=${encodeURIComponent(normalizedEmail)}${tenantSlug ? `&tenant=${encodeURIComponent(tenantSlug)}` : ""}`;
-    await sendPasswordResetEmail(normalizedEmail, resetLink);
+    // Pass the raw token too: the email offers a copy/paste fallback for any
+    // device/platform where the App Link doesn't open the app directly.
+    await sendPasswordResetEmail(normalizedEmail, resetLink, rawToken);
   }
 
   // Always return generic response to prevent account enumeration
