@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { TenantGuard } from "./TenantGuard";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { TaskTrayProvider } from "../context/TaskTrayContext";
 import { TaskSheetHost } from "../components/TaskSheetHost/TaskSheetHost";
@@ -83,6 +84,7 @@ function SmartRootRoute() {
 export function App() {
   return (
     <BrowserRouter>
+      <TenantGuard>
       <AuthProvider>
         {/* Mounted above <Routes> deliberately — every route below re-wraps
             its own <AppLayout>, which remounts on every navigation. A task
@@ -351,6 +353,7 @@ export function App() {
         <TaskSheetHost />
         </TaskTrayProvider>
       </AuthProvider>
+      </TenantGuard>
     </BrowserRouter>
   );
 }
