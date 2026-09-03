@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Job, JobFuelEntry, JobPhoto, JobWorkSession, JobAssignmentChange, JobTransportCharge, TransportType } from "../../types/job";
+import type { Job, JobFuelEntry, JobPhoto, JobWorkSession, JobAssignmentChange, JobTransportCharge, JobWorkSummary, TransportType } from "../../types/job";
 import type { PricingMethodOption } from "../../types/booking";
 import type { Machine } from "../../types/machine";
 import type { Driver } from "../../types/driver";
@@ -213,6 +213,9 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
   const [transportCharges, setTransportCharges] = useState<JobTransportCharge[]>([]);
   const [workSessions, setWorkSessions] = useState<JobWorkSession[]>([]);
   const [assignmentChanges, setAssignmentChanges] = useState<JobAssignmentChange[]>([]);
+  // Authoritative per-driver / per-machine worked-time rollup (Parts 15, 30),
+  // served by GET /jobs/:id/work-summary. Rendered on STOPPED/COMPLETED jobs.
+  const [workSummary, setWorkSummary] = useState<JobWorkSummary | null>(null);
 
   const [elapsedSec, setElapsedSec] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -223,14 +226,16 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
   // records, never reconstructed from the job's current machine/driver.
   const loadExecutionHistory = async () => {
     try {
-      const [sessions, changes, charges] = await Promise.all([
+      const [sessions, changes, charges, summary] = await Promise.all([
         api.listJobWorkSessions(jobId).catch(() => []),
         api.listJobAssignmentChanges(jobId).catch(() => []),
         api.listJobTransportCharges(jobId).catch(() => []),
+        api.getJobWorkSummary(jobId).catch(() => null),
       ]);
       setWorkSessions(sessions);
       setAssignmentChanges(changes);
       setTransportCharges(charges);
+      setWorkSummary(summary);
     } catch {
       /* non-fatal: the timeline just stays empty */
     }
@@ -1541,38 +1546,72 @@ export const JobExecutionTask: TaskContentComponent<JobExecutionInitProps> = ({
             ))}
           </ol>
 
-          {/* Per-resource attribution from sessions (Parts I/J) — actual worked
-              time per Machine / Driver, never the current/final assignment. */}
+          {/* Per-resource attribution (Parts I/J) — actual worked time per
+              Machine / Driver, never the current/final assignment. Sourced from
+              the authoritative GET /jobs/:id/work-summary rollup when available
+              (single source of truth with the backend/Flutter), falling back to
+              a client-side sum of the loaded sessions if that request failed. */}
           {(() => {
-            const byDriver = new Map<string, { name: string; sec: number }>();
-            const byMachine = new Map<string, { name: string; sec: number }>();
-            for (const s of workSessions) {
-              const sec = s.durationSec ?? 0;
-              const dName = s.driver?.employee?.name ?? driverLabel(s.driverId);
-              const mName = s.machine?.registrationNumber ?? machineLabel(s.machineId);
-              byDriver.set(s.driverId, { name: dName, sec: (byDriver.get(s.driverId)?.sec ?? 0) + sec });
-              byMachine.set(s.machineId, { name: mName, sec: (byMachine.get(s.machineId)?.sec ?? 0) + sec });
+            let perDriver: Array<{ name: string; sec: number }>;
+            let perMachine: Array<{ name: string; sec: number }>;
+            let totalSec: number;
+            let sessionCount: number;
+            if (workSummary) {
+              perDriver = workSummary.perDriver.map((d) => ({ name: d.driverName, sec: d.seconds }));
+              perMachine = workSummary.perMachine.map((m) => ({ name: m.registrationNumber, sec: m.seconds }));
+              totalSec = workSummary.totalWorkedSeconds;
+              sessionCount = workSummary.sessionCount;
+            } else {
+              const byDriver = new Map<string, { name: string; sec: number }>();
+              const byMachine = new Map<string, { name: string; sec: number }>();
+              let sum = 0;
+              for (const s of workSessions) {
+                const sec = s.durationSec ?? 0;
+                sum += sec;
+                const dName = s.driver?.employee?.name ?? driverLabel(s.driverId);
+                const mName = s.machine?.registrationNumber ?? machineLabel(s.machineId);
+                byDriver.set(s.driverId, { name: dName, sec: (byDriver.get(s.driverId)?.sec ?? 0) + sec });
+                byMachine.set(s.machineId, { name: mName, sec: (byMachine.get(s.machineId)?.sec ?? 0) + sec });
+              }
+              perDriver = [...byDriver.values()];
+              perMachine = [...byMachine.values()];
+              totalSec = sum;
+              sessionCount = workSessions.length;
             }
             const fmtH = (sec: number) => `${Math.round((sec / 3600) * 100) / 100}h`;
-            if (byDriver.size <= 1 && byMachine.size <= 1) return null;
+            // Total worked time / session count is shown for every started job;
+            // the per-resource split only adds signal once a job spans more than
+            // one driver or machine (i.e. it was reassigned mid-way).
+            const showSplit = perDriver.length > 1 || perMachine.length > 1;
             return (
               <div className="sa-attribution">
                 <div>
-                  <span className="sa-finfo-label">Driver time</span>
-                  {[...byDriver.values()].map((d, i) => (
-                    <span key={i} className="sa-attribution-row">
-                      {d.name}: <b>{fmtH(d.sec)}</b>
-                    </span>
-                  ))}
+                  <span className="sa-finfo-label">Total worked</span>
+                  <span className="sa-attribution-row">
+                    <b>{formatDurationWords(totalSec)}</b> · {sessionCount}{" "}
+                    {sessionCount === 1 ? "session" : "sessions"}
+                  </span>
                 </div>
-                <div>
-                  <span className="sa-finfo-label">Machine time</span>
-                  {[...byMachine.values()].map((m, i) => (
-                    <span key={i} className="sa-attribution-row">
-                      {m.name}: <b>{fmtH(m.sec)}</b>
-                    </span>
-                  ))}
-                </div>
+                {showSplit && (
+                  <>
+                    <div>
+                      <span className="sa-finfo-label">Driver time</span>
+                      {perDriver.map((d, i) => (
+                        <span key={i} className="sa-attribution-row">
+                          {d.name}: <b>{fmtH(d.sec)}</b>
+                        </span>
+                      ))}
+                    </div>
+                    <div>
+                      <span className="sa-finfo-label">Machine time</span>
+                      {perMachine.map((m, i) => (
+                        <span key={i} className="sa-attribution-row">
+                          {m.name}: <b>{fmtH(m.sec)}</b>
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             );
           })()}
