@@ -2,11 +2,16 @@ import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Tractor, CheckCircle2 } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
+import { AppHandoff } from "./AppHandoff";
 
 export const ResetPasswordPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") || "";
   const emailParam = searchParams.get("email") || "";
+  // Operational (tenant) reset links carry &tenant=<slug>; platform-account
+  // resets never do. For the operational case this page is only a handoff into
+  // the Flutter app — it does NOT run the platform reset flow below.
+  const tenant = searchParams.get("tenant") || "";
 
   const [email, setEmail] = useState(emailParam);
   const [newPassword, setNewPassword] = useState("");
@@ -20,7 +25,9 @@ export const ResetPasswordPage: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isConfirmMode) return;
+    // Skip the platform token-verify for operational (tenant) handoff links —
+    // that token belongs to the operational backend, not the platform one.
+    if (!isConfirmMode || tenant) return;
     (async () => {
       try {
         await api.verifyPasswordResetToken(emailParam, token);
@@ -32,7 +39,7 @@ export const ResetPasswordPage: React.FC = () => {
         setIsValidatingToken(false);
       }
     })();
-  }, [isConfirmMode, emailParam, token]);
+  }, [isConfirmMode, emailParam, token, tenant]);
 
   const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +82,11 @@ export const ResetPasswordPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Operational reset link → hand off to the Flutter app (token paste fallback).
+  if (tenant) {
+    return <AppHandoff kind="reset" token={token} email={emailParam} tenant={tenant} />;
+  }
 
   return (
     <div className="pf-center-viewport">

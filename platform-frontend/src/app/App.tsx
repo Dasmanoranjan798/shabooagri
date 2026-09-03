@@ -6,6 +6,7 @@ import { RegisterPage } from "../features/auth/RegisterPage";
 import { LoginPage } from "../features/auth/LoginPage";
 import { UpgradePage } from "../features/auth/UpgradePage";
 import { ResetPasswordPage } from "../features/auth/ResetPasswordPage";
+import { AcceptInvitePage } from "../features/auth/AcceptInvitePage";
 import { ChangePasswordPage } from "../features/auth/ChangePasswordPage";
 import { AdminDashboardPage } from "../features/admin/AdminDashboardPage";
 import { CustomerListPage } from "../features/admin/CustomerListPage";
@@ -28,6 +29,7 @@ export function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/upgrade" element={<UpgradePage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/accept-invite" element={<AcceptInvitePage />} />
           <Route path="/change-password" element={<ChangePasswordPage />} />
           <Route path="/admin" element={<AdminDashboardPage />} />
           <Route path="/admin/customers" element={<CustomerListPage />} />

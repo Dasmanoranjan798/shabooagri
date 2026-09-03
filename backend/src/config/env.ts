@@ -18,6 +18,13 @@ const envSchema = z.object({
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM: z.string().optional().default("support@shabooagri.com"),
   APP_URL: z.string().optional().default("http://localhost:5173"),
+  // Customer-facing base URL for emailed auth links (password-reset & staff-invite).
+  // The per-tenant operational web app (frontend/) was retired, so these links must
+  // target an always-served host — the commercial platform site — which is a
+  // registered Android App Link target (an installed app deep-links straight into
+  // the Flutter routes) and serves the /reset-password + /accept-invite handoff
+  // pages for everyone else. Never a *.shabooagri.com operational URL.
+  AUTH_LINK_BASE_URL: z.string().optional().default("https://shabooagri.com"),
   // Base URL of the commercial platform site — used only to build the
   // "Upgrade Plan" redirect link shown when a company hits its machine
   // limit. A plain string, never a live call: if this is wrong or the
