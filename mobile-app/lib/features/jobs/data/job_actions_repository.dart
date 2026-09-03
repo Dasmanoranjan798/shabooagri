@@ -47,9 +47,25 @@ class JobActionsRepository {
     return JobDetail.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<JobDetail> resume(String id, String reason) async {
-    final response = await _dio.post('/jobs/$id/resume', data: {'note': reason});
+  /// Resume takes NO reason — the reason captured at Pause time is the record.
+  Future<JobDetail> resume(String id) async {
+    final response = await _dio.post('/jobs/$id/resume');
     return JobDetail.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// Pause-reason master (data-driven dropdown, not hardcoded). Returns labels.
+  Future<List<String>> listPauseReasons() async {
+    final response = await _dio.get('/pause-reasons');
+    return (response.data as List<dynamic>)
+        .map((e) => (e as Map<String, dynamic>)['label'] as String)
+        .toList();
+  }
+
+  /// Create a new pause reason (Owner/Manager). Backend enforces the
+  /// case-insensitive duplicate check and returns 409 if it already exists.
+  Future<String> createPauseReason(String label) async {
+    final response = await _dio.post('/pause-reasons', data: {'label': label});
+    return (response.data as Map<String, dynamic>)['label'] as String;
   }
 
   Future<JobDetail> stop(String id) async {

@@ -43,12 +43,12 @@ export const addTransportChargeSchema = z.object({
   notes: z.string().optional(),
 });
 
-// Required, unlike pause's note: resuming from a pause must state why the
-// delay happened (quick-pick reason or free text on the client) before the
-// live counter is allowed to start again. Logged as this resume's
-// JobStatusLog note — the pause-history record the Owner reviews later.
+// Resume takes NO reason: the reason captured at Pause time (a JobStatusLog
+// note, chosen from the pause-reason master) is the record the Owner reviews.
+// note stays as an OPTIONAL free-text field for backward compatibility, but the
+// client no longer sends or asks for one.
 export const resumeJobSchema = z.object({
-  note: z.string().trim().min(1, "A reason is required to resume"),
+  note: z.string().trim().min(1).optional(),
 });
 
 // Stop freezes the clock only — no acres/notes/photo-fuel gating here,

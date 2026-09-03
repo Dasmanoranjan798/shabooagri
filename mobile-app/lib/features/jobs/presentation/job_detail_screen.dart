@@ -224,36 +224,39 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
   }
 
   Future<void> _handlePause() async {
-    final reason = await _showReasonDialog(
-      title: 'Why are you pausing?',
-      label: 'Pause reason *',
-      quickOptions: const [
-        'Customer requested pause',
-        'Weather',
-        'Machine issue',
-        'Driver issue',
-        'Field/access problem',
-        'Waiting for customer',
-        'Work postponed',
-      ],
-      confirmLabel: 'Confirm & Pause',
-      helper: 'Pausing releases the machine and driver for other jobs. The elapsed time is preserved.',
-    );
-    if (reason == null) return;
     final repo = ref.read(jobActionsRepositoryProvider);
+    List<String> reasons;
+    try {
+      reasons = await repo.listPauseReasons();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+      return;
+    }
+    if (!mounted) return;
+    // "Create New Reason" is offered only to users who can manage master data
+    // (Owner/Manager) — the backend also gates POST /pause-reasons on that.
+    final canCreate = ref.read(currentUserProvider)?.isOwnerOrManager ?? false;
+    final reason = await _showPauseReasonDialog(reasons: reasons, canCreate: canCreate);
+    if (reason == null) return;
     await _runAction(() => repo.pause(widget.jobId, reason));
   }
 
+  // Resume takes NO reason — the pause reason already on record is sufficient.
   Future<void> _handleResume() async {
-    final reason = await _showReasonDialog(
-      title: 'Why the delay?',
-      label: 'Reason to Resume *',
-      quickOptions: const ['Machine breakdown', 'Lunch break', 'Rain'],
-      confirmLabel: 'Confirm & Resume',
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Resume this job?'),
+        content: const Text('The machine and driver are re-checked for availability, then the timer resumes.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Resume')),
+        ],
+      ),
     );
-    if (reason == null) return;
+    if (confirmed != true) return;
     final repo = ref.read(jobActionsRepositoryProvider);
-    await _runAction(() => repo.resume(widget.jobId, reason));
+    await _runAction(() => repo.resume(widget.jobId));
   }
 
   Future<void> _handleChangeMachine() async {
@@ -419,59 +422,125 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
   /// Shared reason prompt (quick-pick chips + free text). Used by Pause and
   /// Resume — a non-empty reason is required, matching the backend. "Other" is
   /// simply free text, so no special-casing is needed here.
-  Future<String?> _showReasonDialog({
-    required String title,
-    required String label,
-    required List<String> quickOptions,
-    required String confirmLabel,
-    String? helper,
+  /// Pause-reason picker sourced from the backend pause-reason master (never
+  /// hardcoded). Owner/Manager can add a reason inline via "Create New Reason";
+  /// the backend enforces the case-insensitive duplicate check and returns 409
+  /// ("This reason already exists"), surfaced here. Returns the chosen label.
+  Future<String?> _showPauseReasonDialog({
+    required List<String> reasons,
+    required bool canCreate,
   }) {
-    final controller = TextEditingController();
     return showDialog<String>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(title),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: 8,
-                  children: quickOptions.map((chip) {
-                    return ActionChip(
-                      label: Text(chip),
-                      onPressed: () {
-                        controller.text = chip;
-                        setDialogState(() {});
-                      },
-                    );
-                  }).toList(),
+      builder: (dialogContext) {
+        final available = List<String>.from(reasons);
+        String? selected = available.isNotEmpty ? available.first : null;
+        bool creating = available.isEmpty; // no reasons yet → go straight to create
+        final newReasonController = TextEditingController();
+        String? createError;
+        bool saving = false;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> submitNew() async {
+              final label = newReasonController.text.trim();
+              if (label.isEmpty) {
+                setDialogState(() => createError = 'Enter a reason');
+                return;
+              }
+              setDialogState(() {
+                saving = true;
+                createError = null;
+              });
+              try {
+                final created = await ref.read(jobActionsRepositoryProvider).createPauseReason(label);
+                setDialogState(() {
+                  if (!available.contains(created)) available.add(created);
+                  selected = created;
+                  creating = false;
+                  saving = false;
+                  newReasonController.clear();
+                });
+              } catch (e) {
+                // 409 duplicate (or any error) shown clearly under the field.
+                setDialogState(() {
+                  saving = false;
+                  createError = apiErrorMessage(e);
+                });
+              }
+            }
+
+            return AlertDialog(
+              title: const Text('Why are you pausing?'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!creating) ...[
+                      DropdownButtonFormField<String>(
+                        initialValue: selected,
+                        isExpanded: true,
+                        decoration: const InputDecoration(labelText: 'Pause reason *', border: OutlineInputBorder()),
+                        items: available.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+                        onChanged: (v) => setDialogState(() => selected = v),
+                      ),
+                      if (canCreate)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text('Create New Reason'),
+                            onPressed: () => setDialogState(() => creating = true),
+                          ),
+                        ),
+                    ] else ...[
+                      TextField(
+                        controller: newReasonController,
+                        decoration: InputDecoration(
+                          labelText: 'New reason *',
+                          border: const OutlineInputBorder(),
+                          errorText: createError,
+                        ),
+                        autofocus: true,
+                        onSubmitted: (_) => saving ? null : submitNew(),
+                      ),
+                      if (available.isNotEmpty)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            onPressed: saving ? null : () => setDialogState(() {
+                              creating = false;
+                              createError = null;
+                            }),
+                            child: const Text('Back to list'),
+                          ),
+                        ),
+                    ],
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Pausing releases the machine and driver for other jobs. The elapsed time is preserved.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: controller,
-                  decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
-                  onChanged: (_) => setDialogState(() {}),
-                  autofocus: true,
-                ),
-                if (helper != null) ...[
-                  const SizedBox(height: 8),
-                  Text(helper, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: controller.text.trim().isEmpty ? null : () => Navigator.pop(context, controller.text.trim()),
-              child: Text(confirmLabel),
-            ),
-          ],
-        ),
-      ),
+              ),
+              actions: creating
+                  ? [
+                      TextButton(onPressed: saving ? null : () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+                      ElevatedButton(onPressed: saving ? null : submitNew, child: Text(saving ? 'Saving…' : 'Save Reason')),
+                    ]
+                  : [
+                      TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+                      ElevatedButton(
+                        onPressed: selected == null ? null : () => Navigator.pop(dialogContext, selected),
+                        child: const Text('Confirm & Pause'),
+                      ),
+                    ],
+            );
+          },
+        );
+      },
     );
   }
 
