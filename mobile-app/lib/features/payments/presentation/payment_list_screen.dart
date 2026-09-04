@@ -25,6 +25,10 @@ class InvoiceSummary {
   final String? dueDate;
   final String customerName;
   final String villageName;
+  // A manual/"Direct Invoice" has no booking (bookingId == null); a job-
+  // generated "After-Work" invoice is tied to a booking. Derived from the
+  // already-returned field — no API change. Powers the Invoice workspace tabs.
+  final bool isDirect;
 
   InvoiceSummary.fromJson(Map<String, dynamic> json)
       : id = json['id'] as String,
@@ -36,7 +40,8 @@ class InvoiceSummary {
         invoiceDate = json['invoiceDate'] as String,
         dueDate = json['dueDate'] as String?,
         customerName = (json['customer'] as Map<String, dynamic>?)?['name'] as String? ?? 'Unknown',
-        villageName = (json['customer'] as Map<String, dynamic>?)?['village'] as String? ?? '—';
+        villageName = (json['customer'] as Map<String, dynamic>?)?['village'] as String? ?? '—',
+        isDirect = json['bookingId'] == null;
 }
 
 class AdvanceSummary {

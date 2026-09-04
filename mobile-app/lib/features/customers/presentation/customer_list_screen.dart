@@ -38,23 +38,13 @@ final customersListProvider = FutureProvider<List<CustomerSummary>>((ref) async 
   return (response.data as List<dynamic>).map((j) => CustomerSummary.fromJson(j as Map<String, dynamic>)).toList();
 });
 
-class CustomerListScreen extends ConsumerStatefulWidget {
+class CustomerListScreen extends ConsumerWidget {
   const CustomerListScreen({super.key});
 
   @override
-  ConsumerState<CustomerListScreen> createState() => _CustomerListScreenState();
-}
-
-class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
-  String _query = '';
-
-  @override
-  Widget build(BuildContext context) {
-    final customersAsync = ref.watch(customersListProvider);
+  Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
     final canManage = user?.isOwnerOrManager ?? false;
-    final canDelete = user?.roleSystemKey == 'owner';
-
     final isDesktop = context.responsive.isDesktop;
     return AdaptiveScaffold(
       currentRoute: '/customers',
@@ -80,117 +70,142 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
           ? FloatingActionButton(onPressed: () => context.go('/customers/new'), child: const Icon(Icons.add))
           : null,
       bottomNavigationBar: isDesktop ? null : const QuickActionBar(),
-      body: customersAsync.when(
-        data: (customers) {
-          final filtered = _query.isEmpty
-              ? customers
-              : customers
-                  .where((c) =>
-                      c.name.toLowerCase().contains(_query) ||
-                      c.villageName.toLowerCase().contains(_query) ||
-                      (c.phone?.toLowerCase().contains(_query) ?? false) ||
-                      (c.address?.toLowerCase().contains(_query) ?? false))
-                  .toList();
-          return Column(
-            children: [
-              SearchField(
-                hintText: 'Search by Name, Village, Phone, Address...',
-                onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
-              ),
-              Expanded(
-                child: filtered.isEmpty
-                    ? Center(child: Text(_query.isEmpty ? 'No customers found.' : 'No customers match your search.'))
-                    : isDesktop
-                        ? _desktopTable(context, ref, filtered, canManage: canManage, canDelete: canDelete)
-                        : ListView.builder(
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) {
-                          final customer = filtered[index];
-                          return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                            child: InkWell(
-                              onTap: () => context.go('/customers/${customer.id}'),
-                              borderRadius: BorderRadius.circular(10),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(customer.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                        if (canManage || canDelete)
-                                          SizedBox(
-                                            width: 32,
-                                            height: 32,
-                                            child: PopupMenuButton<String>(
-                                              padding: EdgeInsets.zero,
-                                              icon: const Icon(Icons.more_vert, size: 20, color: Colors.grey),
-                                              onSelected: (action) async {
-                                                if (action == 'edit') {
-                                                  context.go('/customers/${customer.id}/edit');
-                                                } else if (action == 'delete') {
-                                                  final dio = ref.read(apiClientProvider);
-                                                  await confirmAndDelete(
-                                                    context: context,
-                                                    entityLabel: customer.name,
-                                                    onDelete: () => dio.delete('/customers/${customer.id}'),
-                                                    onSuccess: () => ref.invalidate(customersListProvider),
-                                                  );
-                                                }
-                                              },
-                                              itemBuilder: (context) => [
-                                                if (canManage) const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                                                if (canDelete) const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
-                                              ],
-                                            ),
+      body: const CustomerListBody(),
+    );
+  }
+}
+
+/// The search + list content of the Customers screen, without the scaffold —
+/// so it can be reused both as the standalone screen body and as the Dashboard's
+/// contextual "Customers" workspace (no duplicate list/search implementation).
+class CustomerListBody extends ConsumerStatefulWidget {
+  const CustomerListBody({super.key});
+
+  @override
+  ConsumerState<CustomerListBody> createState() => _CustomerListBodyState();
+}
+
+class _CustomerListBodyState extends ConsumerState<CustomerListBody> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final customersAsync = ref.watch(customersListProvider);
+    final user = ref.watch(currentUserProvider);
+    final canManage = user?.isOwnerOrManager ?? false;
+    final canDelete = user?.roleSystemKey == 'owner';
+    final isDesktop = context.responsive.isDesktop;
+
+    return customersAsync.when(
+      data: (customers) {
+        final filtered = _query.isEmpty
+            ? customers
+            : customers
+                .where((c) =>
+                    c.name.toLowerCase().contains(_query) ||
+                    c.villageName.toLowerCase().contains(_query) ||
+                    (c.phone?.toLowerCase().contains(_query) ?? false) ||
+                    (c.address?.toLowerCase().contains(_query) ?? false))
+                .toList();
+        return Column(
+          children: [
+            SearchField(
+              hintText: 'Search by Name, Village, Phone, Address...',
+              onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
+            ),
+            Expanded(
+              child: filtered.isEmpty
+                  ? Center(child: Text(_query.isEmpty ? 'No customers found.' : 'No customers match your search.'))
+                  : isDesktop
+                      ? _desktopTable(context, ref, filtered, canManage: canManage, canDelete: canDelete)
+                      : ListView.builder(
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) {
+                        final customer = filtered[index];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          child: InkWell(
+                            onTap: () => context.go('/customers/${customer.id}'),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(customer.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                      if (canManage || canDelete)
+                                        SizedBox(
+                                          width: 32,
+                                          height: 32,
+                                          child: PopupMenuButton<String>(
+                                            padding: EdgeInsets.zero,
+                                            icon: const Icon(Icons.more_vert, size: 20, color: Colors.grey),
+                                            onSelected: (action) async {
+                                              if (action == 'edit') {
+                                                context.go('/customers/${customer.id}/edit');
+                                              } else if (action == 'delete') {
+                                                final dio = ref.read(apiClientProvider);
+                                                await confirmAndDelete(
+                                                  context: context,
+                                                  entityLabel: customer.name,
+                                                  onDelete: () => dio.delete('/customers/${customer.id}'),
+                                                  onSuccess: () => ref.invalidate(customersListProvider),
+                                                );
+                                              }
+                                            },
+                                            itemBuilder: (context) => [
+                                              if (canManage) const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                              if (canDelete) const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
+                                            ],
                                           ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                                      const SizedBox(width: 8),
+                                      Expanded(child: Text(customer.villageName, style: const TextStyle(fontSize: 14))),
+                                    ],
+                                  ),
+                                  if (customer.phone != null) ...[
+                                    const SizedBox(height: 4),
                                     Row(
                                       children: [
-                                        const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                                        const Icon(Icons.phone, size: 16, color: Colors.grey),
                                         const SizedBox(width: 8),
-                                        Expanded(child: Text(customer.villageName, style: const TextStyle(fontSize: 14))),
+                                        Expanded(child: Text(customer.phone!, style: const TextStyle(fontSize: 14))),
                                       ],
                                     ),
-                                    if (customer.phone != null) ...[
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.phone, size: 16, color: Colors.grey),
-                                          const SizedBox(width: 8),
-                                          Expanded(child: Text(customer.phone!, style: const TextStyle(fontSize: 14))),
-                                        ],
-                                      ),
-                                    ],
-                                    if (customer.hasPortalAccess) ...[
-                                      const SizedBox(height: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.blue.withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: const Text('Portal Linked', style: TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.bold)),
-                                      ),
-                                    ]
                                   ],
-                                ),
+                                  if (customer.hasPortalAccess) ...[
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Text('Portal Linked', style: TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.bold)),
+                                    ),
+                                  ]
+                                ],
                               ),
                             ),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: ${apiErrorMessage(error)}')),
-      ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text('Error: ${apiErrorMessage(error)}')),
     );
   }
 

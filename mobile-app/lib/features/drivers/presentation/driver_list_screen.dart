@@ -45,34 +45,11 @@ final driversListProvider = FutureProvider<List<DriverSummary>>((ref) async {
 
 enum _AvailFilter { all, available, onJob, offDuty }
 
-class DriverListScreen extends ConsumerStatefulWidget {
+class DriverListScreen extends ConsumerWidget {
   const DriverListScreen({super.key});
 
   @override
-  ConsumerState<DriverListScreen> createState() => _DriverListScreenState();
-}
-
-class _DriverListScreenState extends ConsumerState<DriverListScreen> {
-  String _query = '';
-  _AvailFilter _filter = _AvailFilter.all;
-
-  bool _matchesFilter(DriverSummary d, _AvailFilter filter) {
-    switch (filter) {
-      case _AvailFilter.all:
-        return true;
-      case _AvailFilter.available:
-        return d.availabilityStatus == 'AVAILABLE';
-      case _AvailFilter.onJob:
-        return d.availabilityStatus == 'ON_JOB';
-      case _AvailFilter.offDuty:
-        return d.availabilityStatus == 'OFF_DUTY';
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final driversAsync = ref.watch(driversListProvider);
-
+  Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
     final canManage = user?.isOwnerOrManager ?? false;
     final isDesktop = context.responsive.isDesktop;
@@ -99,82 +76,118 @@ class _DriverListScreenState extends ConsumerState<DriverListScreen> {
           ? FloatingActionButton(onPressed: () => context.go('/drivers/new'), child: const Icon(Icons.add))
           : null,
       bottomNavigationBar: isDesktop ? null : const QuickActionBar(),
-      body: driversAsync.when(
-        data: (drivers) {
-          final counts = {for (final f in _AvailFilter.values) f: drivers.where((d) => _matchesFilter(d, f)).length};
-          var filtered = drivers.where((d) => _matchesFilter(d, _filter)).toList();
-          if (_query.isNotEmpty) {
-            filtered = filtered
-                .where((d) =>
-                    d.name.toLowerCase().contains(_query) ||
-                    (d.roleTitle?.toLowerCase().contains(_query) ?? false) ||
-                    (d.phone?.toLowerCase().contains(_query) ?? false) ||
-                    (d.licenseNumber?.toLowerCase().contains(_query) ?? false))
-                .toList();
-          }
+      body: const DriverListBody(),
+    );
+  }
+}
 
-          return Column(
-            children: [
-              SearchField(
-                hintText: 'Search by Name, License, Phone...',
-                onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
-              ),
-              FilterTabsRow<_AvailFilter>(
-                selected: _filter,
-                onSelected: (f) => setState(() => _filter = f),
-                tabs: [
-                  (_AvailFilter.all, 'All', counts[_AvailFilter.all]!),
-                  (_AvailFilter.available, 'Available', counts[_AvailFilter.available]!),
-                  (_AvailFilter.onJob, 'On Job', counts[_AvailFilter.onJob]!),
-                  (_AvailFilter.offDuty, 'Off Duty', counts[_AvailFilter.offDuty]!),
+/// Search + availability-filter + list content of the Drivers screen, without
+/// the scaffold — reused both as the standalone screen body and the Dashboard's
+/// contextual "Drivers" workspace.
+class DriverListBody extends ConsumerStatefulWidget {
+  const DriverListBody({super.key});
+
+  @override
+  ConsumerState<DriverListBody> createState() => _DriverListBodyState();
+}
+
+class _DriverListBodyState extends ConsumerState<DriverListBody> {
+  String _query = '';
+  _AvailFilter _filter = _AvailFilter.all;
+
+  bool _matchesFilter(DriverSummary d, _AvailFilter filter) {
+    switch (filter) {
+      case _AvailFilter.all:
+        return true;
+      case _AvailFilter.available:
+        return d.availabilityStatus == 'AVAILABLE';
+      case _AvailFilter.onJob:
+        return d.availabilityStatus == 'ON_JOB';
+      case _AvailFilter.offDuty:
+        return d.availabilityStatus == 'OFF_DUTY';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final driversAsync = ref.watch(driversListProvider);
+    final isDesktop = context.responsive.isDesktop;
+
+    return driversAsync.when(
+      data: (drivers) {
+        final counts = {for (final f in _AvailFilter.values) f: drivers.where((d) => _matchesFilter(d, f)).length};
+        var filtered = drivers.where((d) => _matchesFilter(d, _filter)).toList();
+        if (_query.isNotEmpty) {
+          filtered = filtered
+              .where((d) =>
+                  d.name.toLowerCase().contains(_query) ||
+                  (d.roleTitle?.toLowerCase().contains(_query) ?? false) ||
+                  (d.phone?.toLowerCase().contains(_query) ?? false) ||
+                  (d.licenseNumber?.toLowerCase().contains(_query) ?? false))
+              .toList();
+        }
+
+        return Column(
+          children: [
+            SearchField(
+              hintText: 'Search by Name, License, Phone...',
+              onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
+            ),
+            FilterTabsRow<_AvailFilter>(
+              selected: _filter,
+              onSelected: (f) => setState(() => _filter = f),
+              tabs: [
+                (_AvailFilter.all, 'All', counts[_AvailFilter.all]!),
+                (_AvailFilter.available, 'Available', counts[_AvailFilter.available]!),
+                (_AvailFilter.onJob, 'On Job', counts[_AvailFilter.onJob]!),
+                (_AvailFilter.offDuty, 'Off Duty', counts[_AvailFilter.offDuty]!),
+              ],
+            ),
+            Expanded(
+              child: filtered.isEmpty
+                  ? const Center(child: Text('No drivers match this view.'))
+                  : isDesktop
+                      ? _desktopTable(context, filtered)
+                      : ListView.builder(
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) {
+                        final driver = filtered[index];
+                        return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: Colors.grey.shade200,
+                    child: const Icon(Icons.person, color: Colors.grey),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(driver.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        if (driver.phone != null) ...[
+                          const SizedBox(height: 4),
+                          Text(driver.phone!, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+                        ],
+                      ],
+                    ),
+                  ),
+                  DriverStatusBadge(status: driver.availabilityStatus),
                 ],
               ),
-              Expanded(
-                child: filtered.isEmpty
-                    ? const Center(child: Text('No drivers match this view.'))
-                    : isDesktop
-                        ? _desktopTable(context, filtered)
-                        : ListView.builder(
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) {
-                          final driver = filtered[index];
-                          return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.grey.shade200,
-                      child: const Icon(Icons.person, color: Colors.grey),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(driver.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          if (driver.phone != null) ...[
-                            const SizedBox(height: 4),
-                            Text(driver.phone!, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
-                          ],
-                        ],
-                      ),
-                    ),
-                    DriverStatusBadge(status: driver.availabilityStatus),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-              ),
-            ],
+            ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: ${apiErrorMessage(error)}')),
       ),
+            ),
+          ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text('Error: ${apiErrorMessage(error)}')),
     );
   }
 

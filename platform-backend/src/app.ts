@@ -29,9 +29,9 @@ app.get("/health", async (_req, res) => {
 
 app.get("/api/app-version", (_req, res) => {
   res.status(200).json({
-    version: "0.8.14",
-    buildNumber: 27,
-    downloadUrl: "https://shabooagri.com/downloads/shabooagri-v0.8.14.apk",
+    version: "0.8.15",
+    buildNumber: 28,
+    downloadUrl: "https://shabooagri.com/downloads/shabooagri-v0.8.15.apk",
     mandatory: false
   });
 });
