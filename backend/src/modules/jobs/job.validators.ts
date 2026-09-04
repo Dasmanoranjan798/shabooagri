@@ -99,7 +99,6 @@ export const addJobPhotoSchema = z.object({
 export const createManualJobSchema = z.object({
   id: z.string().uuid().optional(),
   customerId: z.string().uuid(),
-  villageId: z.string().uuid(),
   machineId: z.string().uuid(),
   driverId: z.string().uuid(),
   scheduledDate: z.coerce.date(),

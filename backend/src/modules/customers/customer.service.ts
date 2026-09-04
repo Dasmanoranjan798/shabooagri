@@ -1,5 +1,4 @@
 import * as authService from "../auth/auth.service";
-import * as villageService from "../villages/village.service";
 import { AppError } from "../../shared/errors/AppError";
 import { assertNoBookingReferences } from "../../shared/utils/dependencyGuard";
 import * as bookingRepository from "../bookings/booking.repository";
@@ -26,8 +25,11 @@ export function getByUserId(companyId: string, userId: string) {
   return customerRepository.findByUserIdScoped(companyId, userId);
 }
 
+export function listVillages(companyId: string) {
+  return customerRepository.distinctVillages(companyId);
+}
+
 export async function create(companyId: string, input: CreateCustomerInput) {
-  await villageService.getById(companyId, input.villageId);
   if (input.userId) {
     await authService.getUserForCompany(companyId, input.userId);
   }
@@ -41,7 +43,7 @@ export async function create(companyId: string, input: CreateCustomerInput) {
   }
 
   // Duplicate Check 2: Name + Village uniqueness per company
-  const existingByNameVillage = await customerRepository.findByNameAndVillageScoped(companyId, input.name.trim(), input.villageId);
+  const existingByNameVillage = await customerRepository.findByNameAndVillageScoped(companyId, input.name.trim(), input.village);
   if (existingByNameVillage) {
     throw new AppError(400, `A farmer named '${input.name.trim()}' already exists in this village.`);
   }
@@ -50,9 +52,6 @@ export async function create(companyId: string, input: CreateCustomerInput) {
 }
 
 export async function update(companyId: string, id: string, input: UpdateCustomerInput) {
-  if (input.villageId) {
-    await villageService.getById(companyId, input.villageId);
-  }
   if (input.userId) {
     await authService.getUserForCompany(companyId, input.userId);
   }

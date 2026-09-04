@@ -131,7 +131,7 @@ export function findJobsForDateWindow(companyId: string, fromUtc: Date, toUtc: D
             select: {
               id: true,
               name: true,
-              village: { select: { id: true, name: true } },
+              village: true,
             },
           },
           machine: {
@@ -201,7 +201,7 @@ export function findJobsForDriverInDateWindow(
             select: {
               id: true,
               name: true,
-              village: { select: { id: true, name: true } },
+              village: true,
             },
           },
           machine: {

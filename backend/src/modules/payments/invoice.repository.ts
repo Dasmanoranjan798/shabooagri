@@ -7,11 +7,7 @@ import { createScopedRepository } from "../../shared/db/scopedRepository";
 const scoped = createScopedRepository(prisma.invoice);
 
 export const invoiceIncludeRelations = {
-  customer: {
-    include: {
-      village: true,
-    },
-  },
+  customer: true,
   booking: {
     include: {
       machine: true,
@@ -243,8 +239,8 @@ export async function filterInvoicesWithAnalytics(
   if (input.customerId && input.customerId.length > 0) {
     where.customerId = { in: input.customerId };
   }
-  if (input.villageId && input.villageId.length > 0) {
-    where.customer = { villageId: { in: input.villageId } };
+  if (input.village && input.village.length > 0) {
+    where.customer = { village: { in: input.village } };
   }
   if (input.machineId && input.machineId.length > 0) {
     where.booking = { ...((where.booking as any) || {}), machineId: { in: input.machineId } };
@@ -391,14 +387,14 @@ export async function filterInvoicesWithAnalytics(
       cStat.paid += scopedPaid;
       cStat.outstanding += balance;
       
-      if (inv.customer.village) {
-        const vid = inv.customer.villageId;
-        if (vid) {
-           if (!villageMap.has(vid)) {
-             villageMap.set(vid, { outstanding: 0, name: inv.customer.village.name });
-           }
-           villageMap.get(vid)!.outstanding += balance;
+      // Group outstanding by the customer's locality/village text (the old
+      // shared Village master was retired; village is a plain address field now).
+      if (inv.customer.village && inv.customer.village.trim()) {
+        const vname = inv.customer.village.trim();
+        if (!villageMap.has(vname)) {
+          villageMap.set(vname, { outstanding: 0, name: vname });
         }
+        villageMap.get(vname)!.outstanding += balance;
       }
     }
   }

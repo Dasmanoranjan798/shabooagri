@@ -10,7 +10,6 @@ import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../customers/presentation/customer_list_screen.dart';
 import '../../machines/presentation/machine_list_screen.dart';
 import '../../drivers/presentation/driver_list_screen.dart';
-import '../../villages/presentation/village_list_screen.dart';
 import 'booking_list_screen.dart';
 
 final bookingByIdProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
@@ -41,7 +40,6 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
   final _estimatedAcresController = TextEditingController();
   final _notesController = TextEditingController();
   String? _customerId;
-  String? _villageId;
   String? _machineId;
   String? _driverId;
   DateTime _scheduledDate = DateTime.now();
@@ -56,7 +54,6 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
     if (_prefilled) return;
     _prefilled = true;
     _customerId = booking['customerId'] as String?;
-    _villageId = booking['villageId'] as String?;
     _machineId = booking['machineId'] as String?;
     _driverId = booking['driverId'] as String?;
     _workDescriptionController.text = booking['workDescription'] as String? ?? '';
@@ -103,8 +100,8 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
 
   Future<void> _save() async {
     final workDescription = _workDescriptionController.text.trim();
-    if (workDescription.isEmpty || _customerId == null || _villageId == null) {
-      setState(() => _error = 'Customer, village, and work description are required.');
+    if (workDescription.isEmpty || _customerId == null) {
+      setState(() => _error = 'Customer and work description are required.');
       return;
     }
     setState(() {
@@ -114,7 +111,6 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
     final dio = ref.read(apiClientProvider);
     final data = {
       'customerId': _customerId,
-      'villageId': _villageId,
       'workDescription': workDescription,
       'scheduledDate': _scheduledDate.toIso8601String(),
       if (_scheduledTime != null)
@@ -178,7 +174,6 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
 
   Widget _buildForm(BuildContext context) {
     final customersAsync = ref.watch(customersListProvider);
-    final villagesAsync = ref.watch(villagesListProvider);
     final machinesAsync = ref.watch(machinesListProvider);
     final driversAsync = ref.watch(driversListProvider);
 
@@ -201,16 +196,6 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
               ),
               loading: () => const LinearProgressIndicator(),
               error: (e, s) => Text('Could not load customers: ${apiErrorMessage(e)}'),
-            ),
-            villagesAsync.when(
-              data: (villages) => DropdownButtonFormField<String>(
-                initialValue: _villageId,
-                decoration: const InputDecoration(labelText: 'Village *', border: OutlineInputBorder()),
-                items: villages.map((v) => DropdownMenuItem(value: v.id, child: Text(v.name))).toList(),
-                onChanged: _saving ? null : (value) => setState(() => _villageId = value),
-              ),
-              loading: () => const LinearProgressIndicator(),
-              error: (e, s) => Text('Could not load villages: ${apiErrorMessage(e)}'),
             ),
           ],
         ),
@@ -253,7 +238,10 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
             ),
             TextField(
               controller: _locationController,
-              decoration: const InputDecoration(labelText: 'Location', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Work Location (if different from farmer\'s address)',
+                border: OutlineInputBorder(),
+              ),
               enabled: !_saving,
             ),
             TextField(

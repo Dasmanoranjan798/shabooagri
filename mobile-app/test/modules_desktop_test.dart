@@ -15,7 +15,6 @@ import 'package:shabooagri_mobile/core/widgets/desktop_table.dart';
 import 'package:shabooagri_mobile/features/jobs/presentation/job_list_screen.dart';
 import 'package:shabooagri_mobile/features/jobs/data/job_detail.dart';
 import 'package:shabooagri_mobile/features/machines/presentation/machine_list_screen.dart';
-import 'package:shabooagri_mobile/features/villages/presentation/village_list_screen.dart';
 import 'package:shabooagri_mobile/features/employees/presentation/employee_list_screen.dart';
 import 'package:shabooagri_mobile/features/expenses/presentation/expense_list_screen.dart';
 
@@ -70,8 +69,7 @@ JobDetail _job(String id, String number, String customer, String status,
       'status': status,
       'booking': {
         'bookingNumber': number,
-        'customer': {'name': customer},
-        'village': {'name': 'Anandpur'},
+        'customer': {'name': customer, 'village': 'Anandpur'},
       },
       if (machine != null) 'machine': {'registrationNumber': machine},
       if (driver != null)
@@ -89,8 +87,6 @@ MachineSummary _machine(String id, String reg, String status) => MachineSummary.
       'hourMeterReading': '120',
     });
 
-VillageSummary _village(String id, String name, bool active) =>
-    VillageSummary.fromJson({'id': id, 'name': name, 'isActive': active});
 
 EmployeeSummary _employee(String id, String name, String status) =>
     EmployeeSummary.fromJson({'id': id, 'name': name, 'roleTitle': 'Field Staff', 'employmentStatus': status});
@@ -141,19 +137,6 @@ void main() {
     expect(find.byType(DesktopSidebar), findsOneWidget);
     expect(find.byType(DesktopTable), findsOneWidget);
     expect(find.text('PB01AB1234'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('Villages uses the desktop data grid at 1366', (tester) async {
-    await _pumpScreen(tester, const VillageListScreen(), [
-      villagesListProvider.overrideWith((ref) async => [
-            _village('1', 'Anandpur', true),
-            _village('2', 'Bela', false),
-          ]),
-    ]);
-
-    expect(find.byType(DesktopTable), findsOneWidget);
-    expect(find.text('Anandpur'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

@@ -51,16 +51,16 @@ class $BookingsTable extends Bookings
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _villageIdMeta = const VerificationMeta(
-    'villageId',
+  static const VerificationMeta _locationMeta = const VerificationMeta(
+    'location',
   );
   @override
-  late final GeneratedColumn<String> villageId = GeneratedColumn<String>(
-    'village_id',
+  late final GeneratedColumn<String> location = GeneratedColumn<String>(
+    'location',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _machineIdMeta = const VerificationMeta(
     'machineId',
@@ -179,7 +179,7 @@ class $BookingsTable extends Bookings
     companyId,
     bookingNumber,
     customerId,
-    villageId,
+    location,
     machineId,
     driverId,
     scheduledDate,
@@ -235,13 +235,11 @@ class $BookingsTable extends Bookings
     } else if (isInserting) {
       context.missing(_customerIdMeta);
     }
-    if (data.containsKey('village_id')) {
+    if (data.containsKey('location')) {
       context.handle(
-        _villageIdMeta,
-        villageId.isAcceptableOrUnknown(data['village_id']!, _villageIdMeta),
+        _locationMeta,
+        location.isAcceptableOrUnknown(data['location']!, _locationMeta),
       );
-    } else if (isInserting) {
-      context.missing(_villageIdMeta);
     }
     if (data.containsKey('machine_id')) {
       context.handle(
@@ -342,10 +340,10 @@ class $BookingsTable extends Bookings
         DriftSqlType.string,
         data['${effectivePrefix}customer_id'],
       )!,
-      villageId: attachedDatabase.typeMapping.read(
+      location: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}village_id'],
-      )!,
+        data['${effectivePrefix}location'],
+      ),
       machineId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}machine_id'],
@@ -400,7 +398,7 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
   final String companyId;
   final String bookingNumber;
   final String customerId;
-  final String villageId;
+  final String? location;
   final String? machineId;
   final String? driverId;
   final DateTime? scheduledDate;
@@ -416,7 +414,7 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
     required this.companyId,
     required this.bookingNumber,
     required this.customerId,
-    required this.villageId,
+    this.location,
     this.machineId,
     this.driverId,
     this.scheduledDate,
@@ -435,7 +433,9 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
     map['company_id'] = Variable<String>(companyId);
     map['booking_number'] = Variable<String>(bookingNumber);
     map['customer_id'] = Variable<String>(customerId);
-    map['village_id'] = Variable<String>(villageId);
+    if (!nullToAbsent || location != null) {
+      map['location'] = Variable<String>(location);
+    }
     if (!nullToAbsent || machineId != null) {
       map['machine_id'] = Variable<String>(machineId);
     }
@@ -471,7 +471,9 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
       companyId: Value(companyId),
       bookingNumber: Value(bookingNumber),
       customerId: Value(customerId),
-      villageId: Value(villageId),
+      location: location == null && nullToAbsent
+          ? const Value.absent()
+          : Value(location),
       machineId: machineId == null && nullToAbsent
           ? const Value.absent()
           : Value(machineId),
@@ -511,7 +513,7 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
       companyId: serializer.fromJson<String>(json['companyId']),
       bookingNumber: serializer.fromJson<String>(json['bookingNumber']),
       customerId: serializer.fromJson<String>(json['customerId']),
-      villageId: serializer.fromJson<String>(json['villageId']),
+      location: serializer.fromJson<String?>(json['location']),
       machineId: serializer.fromJson<String?>(json['machineId']),
       driverId: serializer.fromJson<String?>(json['driverId']),
       scheduledDate: serializer.fromJson<DateTime?>(json['scheduledDate']),
@@ -532,7 +534,7 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
       'companyId': serializer.toJson<String>(companyId),
       'bookingNumber': serializer.toJson<String>(bookingNumber),
       'customerId': serializer.toJson<String>(customerId),
-      'villageId': serializer.toJson<String>(villageId),
+      'location': serializer.toJson<String?>(location),
       'machineId': serializer.toJson<String?>(machineId),
       'driverId': serializer.toJson<String?>(driverId),
       'scheduledDate': serializer.toJson<DateTime?>(scheduledDate),
@@ -551,7 +553,7 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
     String? companyId,
     String? bookingNumber,
     String? customerId,
-    String? villageId,
+    Value<String?> location = const Value.absent(),
     Value<String?> machineId = const Value.absent(),
     Value<String?> driverId = const Value.absent(),
     Value<DateTime?> scheduledDate = const Value.absent(),
@@ -567,7 +569,7 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
     companyId: companyId ?? this.companyId,
     bookingNumber: bookingNumber ?? this.bookingNumber,
     customerId: customerId ?? this.customerId,
-    villageId: villageId ?? this.villageId,
+    location: location.present ? location.value : this.location,
     machineId: machineId.present ? machineId.value : this.machineId,
     driverId: driverId.present ? driverId.value : this.driverId,
     scheduledDate: scheduledDate.present
@@ -597,7 +599,7 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
       customerId: data.customerId.present
           ? data.customerId.value
           : this.customerId,
-      villageId: data.villageId.present ? data.villageId.value : this.villageId,
+      location: data.location.present ? data.location.value : this.location,
       machineId: data.machineId.present ? data.machineId.value : this.machineId,
       driverId: data.driverId.present ? data.driverId.value : this.driverId,
       scheduledDate: data.scheduledDate.present
@@ -626,7 +628,7 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
           ..write('companyId: $companyId, ')
           ..write('bookingNumber: $bookingNumber, ')
           ..write('customerId: $customerId, ')
-          ..write('villageId: $villageId, ')
+          ..write('location: $location, ')
           ..write('machineId: $machineId, ')
           ..write('driverId: $driverId, ')
           ..write('scheduledDate: $scheduledDate, ')
@@ -647,7 +649,7 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
     companyId,
     bookingNumber,
     customerId,
-    villageId,
+    location,
     machineId,
     driverId,
     scheduledDate,
@@ -667,7 +669,7 @@ class OfflineBooking extends DataClass implements Insertable<OfflineBooking> {
           other.companyId == this.companyId &&
           other.bookingNumber == this.bookingNumber &&
           other.customerId == this.customerId &&
-          other.villageId == this.villageId &&
+          other.location == this.location &&
           other.machineId == this.machineId &&
           other.driverId == this.driverId &&
           other.scheduledDate == this.scheduledDate &&
@@ -685,7 +687,7 @@ class BookingsCompanion extends UpdateCompanion<OfflineBooking> {
   final Value<String> companyId;
   final Value<String> bookingNumber;
   final Value<String> customerId;
-  final Value<String> villageId;
+  final Value<String?> location;
   final Value<String?> machineId;
   final Value<String?> driverId;
   final Value<DateTime?> scheduledDate;
@@ -702,7 +704,7 @@ class BookingsCompanion extends UpdateCompanion<OfflineBooking> {
     this.companyId = const Value.absent(),
     this.bookingNumber = const Value.absent(),
     this.customerId = const Value.absent(),
-    this.villageId = const Value.absent(),
+    this.location = const Value.absent(),
     this.machineId = const Value.absent(),
     this.driverId = const Value.absent(),
     this.scheduledDate = const Value.absent(),
@@ -720,7 +722,7 @@ class BookingsCompanion extends UpdateCompanion<OfflineBooking> {
     required String companyId,
     required String bookingNumber,
     required String customerId,
-    required String villageId,
+    this.location = const Value.absent(),
     this.machineId = const Value.absent(),
     this.driverId = const Value.absent(),
     this.scheduledDate = const Value.absent(),
@@ -736,14 +738,13 @@ class BookingsCompanion extends UpdateCompanion<OfflineBooking> {
        companyId = Value(companyId),
        bookingNumber = Value(bookingNumber),
        customerId = Value(customerId),
-       villageId = Value(villageId),
        status = Value(status);
   static Insertable<OfflineBooking> custom({
     Expression<String>? id,
     Expression<String>? companyId,
     Expression<String>? bookingNumber,
     Expression<String>? customerId,
-    Expression<String>? villageId,
+    Expression<String>? location,
     Expression<String>? machineId,
     Expression<String>? driverId,
     Expression<DateTime>? scheduledDate,
@@ -761,7 +762,7 @@ class BookingsCompanion extends UpdateCompanion<OfflineBooking> {
       if (companyId != null) 'company_id': companyId,
       if (bookingNumber != null) 'booking_number': bookingNumber,
       if (customerId != null) 'customer_id': customerId,
-      if (villageId != null) 'village_id': villageId,
+      if (location != null) 'location': location,
       if (machineId != null) 'machine_id': machineId,
       if (driverId != null) 'driver_id': driverId,
       if (scheduledDate != null) 'scheduled_date': scheduledDate,
@@ -781,7 +782,7 @@ class BookingsCompanion extends UpdateCompanion<OfflineBooking> {
     Value<String>? companyId,
     Value<String>? bookingNumber,
     Value<String>? customerId,
-    Value<String>? villageId,
+    Value<String?>? location,
     Value<String?>? machineId,
     Value<String?>? driverId,
     Value<DateTime?>? scheduledDate,
@@ -799,7 +800,7 @@ class BookingsCompanion extends UpdateCompanion<OfflineBooking> {
       companyId: companyId ?? this.companyId,
       bookingNumber: bookingNumber ?? this.bookingNumber,
       customerId: customerId ?? this.customerId,
-      villageId: villageId ?? this.villageId,
+      location: location ?? this.location,
       machineId: machineId ?? this.machineId,
       driverId: driverId ?? this.driverId,
       scheduledDate: scheduledDate ?? this.scheduledDate,
@@ -829,8 +830,8 @@ class BookingsCompanion extends UpdateCompanion<OfflineBooking> {
     if (customerId.present) {
       map['customer_id'] = Variable<String>(customerId.value);
     }
-    if (villageId.present) {
-      map['village_id'] = Variable<String>(villageId.value);
+    if (location.present) {
+      map['location'] = Variable<String>(location.value);
     }
     if (machineId.present) {
       map['machine_id'] = Variable<String>(machineId.value);
@@ -875,7 +876,7 @@ class BookingsCompanion extends UpdateCompanion<OfflineBooking> {
           ..write('companyId: $companyId, ')
           ..write('bookingNumber: $bookingNumber, ')
           ..write('customerId: $customerId, ')
-          ..write('villageId: $villageId, ')
+          ..write('location: $location, ')
           ..write('machineId: $machineId, ')
           ..write('driverId: $driverId, ')
           ..write('scheduledDate: $scheduledDate, ')
@@ -2767,16 +2768,38 @@ class $CustomersTable extends Customers
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _villageIdMeta = const VerificationMeta(
-    'villageId',
+  static const VerificationMeta _villageMeta = const VerificationMeta(
+    'village',
   );
   @override
-  late final GeneratedColumn<String> villageId = GeneratedColumn<String>(
-    'village_id',
+  late final GeneratedColumn<String> village = GeneratedColumn<String>(
+    'village',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _districtMeta = const VerificationMeta(
+    'district',
+  );
+  @override
+  late final GeneratedColumn<String> district = GeneratedColumn<String>(
+    'district',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _addressMeta = const VerificationMeta(
+    'address',
+  );
+  @override
+  late final GeneratedColumn<String> address = GeneratedColumn<String>(
+    'address',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
@@ -2795,7 +2818,9 @@ class $CustomersTable extends Customers
     companyId,
     name,
     mobileNumber,
-    villageId,
+    village,
+    district,
+    address,
     updatedAt,
   ];
   @override
@@ -2840,13 +2865,23 @@ class $CustomersTable extends Customers
         ),
       );
     }
-    if (data.containsKey('village_id')) {
+    if (data.containsKey('village')) {
       context.handle(
-        _villageIdMeta,
-        villageId.isAcceptableOrUnknown(data['village_id']!, _villageIdMeta),
+        _villageMeta,
+        village.isAcceptableOrUnknown(data['village']!, _villageMeta),
       );
-    } else if (isInserting) {
-      context.missing(_villageIdMeta);
+    }
+    if (data.containsKey('district')) {
+      context.handle(
+        _districtMeta,
+        district.isAcceptableOrUnknown(data['district']!, _districtMeta),
+      );
+    }
+    if (data.containsKey('address')) {
+      context.handle(
+        _addressMeta,
+        address.isAcceptableOrUnknown(data['address']!, _addressMeta),
+      );
     }
     if (data.containsKey('updated_at')) {
       context.handle(
@@ -2879,10 +2914,18 @@ class $CustomersTable extends Customers
         DriftSqlType.string,
         data['${effectivePrefix}mobile_number'],
       ),
-      villageId: attachedDatabase.typeMapping.read(
+      village: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}village_id'],
-      )!,
+        data['${effectivePrefix}village'],
+      ),
+      district: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}district'],
+      ),
+      address: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}address'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -2901,14 +2944,18 @@ class OfflineCustomer extends DataClass implements Insertable<OfflineCustomer> {
   final String companyId;
   final String name;
   final String? mobileNumber;
-  final String villageId;
+  final String? village;
+  final String? district;
+  final String? address;
   final DateTime? updatedAt;
   const OfflineCustomer({
     required this.id,
     required this.companyId,
     required this.name,
     this.mobileNumber,
-    required this.villageId,
+    this.village,
+    this.district,
+    this.address,
     this.updatedAt,
   });
   @override
@@ -2920,7 +2967,15 @@ class OfflineCustomer extends DataClass implements Insertable<OfflineCustomer> {
     if (!nullToAbsent || mobileNumber != null) {
       map['mobile_number'] = Variable<String>(mobileNumber);
     }
-    map['village_id'] = Variable<String>(villageId);
+    if (!nullToAbsent || village != null) {
+      map['village'] = Variable<String>(village);
+    }
+    if (!nullToAbsent || district != null) {
+      map['district'] = Variable<String>(district);
+    }
+    if (!nullToAbsent || address != null) {
+      map['address'] = Variable<String>(address);
+    }
     if (!nullToAbsent || updatedAt != null) {
       map['updated_at'] = Variable<DateTime>(updatedAt);
     }
@@ -2935,7 +2990,15 @@ class OfflineCustomer extends DataClass implements Insertable<OfflineCustomer> {
       mobileNumber: mobileNumber == null && nullToAbsent
           ? const Value.absent()
           : Value(mobileNumber),
-      villageId: Value(villageId),
+      village: village == null && nullToAbsent
+          ? const Value.absent()
+          : Value(village),
+      district: district == null && nullToAbsent
+          ? const Value.absent()
+          : Value(district),
+      address: address == null && nullToAbsent
+          ? const Value.absent()
+          : Value(address),
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(updatedAt),
@@ -2952,7 +3015,9 @@ class OfflineCustomer extends DataClass implements Insertable<OfflineCustomer> {
       companyId: serializer.fromJson<String>(json['companyId']),
       name: serializer.fromJson<String>(json['name']),
       mobileNumber: serializer.fromJson<String?>(json['mobileNumber']),
-      villageId: serializer.fromJson<String>(json['villageId']),
+      village: serializer.fromJson<String?>(json['village']),
+      district: serializer.fromJson<String?>(json['district']),
+      address: serializer.fromJson<String?>(json['address']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
     );
   }
@@ -2964,7 +3029,9 @@ class OfflineCustomer extends DataClass implements Insertable<OfflineCustomer> {
       'companyId': serializer.toJson<String>(companyId),
       'name': serializer.toJson<String>(name),
       'mobileNumber': serializer.toJson<String?>(mobileNumber),
-      'villageId': serializer.toJson<String>(villageId),
+      'village': serializer.toJson<String?>(village),
+      'district': serializer.toJson<String?>(district),
+      'address': serializer.toJson<String?>(address),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
     };
   }
@@ -2974,14 +3041,18 @@ class OfflineCustomer extends DataClass implements Insertable<OfflineCustomer> {
     String? companyId,
     String? name,
     Value<String?> mobileNumber = const Value.absent(),
-    String? villageId,
+    Value<String?> village = const Value.absent(),
+    Value<String?> district = const Value.absent(),
+    Value<String?> address = const Value.absent(),
     Value<DateTime?> updatedAt = const Value.absent(),
   }) => OfflineCustomer(
     id: id ?? this.id,
     companyId: companyId ?? this.companyId,
     name: name ?? this.name,
     mobileNumber: mobileNumber.present ? mobileNumber.value : this.mobileNumber,
-    villageId: villageId ?? this.villageId,
+    village: village.present ? village.value : this.village,
+    district: district.present ? district.value : this.district,
+    address: address.present ? address.value : this.address,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
   );
   OfflineCustomer copyWithCompanion(CustomersCompanion data) {
@@ -2992,7 +3063,9 @@ class OfflineCustomer extends DataClass implements Insertable<OfflineCustomer> {
       mobileNumber: data.mobileNumber.present
           ? data.mobileNumber.value
           : this.mobileNumber,
-      villageId: data.villageId.present ? data.villageId.value : this.villageId,
+      village: data.village.present ? data.village.value : this.village,
+      district: data.district.present ? data.district.value : this.district,
+      address: data.address.present ? data.address.value : this.address,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
@@ -3004,15 +3077,25 @@ class OfflineCustomer extends DataClass implements Insertable<OfflineCustomer> {
           ..write('companyId: $companyId, ')
           ..write('name: $name, ')
           ..write('mobileNumber: $mobileNumber, ')
-          ..write('villageId: $villageId, ')
+          ..write('village: $village, ')
+          ..write('district: $district, ')
+          ..write('address: $address, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, companyId, name, mobileNumber, villageId, updatedAt);
+  int get hashCode => Object.hash(
+    id,
+    companyId,
+    name,
+    mobileNumber,
+    village,
+    district,
+    address,
+    updatedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3021,7 +3104,9 @@ class OfflineCustomer extends DataClass implements Insertable<OfflineCustomer> {
           other.companyId == this.companyId &&
           other.name == this.name &&
           other.mobileNumber == this.mobileNumber &&
-          other.villageId == this.villageId &&
+          other.village == this.village &&
+          other.district == this.district &&
+          other.address == this.address &&
           other.updatedAt == this.updatedAt);
 }
 
@@ -3030,7 +3115,9 @@ class CustomersCompanion extends UpdateCompanion<OfflineCustomer> {
   final Value<String> companyId;
   final Value<String> name;
   final Value<String?> mobileNumber;
-  final Value<String> villageId;
+  final Value<String?> village;
+  final Value<String?> district;
+  final Value<String?> address;
   final Value<DateTime?> updatedAt;
   final Value<int> rowid;
   const CustomersCompanion({
@@ -3038,7 +3125,9 @@ class CustomersCompanion extends UpdateCompanion<OfflineCustomer> {
     this.companyId = const Value.absent(),
     this.name = const Value.absent(),
     this.mobileNumber = const Value.absent(),
-    this.villageId = const Value.absent(),
+    this.village = const Value.absent(),
+    this.district = const Value.absent(),
+    this.address = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -3047,19 +3136,22 @@ class CustomersCompanion extends UpdateCompanion<OfflineCustomer> {
     required String companyId,
     required String name,
     this.mobileNumber = const Value.absent(),
-    required String villageId,
+    this.village = const Value.absent(),
+    this.district = const Value.absent(),
+    this.address = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        companyId = Value(companyId),
-       name = Value(name),
-       villageId = Value(villageId);
+       name = Value(name);
   static Insertable<OfflineCustomer> custom({
     Expression<String>? id,
     Expression<String>? companyId,
     Expression<String>? name,
     Expression<String>? mobileNumber,
-    Expression<String>? villageId,
+    Expression<String>? village,
+    Expression<String>? district,
+    Expression<String>? address,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
@@ -3068,7 +3160,9 @@ class CustomersCompanion extends UpdateCompanion<OfflineCustomer> {
       if (companyId != null) 'company_id': companyId,
       if (name != null) 'name': name,
       if (mobileNumber != null) 'mobile_number': mobileNumber,
-      if (villageId != null) 'village_id': villageId,
+      if (village != null) 'village': village,
+      if (district != null) 'district': district,
+      if (address != null) 'address': address,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -3079,7 +3173,9 @@ class CustomersCompanion extends UpdateCompanion<OfflineCustomer> {
     Value<String>? companyId,
     Value<String>? name,
     Value<String?>? mobileNumber,
-    Value<String>? villageId,
+    Value<String?>? village,
+    Value<String?>? district,
+    Value<String?>? address,
     Value<DateTime?>? updatedAt,
     Value<int>? rowid,
   }) {
@@ -3088,7 +3184,9 @@ class CustomersCompanion extends UpdateCompanion<OfflineCustomer> {
       companyId: companyId ?? this.companyId,
       name: name ?? this.name,
       mobileNumber: mobileNumber ?? this.mobileNumber,
-      villageId: villageId ?? this.villageId,
+      village: village ?? this.village,
+      district: district ?? this.district,
+      address: address ?? this.address,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -3109,8 +3207,14 @@ class CustomersCompanion extends UpdateCompanion<OfflineCustomer> {
     if (mobileNumber.present) {
       map['mobile_number'] = Variable<String>(mobileNumber.value);
     }
-    if (villageId.present) {
-      map['village_id'] = Variable<String>(villageId.value);
+    if (village.present) {
+      map['village'] = Variable<String>(village.value);
+    }
+    if (district.present) {
+      map['district'] = Variable<String>(district.value);
+    }
+    if (address.present) {
+      map['address'] = Variable<String>(address.value);
     }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
@@ -3128,316 +3232,9 @@ class CustomersCompanion extends UpdateCompanion<OfflineCustomer> {
           ..write('companyId: $companyId, ')
           ..write('name: $name, ')
           ..write('mobileNumber: $mobileNumber, ')
-          ..write('villageId: $villageId, ')
-          ..write('updatedAt: $updatedAt, ')
-          ..write('rowid: $rowid')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $VillagesTable extends Villages
-    with TableInfo<$VillagesTable, OfflineVillage> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $VillagesTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<String> id = GeneratedColumn<String>(
-    'id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _companyIdMeta = const VerificationMeta(
-    'companyId',
-  );
-  @override
-  late final GeneratedColumn<String> companyId = GeneratedColumn<String>(
-    'company_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _nameMeta = const VerificationMeta('name');
-  @override
-  late final GeneratedColumn<String> name = GeneratedColumn<String>(
-    'name',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
-    aliasedName,
-    true,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: false,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [id, companyId, name, updatedAt];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'villages';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<OfflineVillage> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    } else if (isInserting) {
-      context.missing(_idMeta);
-    }
-    if (data.containsKey('company_id')) {
-      context.handle(
-        _companyIdMeta,
-        companyId.isAcceptableOrUnknown(data['company_id']!, _companyIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_companyIdMeta);
-    }
-    if (data.containsKey('name')) {
-      context.handle(
-        _nameMeta,
-        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_nameMeta);
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
-      );
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  OfflineVillage map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return OfflineVillage(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}id'],
-      )!,
-      companyId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}company_id'],
-      )!,
-      name: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}name'],
-      )!,
-      updatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
-      ),
-    );
-  }
-
-  @override
-  $VillagesTable createAlias(String alias) {
-    return $VillagesTable(attachedDatabase, alias);
-  }
-}
-
-class OfflineVillage extends DataClass implements Insertable<OfflineVillage> {
-  final String id;
-  final String companyId;
-  final String name;
-  final DateTime? updatedAt;
-  const OfflineVillage({
-    required this.id,
-    required this.companyId,
-    required this.name,
-    this.updatedAt,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<String>(id);
-    map['company_id'] = Variable<String>(companyId);
-    map['name'] = Variable<String>(name);
-    if (!nullToAbsent || updatedAt != null) {
-      map['updated_at'] = Variable<DateTime>(updatedAt);
-    }
-    return map;
-  }
-
-  VillagesCompanion toCompanion(bool nullToAbsent) {
-    return VillagesCompanion(
-      id: Value(id),
-      companyId: Value(companyId),
-      name: Value(name),
-      updatedAt: updatedAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(updatedAt),
-    );
-  }
-
-  factory OfflineVillage.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return OfflineVillage(
-      id: serializer.fromJson<String>(json['id']),
-      companyId: serializer.fromJson<String>(json['companyId']),
-      name: serializer.fromJson<String>(json['name']),
-      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<String>(id),
-      'companyId': serializer.toJson<String>(companyId),
-      'name': serializer.toJson<String>(name),
-      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
-    };
-  }
-
-  OfflineVillage copyWith({
-    String? id,
-    String? companyId,
-    String? name,
-    Value<DateTime?> updatedAt = const Value.absent(),
-  }) => OfflineVillage(
-    id: id ?? this.id,
-    companyId: companyId ?? this.companyId,
-    name: name ?? this.name,
-    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
-  );
-  OfflineVillage copyWithCompanion(VillagesCompanion data) {
-    return OfflineVillage(
-      id: data.id.present ? data.id.value : this.id,
-      companyId: data.companyId.present ? data.companyId.value : this.companyId,
-      name: data.name.present ? data.name.value : this.name,
-      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('OfflineVillage(')
-          ..write('id: $id, ')
-          ..write('companyId: $companyId, ')
-          ..write('name: $name, ')
-          ..write('updatedAt: $updatedAt')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(id, companyId, name, updatedAt);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is OfflineVillage &&
-          other.id == this.id &&
-          other.companyId == this.companyId &&
-          other.name == this.name &&
-          other.updatedAt == this.updatedAt);
-}
-
-class VillagesCompanion extends UpdateCompanion<OfflineVillage> {
-  final Value<String> id;
-  final Value<String> companyId;
-  final Value<String> name;
-  final Value<DateTime?> updatedAt;
-  final Value<int> rowid;
-  const VillagesCompanion({
-    this.id = const Value.absent(),
-    this.companyId = const Value.absent(),
-    this.name = const Value.absent(),
-    this.updatedAt = const Value.absent(),
-    this.rowid = const Value.absent(),
-  });
-  VillagesCompanion.insert({
-    required String id,
-    required String companyId,
-    required String name,
-    this.updatedAt = const Value.absent(),
-    this.rowid = const Value.absent(),
-  }) : id = Value(id),
-       companyId = Value(companyId),
-       name = Value(name);
-  static Insertable<OfflineVillage> custom({
-    Expression<String>? id,
-    Expression<String>? companyId,
-    Expression<String>? name,
-    Expression<DateTime>? updatedAt,
-    Expression<int>? rowid,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (companyId != null) 'company_id': companyId,
-      if (name != null) 'name': name,
-      if (updatedAt != null) 'updated_at': updatedAt,
-      if (rowid != null) 'rowid': rowid,
-    });
-  }
-
-  VillagesCompanion copyWith({
-    Value<String>? id,
-    Value<String>? companyId,
-    Value<String>? name,
-    Value<DateTime?>? updatedAt,
-    Value<int>? rowid,
-  }) {
-    return VillagesCompanion(
-      id: id ?? this.id,
-      companyId: companyId ?? this.companyId,
-      name: name ?? this.name,
-      updatedAt: updatedAt ?? this.updatedAt,
-      rowid: rowid ?? this.rowid,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<String>(id.value);
-    }
-    if (companyId.present) {
-      map['company_id'] = Variable<String>(companyId.value);
-    }
-    if (name.present) {
-      map['name'] = Variable<String>(name.value);
-    }
-    if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('VillagesCompanion(')
-          ..write('id: $id, ')
-          ..write('companyId: $companyId, ')
-          ..write('name: $name, ')
+          ..write('village: $village, ')
+          ..write('district: $district, ')
+          ..write('address: $address, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -4878,7 +4675,6 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $MachinesTable machines = $MachinesTable(this);
   late final $DriversTable drivers = $DriversTable(this);
   late final $CustomersTable customers = $CustomersTable(this);
-  late final $VillagesTable villages = $VillagesTable(this);
   late final $SyncQueueTable syncQueue = $SyncQueueTable(this);
   late final $OutboxOpsTable outboxOps = $OutboxOpsTable(this);
   late final $HttpCacheTable httpCache = $HttpCacheTable(this);
@@ -4892,7 +4688,6 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     machines,
     drivers,
     customers,
-    villages,
     syncQueue,
     outboxOps,
     httpCache,
@@ -4904,7 +4699,7 @@ typedef $$BookingsTableCreateCompanionBuilder = BookingsCompanion Function({
   required String companyId,
   required String bookingNumber,
   required String customerId,
-  required String villageId,
+  Value<String?> location,
   Value<String?> machineId,
   Value<String?> driverId,
   Value<DateTime?> scheduledDate,
@@ -4922,7 +4717,7 @@ typedef $$BookingsTableUpdateCompanionBuilder = BookingsCompanion Function({
   Value<String> companyId,
   Value<String> bookingNumber,
   Value<String> customerId,
-  Value<String> villageId,
+  Value<String?> location,
   Value<String?> machineId,
   Value<String?> driverId,
   Value<DateTime?> scheduledDate,
@@ -4965,8 +4760,8 @@ class $$BookingsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get villageId => $composableBuilder(
-    column: $table.villageId,
+  ColumnFilters<String> get location => $composableBuilder(
+    column: $table.location,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5050,8 +4845,8 @@ class $$BookingsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get villageId => $composableBuilder(
-    column: $table.villageId,
+  ColumnOrderings<String> get location => $composableBuilder(
+    column: $table.location,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -5131,8 +4926,8 @@ class $$BookingsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get villageId =>
-      $composableBuilder(column: $table.villageId, builder: (column) => column);
+  GeneratedColumn<String> get location =>
+      $composableBuilder(column: $table.location, builder: (column) => column);
 
   GeneratedColumn<String> get machineId =>
       $composableBuilder(column: $table.machineId, builder: (column) => column);
@@ -5208,7 +5003,7 @@ class $$BookingsTableTableManager
                 Value<String> companyId = const Value.absent(),
                 Value<String> bookingNumber = const Value.absent(),
                 Value<String> customerId = const Value.absent(),
-                Value<String> villageId = const Value.absent(),
+                Value<String?> location = const Value.absent(),
                 Value<String?> machineId = const Value.absent(),
                 Value<String?> driverId = const Value.absent(),
                 Value<DateTime?> scheduledDate = const Value.absent(),
@@ -5225,7 +5020,7 @@ class $$BookingsTableTableManager
                 companyId: companyId,
                 bookingNumber: bookingNumber,
                 customerId: customerId,
-                villageId: villageId,
+                location: location,
                 machineId: machineId,
                 driverId: driverId,
                 scheduledDate: scheduledDate,
@@ -5244,7 +5039,7 @@ class $$BookingsTableTableManager
                 required String companyId,
                 required String bookingNumber,
                 required String customerId,
-                required String villageId,
+                Value<String?> location = const Value.absent(),
                 Value<String?> machineId = const Value.absent(),
                 Value<String?> driverId = const Value.absent(),
                 Value<DateTime?> scheduledDate = const Value.absent(),
@@ -5261,7 +5056,7 @@ class $$BookingsTableTableManager
                 companyId: companyId,
                 bookingNumber: bookingNumber,
                 customerId: customerId,
-                villageId: villageId,
+                location: location,
                 machineId: machineId,
                 driverId: driverId,
                 scheduledDate: scheduledDate,
@@ -6172,7 +5967,9 @@ typedef $$CustomersTableCreateCompanionBuilder = CustomersCompanion Function({
   required String companyId,
   required String name,
   Value<String?> mobileNumber,
-  required String villageId,
+  Value<String?> village,
+  Value<String?> district,
+  Value<String?> address,
   Value<DateTime?> updatedAt,
   Value<int> rowid,
 });
@@ -6181,7 +5978,9 @@ typedef $$CustomersTableUpdateCompanionBuilder = CustomersCompanion Function({
   Value<String> companyId,
   Value<String> name,
   Value<String?> mobileNumber,
-  Value<String> villageId,
+  Value<String?> village,
+  Value<String?> district,
+  Value<String?> address,
   Value<DateTime?> updatedAt,
   Value<int> rowid,
 });
@@ -6215,8 +6014,18 @@ class $$CustomersTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get villageId => $composableBuilder(
-    column: $table.villageId,
+  ColumnFilters<String> get village => $composableBuilder(
+    column: $table.village,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get district => $composableBuilder(
+    column: $table.district,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get address => $composableBuilder(
+    column: $table.address,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6255,8 +6064,18 @@ class $$CustomersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get villageId => $composableBuilder(
-    column: $table.villageId,
+  ColumnOrderings<String> get village => $composableBuilder(
+    column: $table.village,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get district => $composableBuilder(
+    column: $table.district,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get address => $composableBuilder(
+    column: $table.address,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -6289,8 +6108,14 @@ class $$CustomersTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get villageId =>
-      $composableBuilder(column: $table.villageId, builder: (column) => column);
+  GeneratedColumn<String> get village =>
+      $composableBuilder(column: $table.village, builder: (column) => column);
+
+  GeneratedColumn<String> get district =>
+      $composableBuilder(column: $table.district, builder: (column) => column);
+
+  GeneratedColumn<String> get address =>
+      $composableBuilder(column: $table.address, builder: (column) => column);
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -6331,7 +6156,9 @@ class $$CustomersTableTableManager
                 Value<String> companyId = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> mobileNumber = const Value.absent(),
-                Value<String> villageId = const Value.absent(),
+                Value<String?> village = const Value.absent(),
+                Value<String?> district = const Value.absent(),
+                Value<String?> address = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CustomersCompanion(
@@ -6339,7 +6166,9 @@ class $$CustomersTableTableManager
                 companyId: companyId,
                 name: name,
                 mobileNumber: mobileNumber,
-                villageId: villageId,
+                village: village,
+                district: district,
+                address: address,
                 updatedAt: updatedAt,
                 rowid: rowid,
               ),
@@ -6349,7 +6178,9 @@ class $$CustomersTableTableManager
                 required String companyId,
                 required String name,
                 Value<String?> mobileNumber = const Value.absent(),
-                required String villageId,
+                Value<String?> village = const Value.absent(),
+                Value<String?> district = const Value.absent(),
+                Value<String?> address = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CustomersCompanion.insert(
@@ -6357,7 +6188,9 @@ class $$CustomersTableTableManager
                 companyId: companyId,
                 name: name,
                 mobileNumber: mobileNumber,
-                villageId: villageId,
+                village: village,
+                district: district,
+                address: address,
                 updatedAt: updatedAt,
                 rowid: rowid,
               ),
@@ -6384,185 +6217,6 @@ typedef $$CustomersTableProcessedTableManager =
         BaseReferences<_$AppDatabase, $CustomersTable, OfflineCustomer>,
       ),
       OfflineCustomer,
-      PrefetchHooks Function()
-    >;
-typedef $$VillagesTableCreateCompanionBuilder = VillagesCompanion Function({
-  required String id,
-  required String companyId,
-  required String name,
-  Value<DateTime?> updatedAt,
-  Value<int> rowid,
-});
-typedef $$VillagesTableUpdateCompanionBuilder = VillagesCompanion Function({
-  Value<String> id,
-  Value<String> companyId,
-  Value<String> name,
-  Value<DateTime?> updatedAt,
-  Value<int> rowid,
-});
-
-class $$VillagesTableFilterComposer
-    extends Composer<_$AppDatabase, $VillagesTable> {
-  $$VillagesTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get companyId => $composableBuilder(
-    column: $table.companyId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get name => $composableBuilder(
-    column: $table.name,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-}
-
-class $$VillagesTableOrderingComposer
-    extends Composer<_$AppDatabase, $VillagesTable> {
-  $$VillagesTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get companyId => $composableBuilder(
-    column: $table.companyId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get name => $composableBuilder(
-    column: $table.name,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$VillagesTableAnnotationComposer
-    extends Composer<_$AppDatabase, $VillagesTable> {
-  $$VillagesTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get companyId =>
-      $composableBuilder(column: $table.companyId, builder: (column) => column);
-
-  GeneratedColumn<String> get name =>
-      $composableBuilder(column: $table.name, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-}
-
-class $$VillagesTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $VillagesTable,
-          OfflineVillage,
-          $$VillagesTableFilterComposer,
-          $$VillagesTableOrderingComposer,
-          $$VillagesTableAnnotationComposer,
-          $$VillagesTableCreateCompanionBuilder,
-          $$VillagesTableUpdateCompanionBuilder,
-          (
-            OfflineVillage,
-            BaseReferences<_$AppDatabase, $VillagesTable, OfflineVillage>,
-          ),
-          OfflineVillage,
-          PrefetchHooks Function()
-        > {
-  $$VillagesTableTableManager(_$AppDatabase db, $VillagesTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$VillagesTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$VillagesTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$VillagesTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<String> id = const Value.absent(),
-                Value<String> companyId = const Value.absent(),
-                Value<String> name = const Value.absent(),
-                Value<DateTime?> updatedAt = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => VillagesCompanion(
-                id: id,
-                companyId: companyId,
-                name: name,
-                updatedAt: updatedAt,
-                rowid: rowid,
-              ),
-          createCompanionCallback:
-              ({
-                required String id,
-                required String companyId,
-                required String name,
-                Value<DateTime?> updatedAt = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => VillagesCompanion.insert(
-                id: id,
-                companyId: companyId,
-                name: name,
-                updatedAt: updatedAt,
-                rowid: rowid,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
-        ),
-      );
-}
-
-typedef $$VillagesTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $VillagesTable,
-      OfflineVillage,
-      $$VillagesTableFilterComposer,
-      $$VillagesTableOrderingComposer,
-      $$VillagesTableAnnotationComposer,
-      $$VillagesTableCreateCompanionBuilder,
-      $$VillagesTableUpdateCompanionBuilder,
-      (
-        OfflineVillage,
-        BaseReferences<_$AppDatabase, $VillagesTable, OfflineVillage>,
-      ),
-      OfflineVillage,
       PrefetchHooks Function()
     >;
 typedef $$SyncQueueTableCreateCompanionBuilder = SyncQueueCompanion Function({
@@ -7299,8 +6953,6 @@ class $AppDatabaseManager {
       $$DriversTableTableManager(_db, _db.drivers);
   $$CustomersTableTableManager get customers =>
       $$CustomersTableTableManager(_db, _db.customers);
-  $$VillagesTableTableManager get villages =>
-      $$VillagesTableTableManager(_db, _db.villages);
   $$SyncQueueTableTableManager get syncQueue =>
       $$SyncQueueTableTableManager(_db, _db.syncQueue);
   $$OutboxOpsTableTableManager get outboxOps =>

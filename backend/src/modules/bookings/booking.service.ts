@@ -6,7 +6,6 @@ import * as driverService from "../drivers/driver.service";
 import * as jobService from "../jobs/job.service";
 import * as machineService from "../machines/machine.service";
 import * as pricingMethodService from "../pricing-methods/pricingMethod.service";
-import * as villageService from "../villages/village.service";
 import { resolveCallerScope } from "../../shared/access/callerScope";
 import { AppError } from "../../shared/errors/AppError";
 import { assertBookingDeletable } from "../../shared/utils/dependencyGuard";
@@ -143,7 +142,6 @@ export async function create(companyId: string, creatorId: string, input: Create
 
   await Promise.all([
     customerService.getById(companyId, input.customerId),
-    villageService.getById(companyId, input.villageId),
     input.pricingMethodId ? pricingMethodService.getById(companyId, input.pricingMethodId) : Promise.resolve(),
     authService.getUserForCompany(companyId, managerId),
     input.machineId ? assertMachineExists(companyId, input.machineId) : Promise.resolve(),
@@ -165,7 +163,6 @@ export async function create(companyId: string, creatorId: string, input: Create
     // through sync; the server still assigns the authoritative bookingNumber.
     ...(input.id ? { id: input.id } : {}),
     customerId: input.customerId,
-    villageId: input.villageId,
     location: input.location,
     machineId: input.machineId,
     driverId: input.driverId,
@@ -193,7 +190,6 @@ export async function create(companyId: string, creatorId: string, input: Create
 export async function updateDetails(companyId: string, id: string, input: UpdateBookingInput) {
   await Promise.all([
     input.customerId ? customerService.getById(companyId, input.customerId) : Promise.resolve(),
-    input.villageId ? villageService.getById(companyId, input.villageId) : Promise.resolve(),
     input.managerId ? authService.getUserForCompany(companyId, input.managerId) : Promise.resolve(),
   ]);
 

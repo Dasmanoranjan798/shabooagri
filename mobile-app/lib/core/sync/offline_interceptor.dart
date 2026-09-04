@@ -354,7 +354,7 @@ class OfflineInterceptor extends Interceptor {
   }
 
   static const _collectionSegments = {
-    'customers', 'villages', 'machines', 'drivers', 'employees',
+    'customers', 'machines', 'drivers', 'employees',
     'bookings', 'jobs', 'payments', 'invoices', 'expenses', 'maintenance',
     'fuel', 'pricing-methods', 'machine-types',
   };

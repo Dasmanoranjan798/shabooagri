@@ -9,6 +9,14 @@ export async function list(req: Request, res: Response) {
   res.status(200).json(customers);
 }
 
+// Distinct locality/village names across this company's customers — the
+// replacement for the retired Village master list in filter/report pickers.
+export async function listVillages(req: Request, res: Response) {
+  const user = requireUser(req);
+  const villages = await customerService.listVillages(user.companyId);
+  res.status(200).json(villages);
+}
+
 export async function getById(req: Request, res: Response) {
   const user = requireUser(req);
   const customer = await customerService.getById(user.companyId, req.params.id);

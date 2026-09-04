@@ -295,7 +295,7 @@ export function findPendingInvoices(companyId: string) {
         select: {
           id: true,
           name: true,
-          village: { select: { id: true, name: true } },
+          village: true,
         },
       },
     },

@@ -464,7 +464,7 @@ export async function getReceipt(companyId: string, invoiceId: string, user: Aut
       name: invoice.customer.name,
       phone: invoice.customer.phone,
       address: invoice.customer.address,
-      village: invoice.customer.village.name,
+      village: invoice.customer.village ?? null,
       isGstApplicable: invoice.customer.isGstApplicable,
       gstin: invoice.customer.gstin,
     },

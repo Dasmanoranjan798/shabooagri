@@ -6,7 +6,9 @@ export const createInviteSchema = z
     roleId: z.string().uuid("Invalid role"),
     email: z.string().email("Invalid email address").optional(),
     phone: z.string().min(6, "Invalid phone number").optional(),
-    villageId: z.string().uuid("Invalid village").optional(),
+    // Locality/village for a farmer invite, plain text (Village master retired);
+    // copied onto the Customer created on accept.
+    village: z.string().trim().optional(),
     // Set when inviting someone who already has an Employee HR record
     // (e.g. from the Employees page) — accept links to it instead of
     // creating a new Employee.

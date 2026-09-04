@@ -15,7 +15,6 @@ import 'package:shabooagri_mobile/core/widgets/role_shell.dart';
 import 'package:shabooagri_mobile/features/jobs/presentation/job_list_screen.dart';
 import 'package:shabooagri_mobile/features/jobs/data/job_detail.dart';
 import 'package:shabooagri_mobile/features/customers/presentation/customer_form_screen.dart';
-import 'package:shabooagri_mobile/features/villages/presentation/village_list_screen.dart';
 import 'package:shabooagri_mobile/features/payments/presentation/payment_list_screen.dart';
 import 'package:shabooagri_mobile/features/payments/presentation/payment_list_screen_provider.dart';
 import 'package:shabooagri_mobile/features/payments/presentation/widgets/payment_filters_dialog.dart';
@@ -47,8 +46,7 @@ JobDetail _job(String id, String number, String customer, String status,
       'status': status,
       'booking': {
         'bookingNumber': number,
-        'customer': {'name': customer},
-        'village': {'name': 'Anandpur'},
+        'customer': {'name': customer, 'village': 'Anandpur'},
       },
       if (machine != null) 'machine': {'registrationNumber': machine},
       if (driver != null)
@@ -57,8 +55,6 @@ JobDetail _job(String id, String number, String customer, String status,
         },
     });
 
-VillageSummary _village(String id, String name) =>
-    VillageSummary.fromJson({'id': id, 'name': name, 'isActive': true});
 
 Future<void> _pump(
   WidgetTester tester,
@@ -190,7 +186,7 @@ void main() {
     await _pump(
       tester,
       const CustomerFormScreen(),
-      [villagesListProvider.overrideWith((ref) async => [_village('v1', 'Anandpur')])],
+      const [],
       size: const Size(900, 700),
     );
 

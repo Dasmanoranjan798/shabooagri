@@ -42,14 +42,8 @@ export async function createInvite(
     throw new AppError(400, "Unknown role");
   }
 
-  if (role.systemKey === "farmer" && !input.villageId && !input.customerId) {
+  if (role.systemKey === "farmer" && !input.village?.trim() && !input.customerId) {
     throw new AppError(400, "Village is required when inviting a farmer");
-  }
-  if (input.villageId) {
-    const village = await prisma.village.findFirst({ where: { id: input.villageId, companyId } });
-    if (!village) {
-      throw new AppError(400, "Unknown village");
-    }
   }
 
   if (input.employeeId) {
@@ -96,7 +90,7 @@ export async function createInvite(
     fullName: input.fullName.trim(),
     email: input.email?.trim().toLowerCase(),
     phone: input.phone?.trim(),
-    villageId: input.villageId,
+    village: input.village?.trim(),
     employeeId: input.employeeId,
     customerId: input.customerId,
     tokenHash,
@@ -145,7 +139,7 @@ export async function revokeInvite(companyId: string, id: string) {
 }
 
 type InviteWithRelations = Prisma.StaffInviteGetPayload<{
-  include: { company: true; role: true; invitedBy: { select: { fullName: true } }; village: true };
+  include: { company: true; role: true; invitedBy: { select: { fullName: true } } };
 }>;
 
 async function loadValidInvite(token: string): Promise<InviteWithRelations> {
@@ -231,7 +225,7 @@ export async function acceptInvite(input: AcceptInviteInput) {
           companyId: invite.companyId,
           userId: newUser.id,
           name: invite.fullName,
-          villageId: invite.villageId!,
+          village: invite.village,
           phone: invite.phone,
         },
       });

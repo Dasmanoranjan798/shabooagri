@@ -59,8 +59,8 @@ export const DownloadAppPage: React.FC = () => {
                 </h3>
                 <div style={{ display: "flex", justifyContent: "center" }}>
                   <a
-                    href="/downloads/shabooagri-v0.8.13.apk"
-                    download="shabooagri-v0.8.13.apk"
+                    href="/downloads/shabooagri-v0.8.14.apk"
+                    download="shabooagri-v0.8.14.apk"
                     className="pf-btn pf-btn-primary"
                     style={{
                       textDecoration: "none",
@@ -70,7 +70,7 @@ export const DownloadAppPage: React.FC = () => {
                     }}
                   >
                     <Download size={20} />
-                    Download APK (v0.8.13)
+                    Download APK (v0.8.14)
                   </a>
                 </div>
               </div>
@@ -82,7 +82,7 @@ export const DownloadAppPage: React.FC = () => {
                   iPhone / iPad
                 </h3>
                 <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem", margin: 0 }}>
-                  <em>v0.8.13 submission pending. Will be available via TestFlight / App Store.</em>
+                  <em>v0.8.14 submission pending. Will be available via TestFlight / App Store.</em>
                 </p>
               </div>
 
@@ -159,7 +159,7 @@ export const DownloadAppPage: React.FC = () => {
                 }}
               >
                 <Info size={24} color="var(--color-primary)" />
-                What's New in v0.8.13
+                What's New in v0.8.14
               </h2>
               <ul
                 style={{
@@ -171,6 +171,7 @@ export const DownloadAppPage: React.FC = () => {
                   gap: 8,
                 }}
               >
+                <li>Simpler addresses: a farmer's village and full address are now entered right on their record — no separate Village list to maintain. Pick the farmer and the location fills in automatically, and you can still analyse business village-wise in reports</li>
                 <li>Fixed a fresh-install setup bug where the app jumped to Sign In while you were still typing your Company ID — it now stays on Company Setup until you press Continue</li>
                 <li>Works offline: view your data and record payments, bookings and jobs with no internet — everything syncs automatically when you reconnect, with no duplicates or lost entries</li>
                 <li>Fixed the Payments ledger getting stuck on "Loading…"</li>
@@ -190,7 +191,7 @@ export const DownloadAppPage: React.FC = () => {
                   borderLeft: "4px solid #eab308",
                 }}
               >
-                <strong>Updated:</strong> 31 August 2026. This is the latest preview release.
+                <strong>Updated:</strong> 4 September 2026. This is the latest preview release.
               </div>
             </div>
 

@@ -56,7 +56,6 @@ class JobDetail {
   factory JobDetail.fromJson(Map<String, dynamic> json) {
     final booking = json['booking'] as Map<String, dynamic>? ?? const {};
     final customer = booking['customer'] as Map<String, dynamic>? ?? const {};
-    final village = booking['village'] as Map<String, dynamic>? ?? const {};
     final pricingMethod = booking['pricingMethod'] as Map<String, dynamic>?;
     final machine = json['machine'] as Map<String, dynamic>?;
     final driver = json['driver'] as Map<String, dynamic>?;
@@ -76,7 +75,9 @@ class JobDetail {
       bookingNumber: booking['bookingNumber'] as String? ?? '—',
       scheduledDate: booking['scheduledDate'] == null ? null : DateTime.parse(booking['scheduledDate'] as String),
       customerName: customer['name'] as String? ?? 'Unknown',
-      villageName: village['name'] as String? ?? '—',
+      // Locality now lives on the customer; the booking's own location (a
+      // per-job override when set) takes precedence for the displayed place.
+      villageName: (booking['location'] as String?) ?? (customer['village'] as String?) ?? '—',
       location: booking['location'] as String?,
       rate: booking['rate'] != null ? double.tryParse(booking['rate'].toString()) : null,
       minimumCharge: booking['minimumCharge'] != null ? double.tryParse(booking['minimumCharge'].toString()) : null,

@@ -2,9 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../../db/prisma";
 
 export const advanceIncludeRelations = {
-  customer: {
-    include: { village: true },
-  },
+  customer: true,
   receiver: {
     select: { id: true, fullName: true },
   },

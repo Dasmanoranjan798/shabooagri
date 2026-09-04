@@ -26,7 +26,6 @@ export const PERMISSIONS = [
   // master-data types moved to its own Owner-only "*.delete" permission
   // below, per the dependency-locked deletion rules (a Manager may still
   // deactivate/mark unavailable via *.manage, never hard-delete).
-  { key: "village.manage", description: "Create/edit villages; mark active/inactive" },
   { key: "machine_type.manage", description: "Create/edit/delete machine types" },
   { key: "machine.manage", description: "Create/edit machines (fleet records, not booking assignment); mark active/inactive" },
   { key: "employee.manage", description: "Create/edit employee records; mark active/inactive" },
@@ -34,7 +33,6 @@ export const PERMISSIONS = [
   { key: "customer.manage", description: "Create/edit customer records; mark active/inactive" },
   { key: "expense.manage", description: "Create/edit/delete expense records" },
   { key: "maintenance.manage", description: "Log/edit/delete machine maintenance records and schedules" },
-  { key: "village.delete", description: "Hard-delete a village with no linked bookings (Owner only)" },
   { key: "machine.delete", description: "Hard-delete a machine with no linked bookings (Owner only)" },
   { key: "employee.delete", description: "Hard-delete an employee with no linked bookings (Owner only)" },
   { key: "driver.delete", description: "Hard-delete a driver profile with no linked bookings (Owner only)" },
@@ -45,7 +43,7 @@ export const PERMISSIONS = [
   { key: "job.cancel", description: "Cancel a job (Owner only)" },
   {
     key: "operations.view",
-    description: "Browse company-wide operational lists (villages, machines, employees, drivers, customers)",
+    description: "Browse company-wide operational lists (machines, employees, drivers, customers)",
   },
 ] as const;
 
@@ -61,7 +59,6 @@ export const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     "payment.receive",
     "report.generate",
     "user.manage",
-    "village.manage",
     "machine_type.manage",
     "machine.manage",
     "employee.manage",

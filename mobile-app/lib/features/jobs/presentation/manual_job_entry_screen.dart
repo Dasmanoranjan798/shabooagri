@@ -9,7 +9,6 @@ import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../customers/presentation/customer_list_screen.dart';
 import '../../drivers/presentation/driver_list_screen.dart';
 import '../../machines/presentation/machine_list_screen.dart';
-import '../../villages/presentation/village_list_screen.dart';
 import 'job_list_screen.dart';
 
 class PricingMethodOption {
@@ -50,7 +49,6 @@ class _ManualJobEntryScreenState extends ConsumerState<ManualJobEntryScreen> {
   final _notesController = TextEditingController();
   final _hoursOverrideController = TextEditingController();
   String? _customerId;
-  String? _villageId;
   String? _machineId;
   String? _driverId;
   String? _pricingMethodId;
@@ -105,8 +103,8 @@ class _ManualJobEntryScreenState extends ConsumerState<ManualJobEntryScreen> {
 
   Future<void> _save() async {
     final rate = double.tryParse(_rateController.text.trim());
-    if (_customerId == null || _villageId == null || _machineId == null || _driverId == null || _pricingMethodId == null || rate == null) {
-      setState(() => _error = 'Please complete all required fields (Customer, Village, Machine, Driver, Pricing Method).');
+    if (_customerId == null || _machineId == null || _driverId == null || _pricingMethodId == null || rate == null) {
+      setState(() => _error = 'Please complete all required fields (Customer, Machine, Driver, Pricing Method).');
       return;
     }
     setState(() {
@@ -118,7 +116,6 @@ class _ManualJobEntryScreenState extends ConsumerState<ManualJobEntryScreen> {
       final dio = ref.read(apiClientProvider);
       await dio.post('/jobs/manual', data: {
         'customerId': _customerId,
-        'villageId': _villageId,
         'machineId': _machineId,
         'driverId': _driverId,
         'scheduledDate': _workDate.toIso8601String(),
@@ -147,7 +144,6 @@ class _ManualJobEntryScreenState extends ConsumerState<ManualJobEntryScreen> {
   @override
   Widget build(BuildContext context) {
     final customersAsync = ref.watch(customersListProvider);
-    final villagesAsync = ref.watch(villagesListProvider);
     final machinesAsync = ref.watch(machinesListProvider);
     final driversAsync = ref.watch(driversListProvider);
     final pricingAsync = ref.watch(pricingMethodsListProvider);
@@ -180,16 +176,6 @@ class _ManualJobEntryScreenState extends ConsumerState<ManualJobEntryScreen> {
                   ),
                   loading: () => const LinearProgressIndicator(),
                   error: (e, s) => Text('Could not load customers: ${apiErrorMessage(e)}'),
-                ),
-                villagesAsync.when(
-                  data: (villages) => DropdownButtonFormField<String>(
-                    initialValue: _villageId,
-                    decoration: const InputDecoration(labelText: 'Village *', border: OutlineInputBorder()),
-                    items: villages.map((v) => DropdownMenuItem(value: v.id, child: Text(v.name))).toList(),
-                    onChanged: _saving ? null : (v) => setState(() => _villageId = v),
-                  ),
-                  loading: () => const LinearProgressIndicator(),
-                  error: (e, s) => Text('Could not load villages: ${apiErrorMessage(e)}'),
                 ),
                 machinesAsync.when(
                   data: (machines) => DropdownButtonFormField<String>(

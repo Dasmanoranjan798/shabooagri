@@ -42,8 +42,6 @@ import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/setup/presentation/setup_screen.dart';
 import '../../features/team/presentation/invite_staff_screen.dart';
 import '../../features/team/presentation/team_screen.dart';
-import '../../features/villages/presentation/village_list_screen.dart';
-import '../../features/villages/presentation/village_form_screen.dart';
 
 import 'package:flutter/material.dart';
 
@@ -192,23 +190,6 @@ GoRouter buildAppRouter(String initialLocation) {
           GoRoute(
             path: ':id/edit',
             builder: (context, state) => CustomerFormScreen(customerId: state.pathParameters['id']!),
-          ),
-        ],
-      ),
-      GoRoute(
-        path: '/villages',
-        builder: (context, state) => const VillageListScreen(),
-        routes: [
-          GoRoute(
-            path: 'new',
-            builder: (context, state) => const VillageFormScreen(),
-          ),
-          GoRoute(
-            path: ':id/edit',
-            builder: (context, state) => VillageFormScreen(
-              villageId: state.pathParameters['id']!,
-              initialName: state.extra as String?,
-            ),
           ),
         ],
       ),

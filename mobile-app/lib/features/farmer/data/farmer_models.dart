@@ -31,7 +31,7 @@ class FarmerBooking {
         scheduledDate = DateTime.parse(json['scheduledDate'] as String),
         createdAt = DateTime.parse(json['createdAt'] as String),
         workDescription = json['workDescription'] as String?,
-        villageName = (json['village'] as Map<String, dynamic>?)?['name'] as String? ?? '—',
+        villageName = (json['location'] as String?) ?? '—',
         machineRegistration = (json['machine'] as Map<String, dynamic>?)?['registrationNumber'] as String?,
         machineBrand = (json['machine'] as Map<String, dynamic>?)?['brand'] as String?,
         pricingLabel = (json['pricingMethod'] as Map<String, dynamic>?)?['label'] as String?,

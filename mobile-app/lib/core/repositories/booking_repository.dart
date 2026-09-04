@@ -43,7 +43,7 @@ class BookingRepository {
               companyId: json['companyId'] as String,
               bookingNumber: json['bookingNumber'] as String,
               customerId: json['customerId'] as String,
-              villageId: json['villageId'] as String,
+              location: Value(json['location'] as String?),
               machineId: Value(json['machineId'] as String?),
               driverId: Value(json['driverId'] as String?),
               scheduledDate: Value(_parseDate(json['scheduledDate'])),

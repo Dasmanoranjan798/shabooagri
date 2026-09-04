@@ -26,7 +26,7 @@ export function findPendingByContact(companyId: string, email: string | undefine
 export function findByTokenHash(tokenHash: string) {
   return prisma.staffInvite.findFirst({
     where: { tokenHash },
-    include: { company: true, role: true, invitedBy: { select: { fullName: true } }, village: true },
+    include: { company: true, role: true, invitedBy: { select: { fullName: true } } },
   });
 }
 

@@ -50,7 +50,6 @@ class _QuickActionMenu extends StatelessWidget {
             alignment: WrapAlignment.center,
             children: [
               _ActionItem(icon: Icons.person, label: 'Farmer', onTap: () { Navigator.pop(context); context.go('/customers/new'); }),
-              _ActionItem(icon: Icons.location_on, label: 'Village', onTap: () { Navigator.pop(context); context.go('/villages'); }),
               _ActionItem(icon: Icons.agriculture, label: 'Machine', onTap: () { Navigator.pop(context); context.go('/machines/new'); }),
               _ActionItem(icon: Icons.badge, label: 'Driver', onTap: () { Navigator.pop(context); context.go('/drivers/new'); }),
               _ActionItem(icon: Icons.groups, label: 'Employee', onTap: () { Navigator.pop(context); context.go('/employees/new'); }),

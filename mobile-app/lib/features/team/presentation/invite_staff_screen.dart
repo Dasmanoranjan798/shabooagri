@@ -9,7 +9,6 @@ import '../../../core/layout/responsive_form.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/adaptive_scaffold.dart';
-import '../../villages/presentation/village_list_screen.dart';
 import '../data/team_models.dart';
 import 'team_screen.dart';
 
@@ -35,8 +34,8 @@ class _InviteStaffScreenState extends ConsumerState<InviteStaffScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _villageController = TextEditingController();
   String? _roleId;
-  String? _villageId;
   bool _saving = false;
   String? _error;
   CreateInviteResult? _result;
@@ -47,6 +46,7 @@ class _InviteStaffScreenState extends ConsumerState<InviteStaffScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _villageController.dispose();
     super.dispose();
   }
 
@@ -66,8 +66,8 @@ class _InviteStaffScreenState extends ConsumerState<InviteStaffScreen> {
       setState(() => _error = 'Please provide an email or phone number');
       return;
     }
-    if (isFarmerRole && (_villageId == null || _villageId!.isEmpty)) {
-      setState(() => _error = 'Please select a village for a farmer invite');
+    if (isFarmerRole && _villageController.text.trim().isEmpty) {
+      setState(() => _error = 'Please enter a village/locality for a farmer invite');
       return;
     }
 
@@ -82,7 +82,7 @@ class _InviteStaffScreenState extends ConsumerState<InviteStaffScreen> {
         'roleId': _roleId,
         if (email.isNotEmpty) 'email': email,
         if (phone.isNotEmpty) 'phone': phone,
-        if (isFarmerRole && _villageId != null) 'villageId': _villageId,
+        if (isFarmerRole && _villageController.text.trim().isNotEmpty) 'village': _villageController.text.trim(),
       });
       final data = response.data as Map<String, dynamic>;
       setState(() => _result = CreateInviteResult.fromJson(data));
@@ -171,19 +171,11 @@ class _InviteStaffScreenState extends ConsumerState<InviteStaffScreen> {
               enabled: !_saving,
             ),
             if (isFarmerRole)
-              Consumer(builder: (context, ref, _) {
-                final villagesAsync = ref.watch(villagesListProvider);
-                return villagesAsync.when(
-                  data: (villages) => DropdownButtonFormField<String>(
-                    initialValue: _villageId,
-                    decoration: const InputDecoration(labelText: 'Village *', border: OutlineInputBorder()),
-                    items: villages.map((v) => DropdownMenuItem(value: v.id, child: Text(v.name))).toList(),
-                    onChanged: _saving ? null : (v) => setState(() => _villageId = v),
-                  ),
-                  loading: () => const LinearProgressIndicator(),
-                  error: (e, s) => Text('Could not load villages: ${apiErrorMessage(e)}'),
-                );
-              }),
+              TextField(
+                controller: _villageController,
+                decoration: const InputDecoration(labelText: 'Village / Locality *', border: OutlineInputBorder()),
+                enabled: !_saving,
+              ),
           ],
         ),
         const SizedBox(height: 24),

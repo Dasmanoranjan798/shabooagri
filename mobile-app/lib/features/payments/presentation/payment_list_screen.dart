@@ -36,7 +36,7 @@ class InvoiceSummary {
         invoiceDate = json['invoiceDate'] as String,
         dueDate = json['dueDate'] as String?,
         customerName = (json['customer'] as Map<String, dynamic>?)?['name'] as String? ?? 'Unknown',
-        villageName = (json['customer'] as Map<String, dynamic>?)?['village']?['name'] as String? ?? '—';
+        villageName = (json['customer'] as Map<String, dynamic>?)?['village'] as String? ?? '—';
 }
 
 class AdvanceSummary {
