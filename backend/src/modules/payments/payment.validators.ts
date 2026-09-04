@@ -48,7 +48,9 @@ export const filterInvoicesSchema = z.object({
     field: z.enum(["invoiceDate", "dueDate", "paymentDate", "workCompletionDate"]).optional(),
   }).optional(),
   customerId: z.array(z.string()).optional(),
-  villageId: z.array(z.string()).optional(),
+  // Village/locality filter — now an array of village-name strings (the old
+  // Village master ids were retired; village is a plain address field).
+  village: z.array(z.string()).optional(),
   driverId: z.array(z.string()).optional(),
   machineId: z.array(z.string()).optional(),
   paymentMethod: z.array(z.string()).optional(),

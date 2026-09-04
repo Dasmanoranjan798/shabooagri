@@ -19,7 +19,7 @@ CustomerSummary _c(String id, String name, String village, String? phone,
       'name': name,
       'phone': phone,
       'address': null,
-      'village': {'name': village},
+      'village': village,
       'userId': portal ? 'u-$id' : null,
     });
 

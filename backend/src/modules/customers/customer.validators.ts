@@ -6,8 +6,16 @@ export const createCustomerSchema = z.object({
   // Client-authoritative offline id (see villages validator); optional + UUID.
   id: z.string().uuid().optional(),
   name: z.string().min(1),
-  villageId: z.string().uuid(),
   phone: z.string().optional(),
+  // Address is part of the person now (the standalone Village master was
+  // retired). `village` is the locality; the rest complete a full address.
+  // All optional so a farmer can be saved with only the detail that is known.
+  village: z.string().trim().optional(),
+  postOffice: z.string().trim().optional(),
+  block: z.string().trim().optional(),
+  district: z.string().trim().optional(),
+  state: z.string().trim().optional(),
+  pin: z.string().trim().optional(),
   address: z.string().optional(),
   notes: z.string().optional(),
   userId: z.string().uuid().optional(),

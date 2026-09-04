@@ -60,7 +60,7 @@ class CustomerDetailScreen extends ConsumerWidget {
       ],
       body: customerAsync.when(
         data: (customer) {
-          final villageName = (customer['village'] as Map<String, dynamic>?)?['name'] as String? ?? 'N/A';
+          final villageName = (customer['village'] as String?)?.isNotEmpty == true ? customer['village'] as String : 'N/A';
 
           final profileCard = Card(
             margin: EdgeInsets.zero,

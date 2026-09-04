@@ -10,7 +10,6 @@ import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../customers/presentation/customer_list_screen.dart';
 import '../../drivers/presentation/driver_list_screen.dart';
 import '../../machines/presentation/machine_list_screen.dart';
-import '../../villages/presentation/village_list_screen.dart';
 // Reuse the single pricing-methods fetch + model (no duplicated API/logic).
 import 'manual_job_entry_screen.dart' show pricingMethodsListProvider, PricingMethodOption;
 
@@ -23,7 +22,6 @@ class FastJobCreateScreen extends ConsumerStatefulWidget {
 
 class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
   String? _customerId;
-  String? _villageId;
   String? _machineId;
   String? _driverId;
   final _workController = TextEditingController();
@@ -43,8 +41,8 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
   }
 
   Future<void> _submit() async {
-    if (_customerId == null || _villageId == null || _machineId == null || _driverId == null || _workController.text.trim().isEmpty) {
-      setState(() => _error = 'Please fill all required fields (Farmer, Village, Machine, Driver, Work Type)');
+    if (_customerId == null || _machineId == null || _driverId == null || _workController.text.trim().isEmpty) {
+      setState(() => _error = 'Please fill all required fields (Farmer, Machine, Driver, Work Type)');
       return;
     }
 
@@ -59,7 +57,6 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
     try {
       final res = await dio.post('/bookings', data: {
         'customerId': _customerId,
-        'villageId': _villageId,
         'workDescription': _workController.text.trim(),
         'machineId': _machineId,
         'driverId': _driverId,
@@ -149,7 +146,6 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
   @override
   Widget build(BuildContext context) {
     final customersAsync = ref.watch(customersListProvider);
-    final villagesAsync = ref.watch(villagesListProvider);
     final machinesAsync = ref.watch(machinesListProvider);
     final driversAsync = ref.watch(driversListProvider);
 
@@ -158,8 +154,7 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
       title: 'Create Job Card',
       showBack: true,
       body: customersAsync.when(
-        data: (customers) => villagesAsync.when(
-          data: (villages) => machinesAsync.when(
+        data: (customers) => machinesAsync.when(
             data: (machines) => driversAsync.when(
               data: (drivers) => ListView(
                 padding: const EdgeInsets.all(16),
@@ -177,35 +172,11 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
                     initialValue: _customerId,
                     decoration: const InputDecoration(labelText: 'Farmer (Customer) *'),
                     items: [const DropdownMenuItem(value: 'NEW', child: Text('+ Add Farmer', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold))), ...customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))],
-                    onChanged: (v) {
-                       setState(() {
-                         _customerId = v;
-                         // Smart linked data: Auto-select village based on customer
-                         final customer = customers.firstWhere((c) => c.id == v);
-                         if (customer.villageName.isNotEmpty) {
-                           final villageMatch = villages.firstWhere((vil) => vil.name == customer.villageName, orElse: () => villages.first);
-                           _villageId = villageMatch.id;
-                         }
-                       });
-                    },
+                    onChanged: (v) => setState(() => _customerId = v),
                   ),
                   const SizedBox(height: 16),
 
-                  // 2. Village
-                  DropdownButtonFormField<String>(
-                    initialValue: _villageId,
-                    decoration: const InputDecoration(labelText: 'Village *'),
-                    items: [const DropdownMenuItem(value: 'NEW', child: Text('+ Add Village', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold))), ...villages.map((v) => DropdownMenuItem(value: v.id, child: Text(v.name)))],
-                    onChanged: (v) async {
-                      if (v == 'NEW') {
-                        final newId = await context.push('/villages/new'); ref.invalidate(villagesListProvider); if (newId != null && newId is String) setState(() => _villageId = newId); return;
-                      }
-                      setState(() => _villageId = v);
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // 3. Work Type
+                  // 2. Work Type
                   TextField(
                     controller: _workController,
                     decoration: const InputDecoration(labelText: 'Work Type (e.g. Harvesting) *'),
@@ -263,7 +234,7 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
                   const SizedBox(height: 32),
 
                   // Summary / Review
-                  if (_customerId != null && _villageId != null && _machineId != null && _driverId != null)
+                  if (_customerId != null && _machineId != null && _driverId != null)
                     Card(
                       color: AppTheme.primaryLight,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppTheme.primary)),
@@ -275,7 +246,6 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
                             const Text('JOB SUMMARY', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryDark)),
                             const SizedBox(height: 8),
                             Text('Farmer: ${customers.firstWhere((c) => c.id == _customerId).name}'),
-                            Text('Village: ${villages.firstWhere((v) => v.id == _villageId).name}'),
                             Text('Machine: ${machines.firstWhere((m) => m.id == _machineId).registrationNumber}'),
                             Text('Driver: ${drivers.firstWhere((d) => d.id == _driverId).name}'),
                           ],
@@ -304,9 +274,6 @@ class _FastJobCreateScreenState extends ConsumerState<FastJobCreateScreen> {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, s) => Center(child: Text(apiErrorMessage(e))),
           ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text(apiErrorMessage(e))),
-        ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, s) => Center(child: Text(apiErrorMessage(e))),
       ),

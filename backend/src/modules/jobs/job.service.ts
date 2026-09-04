@@ -18,7 +18,6 @@ import * as driverService from "../drivers/driver.service";
 import * as machineService from "../machines/machine.service";
 import * as transportTypeService from "../transport-types/transportType.service";
 import * as pricingMethodService from "../pricing-methods/pricingMethod.service";
-import * as villageService from "../villages/village.service";
 import * as settingsRepo from "../settings/settings.repository";
 import type { AddTransportChargeInput, ChangeDriverInput, ChangeMachineInput, CreateManualJobInput, PauseJobInput, ResumeJobInput, StartJobInput, StopJobInput, SubmitJobInput, UpdateJobInput } from "./job.validators";
 
@@ -669,7 +668,6 @@ export async function createManualEntryJob(
 ) {
   await Promise.all([
     customerService.getById(companyId, input.customerId),
-    villageService.getById(companyId, input.villageId),
     machineService.getById(companyId, input.machineId),
     driverService.getById(companyId, input.driverId),
     pricingMethodService.getById(companyId, input.pricingMethodId),
@@ -701,7 +699,6 @@ export async function createManualEntryJob(
       companyId,
       {
         customerId: input.customerId,
-        villageId: input.villageId,
         location: input.location,
         machineId: input.machineId,
         driverId: input.driverId,

@@ -25,7 +25,7 @@ class CustomerSummary {
         name = json['name'] as String,
         phone = json['phone'] as String?,
         address = json['address'] as String?,
-        villageName = (json['village'] as Map<String, dynamic>?)?['name'] as String? ?? '—',
+        villageName = (json['village'] as String?)?.isNotEmpty == true ? json['village'] as String : '—',
         hasPortalAccess = json['userId'] != null;
 }
 

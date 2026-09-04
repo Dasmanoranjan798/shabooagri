@@ -10,7 +10,6 @@ import 'package:shabooagri_mobile/core/widgets/desktop_sidebar.dart';
 
 import 'package:shabooagri_mobile/features/customers/presentation/customer_detail_screen.dart';
 import 'package:shabooagri_mobile/features/customers/presentation/customer_form_screen.dart';
-import 'package:shabooagri_mobile/features/villages/presentation/village_list_screen.dart';
 import 'package:shabooagri_mobile/features/customers/presentation/customer_list_screen.dart';
 import 'package:shabooagri_mobile/features/payments/presentation/record_advance_screen.dart';
 import 'package:shabooagri_mobile/features/payments/presentation/new_invoice_screen.dart';
@@ -35,15 +34,13 @@ const _owner = AppUser(
   roleName: 'Owner',
 );
 
-VillageSummary _village(String id, String name) =>
-    VillageSummary.fromJson({'id': id, 'name': name, 'isActive': true});
 
 CustomerSummary _customer(String id, String name) => CustomerSummary.fromJson({
       'id': id,
       'name': name,
       'phone': '9876543210',
       'address': null,
-      'village': {'name': 'Anandpur'},
+      'village': 'Anandpur',
       'userId': null,
     });
 
@@ -89,7 +86,7 @@ void main() {
               'phone': '9876543210',
               'address': 'Main Road',
               'isActive': true,
-              'village': {'name': 'Anandpur'},
+              'village': 'Anandpur',
             }),
         customerInvoicesProvider('c1').overrideWith((ref) async => []),
         customerBookingsProvider('c1').overrideWith((ref) async => []),
@@ -106,7 +103,7 @@ void main() {
     await _pump(
       tester,
       const CustomerFormScreen(),
-      [villagesListProvider.overrideWith((ref) async => [_village('v1', 'Anandpur')])],
+      const [],
     );
 
     expect(find.byType(DesktopSidebar), findsOneWidget);
@@ -124,7 +121,7 @@ void main() {
     await _pump(
       tester,
       const CustomerFormScreen(),
-      [villagesListProvider.overrideWith((ref) async => [_village('v1', 'Anandpur')])],
+      const [],
       size: const Size(1920, 1080),
     );
     expect(find.byType(DesktopSidebar), findsOneWidget);

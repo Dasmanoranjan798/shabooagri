@@ -21,7 +21,6 @@ const List<NavDestination> ownerNavDestinations = [
   NavDestination('Machines', Icons.agriculture, '/machines'),
   NavDestination('Drivers', Icons.badge, '/drivers'),
   NavDestination('Customers', Icons.people, '/customers'),
-  NavDestination('Villages', Icons.location_city, '/villages'),
   NavDestination('Payments', Icons.receipt_long, '/payments'),
   NavDestination('Employees', Icons.groups, '/employees'),
   NavDestination('Team', Icons.admin_panel_settings, '/team'),

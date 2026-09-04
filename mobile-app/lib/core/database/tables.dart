@@ -6,7 +6,9 @@ class Bookings extends Table {
   TextColumn get companyId => text()();
   TextColumn get bookingNumber => text()();
   TextColumn get customerId => text()();
-  TextColumn get villageId => text()();
+  // Optional transaction-specific work location (the old village_id master ref
+  // was retired; address lives on the customer now).
+  TextColumn get location => text().nullable()();
   TextColumn get machineId => text().nullable()();
   TextColumn get driverId => text().nullable()();
   DateTimeColumn get scheduledDate => dateTime().nullable()();
@@ -88,18 +90,11 @@ class Customers extends Table {
   TextColumn get name => text()();
   // Maps from the backend's `phone` field.
   TextColumn get mobileNumber => text().nullable()();
-  TextColumn get villageId => text()();
-  DateTimeColumn get updatedAt => dateTime().nullable()();
-
-  @override
-  Set<Column> get primaryKey => {id};
-}
-
-@DataClassName('OfflineVillage')
-class Villages extends Table {
-  TextColumn get id => text()();
-  TextColumn get companyId => text()();
-  TextColumn get name => text()();
+  // Address is an attribute of the person now (Village master retired).
+  // `village` is the locality; district/address round out offline display.
+  TextColumn get village => text().nullable()();
+  TextColumn get district => text().nullable()();
+  TextColumn get address => text().nullable()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
 
   @override

@@ -21,7 +21,9 @@ const timeOfDaySchema = z
 export const createBookingSchema = z.object({
   id: z.string().uuid().optional(),
   customerId: z.string().uuid(),
-  villageId: z.string().uuid(),
+  // Optional transaction-specific work location. The client defaults it to the
+  // customer's registered address; only set explicitly when the job is somewhere
+  // other than where the farmer lives. The old villageId master ref was removed.
   location: z.string().optional(),
   machineId: z.string().uuid().optional(),
   driverId: z.string().uuid().optional(),

@@ -22,10 +22,7 @@ class FakePullServer implements HttpClientAdapter {
 
   Map<String, dynamic> get _bodies => {
         '/customers': [
-          {'id': 'c1', 'companyId': 'co1', 'name': customerName, 'phone': '999', 'villageId': 'v1'},
-        ],
-        '/villages': [
-          {'id': 'v1', 'companyId': 'co1', 'name': 'Rampur'},
+          {'id': 'c1', 'companyId': 'co1', 'name': customerName, 'phone': '999', 'village': 'Rampur'},
         ],
         '/machines': [
           {'id': 'm1', 'companyId': 'co1', 'registrationNumber': 'TR-1', 'status': 'AVAILABLE', 'hourMeterReading': 12.5},
@@ -37,7 +34,7 @@ class FakePullServer implements HttpClientAdapter {
           {'id': 'j1', 'companyId': 'co1', 'bookingId': 'b1', 'status': 'NOT_STARTED'},
         ],
         '/bookings': [
-          {'id': 'b1', 'companyId': 'co1', 'bookingNumber': 'BK-000001', 'customerId': 'c1', 'villageId': 'v1', 'status': 'PENDING'},
+          {'id': 'b1', 'companyId': 'co1', 'bookingNumber': 'BK-000001', 'customerId': 'c1', 'location': 'Rampur', 'status': 'PENDING'},
         ],
         '/employees': [
           {'id': 'e1', 'companyId': 'co1', 'name': 'Ravi'},
@@ -127,7 +124,7 @@ void main() {
 
     // Cloud → device: the local database now holds the authoritative snapshot.
     expect((await db.select(db.customers).get()).single.name, 'Asha');
-    expect((await db.select(db.villages).get()).single.name, 'Rampur');
+    expect((await db.select(db.customers).get()).single.village, 'Rampur');
     expect((await db.select(db.machines).get()).single.registrationNumber, 'TR-1');
     expect((await db.select(db.drivers).get()).single.name, 'Ravi');
     expect((await db.select(db.jobs).get()).single.id, 'j1');

@@ -10,7 +10,6 @@ import '../repositories/customer_repository.dart';
 import '../repositories/driver_repository.dart';
 import '../repositories/job_repository.dart';
 import '../repositories/machine_repository.dart';
-import '../repositories/village_repository.dart';
 import 'connectivity.dart';
 import 'outbox.dart';
 
@@ -74,7 +73,6 @@ class SyncPullService {
       // rest.
       final refreshers = <Future<void> Function()>[
         () => _ref.read(customerRepositoryProvider).refreshFromApi(),
-        () => _ref.read(villageRepositoryProvider).refreshFromApi(),
         () => _ref.read(machineRepositoryProvider).refreshFromApi(),
         () => _ref.read(driverRepositoryProvider).refreshFromApi(),
         () => _ref.read(jobRepositoryProvider).refreshFromApi(),

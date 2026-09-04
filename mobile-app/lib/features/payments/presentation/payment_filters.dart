@@ -5,7 +5,7 @@ class PaymentFilterState {
   final String? dateField;
   
   final List<String> customerIds;
-  final List<String> villageIds;
+  final List<String> villages;
   final List<String> machineIds;
   final List<String> driverIds;
   final List<String> paymentMethods;
@@ -22,7 +22,7 @@ class PaymentFilterState {
     this.status = const [],
     this.fromDate, this.toDate, this.dateField,
     this.customerIds = const [],
-    this.villageIds = const [],
+    this.villages = const [],
     this.machineIds = const [],
     this.driverIds = const [],
     this.paymentMethods = const [],
@@ -33,7 +33,7 @@ class PaymentFilterState {
   PaymentFilterState copyWith({
     List<String>? status,
     String? fromDate, String? toDate, String? dateField,
-    List<String>? customerIds, List<String>? villageIds,
+    List<String>? customerIds, List<String>? villages,
     List<String>? machineIds, List<String>? driverIds,
     List<String>? paymentMethods,
     String? amountField, String? amountOperator, double? amountValue, double? amountValueMax,
@@ -45,7 +45,7 @@ class PaymentFilterState {
       toDate: toDate ?? this.toDate,
       dateField: dateField ?? this.dateField,
       customerIds: customerIds ?? this.customerIds,
-      villageIds: villageIds ?? this.villageIds,
+      villages: villages ?? this.villages,
       machineIds: machineIds ?? this.machineIds,
       driverIds: driverIds ?? this.driverIds,
       paymentMethods: paymentMethods ?? this.paymentMethods,
@@ -69,7 +69,7 @@ class PaymentFilterState {
       };
     }
     if (customerIds.isNotEmpty) m['customerId'] = customerIds;
-    if (villageIds.isNotEmpty) m['villageId'] = villageIds;
+    if (villages.isNotEmpty) m['village'] = villages;
     if (machineIds.isNotEmpty) m['machineId'] = machineIds;
     if (driverIds.isNotEmpty) m['driverId'] = driverIds;
     if (paymentMethods.isNotEmpty) m['paymentMethod'] = paymentMethods;

@@ -7,7 +7,6 @@ import '../../../core/layout/responsive_form.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/adaptive_scaffold.dart';
-import '../../villages/presentation/village_list_screen.dart';
 import 'customer_list_screen.dart';
 
 final customerByIdProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
@@ -33,10 +32,16 @@ class CustomerFormScreen extends ConsumerStatefulWidget {
 class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  // Address is part of the person now (the Village master was retired).
+  final _villageController = TextEditingController();
+  final _postOfficeController = TextEditingController();
+  final _blockController = TextEditingController();
+  final _districtController = TextEditingController();
+  final _stateController = TextEditingController();
+  final _pinController = TextEditingController();
   final _addressController = TextEditingController();
   final _notesController = TextEditingController();
   final _gstinController = TextEditingController();
-  String? _villageId;
   bool _isGstApplicable = false;
   bool _isActive = true;
   bool _saving = false;
@@ -50,18 +55,29 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
     _prefilled = true;
     _nameController.text = customer['name'] as String? ?? '';
     _phoneController.text = customer['phone'] as String? ?? '';
+    _villageController.text = customer['village'] as String? ?? '';
+    _postOfficeController.text = customer['postOffice'] as String? ?? '';
+    _blockController.text = customer['block'] as String? ?? '';
+    _districtController.text = customer['district'] as String? ?? '';
+    _stateController.text = customer['state'] as String? ?? '';
+    _pinController.text = customer['pin'] as String? ?? '';
     _addressController.text = customer['address'] as String? ?? '';
     _notesController.text = customer['notes'] as String? ?? '';
     _gstinController.text = customer['gstin'] as String? ?? '';
     _isGstApplicable = customer['isGstApplicable'] as bool? ?? false;
     _isActive = customer['isActive'] as bool? ?? true;
-    _villageId = customer['villageId'] as String?;
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _villageController.dispose();
+    _postOfficeController.dispose();
+    _blockController.dispose();
+    _districtController.dispose();
+    _stateController.dispose();
+    _pinController.dispose();
     _addressController.dispose();
     _notesController.dispose();
     _gstinController.dispose();
@@ -70,8 +86,8 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
 
   Future<void> _save() async {
     final name = _nameController.text.trim();
-    if (name.isEmpty || _villageId == null) {
-      setState(() => _error = 'Name and village are required.');
+    if (name.isEmpty) {
+      setState(() => _error = 'Name is required.');
       return;
     }
     setState(() {
@@ -81,7 +97,12 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
     final dio = ref.read(apiClientProvider);
     final data = {
       'name': name,
-      'villageId': _villageId,
+      if (_villageController.text.trim().isNotEmpty) 'village': _villageController.text.trim(),
+      if (_postOfficeController.text.trim().isNotEmpty) 'postOffice': _postOfficeController.text.trim(),
+      if (_blockController.text.trim().isNotEmpty) 'block': _blockController.text.trim(),
+      if (_districtController.text.trim().isNotEmpty) 'district': _districtController.text.trim(),
+      if (_stateController.text.trim().isNotEmpty) 'state': _stateController.text.trim(),
+      if (_pinController.text.trim().isNotEmpty) 'pin': _pinController.text.trim(),
       if (_phoneController.text.trim().isNotEmpty) 'phone': _phoneController.text.trim(),
       if (_addressController.text.trim().isNotEmpty) 'address': _addressController.text.trim(),
       if (_notesController.text.trim().isNotEmpty) 'notes': _notesController.text.trim(),
@@ -133,8 +154,6 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
   }
 
   Widget _buildForm(BuildContext context) {
-    final villagesAsync = ref.watch(villagesListProvider);
-
     final form = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -150,16 +169,6 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
               decoration: const InputDecoration(labelText: 'Name *', border: OutlineInputBorder()),
               enabled: !_saving,
             ),
-            villagesAsync.when(
-              data: (villages) => DropdownButtonFormField<String>(
-                initialValue: _villageId,
-                decoration: const InputDecoration(labelText: 'Village *', border: OutlineInputBorder()),
-                items: villages.map((v) => DropdownMenuItem(value: v.id, child: Text(v.name))).toList(),
-                onChanged: _saving ? null : (value) => setState(() => _villageId = value),
-              ),
-              loading: () => const LinearProgressIndicator(),
-              error: (e, s) => Text('Could not load villages: ${apiErrorMessage(e)}'),
-            ),
             TextField(
               controller: _phoneController,
               decoration: const InputDecoration(labelText: 'Phone', border: OutlineInputBorder()),
@@ -167,8 +176,39 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
               enabled: !_saving,
             ),
             TextField(
+              controller: _villageController,
+              decoration: const InputDecoration(labelText: 'Village / Locality', border: OutlineInputBorder()),
+              enabled: !_saving,
+            ),
+            TextField(
+              controller: _postOfficeController,
+              decoration: const InputDecoration(labelText: 'Post Office', border: OutlineInputBorder()),
+              enabled: !_saving,
+            ),
+            TextField(
+              controller: _blockController,
+              decoration: const InputDecoration(labelText: 'Block / Tahasil', border: OutlineInputBorder()),
+              enabled: !_saving,
+            ),
+            TextField(
+              controller: _districtController,
+              decoration: const InputDecoration(labelText: 'District', border: OutlineInputBorder()),
+              enabled: !_saving,
+            ),
+            TextField(
+              controller: _stateController,
+              decoration: const InputDecoration(labelText: 'State', border: OutlineInputBorder()),
+              enabled: !_saving,
+            ),
+            TextField(
+              controller: _pinController,
+              decoration: const InputDecoration(labelText: 'PIN Code', border: OutlineInputBorder()),
+              keyboardType: TextInputType.number,
+              enabled: !_saving,
+            ),
+            TextField(
               controller: _addressController,
-              decoration: const InputDecoration(labelText: 'Address', border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Full Address', border: OutlineInputBorder()),
               enabled: !_saving,
             ),
           ],

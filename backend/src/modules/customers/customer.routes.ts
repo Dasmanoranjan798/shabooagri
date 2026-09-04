@@ -9,6 +9,8 @@ export const customerRouter = Router();
 customerRouter.use(authMiddleware);
 
 customerRouter.get("/", requirePermission("operations.view"), asyncHandler(customerController.list));
+// Must precede "/:id" so "villages" is not captured as an id path param.
+customerRouter.get("/villages", requirePermission("operations.view"), asyncHandler(customerController.listVillages));
 customerRouter.get("/:id", requirePermission("operations.view"), asyncHandler(customerController.getById));
 customerRouter.post("/", requirePermission("customer.manage"), asyncHandler(customerController.create));
 customerRouter.patch("/:id", requirePermission("customer.manage"), asyncHandler(customerController.update));

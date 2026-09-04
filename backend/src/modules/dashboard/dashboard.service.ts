@@ -188,8 +188,8 @@ function mapJobRow(row: Awaited<ReturnType<typeof dashboardRepository.findJobsFo
     customer: {
       id: row.booking.customer.id,
       name: row.booking.customer.name,
-      village: row.booking.customer.village.name,
-      villageId: row.booking.customer.village.id,
+      village: row.booking.customer.village ?? null,
+      villageId: row.booking.customer.village ?? null,
     },
     machine: row.booking.machine
       ? {
@@ -328,8 +328,8 @@ export async function getSummary(companyId: string, user: AuthenticatedUser) {
       customerMap.set(cId, {
         customerId: cId,
         customerName: inv.customer.name,
-        villageName: inv.customer.village.name,
-        villageId: inv.customer.village.id,
+        villageName: inv.customer.village ?? null,
+        villageId: inv.customer.village ?? null,
         totalOutstanding: 0,
         invoices: [],
       });

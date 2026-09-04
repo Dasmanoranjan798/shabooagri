@@ -180,7 +180,6 @@ model Company {
   customers            Customer[]
   employees            Employee[]
   drivers              Driver[]
-  villages             Village[]
   machineTypes         MachineType[]
   machines             Machine[]
   pricingMethods       PricingMethod[]
@@ -291,8 +290,8 @@ model User {
   uploadedJobPhotos   JobPhoto[]
   recordedFuelEntries JobFuelEntry[]
   recordedExpenses    Expense[]
-  receivedPayments    Payment[]         @relation("PaymentReceivedBy")
-  voidedPayments      Payment[]         @relation("PaymentVoidedBy")
+  receivedPayments    Payment[]           @relation("PaymentReceivedBy")
+  voidedPayments      Payment[]           @relation("PaymentVoidedBy")
   voidedInvoices      Invoice[]
   receivedAdvances    CustomerAdvance[]
   invitesSent         StaffInvite[]
@@ -307,8 +306,19 @@ model Customer {
   companyId       String   @map("company_id") @db.Uuid
   userId          String?  @unique @map("user_id") @db.Uuid
   name            String
-  villageId       String   @map("village_id") @db.Uuid
   phone           String?
+  // Address is now an attribute of the person itself — the old standalone
+  // Village master was retired (see migration 20260904_remove_village_master).
+  // `village` is the locality/village name; the remaining fields complete a
+  // full Indian rural address. All optional so a farmer can be recorded with
+  // as little or as much address detail as is known. Village-wise reporting
+  // now groups by this `village` text instead of a shared Village row.
+  village         String?
+  postOffice      String?  @map("post_office")
+  block           String?
+  district        String?
+  state           String?
+  pin             String?
   address         String?
   notes           String?
   // Phase B Customer GST fields (Optional)
@@ -324,7 +334,6 @@ model Customer {
 
   company  Company           @relation(fields: [companyId], references: [id])
   user     User?             @relation(fields: [userId], references: [id])
-  village  Village           @relation(fields: [villageId], references: [id])
   bookings Booking[]
   invoices Invoice[]
   advances CustomerAdvance[]
@@ -367,32 +376,14 @@ model Driver {
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
 
-  company          Company   @relation(fields: [companyId], references: [id])
-  employee         Employee  @relation(fields: [employeeId], references: [id])
-  assignedMachines Machine[] @relation("MachineAssignedDriver")
+  company          Company          @relation(fields: [companyId], references: [id])
+  employee         Employee         @relation(fields: [employeeId], references: [id])
+  assignedMachines Machine[]        @relation("MachineAssignedDriver")
   bookings         Booking[]
   jobs             Job[]
   workSessions     JobWorkSession[]
 
   @@map("drivers")
-}
-
-model Village {
-  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId String  @map("company_id") @db.Uuid
-  name      String
-  // Same rationale as Customer.isActive — a Village referenced by any
-  // Booking can never be hard-deleted; this is the Manager-facing
-  // alternative once it's no longer usable for new bookings.
-  isActive  Boolean @default(true) @map("is_active")
-
-  company      Company       @relation(fields: [companyId], references: [id])
-  customers    Customer[]
-  bookings     Booking[]
-  staffInvites StaffInvite[]
-
-  @@unique([companyId, name])
-  @@map("villages")
 }
 
 // ---------- Machines (§8.3) ----------
@@ -471,7 +462,11 @@ model Booking {
   companyId       String        @map("company_id") @db.Uuid
   bookingNumber   String        @map("booking_number")
   customerId      String        @map("customer_id") @db.Uuid
-  villageId       String        @map("village_id") @db.Uuid
+  // Transaction-specific work/service location. Defaults to the customer's
+  // registered address on the client, but may be overridden per booking when
+  // the job is genuinely somewhere other than where the farmer lives. The old
+  // village_id FK to the retired Village master was removed; historical village
+  // names were backfilled into this field where it was empty.
   location        String?
   machineId       String?       @map("machine_id") @db.Uuid
   driverId        String?       @map("driver_id") @db.Uuid
@@ -503,13 +498,12 @@ model Booking {
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
-  company       Company       @relation(fields: [companyId], references: [id])
-  customer      Customer      @relation(fields: [customerId], references: [id])
-  village       Village       @relation(fields: [villageId], references: [id])
-  machine       Machine?      @relation(fields: [machineId], references: [id])
-  driver        Driver?       @relation(fields: [driverId], references: [id])
-  manager       User          @relation("BookingManager", fields: [managerId], references: [id])
-  creator       User          @relation("BookingCreatedBy", fields: [createdBy], references: [id])
+  company       Company        @relation(fields: [companyId], references: [id])
+  customer      Customer       @relation(fields: [customerId], references: [id])
+  machine       Machine?       @relation(fields: [machineId], references: [id])
+  driver        Driver?        @relation(fields: [driverId], references: [id])
+  manager       User           @relation("BookingManager", fields: [managerId], references: [id])
+  creator       User           @relation("BookingCreatedBy", fields: [createdBy], references: [id])
   pricingMethod PricingMethod? @relation(fields: [pricingMethodId], references: [id])
 
   attachments BookingAttachment[]
@@ -694,10 +688,10 @@ model JobAssignmentChange {
 // Company-configurable transport master (mirrors MachineType). Seeded with
 // sensible defaults per company; new ones are inserts, not code changes.
 model TransportType {
-  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId String  @map("company_id") @db.Uuid
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
   name      String
-  isActive  Boolean @default(true) @map("is_active")
+  isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")
 
   charges JobTransportCharge[]
@@ -974,7 +968,9 @@ model StaffInvite {
   fullName        String       @map("full_name")
   email           String?
   phone           String?
-  villageId       String?      @map("village_id") @db.Uuid
+  // Locality/village for a farmer invite — captured as plain text (the old
+  // Village master was retired) and copied onto the Customer created on accept.
+  village         String?
   // Set when this invite grants login access to an employee record that
   // already exists (e.g. invited from the Employees page) rather than
   // creating a brand-new Employee on accept — see staffInvite.service.ts.
@@ -993,7 +989,6 @@ model StaffInvite {
   company   Company   @relation(fields: [companyId], references: [id])
   role      Role      @relation(fields: [roleId], references: [id])
   invitedBy User      @relation(fields: [invitedByUserId], references: [id])
-  village   Village?  @relation(fields: [villageId], references: [id])
   employee  Employee? @relation(fields: [employeeId], references: [id])
   customer  Customer? @relation(fields: [customerId], references: [id])
 

@@ -7,7 +7,6 @@ const scoped = createScopedRepository(prisma.booking);
 
 const includeRelations = {
   customer: true,
-  village: true,
   machine: true,
   driver: {
     include: {
@@ -149,12 +148,12 @@ export function deleteScoped(companyId: string, id: string) {
 
 // Dependency-guard support (§ dependency-locked deletion) — how many
 // bookings (any status, past or present) reference a given machine,
-// driver, village, or customer. Exactly one key should be set per call;
+// driver, or customer. Exactly one key should be set per call;
 // callers pass e.g. { machineId } to check whether a Machine can be
 // hard-deleted.
 export function countByReference(
   companyId: string,
-  ref: { machineId?: string; driverId?: string; villageId?: string; customerId?: string },
+  ref: { machineId?: string; driverId?: string; customerId?: string },
 ) {
   return prisma.booking.count({ where: { companyId, ...ref } });
 }

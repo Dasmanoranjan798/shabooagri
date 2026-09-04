@@ -16,7 +16,6 @@ import { jobRouter } from "./modules/jobs/job.routes";
 import { UPLOAD_ROOT as JOB_PHOTO_UPLOAD_ROOT } from "./modules/jobs/job.upload";
 import { pricingMethodRouter } from "./modules/pricing-methods/pricingMethod.routes";
 import { pauseReasonRouter } from "./modules/pause-reasons/pauseReason.routes";
-import { villageRouter } from "./modules/villages/village.routes";
 import { invoiceRouter, paymentRouter } from "./modules/payments/payment.routes";
 import { dashboardRouter } from "./modules/dashboard/dashboard.routes";
 import { expenseRouter } from "./modules/expenses/expense.routes";
@@ -102,7 +101,6 @@ app.use(tenantResolverMiddleware);
 app.use(idempotencyMiddleware);
 
 app.use("/auth", authRouter);
-app.use("/villages", villageRouter);
 app.use("/machine-types", machineTypeRouter);
 app.use("/machines", machineRouter);
 app.use("/transport-types", transportTypeRouter);

@@ -30,10 +30,13 @@ const includeRelations = {
         select: {
           id: true,
           name: true,
-          village: { select: { id: true, name: true } },
+          // Locality/address is a scalar on the customer now; `location` on the
+          // booking below carries any transaction-specific work location.
+          village: true,
+          district: true,
+          address: true,
         },
       },
-      village: { select: { id: true, name: true } },
       pricingMethod: true,
     },
   },
