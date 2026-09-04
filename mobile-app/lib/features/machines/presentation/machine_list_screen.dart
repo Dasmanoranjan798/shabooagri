@@ -50,14 +50,53 @@ final machinesListProvider = FutureProvider<List<MachineSummary>>((ref) async {
 
 enum _StatusFilter { all, available, working, repair, offline }
 
-class MachineListScreen extends ConsumerStatefulWidget {
+class MachineListScreen extends ConsumerWidget {
   const MachineListScreen({super.key});
 
   @override
-  ConsumerState<MachineListScreen> createState() => _MachineListScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider);
+    final canManage = user?.isOwnerOrManager ?? false;
+    final isDesktop = context.responsive.isDesktop;
+
+    return AdaptiveScaffold(
+      currentRoute: '/machines',
+      title: 'Machines',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: () => ref.invalidate(machinesListProvider),
+        ),
+        if (isDesktop && canManage)
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: FilledButton.icon(
+              onPressed: () => context.go('/machines/new'),
+              icon: const Icon(Icons.add),
+              label: const Text('New Machine'),
+            ),
+          ),
+      ],
+      floatingActionButton: (!isDesktop && canManage)
+          ? FloatingActionButton(onPressed: () => context.go('/machines/new'), child: const Icon(Icons.add))
+          : null,
+      bottomNavigationBar: isDesktop ? null : const QuickActionBar(),
+      body: const MachineListBody(),
+    );
+  }
 }
 
-class _MachineListScreenState extends ConsumerState<MachineListScreen> {
+/// Search + status-filter + list content of the Machines screen, without the
+/// scaffold — reused both as the standalone screen body and the Dashboard's
+/// contextual "Machines" workspace.
+class MachineListBody extends ConsumerStatefulWidget {
+  const MachineListBody({super.key});
+
+  @override
+  ConsumerState<MachineListBody> createState() => _MachineListBodyState();
+}
+
+class _MachineListBodyState extends ConsumerState<MachineListBody> {
   String _query = '';
   _StatusFilter _filter = _StatusFilter.all;
 
@@ -97,187 +136,164 @@ class _MachineListScreenState extends ConsumerState<MachineListScreen> {
     final insuranceAlertDays = profileAsync.valueOrNull?.insuranceAlertDays ?? 30;
     final isDesktop = context.responsive.isDesktop;
 
-    return AdaptiveScaffold(
-      currentRoute: '/machines',
-      title: 'Machines',
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.refresh),
-          onPressed: () => ref.invalidate(machinesListProvider),
-        ),
-        if (isDesktop && canManage)
-          Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: FilledButton.icon(
-              onPressed: () => context.go('/machines/new'),
-              icon: const Icon(Icons.add),
-              label: const Text('New Machine'),
+    return machinesAsync.when(
+      data: (machines) {
+        final counts = {for (final f in _StatusFilter.values) f: machines.where((m) => _matchesFilter(m, f)).length};
+        var filtered = machines.where((m) => _matchesFilter(m, _filter)).toList();
+        if (_query.isNotEmpty) {
+          filtered = filtered
+              .where((m) =>
+                  m.registrationNumber.toLowerCase().contains(_query) ||
+                  (m.brand?.toLowerCase().contains(_query) ?? false) ||
+                  (m.model?.toLowerCase().contains(_query) ?? false))
+              .toList();
+        }
+
+        return Column(
+          children: [
+            SearchField(
+              hintText: 'Search by Reg #, Brand, Model...',
+              onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
             ),
-          ),
-      ],
-      floatingActionButton: (!isDesktop && canManage)
-          ? FloatingActionButton(onPressed: () => context.go('/machines/new'), child: const Icon(Icons.add))
-          : null,
-      bottomNavigationBar: isDesktop ? null : const QuickActionBar(),
-      body: machinesAsync.when(
-        data: (machines) {
-          final counts = {for (final f in _StatusFilter.values) f: machines.where((m) => _matchesFilter(m, f)).length};
-          var filtered = machines.where((m) => _matchesFilter(m, _filter)).toList();
-          if (_query.isNotEmpty) {
-            filtered = filtered
-                .where((m) =>
-                    m.registrationNumber.toLowerCase().contains(_query) ||
-                    (m.brand?.toLowerCase().contains(_query) ?? false) ||
-                    (m.model?.toLowerCase().contains(_query) ?? false))
-                .toList();
-          }
+            FilterTabsRow<_StatusFilter>(
+              selected: _filter,
+              onSelected: (f) => setState(() => _filter = f),
+              tabs: [
+                (_StatusFilter.all, 'All', counts[_StatusFilter.all]!),
+                (_StatusFilter.available, 'Available', counts[_StatusFilter.available]!),
+                (_StatusFilter.working, 'Working', counts[_StatusFilter.working]!),
+                (_StatusFilter.repair, 'Repair', counts[_StatusFilter.repair]!),
+                (_StatusFilter.offline, 'Offline', counts[_StatusFilter.offline]!),
+              ],
+            ),
+            Expanded(
+              child: filtered.isEmpty
+                  ? const Center(child: Text('No machines match this view.'))
+                  : isDesktop
+                      ? _desktopTable(context, filtered,
+                          canManage: canManage,
+                          canDelete: canDelete,
+                          serviceAlertHours: serviceAlertHours,
+                          insuranceAlertDays: insuranceAlertDays)
+                      : ListView.builder(
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) {
+                        final machine = filtered[index];
+                        final title = [machine.brand, machine.model].where((s) => s != null && s.isNotEmpty).join(' ');
+                        final serviceWarn = machineServiceWarning(
+                          hourMeterReading: machine.hourMeterReading,
+                          nextServiceDueHours: machine.nextServiceDueHours,
+                          serviceAlertHours: serviceAlertHours,
+                        );
+                        final insuranceWarn = expiryWarning(
+                          expiryDate: machine.insuranceExpiryDate,
+                          alertDays: insuranceAlertDays,
+                          overdueLabel: 'Insurance Expired',
+                          dueSoonLabel: 'Insurance Expires',
+                        );
 
-          return Column(
-            children: [
-              SearchField(
-                hintText: 'Search by Reg #, Brand, Model...',
-                onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
-              ),
-              FilterTabsRow<_StatusFilter>(
-                selected: _filter,
-                onSelected: (f) => setState(() => _filter = f),
-                tabs: [
-                  (_StatusFilter.all, 'All', counts[_StatusFilter.all]!),
-                  (_StatusFilter.available, 'Available', counts[_StatusFilter.available]!),
-                  (_StatusFilter.working, 'Working', counts[_StatusFilter.working]!),
-                  (_StatusFilter.repair, 'Repair', counts[_StatusFilter.repair]!),
-                  (_StatusFilter.offline, 'Offline', counts[_StatusFilter.offline]!),
-                ],
-              ),
-              Expanded(
-                child: filtered.isEmpty
-                    ? const Center(child: Text('No machines match this view.'))
-                    : isDesktop
-                        ? _desktopTable(context, filtered,
-                            canManage: canManage,
-                            canDelete: canDelete,
-                            serviceAlertHours: serviceAlertHours,
-                            insuranceAlertDays: insuranceAlertDays)
-                        : ListView.builder(
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) {
-                          final machine = filtered[index];
-                          final title = [machine.brand, machine.model].where((s) => s != null && s.isNotEmpty).join(' ');
-                          final serviceWarn = machineServiceWarning(
-                            hourMeterReading: machine.hourMeterReading,
-                            nextServiceDueHours: machine.nextServiceDueHours,
-                            serviceAlertHours: serviceAlertHours,
-                          );
-                          final insuranceWarn = expiryWarning(
-                            expiryDate: machine.insuranceExpiryDate,
-                            alertDays: insuranceAlertDays,
-                            overdueLabel: 'Insurance Expired',
-                            dueSoonLabel: 'Insurance Expires',
-                          );
-
-                          return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                            child: InkWell(
-                              onTap: () => context.go('/machines/${machine.id}'),
-                              borderRadius: BorderRadius.circular(10),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          machine.registrationNumber,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                        ),
-                                        if (canManage || canDelete)
-                                          SizedBox(
-                                            width: 32,
-                                            height: 32,
-                                            child: PopupMenuButton<String>(
-                                              padding: EdgeInsets.zero,
-                                              icon: const Icon(Icons.more_vert, size: 20, color: Colors.grey),
-                                              onSelected: (action) async {
-                                                if (action == 'edit') {
-                                                  context.go('/machines/${machine.id}/edit');
-                                                } else if (action == 'delete') {
-                                                  await _delete(machine);
-                                                }
-                                              },
-                                              itemBuilder: (context) => [
-                                                if (canManage) const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                                                if (canDelete) const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
-                                              ],
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                    if (title.isNotEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 4, bottom: 8),
-                                        child: Text(title, style: TextStyle(color: Colors.grey.shade700, fontSize: 14)),
+                        return Card(
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          child: InkWell(
+                            onTap: () => context.go('/machines/${machine.id}'),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        machine.registrationNumber,
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                       ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        MachineStatusBadge(status: machine.status),
-                                        if (machine.hourMeterReading != null)
-                                          Text(
-                                            '${machine.hourMeterReading} hrs',
-                                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                                          ),
-                                      ],
-                                    ),
-                                    if (serviceWarn != null || insuranceWarn != null) ...[
-                                      const Divider(height: 24),
-                                      if (serviceWarn != null)
-                                        Row(
-                                          children: [
-                                            Icon(Icons.build, size: 14, color: serviceWarn.$1 ? Colors.red : Colors.orange),
-                                            const SizedBox(width: 6),
-                                            Expanded(
-                                              child: Text(
-                                                serviceWarn.$3,
-                                                style: TextStyle(color: serviceWarn.$1 ? Colors.red : Colors.orange, fontSize: 12),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      if (insuranceWarn != null)
-                                        Padding(
-                                          padding: EdgeInsets.only(top: serviceWarn != null ? 4 : 0),
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.shield_outlined, size: 14, color: insuranceWarn.$1 ? Colors.red : Colors.orange),
-                                              const SizedBox(width: 6),
-                                              Expanded(
-                                                child: Text(
-                                                  insuranceWarn.$3,
-                                                  style: TextStyle(color: insuranceWarn.$1 ? Colors.red : Colors.orange, fontSize: 12),
-                                                ),
-                                              ),
+                                      if (canManage || canDelete)
+                                        SizedBox(
+                                          width: 32,
+                                          height: 32,
+                                          child: PopupMenuButton<String>(
+                                            padding: EdgeInsets.zero,
+                                            icon: const Icon(Icons.more_vert, size: 20, color: Colors.grey),
+                                            onSelected: (action) async {
+                                              if (action == 'edit') {
+                                                context.go('/machines/${machine.id}/edit');
+                                              } else if (action == 'delete') {
+                                                await _delete(machine);
+                                              }
+                                            },
+                                            itemBuilder: (context) => [
+                                              if (canManage) const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                              if (canDelete) const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
                                             ],
                                           ),
                                         ),
                                     ],
+                                  ),
+                                  if (title.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4, bottom: 8),
+                                      child: Text(title, style: TextStyle(color: Colors.grey.shade700, fontSize: 14)),
+                                    ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      MachineStatusBadge(status: machine.status),
+                                      if (machine.hourMeterReading != null)
+                                        Text(
+                                          '${machine.hourMeterReading} hrs',
+                                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                        ),
+                                    ],
+                                  ),
+                                  if (serviceWarn != null || insuranceWarn != null) ...[
+                                    const Divider(height: 24),
+                                    if (serviceWarn != null)
+                                      Row(
+                                        children: [
+                                          Icon(Icons.build, size: 14, color: serviceWarn.$1 ? Colors.red : Colors.orange),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              serviceWarn.$3,
+                                              style: TextStyle(color: serviceWarn.$1 ? Colors.red : Colors.orange, fontSize: 12),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    if (insuranceWarn != null)
+                                      Padding(
+                                        padding: EdgeInsets.only(top: serviceWarn != null ? 4 : 0),
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.shield_outlined, size: 14, color: insuranceWarn.$1 ? Colors.red : Colors.orange),
+                                            const SizedBox(width: 6),
+                                            Expanded(
+                                              child: Text(
+                                                insuranceWarn.$3,
+                                                style: TextStyle(color: insuranceWarn.$1 ? Colors.red : Colors.orange, fontSize: 12),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                   ],
-                                ),
+                                ],
                               ),
                             ),
-                          );
+                          ),
+                        );
 },
-                      ),
-              ),
+                    ),
+            ),
 
-            ],
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: ${apiErrorMessage(error)}')),
-      ),
+          ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text('Error: ${apiErrorMessage(error)}')),
     );
   }
 

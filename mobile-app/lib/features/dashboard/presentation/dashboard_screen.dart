@@ -14,8 +14,10 @@ import '../../../core/providers/company_profile_provider.dart';
 import '../../../core/providers/network_provider.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/storage/local_storage.dart';
+import '../../customers/presentation/customer_list_screen.dart';
 import '../../drivers/presentation/driver_list_screen.dart';
 import '../../machines/presentation/machine_list_screen.dart';
+import '../../payments/presentation/invoice_workspace.dart';
 import '../../notifications/presentation/notification_bell.dart';
 import '../data/dashboard_summary.dart';
 
@@ -72,20 +74,30 @@ final _opsWarningCountsProvider = FutureProvider<(int service, int insurance, in
 
 final _opsWarningDismissedProvider = FutureProvider<bool>((ref) => DashboardStorage.isOpsWarningDismissed());
 
-class DashboardScreen extends ConsumerWidget {
+/// The contextual workspace selected by the quick-access pills. `today` is the
+/// default (Today's Job Cards); the rest embed the SAME list bodies used by the
+/// standalone screens — no duplicate list/search implementations.
+enum _WorkspaceArea { today, customers, invoices, machines, drivers }
+
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  _WorkspaceArea _area = _WorkspaceArea.today;
+
+  @override
+  Widget build(BuildContext context) {
     final networkStatusAsync = ref.watch(networkStatusProvider);
     final isOnline = networkStatusAsync.valueOrNull ?? false;
     final summaryAsync = ref.watch(dashboardSummaryProvider);
     final user = ref.watch(currentUserProvider);
-    final opsCountsAsync = ref.watch(_opsWarningCountsProvider);
-    final opsDismissedAsync = ref.watch(_opsWarningDismissedProvider);
     final dateStr = DateFormat('EEEE, d MMMM yyyy').format(DateTime.now());
-
     final isDesktop = context.responsive.isDesktop;
+
     return AdaptiveScaffold(
       currentRoute: '/dashboard',
       title: 'Dashboard',
@@ -97,186 +109,261 @@ class DashboardScreen extends ConsumerWidget {
       // Quick actions live in a bottom bar on phones; on desktop the same
       // navigation is always available in the persistent sidebar.
       bottomNavigationBar: isDesktop ? null : const QuickActionBar(),
-      body: summaryAsync.when(
-        data: (summary) => RefreshIndicator(
-          onRefresh: () async => ref.invalidate(dashboardSummaryProvider),
-          child: ListView(
-            padding: const EdgeInsets.all(16.0),
-            children: [
-              Text('Hello, ${user?.fullName.split(' ').first ?? 'Partner'}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              Text(dateStr, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              const SizedBox(height: 16),
-              if (summary.kpis != null) ...[
-                if (opsCountsAsync.valueOrNull != null && !(opsDismissedAsync.valueOrNull ?? false))
-                  _buildOpsWarningBanner(context, ref, opsCountsAsync.valueOrNull!),
-
-                const SizedBox(height: 8),
-                // KPI cards auto-flow into as many columns as the width allows
-                // (2 on a phone, up to 6 across on a wide desktop) — no overflow.
-                GridView.extent(
-                  maxCrossAxisExtent: 240,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 1.6,
-                  children: [
-                    _kpiCard("Today's Revenue", '₹${summary.kpis!.todayRevenue.current.toStringAsFixed(0)}',
-                        summary.kpis!.todayRevenue.deltaPercent, Colors.green),
-                    _kpiCard('This Month', '₹${summary.kpis!.monthRevenue.current.toStringAsFixed(0)}',
-                        summary.kpis!.monthRevenue.deltaPercent, Colors.green),
-                    _kpiCard('Pending Collection', '₹${summary.kpis!.pendingCollection.current.toStringAsFixed(0)}',
-                        null, Colors.orange,
-                        onTap: () => context.go('/payments?status=UNPAID&status=PARTIALLY_PAID'),
-                        valueColor: summary.kpis!.pendingCollection.current > 0 ? Colors.red : null),
-                    _kpiCard('Machines Working',
-                        '${summary.kpis!.machinesWorking.working}/${summary.kpis!.machinesWorking.activeUsable}',
-                        null, Colors.blue),
-                    _kpiCard('Drivers Active', '${summary.kpis!.driversActive.current.toInt()}', null, Colors.purple),
-                    _kpiCard('Jobs Completed', '${summary.kpis!.jobsCompleted.current.toInt()}',
-                        summary.kpis!.jobsCompleted.deltaPercent, Colors.teal),
-                  ],
-                ),
-                const SizedBox(height: 24),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Compact greeting.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Hello, ${user?.fullName.split(' ').first ?? 'Partner'}',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(dateStr, style: const TextStyle(fontSize: 12, color: Colors.grey)),
               ],
-              // On desktop the two operational lists sit side by side; on a
-              // phone they stack.
-              if (isDesktop)
-                IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: _todaysJobsSection(context, summary)),
-                      const SizedBox(width: 24),
-                      if (summary.pendingPayments != null) Expanded(child: _pendingPaymentsSection(context, summary)),
-                    ],
-                  ),
-                )
-              else ...[
-                _todaysJobsSection(context, summary),
-                const SizedBox(height: 24),
-                if (summary.pendingPayments != null) _pendingPaymentsSection(context, summary),
-              ],
-              const SizedBox(height: 24),
-              // Primary shortcuts. Side by side with room on desktop, stacked
-              // full-width on a phone.
-              if (isDesktop)
-                Row(
-                  children: [
-                    Expanded(child: _viewAllJobsButton(context)),
-                    const SizedBox(width: 12),
-                    Expanded(child: _viewAllInvoicesButton(context)),
-                  ],
-                )
-              else ...[
-                _viewAllJobsButton(context),
-                const SizedBox(height: 12),
-                _viewAllInvoicesButton(context),
-              ],
-            ],
+            ),
           ),
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Could not load dashboard: ${apiErrorMessage(error)}')),
+          // 1. Horizontal, swipeable KPI carousel — every card is clickable.
+          _kpiCarousel(context, summaryAsync),
+          // 5. Quick-access pills.
+          _pillsRow(context),
+          const Divider(height: 1),
+          // 6. Contextual workspace controlled by the selected pill.
+          Expanded(child: _workspace(context, summaryAsync)),
+        ],
       ),
     );
   }
 
-  Widget _todaysJobsSection(BuildContext context, DashboardSummary summary) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text("Today's Job Cards", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        if (summary.todaysJobs.isEmpty)
-          const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('No jobs scheduled today.'))
-        else
-          ...summary.todaysJobs.map((job) => Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: InkWell(
-                  onTap: () => context.go('/jobs/${job.jobId}'),
-                  borderRadius: BorderRadius.circular(10),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Flexible(child: Text(job.bookingNumber, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), overflow: TextOverflow.ellipsis)),
-                            JobStatusBadge(status: job.jobStatus),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(Icons.person, size: 16, color: AppTheme.textMuted),
-                            const SizedBox(width: 8),
-                            Expanded(child: Text(job.customerName, style: const TextStyle(fontSize: 14), overflow: TextOverflow.ellipsis)),
-                          ],
-                        ),
-                        if (job.jobStatus == 'NOT_STARTED') ...[
-                          const SizedBox(height: 4),
-                          Row(
+  // ---------------------------------------------------------------- KPI band
+
+  Widget _kpiCarousel(BuildContext context, AsyncValue<DashboardSummary> summaryAsync) {
+    return SizedBox(
+      height: 108,
+      child: summaryAsync.when(
+        data: (summary) {
+          final k = summary.kpis;
+          if (k == null) return const SizedBox.shrink();
+          final cards = <Widget>[
+            _kpiCard("Today's Revenue", '₹${k.todayRevenue.current.toStringAsFixed(0)}',
+                k.todayRevenue.deltaPercent, Colors.green, onTap: () => context.go('/payments')),
+            _kpiCard('This Month', '₹${k.monthRevenue.current.toStringAsFixed(0)}',
+                k.monthRevenue.deltaPercent, Colors.green, onTap: () => context.go('/payments')),
+            _kpiCard('Pending Collection', '₹${k.pendingCollection.current.toStringAsFixed(0)}', null, Colors.orange,
+                onTap: () => context.go('/payments?status=UNPAID&status=PARTIALLY_PAID'),
+                valueColor: k.pendingCollection.current > 0 ? Colors.red : null),
+            _kpiCard('Machines Working', '${k.machinesWorking.working}/${k.machinesWorking.activeUsable}', null, Colors.blue,
+                onTap: () => context.go('/machines')),
+            _kpiCard('Drivers Active', '${k.driversActive.current.toInt()}', null, Colors.purple,
+                onTap: () => context.go('/drivers')),
+            _kpiCard('Jobs Completed', '${k.jobsCompleted.current.toInt()}', k.jobsCompleted.deltaPercent, Colors.teal,
+                onTap: () => context.go('/jobs')),
+          ];
+          return ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            itemCount: cards.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            itemBuilder: (_, i) => cards[i],
+          );
+        },
+        loading: () => const Center(child: SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2))),
+        error: (e, _) => Center(child: Text('KPIs unavailable: ${apiErrorMessage(e)}', style: const TextStyle(fontSize: 12, color: Colors.grey))),
+      ),
+    );
+  }
+
+  Widget _kpiCard(String title, String value, double? deltaPercent, Color color, {VoidCallback? onTap, Color? valueColor}) {
+    return SizedBox(
+      width: 168,
+      child: Card(
+        color: color.withValues(alpha: 0.05),
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: color.withValues(alpha: 0.2)),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(title,
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color.withValues(alpha: 0.8)),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 6),
+                Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: valueColor ?? color.withValues(alpha: 1.0))),
+                if (deltaPercent != null) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(deltaPercent >= 0 ? Icons.arrow_upward : Icons.arrow_downward, size: 12, color: deltaPercent >= 0 ? Colors.green : Colors.red),
+                      Text('${deltaPercent.abs().toStringAsFixed(1)}%', style: TextStyle(fontSize: 10, color: deltaPercent >= 0 ? Colors.green : Colors.red)),
+                    ],
+                  ),
+                ] else
+                  const Icon(Icons.chevron_right, size: 14, color: Colors.grey),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------- Pills
+
+  Widget _pillsRow(BuildContext context) {
+    final pills = <(_WorkspaceArea, String, IconData)>[
+      (_WorkspaceArea.today, 'Today', Icons.today),
+      (_WorkspaceArea.customers, 'Customers', Icons.people),
+      (_WorkspaceArea.invoices, 'Invoices', Icons.receipt_long),
+      (_WorkspaceArea.machines, 'Machines', Icons.agriculture),
+      (_WorkspaceArea.drivers, 'Drivers', Icons.badge),
+    ];
+    return SizedBox(
+      height: 48,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        itemCount: pills.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final (area, label, icon) = pills[i];
+          final selected = _area == area;
+          return ChoiceChip(
+            avatar: Icon(icon, size: 16, color: selected ? Colors.white : AppTheme.primary),
+            label: Text(label),
+            selected: selected,
+            showCheckmark: false,
+            selectedColor: AppTheme.primary,
+            labelStyle: TextStyle(color: selected ? Colors.white : null, fontWeight: FontWeight.w600),
+            onSelected: (_) => setState(() => _area = area),
+          );
+        },
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------- Workspace
+
+  Widget _workspace(BuildContext context, AsyncValue<DashboardSummary> summaryAsync) {
+    switch (_area) {
+      case _WorkspaceArea.today:
+        return _todayWorkspace(context, summaryAsync);
+      case _WorkspaceArea.customers:
+        return Column(children: [
+          _workspaceHeader('Customers', '+ New Customer', () => context.go('/customers/new')),
+          const Expanded(child: CustomerListBody()),
+        ]);
+      case _WorkspaceArea.invoices:
+        return Column(children: [
+          _workspaceHeader('Invoices', '+ Create', () => showInvoiceCreateMenu(context)),
+          const Expanded(child: InvoiceWorkspaceBody()),
+        ]);
+      case _WorkspaceArea.machines:
+        return Column(children: [
+          _workspaceHeader('Machines', '+ New Machine', () => context.go('/machines/new')),
+          const Expanded(child: MachineListBody()),
+        ]);
+      case _WorkspaceArea.drivers:
+        return Column(children: [
+          _workspaceHeader('Drivers', '+ New Driver', () => context.go('/drivers/new')),
+          const Expanded(child: DriverListBody()),
+        ]);
+    }
+  }
+
+  Widget _workspaceHeader(String title, String actionLabel, VoidCallback onAction) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 8, 0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          TextButton(onPressed: onAction, child: Text(actionLabel)),
+        ],
+      ),
+    );
+  }
+
+  Widget _todayWorkspace(BuildContext context, AsyncValue<DashboardSummary> summaryAsync) {
+    return summaryAsync.when(
+      data: (summary) {
+        final opsCountsAsync = ref.watch(_opsWarningCountsProvider);
+        final opsDismissedAsync = ref.watch(_opsWarningDismissedProvider);
+        return RefreshIndicator(
+          onRefresh: () async => ref.invalidate(dashboardSummaryProvider),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            children: [
+              if (opsCountsAsync.valueOrNull != null && !(opsDismissedAsync.valueOrNull ?? false))
+                _buildOpsWarningBanner(context, ref, opsCountsAsync.valueOrNull!),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text("Today's Job Cards", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  TextButton(onPressed: () => context.go('/jobs'), child: const Text('View all')),
+                ],
+              ),
+              const SizedBox(height: 4),
+              if (summary.todaysJobs.isEmpty)
+                const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('No jobs scheduled today.'))
+              else
+                ...summary.todaysJobs.map((job) => Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: InkWell(
+                        onTap: () => context.go('/jobs/${job.jobId}'),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.info_outline, size: 16, color: AppTheme.textMuted),
-                              const SizedBox(width: 8),
-                              Text(job.isReadyToStart ? 'Ready to Start' : 'Awaiting Machine',
-                                style: TextStyle(fontSize: 13, color: job.isReadyToStart ? AppTheme.success : AppTheme.warning)),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Flexible(child: Text(job.bookingNumber, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), overflow: TextOverflow.ellipsis)),
+                                  JobStatusBadge(status: job.jobStatus),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  const Icon(Icons.person, size: 16, color: AppTheme.textMuted),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: Text(job.customerName, style: const TextStyle(fontSize: 14), overflow: TextOverflow.ellipsis)),
+                                ],
+                              ),
+                              if (job.jobStatus == 'NOT_STARTED') ...[
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.info_outline, size: 16, color: AppTheme.textMuted),
+                                    const SizedBox(width: 8),
+                                    Text(job.isReadyToStart ? 'Ready to Start' : 'Awaiting Machine',
+                                      style: TextStyle(fontSize: 13, color: job.isReadyToStart ? AppTheme.success : AppTheme.warning)),
+                                  ],
+                                ),
+                              ],
                             ],
                           ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              )),
-      ],
+                        ),
+                      ),
+                    )),
+            ],
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text('Could not load dashboard: ${apiErrorMessage(error)}')),
     );
   }
-
-  Widget _pendingPaymentsSection(BuildContext context, DashboardSummary summary) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Pending Payments', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        if (summary.pendingPayments!.isEmpty)
-          const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('No pending payments.'))
-        else
-          ...summary.pendingPayments!.map((p) => Card(
-                child: ExpansionTile(
-                  title: Text(p.customerName, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(p.villageName, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                  trailing: Text('₹${p.totalOutstanding.toStringAsFixed(0)}',
-                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                  children: p.invoices.map((inv) => ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 32),
-                    title: Text(inv.invoiceNumber, style: const TextStyle(fontSize: 14)),
-                    subtitle: Text('${inv.daysOutstanding}d outstanding', style: const TextStyle(fontSize: 12)),
-                    trailing: Text('₹${inv.balanceAmount.toStringAsFixed(0)}', style: const TextStyle(color: Colors.red, fontSize: 13)),
-                    onTap: () => context.go('/payments/${inv.invoiceId}'),
-                  )).toList(),
-                ),
-              )),
-      ],
-    );
-  }
-
-  Widget _viewAllJobsButton(BuildContext context) => ElevatedButton.icon(
-        icon: const Icon(Icons.work),
-        label: const Text('VIEW ALL JOBS', style: TextStyle(fontSize: 16)),
-        style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 24)),
-        onPressed: () => context.go('/jobs'),
-      );
-
-  Widget _viewAllInvoicesButton(BuildContext context) => OutlinedButton.icon(
-        icon: const Icon(Icons.receipt_long),
-        label: const Text('VIEW ALL INVOICES', style: TextStyle(fontSize: 16)),
-        style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 24)),
-        onPressed: () => context.go('/payments'),
-      );
 
   Widget _buildOpsWarningBanner(BuildContext context, WidgetRef ref, (int service, int insurance, int license) counts) {
     final (service, insurance, license) = counts;
@@ -342,41 +429,6 @@ class DashboardScreen extends ConsumerWidget {
         const SizedBox(width: 6),
         Text(text, style: const TextStyle(color: Color(0xFFB45309), fontSize: 12, fontWeight: FontWeight.w600)),
       ]),
-    );
-  }
-
-  Widget _kpiCard(String title, String value, double? deltaPercent, Color color, {VoidCallback? onTap, Color? valueColor}) {
-    return Card(
-      color: color.withValues(alpha: 0.05),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: color.withValues(alpha: 0.2)),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color.withValues(alpha: 0.8)), maxLines: 1, overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 6),
-              Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: valueColor ?? color.withValues(alpha: 1.0))),
-              if (deltaPercent != null) ...[
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(deltaPercent >= 0 ? Icons.arrow_upward : Icons.arrow_downward, size: 12, color: deltaPercent >= 0 ? Colors.green : Colors.red),
-                    Text('${deltaPercent.abs().toStringAsFixed(1)}%', style: TextStyle(fontSize: 10, color: deltaPercent >= 0 ? Colors.green : Colors.red)),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
