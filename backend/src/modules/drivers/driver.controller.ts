@@ -7,7 +7,7 @@ import { recordDriverPaymentSchema, cancelDriverPaymentSchema } from "./driverPa
 
 export async function list(req: Request, res: Response) {
   const user = requireUser(req);
-  const drivers = await driverService.list(user.companyId);
+  const drivers = await driverService.listWithEarnings(user.companyId);
   res.status(200).json(drivers);
 }
 

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/company_profile_provider.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/info_row.dart';
 
@@ -138,6 +139,8 @@ class MachineDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 _MachineUtilizationCard(machineId: machineId),
+                const SizedBox(height: 8),
+                _MachineCustomerWorkSection(machineId: machineId),
               ],
             ),
           );
@@ -203,6 +206,57 @@ class _MachineUtilizationCard extends ConsumerWidget {
                   InfoRow('Next Service At', u['nextServiceThresholdHours'] != null ? '${u['nextServiceThresholdHours']} h' : '—'),
                   InfoRow('Last Service', (u['lastServiceDate'] as String?)?.split('T').first ?? 'Never'),
                 ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Customer-wise work history for a machine (§ which customers/jobs generated
+/// its working time). Reads the SAME session-attributed data as the machine's
+/// total worked hours, exposed by GET /machines/:id/utilization → `customerWise`.
+class _MachineCustomerWorkSection extends ConsumerWidget {
+  final String machineId;
+  const _MachineCustomerWorkSection({required this.machineId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(machineUtilizationProvider(machineId));
+    return async.maybeWhen(
+      orElse: () => const SizedBox.shrink(),
+      data: (u) {
+        final rows = (u['customerWise'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
+        if (rows.isEmpty) return const SizedBox.shrink();
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Work by Customer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text('Total ${(u['totalWorked'] as Map<String, dynamic>?)?['text'] ?? ''}',
+                        style: const TextStyle(color: AppTheme.textMuted, fontSize: 13)),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                ...rows.map((r) => ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(r['customerName'] as String? ?? 'Unknown'),
+                      subtitle: Text([
+                        '${r['jobs']} job${(r['jobs'] as num? ?? 0) == 1 ? '' : 's'}',
+                        if ((r['lastWorkedDate'] as String?)?.isNotEmpty == true)
+                          (r['lastWorkedDate'] as String).split('T').first,
+                      ].join(' · ')),
+                      trailing: Text(r['workedText'] as String? ?? '—',
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                    )),
               ],
             ),
           ),

@@ -6,10 +6,34 @@ import { assertNoBookingReferences } from "../../shared/utils/dependencyGuard";
 import * as bookingRepository from "../bookings/booking.repository";
 import * as settingsRepo from "../settings/settings.repository";
 import * as machineRepository from "./machine.repository";
+import * as machineUtilizationService from "./machineUtilization.service";
 import type { CreateMachineInput, UpdateMachineInput } from "./machine.validators";
 
 export function list(companyId: string) {
   return machineRepository.findAllForCompany(companyId);
+}
+
+// List machines enriched with worked-time + maintenance for the list cards.
+// Each machine's numbers come from the single authoritative machine-hour
+// calculation (machineUtilization) — no second counter. Per-machine fan-out is
+// fine at fleet scale.
+export async function listWithUtilization(companyId: string) {
+  const machines = await machineRepository.findAllForCompany(companyId);
+  return Promise.all(
+    machines.map(async (m) => {
+      const u = await machineUtilizationService.getMachineMaintenanceStatus(companyId, m.id);
+      return {
+        ...m,
+        totalWorkedHours: u.totalWorked.decimalHours,
+        totalWorkedText: u.totalWorked.text,
+        maintenanceStatus: u.status,
+        maintenanceMessage: u.message,
+        maintenanceTrackingEnabled: u.trackingEnabled,
+        remainingToServiceText: u.remainingToService.text,
+        overdueByText: u.overdueBy.text,
+      };
+    }),
+  );
 }
 
 export async function getById(companyId: string, id: string) {

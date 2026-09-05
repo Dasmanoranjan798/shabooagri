@@ -8,7 +8,6 @@ import * as customerService from "../customers/customer.service";
 import * as invoiceRepository from "./invoice.repository";
 import * as jobTransportChargeRepository from "../jobs/jobTransportCharge.repository";
 import * as paymentRepository from "./payment.repository";
-import * as customerAdvanceRepository from "./customerAdvance.repository";
 import * as settingsRepo from "../settings/settings.repository";
 import type {
   CreateManualInvoiceInput,
@@ -131,23 +130,6 @@ export async function createManualInvoice(
     status: "UNPAID",
     dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
   });
-}
-
-// Customer advance/credit balances. These are NOT a separate money-entry
-// feature — a credit row is created automatically by recordPaymentTx when a
-// customer pays more than all their open invoices' balances combined (the
-// leftover). This read surfaces those balances (balance = amount -
-// appliedAmount) for display; there is no standalone endpoint that creates
-// one.
-export async function listCustomerAdvances(companyId: string, user: AuthenticatedUser) {
-  const scope = await resolveCallerScope(companyId, user);
-  if (scope.kind === "company") {
-    return customerAdvanceRepository.findAllForCompany(companyId);
-  }
-  if (scope.kind === "customer") {
-    return customerAdvanceRepository.findAllForCompany(companyId, { customerId: scope.customerId });
-  }
-  return [];
 }
 
 export async function updateInvoiceTax(

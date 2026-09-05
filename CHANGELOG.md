@@ -5,6 +5,35 @@ mobile app (`mobile-app/pubspec.yaml`); backend and web changes ship alongside
 the release they support. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.8.17+30] - 2026-09-05
+
+### Operational UI/UX, information density & financial-status correction
+- **List endpoints enriched (reusing existing calc services, no duplicated logic).**
+  `GET /customers` now returns per-customer `outstanding` (Σ non-cancelled
+  invoice balances) + `creditBalance`; `GET /drivers` returns worked time +
+  earned/paid/`remainingPayable` + `paymentStatus`; `GET /machines` returns
+  authoritative `totalWorkedText` + maintenance status.
+- **Customer-wise work breakdowns.** `GET /drivers/:id/earnings` and
+  `GET /machines/:id/utilization` now include `customerWise` (same session
+  attribution as the pay/hour calcs; per-customer hours reconcile to totals).
+- **Compact list screens.** Customers/Drivers/Machines use one `[ Search ][ + New ]`
+  action bar (shared `ListActionBar`) instead of a heading + separate search + FAB.
+- **Richer cards.** Customer: original address + phone + **green** outstanding /
+  blue advance-credit. Driver: worked time + **red** payable. Machine:
+  authoritative worked hours + maintenance status (amber due-soon / red overdue).
+- **Detail screens** gained a "Work by Customer" section (driver & machine).
+- **Financial colour language** unified: GREEN = receivable (customer
+  outstanding, invoice balance due), RED = payable (driver) / UNPAID status flag;
+  maintenance & availability use separate operational colours.
+- **KPI cards** redesigned to a neutral surface + accent dot + large readable value.
+- **Removed** the repeated per-card "After-Work" chip (the tab conveys it) and the
+  standalone "Customer Advances" UI section.
+- **Removed the dead read-only `GET /payments/advances` endpoint** (no remaining
+  consumer). The `CustomerAdvance` model and the automatic overpayment→credit
+  path are unchanged; legitimate credit is surfaced on the customer.
+- **Pilot data:** the 8 test `customer_advances` rows were cleared (owner
+  authorized; backup CSV in `backend/backups/`).
+
 ## [Unreleased]
 
 ### Added / Changed — Job Execution V2 (backend, Pass 1)

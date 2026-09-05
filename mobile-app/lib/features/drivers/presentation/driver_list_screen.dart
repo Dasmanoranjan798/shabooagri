@@ -8,8 +8,11 @@ import '../../../core/layout/responsive.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/money.dart';
 import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/desktop_table.dart';
+import '../../../core/widgets/list_action_bar.dart';
 import '../../../core/widgets/search_field.dart';
 
 class DriverSummary {
@@ -21,6 +24,10 @@ class DriverSummary {
   final String? licenseNumber;
   final DateTime? licenseExpiryDate;
   final String? employeeUserId;
+  // Backend-authoritative work + pay (driver.service.listWithEarnings).
+  final String workedText; // "87 h 30 min"
+  final double remainingPayable; // money to PAY OUT (red)
+  final String paymentStatus; // UNPAID | PARTIALLY_PAID | PAID
 
   DriverSummary.fromJson(Map<String, dynamic> json)
       : id = json['id'] as String,
@@ -31,7 +38,10 @@ class DriverSummary {
         licenseNumber = json['licenseNumber'] as String?,
         licenseExpiryDate =
             json['licenseExpiryDate'] == null ? null : DateTime.parse(json['licenseExpiryDate'] as String),
-        employeeUserId = (json['employee'] as Map<String, dynamic>?)?['userId'] as String?;
+        employeeUserId = (json['employee'] as Map<String, dynamic>?)?['userId'] as String?,
+        workedText = json['workedText'] as String? ?? '0 h 0 min',
+        remainingPayable = double.tryParse(json['remainingPayable']?.toString() ?? '0') ?? 0,
+        paymentStatus = json['paymentStatus'] as String? ?? 'UNPAID';
 }
 
 /// Live list (not the offline cache) — license expiry warnings need
@@ -72,9 +82,8 @@ class DriverListScreen extends ConsumerWidget {
             ),
           ),
       ],
-      floatingActionButton: (!isDesktop && canManage)
-          ? FloatingActionButton(onPressed: () => context.go('/drivers/new'), child: const Icon(Icons.add))
-          : null,
+      // New Driver is inline in the compact search/action bar on phones (no FAB);
+      // desktop keeps its top-bar button.
       bottomNavigationBar: isDesktop ? null : const QuickActionBar(),
       body: const DriverListBody(),
     );
@@ -112,6 +121,7 @@ class _DriverListBodyState extends ConsumerState<DriverListBody> {
   Widget build(BuildContext context) {
     final driversAsync = ref.watch(driversListProvider);
     final isDesktop = context.responsive.isDesktop;
+    final canManage = ref.watch(currentUserProvider)?.isOwnerOrManager ?? false;
 
     return driversAsync.when(
       data: (drivers) {
@@ -129,9 +139,11 @@ class _DriverListBodyState extends ConsumerState<DriverListBody> {
 
         return Column(
           children: [
-            SearchField(
+            ListActionBar(
               hintText: 'Search by Name, License, Phone...',
               onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
+              actionLabel: (!isDesktop && canManage) ? 'New Driver' : null,
+              onAction: (!isDesktop && canManage) ? () => context.go('/drivers/new') : null,
             ),
             FilterTabsRow<_AvailFilter>(
               selected: _filter,
@@ -154,29 +166,63 @@ class _DriverListBodyState extends ConsumerState<DriverListBody> {
                         final driver = filtered[index];
                         return Card(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: Colors.grey.shade200,
-                    child: const Icon(Icons.person, color: Colors.grey),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            child: InkWell(
+              onTap: () => context.go('/drivers/${driver.id}'),
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Text(driver.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        if (driver.phone != null) ...[
-                          const SizedBox(height: 4),
-                          Text(driver.phone!, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
-                        ],
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: Colors.grey.shade200,
+                          child: const Icon(Icons.person, color: Colors.grey),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(driver.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              if (driver.phone != null) ...[
+                                const SizedBox(height: 2),
+                                Text(driver.phone!, style: const TextStyle(color: AppTheme.textMuted, fontSize: 13)),
+                              ],
+                            ],
+                          ),
+                        ),
+                        DriverStatusBadge(status: driver.availabilityStatus),
                       ],
                     ),
-                  ),
-                  DriverStatusBadge(status: driver.availabilityStatus),
-                ],
+                    const SizedBox(height: 12),
+                    // Key operational metric + payable. RED = money to PAY OUT.
+                    Row(
+                      children: [
+                        const Icon(Icons.schedule, size: 15, color: AppTheme.textMuted),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text('Worked ${driver.workedText}',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 13, color: AppTheme.textMuted)),
+                        ),
+                        const SizedBox(width: 8),
+                        if (driver.remainingPayable > 0) ...[
+                          const Text('Payable', style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(rupees(driver.remainingPayable),
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.payable)),
+                          ),
+                        ] else
+                          const Text('Settled', style: TextStyle(fontSize: 13, color: AppTheme.textMuted)),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -200,19 +246,23 @@ class _DriverListBodyState extends ConsumerState<DriverListBody> {
         columns: const [
           DataColumn(label: Text('Name')),
           DataColumn(label: Text('Phone')),
-          DataColumn(label: Text('Role')),
-          DataColumn(label: Text('License #')),
           DataColumn(label: Text('Availability')),
+          DataColumn(label: Text('Worked')),
+          DataColumn(label: Text('Payable'), numeric: true),
         ],
         rows: [
           for (final d in drivers)
             DataRow(
+              onSelectChanged: (_) => context.go('/drivers/${d.id}'),
               cells: [
                 DataCell(Text(d.name, style: const TextStyle(fontWeight: FontWeight.w600))),
                 DataCell(Text(d.phone ?? '—')),
-                DataCell(Text(d.roleTitle ?? '—')),
-                DataCell(Text(d.licenseNumber ?? '—')),
                 DataCell(DriverStatusBadge(status: d.availabilityStatus)),
+                DataCell(Text(d.workedText)),
+                DataCell(d.remainingPayable > 0
+                    ? Text(rupees(d.remainingPayable),
+                        style: const TextStyle(color: AppTheme.payable, fontWeight: FontWeight.bold))
+                    : const Text('—', style: TextStyle(color: AppTheme.textMuted))),
               ],
             ),
         ],

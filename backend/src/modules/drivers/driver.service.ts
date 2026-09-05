@@ -1,5 +1,6 @@
 import * as employeeService from "../employees/employee.service";
 import * as driverCompensationService from "./driverCompensation.service";
+import * as driverPaymentRepository from "./driverPayment.repository";
 import { AppError } from "../../shared/errors/AppError";
 import { assertNoBookingReferences } from "../../shared/utils/dependencyGuard";
 import * as bookingRepository from "../bookings/booking.repository";
@@ -10,6 +11,36 @@ import type { CreateDriverInput, UpdateDriverInput } from "./driver.validators";
 
 export function list(companyId: string) {
   return driverRepository.findAllForCompany(companyId);
+}
+
+// List drivers enriched with worked-time + payable for the list cards. Each
+// driver's numbers come from the SAME authoritative services the detail screen
+// uses (driverCompensation for earned/worked, driverPayment sum for paid) — no
+// second calculation. Per-driver fan-out is fine at fleet scale.
+export async function listWithEarnings(companyId: string) {
+  const drivers = await driverRepository.findAllForCompany(companyId);
+  return Promise.all(
+    drivers.map(async (d) => {
+      const [comp, paid] = await Promise.all([
+        driverCompensationService.getDriverCompensationSummary(companyId, d.id),
+        driverPaymentRepository.sumNonCancelledForDriver(companyId, d.id),
+      ]);
+      const earned = Math.round(comp.calculatedEarnings * 100) / 100;
+      const totalPaid = Math.round(paid * 100) / 100;
+      const remainingPayable = Math.round((earned - totalPaid) * 100) / 100;
+      return {
+        ...d,
+        totalWorkedHours: comp.totalWorkedHours,
+        totalWorkedMinutes: comp.totalWorkedMinutes,
+        workedText: `${Math.floor(Math.round(comp.totalWorkedMinutes) / 60)} h ${Math.round(comp.totalWorkedMinutes) % 60} min`,
+        totalCompletedJobs: comp.totalCompletedJobs,
+        totalEarned: earned,
+        totalPaid,
+        remainingPayable,
+        paymentStatus: totalPaid <= 0.005 ? "UNPAID" : totalPaid >= earned - 0.005 && earned > 0 ? "PAID" : "PARTIALLY_PAID",
+      };
+    }),
+  );
 }
 
 export async function getById(companyId: string, id: string) {

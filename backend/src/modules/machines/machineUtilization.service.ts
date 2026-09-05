@@ -68,6 +68,95 @@ export async function getMachineWorkedHours(companyId: string, machineId: string
   return Math.round(total * 100) / 100;
 }
 
+export interface MachineCustomerWorkRow {
+  customerId: string;
+  customerName: string;
+  village: string | null;
+  jobs: number;
+  workedHours: number;
+  workedMinutes: number;
+  workedText: string;
+  lastWorkedDate: string | null;
+}
+
+// Which customers/jobs generated this machine's working time, per customer —
+// from the SAME session-attributed completed-job data as getMachineWorkedHours,
+// so per-customer hours reconcile to the machine total. Grouped by job →
+// booking → customer. No separate machine-hour ledger.
+export async function getMachineCustomerWiseWork(
+  companyId: string,
+  machineId: string,
+): Promise<MachineCustomerWorkRow[]> {
+  const jobs = await prisma.job.findMany({
+    where: {
+      companyId,
+      status: "COMPLETED",
+      OR: [{ machineId }, { workSessions: { some: { machineId } } }],
+    },
+    select: {
+      machineId: true,
+      actualHours: true,
+      endTime: true,
+      updatedAt: true,
+      booking: { select: { customerId: true, customer: { select: { name: true, village: true } } } },
+      workSessions: { where: { endedAt: { not: null } }, select: { machineId: true, durationSec: true } },
+    },
+  });
+
+  const map = new Map<string, { row: MachineCustomerWorkRow; hours: number; date: Date | null }>();
+  for (const j of jobs) {
+    const jobHours = j.actualHours ? Number(j.actualHours) : 0;
+    const totalSec = j.workSessions.reduce((s, w) => s + (w.durationSec ?? 0), 0);
+    let attributed: number;
+    if (totalSec > 0) {
+      const machineSec = j.workSessions
+        .filter((w) => w.machineId === machineId)
+        .reduce((s, w) => s + (w.durationSec ?? 0), 0);
+      attributed = jobHours * (machineSec / totalSec);
+    } else {
+      attributed = j.machineId === machineId ? jobHours : 0;
+    }
+    if (attributed <= 0 && j.machineId !== machineId) continue;
+
+    const cid = j.booking.customerId;
+    const when = j.endTime ?? j.updatedAt;
+    const existing = map.get(cid);
+    if (existing) {
+      existing.hours += attributed;
+      existing.row.jobs += 1;
+      if (when && (!existing.date || when > existing.date)) existing.date = when;
+    } else {
+      map.set(cid, {
+        row: {
+          customerId: cid,
+          customerName: j.booking.customer.name,
+          village: j.booking.customer.village,
+          jobs: 1,
+          workedHours: 0,
+          workedMinutes: 0,
+          workedText: "",
+          lastWorkedDate: null,
+        },
+        hours: attributed,
+        date: when ?? null,
+      });
+    }
+  }
+
+  return Array.from(map.values())
+    .map(({ row, hours, date }) => {
+      const d = toDuration(hours);
+      return {
+        ...row,
+        workedHours: d.decimalHours,
+        workedMinutes: d.totalMinutes,
+        workedText: d.text,
+        lastWorkedDate: date ? date.toISOString() : null,
+      };
+    })
+    .sort((a, b) => b.workedHours - a.workedHours);
+}
+
 export type MaintenanceStatus =
   | "NORMAL"
   | "DUE_SOON"

@@ -9,9 +9,11 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/company_profile_provider.dart';
 import '../../../core/providers/session_provider.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/confirm_delete.dart';
 import '../../../core/widgets/desktop_table.dart';
+import '../../../core/widgets/list_action_bar.dart';
 import '../../../core/widgets/search_field.dart';
 
 class MachineSummary {
@@ -24,6 +26,12 @@ class MachineSummary {
   final double? nextServiceDueHours;
   final DateTime? insuranceExpiryDate;
   final String? driverName;
+  // Backend-authoritative working time + maintenance (machine.service
+  // .listWithUtilization → the single machine-hour calculation).
+  final String totalWorkedText; // "1,248 h 35 min"
+  final String maintenanceStatus; // NORMAL | DUE_SOON | DUE | OVERDUE | ...
+  final String maintenanceMessage; // human-readable ("Due in 7 h 40 min")
+  final bool maintenanceTrackingEnabled;
 
   MachineSummary.fromJson(Map<String, dynamic> json)
       : id = json['id'] as String,
@@ -35,7 +43,29 @@ class MachineSummary {
         nextServiceDueHours = (json['nextServiceDueHours'] != null ? double.tryParse(json['nextServiceDueHours'].toString()) : null),
         insuranceExpiryDate =
             json['insuranceExpiryDate'] == null ? null : DateTime.parse(json['insuranceExpiryDate'] as String),
-        driverName = json['assignedDriver']?['employee']?['name'] as String?;
+        driverName = json['assignedDriver']?['employee']?['name'] as String?,
+        totalWorkedText = json['totalWorkedText'] as String? ?? '0 h 0 min',
+        maintenanceStatus = json['maintenanceStatus'] as String? ?? 'NORMAL',
+        maintenanceMessage = json['maintenanceMessage'] as String? ?? '',
+        maintenanceTrackingEnabled = json['maintenanceTrackingEnabled'] == true;
+}
+
+/// Maintenance status → colour. NOT financial (money) colours — these are
+/// operational-status colours (due/overdue), kept separate from the red/green
+/// money language.
+Color maintenanceStatusColor(String status) {
+  switch (status) {
+    case 'OVERDUE':
+      return const Color(0xFFDC2626);
+    case 'DUE':
+      return const Color(0xFFEA580C);
+    case 'DUE_SOON':
+      return const Color(0xFFD97706);
+    case 'UNDER_MAINTENANCE':
+      return const Color(0xFF64748B);
+    default:
+      return const Color(0xFF16A34A);
+  }
 }
 
 /// Live list (not the offline cache) — service/insurance warning chips need
@@ -77,9 +107,8 @@ class MachineListScreen extends ConsumerWidget {
             ),
           ),
       ],
-      floatingActionButton: (!isDesktop && canManage)
-          ? FloatingActionButton(onPressed: () => context.go('/machines/new'), child: const Icon(Icons.add))
-          : null,
+      // New Machine is inline in the compact search/action bar on phones (no
+      // FAB); desktop keeps its top-bar button.
       bottomNavigationBar: isDesktop ? null : const QuickActionBar(),
       body: const MachineListBody(),
     );
@@ -151,9 +180,11 @@ class _MachineListBodyState extends ConsumerState<MachineListBody> {
 
         return Column(
           children: [
-            SearchField(
+            ListActionBar(
               hintText: 'Search by Reg #, Brand, Model...',
               onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
+              actionLabel: (!isDesktop && canManage) ? 'New Machine' : null,
+              onAction: (!isDesktop && canManage) ? () => context.go('/machines/new') : null,
             ),
             FilterTabsRow<_StatusFilter>(
               selected: _filter,
@@ -236,18 +267,41 @@ class _MachineListBodyState extends ConsumerState<MachineListBody> {
                                       padding: const EdgeInsets.only(top: 4, bottom: 8),
                                       child: Text(title, style: TextStyle(color: Colors.grey.shade700, fontSize: 14)),
                                     ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: 10),
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       MachineStatusBadge(status: machine.status),
-                                      if (machine.hourMeterReading != null)
-                                        Text(
-                                          '${machine.hourMeterReading} hrs',
-                                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                                        ),
+                                      const SizedBox(width: 8),
+                                      const Spacer(),
+                                      const Icon(Icons.schedule, size: 15, color: AppTheme.textMuted),
+                                      const SizedBox(width: 6),
+                                      // Authoritative accumulated working time.
+                                      Flexible(
+                                        child: Text('Worked ${machine.totalWorkedText}',
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                                      ),
                                     ],
                                   ),
+                                  if (machine.maintenanceTrackingEnabled && machine.maintenanceMessage.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.build_circle_outlined,
+                                            size: 15, color: maintenanceStatusColor(machine.maintenanceStatus)),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(machine.maintenanceMessage,
+                                              style: TextStyle(
+                                                  fontSize: 12.5,
+                                                  color: maintenanceStatusColor(machine.maintenanceStatus),
+                                                  fontWeight: machine.maintenanceStatus == 'OVERDUE' || machine.maintenanceStatus == 'DUE'
+                                                      ? FontWeight.bold
+                                                      : FontWeight.normal)),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                   if (serviceWarn != null || insuranceWarn != null) ...[
                                     const Divider(height: 24),
                                     if (serviceWarn != null)
@@ -315,8 +369,8 @@ class _MachineListBodyState extends ConsumerState<MachineListBody> {
           DataColumn(label: Text('Registration')),
           DataColumn(label: Text('Brand / Model')),
           DataColumn(label: Text('Status')),
-          DataColumn(label: Text('Hours')),
-          DataColumn(label: Text('Alerts')),
+          DataColumn(label: Text('Worked')),
+          DataColumn(label: Text('Maintenance / Alerts')),
           DataColumn(label: Text('Actions')),
         ],
         rows: [
@@ -340,22 +394,25 @@ class _MachineListBodyState extends ConsumerState<MachineListBody> {
                   DataCell(Text(m.registrationNumber, style: const TextStyle(fontWeight: FontWeight.w600))),
                   DataCell(Text(title.isEmpty ? '—' : title)),
                   DataCell(MachineStatusBadge(status: m.status)),
-                  DataCell(Text(m.hourMeterReading != null ? '${m.hourMeterReading} hrs' : '—')),
+                  DataCell(Text(m.totalWorkedText)),
                   DataCell(
-                    (serviceWarn == null && insuranceWarn == null)
-                        ? const Text('—', style: TextStyle(color: Colors.green))
-                        : Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (serviceWarn != null)
-                                Text(serviceWarn.$3,
-                                    style: TextStyle(color: serviceWarn.$1 ? Colors.red : Colors.orange, fontSize: 12)),
-                              if (insuranceWarn != null)
-                                Text(insuranceWarn.$3,
-                                    style: TextStyle(color: insuranceWarn.$1 ? Colors.red : Colors.orange, fontSize: 12)),
-                            ],
-                          ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (m.maintenanceTrackingEnabled && m.maintenanceMessage.isNotEmpty)
+                          Text(m.maintenanceMessage,
+                              style: TextStyle(color: maintenanceStatusColor(m.maintenanceStatus), fontSize: 12)),
+                        if (serviceWarn != null)
+                          Text(serviceWarn.$3,
+                              style: TextStyle(color: serviceWarn.$1 ? Colors.red : Colors.orange, fontSize: 12)),
+                        if (insuranceWarn != null)
+                          Text(insuranceWarn.$3,
+                              style: TextStyle(color: insuranceWarn.$1 ? Colors.red : Colors.orange, fontSize: 12)),
+                        if (!m.maintenanceTrackingEnabled && serviceWarn == null && insuranceWarn == null)
+                          const Text('—', style: TextStyle(color: AppTheme.textMuted)),
+                      ],
+                    ),
                   ),
                   DataCell(
                     (canManage || canDelete)

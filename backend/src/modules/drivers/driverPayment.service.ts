@@ -4,7 +4,7 @@ import { resolveCallerScope } from "../../shared/access/callerScope";
 import { writeAudit } from "../../shared/audit/audit.service";
 import type { AuthenticatedUser } from "../auth/auth.types";
 import * as driverCompensationService from "./driverCompensation.service";
-import type { DriverCompensationSummary } from "./driverCompensation.service";
+import type { DriverCompensationSummary, CustomerWorkRow } from "./driverCompensation.service";
 import * as driverPaymentRepo from "./driverPayment.repository";
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -39,6 +39,9 @@ export interface DriverEarningsView {
   remainingPayable: number;
   status: DriverPaymentStatus;
   payments: DriverPaymentView[];
+  // Which customers this driver worked for (§ customer-wise work history) —
+  // same authoritative attribution as the pay calc.
+  customerWise: CustomerWorkRow[];
 }
 
 function deriveStatus(earned: number, paid: number): DriverPaymentStatus {
@@ -107,8 +110,11 @@ export async function getDriverEarnings(
 ): Promise<DriverEarningsView> {
   await assertCanView(companyId, driverId, user);
 
-  const compensation = await driverCompensationService.getDriverCompensationSummary(companyId, driverId);
-  const rows = await driverPaymentRepo.findAllForDriver(companyId, driverId);
+  const [compensation, rows, customerWise] = await Promise.all([
+    driverCompensationService.getDriverCompensationSummary(companyId, driverId),
+    driverPaymentRepo.findAllForDriver(companyId, driverId),
+    driverCompensationService.getDriverCustomerWiseWork(companyId, driverId),
+  ]);
   const names = await resolveNames(rows.map((r) => r.paidBy));
 
   const totalEarned = round2(compensation.calculatedEarnings);
@@ -122,6 +128,7 @@ export async function getDriverEarnings(
     remainingPayable,
     status: deriveStatus(totalEarned, totalPaid),
     payments: rows.map((r) => toView(r, names)),
+    customerWise,
   };
 }
 

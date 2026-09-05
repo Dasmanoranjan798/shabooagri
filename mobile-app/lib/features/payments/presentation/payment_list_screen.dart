@@ -7,12 +7,30 @@ import '../../../core/layout/responsive.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/search_field.dart';
 import '../data/invoice_analysis.dart';
 import 'payment_list_screen_provider.dart';
 import 'widgets/payment_filters_dialog.dart';
 import 'widgets/payment_filters_desktop_dialog.dart';
+
+/// Invoice payment-status chip (§ clear payment status). UNPAID/OVERDUE = red;
+/// partial = amber; paid = green; cancelled = muted.
+Widget _invoiceStatusChip(String status) {
+  final (Color color, String label) = switch (status) {
+    'PAID' => (AppTheme.success, 'Paid'),
+    'PARTIALLY_PAID' => (AppTheme.warning, 'Partial'),
+    'OVERDUE' => (AppTheme.danger, 'Overdue'),
+    'CANCELLED' => (AppTheme.textMuted, 'Cancelled'),
+    _ => (AppTheme.danger, 'Unpaid'),
+  };
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+    decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
+    child: Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+  );
+}
 
 class InvoiceSummary {
   final String id;
@@ -44,27 +62,6 @@ class InvoiceSummary {
         isDirect = json['bookingId'] == null;
 }
 
-class AdvanceSummary {
-  final String customerName;
-  final double amount;
-  final double appliedAmount;
-  final String paymentMethod;
-  final String receivedAt;
-  final String? notes;
-  final String? referenceNumber;
-
-  AdvanceSummary.fromJson(Map<String, dynamic> json)
-      : customerName = (json['customer'] as Map<String, dynamic>?)?['name'] as String? ?? 'Unknown',
-        amount = double.tryParse(json['amount'].toString()) ?? 0.0,
-        appliedAmount = double.tryParse(json['appliedAmount']?.toString() ?? '0') ?? 0.0,
-        paymentMethod = json['paymentMethod'] as String,
-        receivedAt = json['receivedAt'] as String,
-        notes = json['notes'] as String?,
-        referenceNumber = json['referenceNumber'] as String?;
-
-  double get balance => amount - appliedAmount;
-}
-
 // Keep original provider for Farmer app etc if needed
 final invoicesListProvider = FutureProvider<List<InvoiceSummary>>((ref) async {
   syncOn(ref, {SyncEntity.invoice, SyncEntity.payment});
@@ -75,12 +72,10 @@ final invoicesListProvider = FutureProvider<List<InvoiceSummary>>((ref) async {
       .toList();
 });
 
-final advancesListProvider = FutureProvider<List<AdvanceSummary>>((ref) async {
-  syncOn(ref, {SyncEntity.payment, SyncEntity.invoice});
-  final dio = ref.watch(apiClientProvider);
-  final response = await dio.get('/payments/advances');
-  return (response.data as List<dynamic>).map((j) => AdvanceSummary.fromJson(j as Map<String, dynamic>)).toList();
-});
+// NOTE: There is no standalone "Customer Advances" list/screen. Advance/credit
+// is created only automatically when a Payment In exceeds the customer's
+// outstanding (see backend payment.repository); the resulting available credit
+// is surfaced on the customer (list card + detail), not as a separate feature.
 
 class PaymentListScreen extends ConsumerStatefulWidget {
   final List<String>? initialStatuses;
@@ -132,7 +127,6 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
   @override
   Widget build(BuildContext context) {
     final analysisAsync = ref.watch(invoicesAnalysisProvider);
-    final advancesAsync = ref.watch(advancesListProvider);
     final user = ref.watch(currentUserProvider);
     final filterState = ref.watch(paymentFilterProvider);
     final canReceive = user?.isOwnerOrManager ?? false;
@@ -175,7 +169,6 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
           icon: const Icon(Icons.refresh),
           onPressed: () {
             ref.invalidate(invoicesAnalysisProvider);
-            ref.invalidate(advancesListProvider);
           },
         ),
       ],
@@ -196,7 +189,6 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(invoicesAnalysisProvider);
-              ref.invalidate(advancesListProvider);
             },
             child: ListView(
               children: [
@@ -227,11 +219,13 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                     children: [
                       _kpiCard('Filtered Invoices', '${analysis.summary.invoicesCount}', Colors.blueGrey),
                       _kpiCard('Total Invoiced', '₹${analysis.summary.totalInvoiced.toStringAsFixed(0)}', Colors.blue, onTap: () => ref.read(paymentFilterProvider.notifier).updateFilter(ref.read(paymentFilterProvider).copyWith(status: []))),
-                      _kpiCard('Total Collected', '₹${analysis.summary.totalPaid.toStringAsFixed(0)}', Colors.green, onTap: () => ref.read(paymentFilterProvider.notifier).updateFilter(ref.read(paymentFilterProvider).copyWith(status: ['PAID']))),
+                      // Collected + Outstanding are money to RECEIVE → green.
+                      _kpiCard('Total Collected', '₹${analysis.summary.totalPaid.toStringAsFixed(0)}', AppTheme.success, onTap: () => ref.read(paymentFilterProvider.notifier).updateFilter(ref.read(paymentFilterProvider).copyWith(status: ['PAID']))),
                       _kpiCard('Outstanding', '₹${analysis.summary.totalOutstanding.toStringAsFixed(0)}',
                           onTap: () => ref.read(paymentFilterProvider.notifier).updateFilter(ref.read(paymentFilterProvider).copyWith(status: ['UNPAID', 'PARTIALLY_PAID'])),
-                          analysis.summary.totalOutstanding > 0 ? Colors.red : Colors.green),
-                      _kpiCard('Overdue Amount', '₹${analysis.summary.overdueAmount.toStringAsFixed(0)}', Colors.redAccent, onTap: () => ref.read(paymentFilterProvider.notifier).updateFilter(ref.read(paymentFilterProvider).copyWith(status: ['OVERDUE']))),
+                          AppTheme.receivable),
+                      // Overdue is a problem flag (not the money-direction rule) → red.
+                      _kpiCard('Overdue Amount', '₹${analysis.summary.overdueAmount.toStringAsFixed(0)}', AppTheme.danger, onTap: () => ref.read(paymentFilterProvider.notifier).updateFilter(ref.read(paymentFilterProvider).copyWith(status: ['OVERDUE']))),
                     ],
                   ),
                 ),
@@ -247,8 +241,16 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                   ...filtered.map((invoice) => Card(
                         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         child: ListTile(
-                          title: Text('${invoice.invoiceNumber} · ${invoice.customerName}'),
-                          subtitle: Text('${invoice.status} · ${invoice.invoiceDate.split('T').first}'),
+                          title: Text('${invoice.invoiceNumber} · ${invoice.customerName}',
+                              maxLines: 1, overflow: TextOverflow.ellipsis),
+                          subtitle: Row(
+                            children: [
+                              _invoiceStatusChip(invoice.status),
+                              const SizedBox(width: 8),
+                              Text(invoice.invoiceDate.split('T').first,
+                                  style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                            ],
+                          ),
                           onTap: () => context.go('/payments/${invoice.id}'),
                           trailing: canReceive && invoice.balanceAmount > 0 && invoice.status != 'CANCELLED'
                               ? TextButton(
@@ -256,10 +258,12 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                                   child: Text('Receive\n₹${invoice.balanceAmount.toStringAsFixed(0)}',
                                       textAlign: TextAlign.center, style: const TextStyle(fontSize: 11)),
                                 )
+                              // Balance due is a RECEIVABLE (money to collect) →
+                              // GREEN (§20); the red UNPAID chip carries status.
                               : Text(
                                   invoice.balanceAmount > 0 ? 'Due ₹${invoice.balanceAmount.toStringAsFixed(0)}' : 'Paid',
                                   style: TextStyle(
-                                    color: invoice.balanceAmount > 0 ? Colors.red : Colors.green,
+                                    color: invoice.balanceAmount > 0 ? AppTheme.receivable : AppTheme.textMuted,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -290,36 +294,9 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                    ...analysis.customerWise.map((c) => ListTile(
                      title: Text(c['name']),
                      subtitle: Text('Invoiced: ₹${c['invoiced']} | Paid: ₹${c['paid']}'),
-                     trailing: Text('₹${(double.tryParse(c['outstanding'].toString()) ?? 0.0).toStringAsFixed(0)}', style: TextStyle(color: c['outstanding'] > 0 ? Colors.red : Colors.green)),
+                     trailing: Text('₹${(double.tryParse(c['outstanding'].toString()) ?? 0.0).toStringAsFixed(0)}', style: const TextStyle(color: AppTheme.receivable, fontWeight: FontWeight.bold)),
                    )),
                 ],
-
-                advancesAsync.when(
-                  data: (advances) {
-                    if (advances.isEmpty) return const SizedBox.shrink();
-                    return Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Divider(),
-                          const Text('Customer Advances', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          const SizedBox(height: 8),
-                          ...advances.map((a) => Card(
-                                child: ListTile(
-                                  title: Text(a.customerName),
-                                  subtitle: Text('${a.paymentMethod} · ${a.receivedAt.split('T').first}'),
-                                  trailing: Text('₹${a.balance.toStringAsFixed(0)}',
-                                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                                ),
-                              )),
-                        ],
-                      ),
-                    );
-                  },
-                  loading: () => const SizedBox.shrink(),
-                  error: (e, s) => const SizedBox.shrink(),
-                ),
               ],
             ),
           );
@@ -369,10 +346,11 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                       DataCell(Text(i.status)),
                       DataCell(Text(i.invoiceDate.split('T').first)),
                       DataCell(Text('₹${i.totalAmount.toStringAsFixed(0)}')),
+                      // Balance = receivable → GREEN when due (§20).
                       DataCell(Text(
                         i.balanceAmount > 0 ? '₹${i.balanceAmount.toStringAsFixed(0)}' : 'Paid',
                         style: TextStyle(
-                          color: i.balanceAmount > 0 ? Colors.red : Colors.green,
+                          color: i.balanceAmount > 0 ? AppTheme.receivable : AppTheme.textMuted,
                           fontWeight: FontWeight.bold,
                         ),
                       )),

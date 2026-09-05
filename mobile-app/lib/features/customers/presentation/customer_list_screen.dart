@@ -7,26 +7,50 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/layout/responsive.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/money.dart';
 import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/confirm_delete.dart';
 import '../../../core/widgets/desktop_table.dart';
-import '../../../core/widgets/search_field.dart';
+import '../../../core/widgets/list_action_bar.dart';
 
 class CustomerSummary {
   final String id;
   final String name;
   final String? phone;
   final String? address;
+  final String? village;
+  final String? block;
+  final String? district;
   final String villageName;
   final bool hasPortalAccess;
+  // Backend-authoritative financial standing (customer.service.listWithFinance).
+  final double outstanding; // money to COLLECT (green)
+  final double creditBalance; // available advance/credit from overpayment
 
   CustomerSummary.fromJson(Map<String, dynamic> json)
       : id = json['id'] as String,
         name = json['name'] as String,
         phone = json['phone'] as String?,
         address = json['address'] as String?,
+        village = json['village'] as String?,
+        block = json['block'] as String?,
+        district = json['district'] as String?,
         villageName = (json['village'] as String?)?.isNotEmpty == true ? json['village'] as String : '—',
-        hasPortalAccess = json['userId'] != null;
+        hasPortalAccess = json['userId'] != null,
+        outstanding = double.tryParse(json['outstanding']?.toString() ?? '0') ?? 0,
+        creditBalance = double.tryParse(json['creditBalance']?.toString() ?? '0') ?? 0;
+
+  /// The customer's actual/original stored address. Prefer the free-text
+  /// `address`; otherwise compose from the structured locality fields. Never a
+  /// placeholder — falls back to the village name, then a neutral dash.
+  String get displayAddress {
+    final full = address?.trim();
+    if (full != null && full.isNotEmpty) return full;
+    final parts = [village, block, district].where((p) => p != null && p.trim().isNotEmpty).map((p) => p!.trim());
+    final composed = parts.join(', ');
+    return composed.isNotEmpty ? composed : '—';
+  }
 }
 
 /// Live list (not the offline cache) — Village name, Address, Portal Access
@@ -65,10 +89,9 @@ class CustomerListScreen extends ConsumerWidget {
             ),
           ),
       ],
-      // On desktop the "New" action is a top-bar button; on phones it's a FAB.
-      floatingActionButton: (!isDesktop && canManage)
-          ? FloatingActionButton(onPressed: () => context.go('/customers/new'), child: const Icon(Icons.add))
-          : null,
+      // On desktop the "New" action is a top-bar button; on phones it now lives
+      // inline in the compact search/action bar (ListActionBar) — no FAB, so the
+      // list keeps the full width and there's a single New affordance.
       bottomNavigationBar: isDesktop ? null : const QuickActionBar(),
       body: const CustomerListBody(),
     );
@@ -105,13 +128,16 @@ class _CustomerListBodyState extends ConsumerState<CustomerListBody> {
                     c.name.toLowerCase().contains(_query) ||
                     c.villageName.toLowerCase().contains(_query) ||
                     (c.phone?.toLowerCase().contains(_query) ?? false) ||
-                    (c.address?.toLowerCase().contains(_query) ?? false))
+                    c.displayAddress.toLowerCase().contains(_query))
                 .toList();
         return Column(
           children: [
-            SearchField(
+            ListActionBar(
               hintText: 'Search by Name, Village, Phone, Address...',
               onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
+              // Inline New on phones; desktop keeps its top-bar button.
+              actionLabel: (!isDesktop && canManage) ? 'New Customer' : null,
+              onAction: (!isDesktop && canManage) ? () => context.go('/customers/new') : null,
             ),
             Expanded(
               child: filtered.isEmpty
@@ -133,16 +159,19 @@ class _CustomerListBodyState extends ConsumerState<CustomerListBody> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(customer.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                      Expanded(
+                                        child: Text(customer.name,
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                      ),
                                       if (canManage || canDelete)
                                         SizedBox(
                                           width: 32,
                                           height: 32,
                                           child: PopupMenuButton<String>(
                                             padding: EdgeInsets.zero,
-                                            icon: const Icon(Icons.more_vert, size: 20, color: Colors.grey),
+                                            icon: const Icon(Icons.more_vert, size: 20, color: AppTheme.textMuted),
                                             onSelected: (action) async {
                                               if (action == 'edit') {
                                                 context.go('/customers/${customer.id}/edit');
@@ -158,41 +187,41 @@ class _CustomerListBodyState extends ConsumerState<CustomerListBody> {
                                             },
                                             itemBuilder: (context) => [
                                               if (canManage) const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                                              if (canDelete) const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
+                                              if (canDelete) const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppTheme.danger))),
                                             ],
                                           ),
                                         ),
                                     ],
                                   ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: 6),
+                                  // Original/stored address (§ customer address).
                                   Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                                      const SizedBox(width: 8),
-                                      Expanded(child: Text(customer.villageName, style: const TextStyle(fontSize: 14))),
+                                      const Icon(Icons.location_on, size: 15, color: AppTheme.textMuted),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                          child: Text(customer.displayAddress,
+                                              style: const TextStyle(fontSize: 13, color: AppTheme.textMuted))),
                                     ],
                                   ),
                                   if (customer.phone != null) ...[
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: 3),
                                     Row(
                                       children: [
-                                        const Icon(Icons.phone, size: 16, color: Colors.grey),
-                                        const SizedBox(width: 8),
-                                        Expanded(child: Text(customer.phone!, style: const TextStyle(fontSize: 14))),
+                                        const Icon(Icons.phone, size: 15, color: AppTheme.textMuted),
+                                        const SizedBox(width: 6),
+                                        Text(customer.phone!, style: const TextStyle(fontSize: 13, color: AppTheme.textMuted)),
+                                        if (customer.hasPortalAccess) ...[
+                                          const SizedBox(width: 8),
+                                          const Icon(Icons.link, size: 14, color: AppTheme.info),
+                                        ],
                                       ],
                                     ),
                                   ],
-                                  if (customer.hasPortalAccess) ...[
-                                    const SizedBox(height: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: const Text('Portal Linked', style: TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.bold)),
-                                    ),
-                                  ]
+                                  const SizedBox(height: 10),
+                                  // Financial standing: GREEN = money to collect.
+                                  _CustomerOutstanding(outstanding: customer.outstanding, credit: customer.creditBalance),
                                 ],
                               ),
                             ),
@@ -224,9 +253,9 @@ class _CustomerListBodyState extends ConsumerState<CustomerListBody> {
       child: DesktopTable(
         columns: const [
           DataColumn(label: Text('Name')),
-          DataColumn(label: Text('Village')),
+          DataColumn(label: Text('Address')),
           DataColumn(label: Text('Phone')),
-          DataColumn(label: Text('Portal')),
+          DataColumn(label: Text('Outstanding'), numeric: true),
           DataColumn(label: Text('Actions')),
         ],
         rows: [
@@ -235,11 +264,17 @@ class _CustomerListBodyState extends ConsumerState<CustomerListBody> {
               onSelectChanged: (_) => context.go('/customers/${c.id}'),
               cells: [
                 DataCell(Text(c.name, style: const TextStyle(fontWeight: FontWeight.w600))),
-                DataCell(Text(c.villageName)),
+                DataCell(ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 260),
+                  child: Text(c.displayAddress, overflow: TextOverflow.ellipsis),
+                )),
                 DataCell(Text(c.phone ?? '—')),
-                DataCell(c.hasPortalAccess
-                    ? const Text('Linked', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold))
-                    : const Text('—')),
+                DataCell(c.outstanding > 0
+                    ? Text(rupees(c.outstanding),
+                        style: const TextStyle(color: AppTheme.receivable, fontWeight: FontWeight.bold))
+                    : c.creditBalance > 0
+                        ? Text('${rupees(c.creditBalance)} cr', style: const TextStyle(color: AppTheme.info))
+                        : const Text('—', style: TextStyle(color: AppTheme.textMuted))),
                 DataCell(
                   (canManage || canDelete)
                       ? Row(
@@ -274,5 +309,45 @@ class _CustomerListBodyState extends ConsumerState<CustomerListBody> {
         ],
       ),
     );
+  }
+}
+
+/// Customer financial standing for the list card. GREEN = money to COLLECT
+/// (outstanding/receivable). Advance credit (customer paid ahead) is shown
+/// neutrally in blue — it is not a receivable, so it must not read as green.
+class _CustomerOutstanding extends StatelessWidget {
+  final double outstanding;
+  final double credit;
+  const _CustomerOutstanding({required this.outstanding, required this.credit});
+
+  @override
+  Widget build(BuildContext context) {
+    if (outstanding > 0) {
+      return Row(
+        children: [
+          const Text('Outstanding', style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(rupees(outstanding),
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.receivable)),
+          ),
+        ],
+      );
+    }
+    if (credit > 0) {
+      return Row(
+        children: [
+          const Text('Advance credit', style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text('${rupees(credit)} available',
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.info)),
+          ),
+        ],
+      );
+    }
+    return const Text('No outstanding', style: TextStyle(fontSize: 13, color: AppTheme.textMuted));
   }
 }

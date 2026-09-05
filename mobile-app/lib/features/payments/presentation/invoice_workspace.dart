@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/providers/session_provider.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/search_field.dart';
+import '../../../core/widgets/list_action_bar.dart';
 import 'payment_list_screen.dart';
 
 enum InvoiceTab { all, direct, afterWork }
@@ -77,9 +78,14 @@ class _InvoiceWorkspaceBodyState extends ConsumerState<InvoiceWorkspaceBody> {
                 ],
               ),
             ),
-            SearchField(
+            ListActionBar(
               hintText: 'Search Invoice #, Customer, Village...',
               onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
+              actionLabel: (ref.watch(currentUserProvider)?.isOwnerOrManager ?? false) ? 'New' : null,
+              actionIcon: Icons.add,
+              onAction: (ref.watch(currentUserProvider)?.isOwnerOrManager ?? false)
+                  ? () => showInvoiceCreateMenu(context)
+                  : null,
             ),
             Expanded(
               child: filtered.isEmpty
@@ -108,11 +114,13 @@ class _InvoiceWorkspaceBodyState extends ConsumerState<InvoiceWorkspaceBody> {
   }
 
   Widget _invoiceCard(BuildContext context, InvoiceSummary inv) {
+    // Status flag (§19: UNPAID stays RED). This is a STATUS badge, distinct
+    // from the money-amount colour below.
     final (statusColor, statusLabel) = switch (inv.status) {
-      'PAID' => (Colors.green, 'Paid'),
-      'PARTIALLY_PAID' => (Colors.orange, 'Partial'),
-      'CANCELLED' => (Colors.grey, 'Cancelled'),
-      _ => (Colors.red, 'Unpaid'),
+      'PAID' => (AppTheme.success, 'Paid'),
+      'PARTIALLY_PAID' => (AppTheme.warning, 'Partial'),
+      'CANCELLED' => (AppTheme.textMuted, 'Cancelled'),
+      _ => (AppTheme.danger, 'Unpaid'),
     };
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -139,20 +147,16 @@ class _InvoiceWorkspaceBodyState extends ConsumerState<InvoiceWorkspaceBody> {
                 ],
               ),
               const SizedBox(height: 8),
+              // Customer + date. The Direct/After-Work distinction is conveyed
+              // by the tab filter above — repeating it on every card added noise
+              // without information, so it's intentionally not shown here (§19).
               Row(
                 children: [
                   const Icon(Icons.person, size: 16, color: AppTheme.textMuted),
                   const SizedBox(width: 8),
                   Expanded(child: Text(inv.customerName, style: const TextStyle(fontSize: 14), overflow: TextOverflow.ellipsis)),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: (inv.isDirect ? Colors.indigo : Colors.teal).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(inv.isDirect ? 'Direct' : 'After-Work',
-                        style: TextStyle(color: inv.isDirect ? Colors.indigo : Colors.teal, fontSize: 11, fontWeight: FontWeight.w600)),
-                  ),
+                  Text(inv.invoiceDate.split('T').first,
+                      style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
                 ],
               ),
               const SizedBox(height: 8),
@@ -160,8 +164,10 @@ class _InvoiceWorkspaceBodyState extends ConsumerState<InvoiceWorkspaceBody> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Total ₹${inv.totalAmount.toStringAsFixed(0)}', style: const TextStyle(fontSize: 13, color: AppTheme.textMuted)),
+                  // Balance is a RECEIVABLE (money to collect) → GREEN when due
+                  // (§20). The red "Unpaid" status badge above carries the flag.
                   Text('Balance ₹${inv.balanceAmount.toStringAsFixed(0)}',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: inv.balanceAmount > 0 ? Colors.red : Colors.green)),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: inv.balanceAmount > 0 ? AppTheme.receivable : AppTheme.textMuted)),
                 ],
               ),
             ],

@@ -255,7 +255,6 @@ void main() {
         // Keep the body in its loading state so the test doesn't need a full
         // analysis payload; the top-bar filter action is always present.
         invoicesAnalysisProvider.overrideWith((ref) => Completer<InvoiceAnalysisResponse>().future),
-        advancesListProvider.overrideWith((ref) => Completer<List<AdvanceSummary>>().future),
       ],
       size: const Size(1366, 768),
     );

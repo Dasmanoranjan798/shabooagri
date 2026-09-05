@@ -6,7 +6,7 @@ import { createMachineSchema, updateMachineSchema } from "./machine.validators";
 
 export async function list(req: Request, res: Response) {
   const user = requireUser(req);
-  const machines = await machineService.list(user.companyId);
+  const machines = await machineService.listWithUtilization(user.companyId);
   res.status(200).json(machines);
 }
 
@@ -41,6 +41,9 @@ export async function remove(req: Request, res: Response) {
 // the backend from work sessions — clients render, never recompute.
 export async function getUtilization(req: Request, res: Response) {
   const user = requireUser(req);
-  const status = await machineUtilizationService.getMachineMaintenanceStatus(user.companyId, req.params.id);
-  res.status(200).json(status);
+  const [status, customerWise] = await Promise.all([
+    machineUtilizationService.getMachineMaintenanceStatus(user.companyId, req.params.id),
+    machineUtilizationService.getMachineCustomerWiseWork(user.companyId, req.params.id),
+  ]);
+  res.status(200).json({ ...status, customerWise });
 }

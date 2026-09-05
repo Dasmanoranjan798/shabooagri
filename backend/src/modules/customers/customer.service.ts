@@ -9,6 +9,24 @@ export function list(companyId: string) {
   return customerRepository.findAllForCompany(companyId);
 }
 
+// List customers enriched with their financial standing for the list cards:
+//   outstanding    — money the business must COLLECT (Σ non-cancelled invoice
+//                    balances; green in the UI = receivable)
+//   creditBalance  — customer's available advance/credit from overpayment
+// Both are aggregated from the authoritative payment data, never recomputed.
+export async function listWithFinance(companyId: string) {
+  const [customers, outstanding, credit] = await Promise.all([
+    customerRepository.findAllForCompany(companyId),
+    customerRepository.outstandingByCustomer(companyId),
+    customerRepository.creditByCustomer(companyId),
+  ]);
+  return customers.map((c) => ({
+    ...c,
+    outstanding: outstanding.get(c.id) ?? 0,
+    creditBalance: credit.get(c.id) ?? 0,
+  }));
+}
+
 export async function getById(companyId: string, id: string) {
   const customer = await customerRepository.findByIdScopedWithRelations(companyId, id);
   if (!customer) {

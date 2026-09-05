@@ -6,6 +6,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/company_profile_provider.dart';
 import '../../../core/providers/session_provider.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/info_row.dart';
 
@@ -98,6 +99,8 @@ class DriverDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 _DriverEarningsSection(driverId: driverId),
+                const SizedBox(height: 8),
+                _DriverCustomerWorkSection(driverId: driverId),
               ],
             ),
           );
@@ -125,14 +128,18 @@ class _DriverEarningsSectionState extends ConsumerState<_DriverEarningsSection> 
 
   String _money(dynamic v) => '₹${(double.tryParse(v.toString()) ?? 0).toStringAsFixed(2)}';
 
+  // Driver Payment-Out status. This is a PAYABLE context (money going OUT), so
+  // there is no "money in" — PAID must NOT be green (§20/§22: green is reserved
+  // for receivables). UNPAID = red (we still owe), PARTIAL = amber, PAID =
+  // neutral (settled). The remaining-payable amount below is the red money value.
   Color _statusColor(String s) {
     switch (s) {
       case 'PAID':
-        return Colors.green;
+        return AppTheme.textMuted;
       case 'PARTIALLY_PAID':
-        return Colors.orange;
+        return AppTheme.warning;
       default:
-        return Colors.red;
+        return AppTheme.payable;
     }
   }
 
@@ -241,7 +248,14 @@ class _DriverEarningsSectionState extends ConsumerState<_DriverEarningsSection> 
                 const Divider(),
                 InfoRow('Total Earned', _money(data['totalEarned'])),
                 InfoRow('Total Paid', _money(data['totalPaid'])),
-                InfoRow('Remaining Payable', _money(remaining)),
+                // Remaining payable = money the business must PAY OUT → red.
+                InfoRow('Remaining Payable', _money(remaining),
+                    customValueWidget: Text(_money(remaining),
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: remaining > 0 ? AppTheme.payable : AppTheme.textMuted))),
                 if (canPay) ...[
                   const SizedBox(height: 12),
                   SizedBox(
@@ -274,6 +288,60 @@ class _DriverEarningsSectionState extends ConsumerState<_DriverEarningsSection> 
                     );
                   }),
                 ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Customer-wise work history for a driver (§ which customers the driver worked
+/// for). Reads the SAME authoritative attribution as the pay calc, exposed by
+/// GET /drivers/:id/earnings → `customerWise`. Never a separate hour ledger.
+class _DriverCustomerWorkSection extends ConsumerWidget {
+  final String driverId;
+  const _DriverCustomerWorkSection({required this.driverId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final earningsAsync = ref.watch(driverEarningsProvider(driverId));
+    return earningsAsync.maybeWhen(
+      orElse: () => const SizedBox.shrink(),
+      data: (data) {
+        final rows = (data['customerWise'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
+        if (rows.isEmpty) return const SizedBox.shrink();
+        final totalText = data['compensation']?['totalWorkedHours'] != null
+            ? '${data['compensation']['totalWorkedHours']} h'
+            : '';
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Work by Customer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    if (totalText.isNotEmpty)
+                      Text('Total $totalText', style: const TextStyle(color: AppTheme.textMuted, fontSize: 13)),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                ...rows.map((r) => ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(r['customerName'] as String? ?? 'Unknown'),
+                      subtitle: Text([
+                        '${r['jobs']} job${(r['jobs'] as num? ?? 0) == 1 ? '' : 's'}',
+                        if ((r['lastWorkedDate'] as String?)?.isNotEmpty == true)
+                          'last ${(r['lastWorkedDate'] as String).split('T').first}',
+                      ].join(' · ')),
+                      trailing: Text(r['workedText'] as String? ?? '—',
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                    )),
               ],
             ),
           ),

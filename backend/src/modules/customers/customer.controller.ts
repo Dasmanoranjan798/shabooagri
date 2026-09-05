@@ -5,7 +5,7 @@ import { createCustomerSchema, updateCustomerSchema } from "./customer.validator
 
 export async function list(req: Request, res: Response) {
   const user = requireUser(req);
-  const customers = await customerService.list(user.companyId);
+  const customers = await customerService.listWithFinance(user.companyId);
   res.status(200).json(customers);
 }
 

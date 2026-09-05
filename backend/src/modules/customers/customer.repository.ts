@@ -14,6 +14,38 @@ export function findByIdScopedWithRelations(companyId: string, id: string) {
   return prisma.customer.findFirst({ where: { id, companyId } });
 }
 
+// Per-customer outstanding = Σ of the canonical, already-maintained
+// invoice.balanceAmount over all non-cancelled invoices. This is NOT a second
+// calculation of outstanding — balanceAmount is the same figure the payment
+// system writes on every receive; we only aggregate it. Cancelled invoices are
+// excluded (they're history, not receivable). One grouped query, no N+1.
+export async function outstandingByCustomer(companyId: string): Promise<Map<string, number>> {
+  const rows = await prisma.invoice.groupBy({
+    by: ["customerId"],
+    where: { companyId, status: { not: "CANCELLED" } },
+    _sum: { balanceAmount: true },
+  });
+  return new Map(rows.map((r) => [r.customerId, r._sum.balanceAmount != null ? Number(r._sum.balanceAmount) : 0]));
+}
+
+// Per-customer available credit = Σ(amount − appliedAmount) over customer_advances.
+// These rows are created only by the legitimate overpayment path (a Payment In
+// exceeding outstanding); there is no standalone advance entry. Grouped query.
+export async function creditByCustomer(companyId: string): Promise<Map<string, number>> {
+  const rows = await prisma.customerAdvance.groupBy({
+    by: ["customerId"],
+    where: { companyId },
+    _sum: { amount: true, appliedAmount: true },
+  });
+  return new Map(
+    rows.map((r) => {
+      const amount = r._sum.amount != null ? Number(r._sum.amount) : 0;
+      const applied = r._sum.appliedAmount != null ? Number(r._sum.appliedAmount) : 0;
+      return [r.customerId, Math.round((amount - applied) * 100) / 100];
+    }),
+  );
+}
+
 // Distinct, non-empty village/locality names for this company — powers the
 // village filter/reporting pickers that used to read the Village master.
 export async function distinctVillages(companyId: string) {

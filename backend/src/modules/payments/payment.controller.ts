@@ -22,12 +22,6 @@ export async function createManualInvoice(req: Request, res: Response) {
   res.status(201).json(invoice);
 }
 
-export async function listCustomerAdvances(req: Request, res: Response) {
-  const user = requireUser(req);
-  const advances = await paymentService.listCustomerAdvances(user.companyId, user);
-  res.json(advances);
-}
-
 export async function getInvoiceById(req: Request, res: Response) {
   const user = requireUser(req);
   const invoice = await paymentService.getInvoiceById(user.companyId, req.params.id, user);

@@ -121,10 +121,11 @@ class CustomerDetailScreen extends ConsumerWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _statCol('Total Billed', '₹${totalBilled.toStringAsFixed(0)}', Colors.black),
+                          _statCol('Total Billed', '₹${totalBilled.toStringAsFixed(0)}', AppTheme.text),
                           _statCol('Total Paid', '₹${totalPaid.toStringAsFixed(0)}', AppTheme.success),
+                          // Customer outstanding is a RECEIVABLE → green (§ money to collect).
                           _statCol('Outstanding', '₹${totalOutstanding.toStringAsFixed(0)}',
-                              totalOutstanding > 0 ? AppTheme.danger : AppTheme.textMuted),
+                              totalOutstanding > 0 ? AppTheme.receivable : AppTheme.textMuted),
                         ],
                       ),
                     ),

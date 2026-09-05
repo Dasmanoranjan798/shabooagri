@@ -22,6 +22,14 @@ class AppTheme {
   static const Color danger = Color(0xFFDC2626);
   static const Color info = Color(0xFF2563EB);
 
+  // Financial colour language (§ one consistent money convention across the
+  // whole app). GREEN = money the business will RECEIVE/COLLECT (customer
+  // outstanding/receivable, customer credit reduces it). RED = money the
+  // business must PAY OUT (driver/supplier payable). Use these ONLY for money;
+  // operational statuses (Available/Working/Maintenance) use their own colours.
+  static const Color receivable = success;
+  static const Color payable = danger;
+
   static ThemeData get themeData {
     return ThemeData(
       colorScheme: ColorScheme.fromSeed(

@@ -49,12 +49,11 @@ invoiceRouter.post(
 // Scoped payment history routes
 paymentRouter.get("/", asyncHandler(paymentController.listPayments));
 
-// Customer advance/credit balances (read-only). These are created
-// automatically as the leftover of an overpayment in recordPaymentTx — there
-// is no standalone endpoint to create one. Registered before the "/:id" route
-// below so "/advances" doesn't get swallowed as an id.
-paymentRouter.get("/advances", asyncHandler(paymentController.listCustomerAdvances));
-
+// NOTE: there is no customer-advance endpoint. Advance/credit is created only
+// as the leftover of an overpayment in recordPaymentTx (never as a standalone
+// entry), and the resulting available credit is surfaced on the customer
+// itself (customer.service.listWithFinance → creditBalance), so the old
+// read-only GET /advances had no remaining consumer and was removed.
 paymentRouter.get("/:id", asyncHandler(paymentController.getPaymentById));
 
 // Cancel, not delete (§ dependency-locked deletion, Rule 1 & 5) — Owner-only.
