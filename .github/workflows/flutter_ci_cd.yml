@@ -3,11 +3,15 @@ name: ShabooAgri Flutter CI/CD
 on:
   push:
     branches: [ "master", "main" ]
+    # Pushing a version tag (e.g. v0.8.16) builds all platforms AND publishes
+    # them to a GitHub Release — see the `release` job below.
+    tags: [ "v*" ]
   pull_request:
     branches: [ "master", "main" ]
   # Allow building the release artifacts (incl. the Windows installer) on any
   # branch on demand — used to produce ShabooAgri-Setup-x64.exe for publishing
-  # without waiting for a merge to master.
+  # without waiting for a merge to master. A manual run also publishes a
+  # Release (versioned by pubspec) so the binaries are one-click downloadable.
   workflow_dispatch:
 
 jobs:
@@ -113,3 +117,52 @@ jobs:
         with:
           name: ios-release-unsigned
           path: mobile-app/shabooagri-ios-unsigned.zip
+
+  # Collect every platform's artifact, name them the way the website's
+  # downloads/ folder expects, and publish a GitHub Release so the binaries
+  # are one-click downloadable (no more digging into an Actions run to grab
+  # the .exe/.zip by hand). Runs only on a manual dispatch or a v* tag — never
+  # on ordinary branch pushes or PRs.
+  release:
+    name: Publish GitHub Release
+    needs: [ build_android, build_windows, build_macos_ios ]
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read app version from pubspec
+        id: ver
+        run: |
+          V=$(grep -E '^version:' mobile-app/pubspec.yaml | sed -E 's/version:\s*([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "App version: $V"
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Stage release assets with website filenames
+        run: |
+          mkdir -p release
+          cp "artifacts/android-apk/app-release.apk"                    "release/shabooagri-v${{ steps.ver.outputs.version }}.apk"
+          cp "artifacts/windows-installer/ShabooAgri-Setup-x64.exe"     "release/ShabooAgri-Setup-x64.exe"
+          cp "artifacts/macos-release/shabooagri-macos.zip"            "release/shabooagri-macos.zip"
+          cp "artifacts/ios-release-unsigned/shabooagri-ios-unsigned.zip" "release/shabooagri-ios-unsigned.zip"
+          ls -la release
+      - name: Publish / update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ steps.ver.outputs.version }}
+        run: |
+          # Idempotent: create the release if the tag is new, else just
+          # re-upload (clobber) the assets. Marked prerelease (preview builds).
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" release/* --clobber
+          else
+            gh release create "$TAG" release/* \
+              --title "ShabooAgri $TAG" \
+              --notes "Automated build of $TAG — Android APK, Windows installer, macOS app, and unsigned iOS build. Drop these into platform-frontend/public/downloads/ and bump /api/app-version to publish." \
+              --prerelease \
+              --target "${{ github.sha }}"
+          fi
