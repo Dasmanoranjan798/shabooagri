@@ -145,10 +145,10 @@ export const AdminDashboardPage: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+    <div style={{ maxWidth: 960, margin: "0 auto", padding: "32px var(--pf-pad-x)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 28 }}>
         <h1 style={{ fontSize: "1.4rem", fontWeight: 800 }}>Owner Dashboard</h1>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <Link to="/change-password" className="pf-btn pf-btn-secondary" style={{ textDecoration: "none" }}>
             Change Password
           </Link>
@@ -269,7 +269,7 @@ export const AdminDashboardPage: React.FC = () => {
                 <Tractor size={16} color="var(--color-primary)" />
                 <strong>{plan.key}</strong>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: 10, marginBottom: 12 }}>
                 <div>
                   <label className="pf-label">Name</label>
                   <input

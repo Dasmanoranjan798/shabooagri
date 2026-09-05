@@ -30,7 +30,7 @@ const CustomerListPageContent: React.FC = () => {
   });
 
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px" }}>
+    <div style={{ maxWidth: 960, margin: "0 auto", padding: "32px var(--pf-pad-x)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
           <Link to="/admin" style={{ color: "var(--color-text-muted)", fontSize: "0.85rem", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, marginBottom: 8 }}>
@@ -59,7 +59,8 @@ const CustomerListPageContent: React.FC = () => {
             {search ? "No customers match your search." : "No signups yet."}
           </p>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
             <thead>
               <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
                 {["Business Name", "Contact", "Email", "Signed Up", "Plan", "License Status"].map((h) => (
@@ -108,6 +109,7 @@ const CustomerListPageContent: React.FC = () => {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

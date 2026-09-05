@@ -56,7 +56,7 @@ const CustomerDetailPageContent: React.FC = () => {
   }, [id]);
 
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px" }}>
+    <div style={{ maxWidth: 960, margin: "0 auto", padding: "32px var(--pf-pad-x)" }}>
       <Link to="/admin/customers" style={{ color: "var(--color-text-muted)", fontSize: "0.85rem", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, marginBottom: 8 }}>
         <ArrowLeft size={14} /> Back to Customers
       </Link>

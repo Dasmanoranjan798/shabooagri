@@ -64,4 +64,8 @@
   --transition: all 0.16s cubic-bezier(0.4, 0, 0.2, 1);
 
   --container: 1120px;
+  /* Fluid gutter used by every page/section: tight on small phones, capped on
+     large screens. Keeps content off the viewport edge without hard-coding 24px
+     everywhere (which cramped the narrowest devices). */
+  --pf-pad-x: clamp(16px, 4vw, 24px);
 }

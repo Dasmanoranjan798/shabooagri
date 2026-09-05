@@ -9,7 +9,7 @@ export const LegalLayout: React.FC<{
   return (
     <MarketingLayout>
       {() => (
-        <section style={{ padding: "56px 24px 80px", maxWidth: 780, margin: "0 auto" }}>
+        <section style={{ padding: "56px var(--pf-pad-x) 80px", maxWidth: 780, margin: "0 auto" }}>
           <h1 style={{ fontSize: "1.9rem", fontWeight: 800, marginBottom: 8 }}>{title}</h1>
           <p style={{ color: "var(--color-text-muted)", fontSize: "0.85rem", marginBottom: 40 }}>
             Effective date: {effectiveDate}

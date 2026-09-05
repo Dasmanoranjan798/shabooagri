@@ -14,6 +14,24 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Global overflow guard. The real overflow causes are fixed at the component
+   level (responsive nav, fluid grids, no fixed-width children); this is only a
+   defence-in-depth net so a future stray element can never introduce a
+   horizontal scrollbar on the whole page. `clip` (not `hidden`) avoids creating
+   a scroll container, so sticky/position contexts still work. */
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+/* Media never escapes its container (no <img> today, but future-proof). */
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans);
@@ -56,7 +74,16 @@ button {
   width: 100%;
   max-width: var(--container);
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 var(--pf-pad-x);
+}
+
+/* Responsive grid primitive. `min(100%, Npx)` guarantees a track can never be
+   wider than the container, so auto-fit grids never overflow on narrow phones
+   while still forming multiple columns when there is room. */
+.pf-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--pf-grid-min, 260px)), 1fr));
 }
 
 .pf-eyebrow {
@@ -318,4 +345,69 @@ button {
 }
 .pf-navlink:hover {
   color: var(--color-text);
+}
+
+/* ---- Responsive header navigation ----------------------------------- */
+/* Desktop: inline links. Mobile: a hamburger toggles a full-width dropdown.
+   Single breakpoint (768px) keeps the strategy coherent. */
+.pf-nav-desktop {
+  display: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.pf-nav-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.pf-nav-toggle:hover {
+  background: var(--color-bg-subtle);
+}
+.pf-nav-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-ring);
+}
+
+/* Mobile dropdown panel, revealed under the sticky header. */
+.pf-mobile-nav {
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+.pf-mobile-nav-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px var(--pf-pad-x) 18px;
+}
+.pf-mobile-nav .pf-navlink {
+  padding: 12px 8px;
+  font-size: var(--text-base);
+  border-radius: var(--radius-sm);
+}
+.pf-mobile-nav .pf-navlink:hover {
+  background: var(--color-bg-subtle);
+}
+.pf-mobile-nav .pf-btn {
+  margin-top: 8px;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .pf-nav-desktop {
+    display: flex;
+  }
+  .pf-nav-toggle,
+  .pf-mobile-nav {
+    display: none;
+  }
 }
