@@ -3,12 +3,11 @@ import { Download, Info, CheckCircle2, Smartphone, Monitor, Apple } from "lucide
 import { MarketingLayout } from "../../components/MarketingLayout";
 
 const CHANGELOG = [
-  "Driver pay made simple: see exactly how much each driver has earned, record payments out (full or partial), and keep a complete history — with a built-in check so you never overpay",
-  "Pay drivers by the minute: alongside hourly and monthly, you can now set a per-minute rate",
-  "Machine hours & service reminders: working hours are tracked automatically from jobs, and maintenance is scheduled by operating hours — you're told when a service is due or overdue, and completing it resets the clock",
-  "New Driver and Machine reports — including a machine-maintenance report — with CSV export. Drivers get a \"My Earnings\" screen to see their own pay, and nothing else",
-  "Overpayments now become customer credit automatically — no separate \"Record Advance\" step to remember",
-  "\"Void\" is now called \"Cancel\" everywhere — cancelling an invoice or payment keeps it in your history with a reason, just clearer wording",
+  "Customer list at a glance: every farmer now shows their address, phone and outstanding balance right on the card — no need to open each one",
+  "Driver cards show worked hours and how much is still payable; open a driver to see a customer-by-customer work breakdown alongside earned, paid and remaining",
+  "Machine cards show real working hours and maintenance status (due / overdue); open a machine to see which customers its hours came from",
+  "Cleaner, faster screens: a compact search-and-add on every list, tidier invoice cards, and clearer, easier-to-read numbers on the dashboard",
+  "One consistent colour language for money across the whole app — green for money coming in (what customers owe you), red for money going out (what you owe drivers)",
   "Performance & bug fixes",
 ];
 
@@ -67,13 +66,13 @@ export const DownloadAppPage: React.FC = () => {
             >
               <PlatformCard icon={Smartphone} name="Android">
                 <a
-                  href="/downloads/shabooagri-v0.8.16.apk"
-                  download="shabooagri-v0.8.16.apk"
+                  href="/downloads/shabooagri-v0.8.17.apk"
+                  download="shabooagri-v0.8.17.apk"
                   className="pf-btn pf-btn-primary"
                   style={{ textDecoration: "none", width: "100%" }}
                 >
                   <Download size={18} />
-                  APK (v0.8.16)
+                  APK (v0.8.17)
                 </a>
               </PlatformCard>
 
@@ -117,7 +116,7 @@ export const DownloadAppPage: React.FC = () => {
             <div className="pf-card" style={{ padding: 32 }}>
               <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: 18, display: "flex", alignItems: "center", gap: 10 }}>
                 <Info size={22} color="var(--color-primary)" />
-                What's New in v0.8.16
+                What's New in v0.8.17
               </h2>
               <ul style={{ paddingLeft: 22, margin: 0, color: "var(--color-text-secondary)", display: "flex", flexDirection: "column", gap: 9, fontSize: "var(--text-sm)", lineHeight: 1.6 }}>
                 {CHANGELOG.map((item) => (
@@ -135,7 +134,7 @@ export const DownloadAppPage: React.FC = () => {
                   borderLeft: "3px solid var(--color-primary)",
                 }}
               >
-                <strong>Updated 5 September 2026.</strong> Android, Windows and macOS are all v0.8.16. iOS is pending App&nbsp;Store / TestFlight submission.
+                <strong>Updated 5 September 2026.</strong> Android is now v0.8.17. Windows and macOS are v0.8.16 (rebuild to follow); iOS is pending App&nbsp;Store / TestFlight submission.
               </div>
             </div>
 
