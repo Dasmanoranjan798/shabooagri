@@ -49,11 +49,20 @@ invoiceRouter.post(
 // Scoped payment history routes
 paymentRouter.get("/", asyncHandler(paymentController.listPayments));
 
-// NOTE: there is no customer-advance endpoint. Advance/credit is created only
-// as the leftover of an overpayment in recordPaymentTx (never as a standalone
-// entry), and the resulting available credit is surfaced on the customer
-// itself (customer.service.listWithFinance → creditBalance), so the old
-// read-only GET /advances had no remaining consumer and was removed.
+// The standalone customer-advance feature is gone: advance/credit is created
+// ONLY as the leftover of an overpayment in recordPaymentTx (never as a
+// standalone entry), and available credit is now surfaced on the customer
+// itself (customer.service.listWithFinance → creditBalance).
+//
+// This route is kept ONLY as a read-only backward-compat shim for pre-0.8.17
+// installs, whose Payments screen still GETs it — it returns an empty list and
+// can never create anything. It MUST stay registered before "/:id" so
+// "advances" is not matched as a payment id (a uuid column → invalid-uuid 500).
+// Safe to delete once every client is >= 0.8.17.
+paymentRouter.get("/advances", (_req, res) => {
+  res.json([]);
+});
+
 paymentRouter.get("/:id", asyncHandler(paymentController.getPaymentById));
 
 // Cancel, not delete (§ dependency-locked deletion, Rule 1 & 5) — Owner-only.
