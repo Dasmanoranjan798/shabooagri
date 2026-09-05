@@ -74,6 +74,7 @@ enum JobAssignmentField {
 
 enum CompensationType {
   HOURLY
+  PER_MINUTE
   MONTHLY
   YEARLY
 }
@@ -82,7 +83,7 @@ enum InvoiceStatus {
   UNPAID
   PARTIALLY_PAID
   PAID
-  VOIDED
+  CANCELLED
 }
 
 enum PaymentMethod {
@@ -196,6 +197,7 @@ model Company {
   invoices             Invoice[]
   payments             Payment[]
   customerAdvances     CustomerAdvance[]
+  driverPayments       DriverPayment[]
   auditLogs            AuditLog[]
   gstCessRules         GstCessRule[]
   staffInvites         StaffInvite[]
@@ -291,8 +293,8 @@ model User {
   recordedFuelEntries JobFuelEntry[]
   recordedExpenses    Expense[]
   receivedPayments    Payment[]           @relation("PaymentReceivedBy")
-  voidedPayments      Payment[]           @relation("PaymentVoidedBy")
-  voidedInvoices      Invoice[]
+  cancelledPayments   Payment[]           @relation("PaymentCancelledBy")
+  cancelledInvoices   Invoice[]
   receivedAdvances    CustomerAdvance[]
   invitesSent         StaffInvite[]
 
@@ -352,6 +354,7 @@ model Employee {
   employmentStatus EmploymentStatus @default(ACTIVE) @map("employment_status")
   compensationType CompensationType @default(HOURLY) @map("compensation_type")
   hourlyRate       Decimal?         @map("hourly_rate") @db.Decimal(10, 2)
+  perMinuteRate    Decimal?         @map("per_minute_rate") @db.Decimal(10, 4)
   monthlySalary    Decimal?         @map("monthly_salary") @db.Decimal(10, 2)
   yearlySalary     Decimal?         @map("yearly_salary") @db.Decimal(10, 2)
   joinedDate       DateTime?        @map("joined_date") @db.Date
@@ -382,6 +385,7 @@ model Driver {
   bookings         Booking[]
   jobs             Job[]
   workSessions     JobWorkSession[]
+  payments         DriverPayment[]
 
   @@map("drivers")
 }
@@ -876,22 +880,22 @@ model Invoice {
   igstAmount          Decimal?      @default(0) @map("igst_amount") @db.Decimal(10, 2)
   cessRate            Decimal?      @default(0) @map("cess_rate") @db.Decimal(5, 2)
   cessAmount          Decimal?      @default(0) @map("cess_amount") @db.Decimal(10, 2)
-  // Void, not delete (§ dependency-locked deletion) — an invoice stays
-  // permanently visible in history/reports with status VOIDED instead of
-  // being removed. voidReason is mandatory at the service layer whenever
-  // status is set to VOIDED; nullable here only because every other status
+  // Cancel, not delete (§ dependency-locked deletion) — an invoice stays
+  // permanently visible in history/reports with status CANCELLED instead of
+  // being removed. cancelReason is mandatory at the service layer whenever
+  // status is set to CANCELLED; nullable here only because every other status
   // never populates these three.
-  voidReason          String?       @map("void_reason")
-  voidedAt            DateTime?     @map("voided_at")
-  voidedBy            String?       @map("voided_by") @db.Uuid
+  cancelReason        String?       @map("cancel_reason")
+  cancelledAt         DateTime?     @map("cancelled_at")
+  cancelledBy         String?       @map("cancelled_by") @db.Uuid
   createdAt           DateTime      @default(now()) @map("created_at")
   updatedAt           DateTime      @updatedAt @map("updated_at")
 
-  company      Company   @relation(fields: [companyId], references: [id])
-  booking      Booking?  @relation(fields: [bookingId], references: [id])
-  customer     Customer  @relation(fields: [customerId], references: [id])
-  voidedByUser User?     @relation(fields: [voidedBy], references: [id])
-  payments     Payment[]
+  company         Company   @relation(fields: [companyId], references: [id])
+  booking         Booking?  @relation(fields: [bookingId], references: [id])
+  customer        Customer  @relation(fields: [customerId], references: [id])
+  cancelledByUser User?     @relation(fields: [cancelledBy], references: [id])
+  payments        Payment[]
 
   @@unique([companyId, invoiceNumber])
   @@index([companyId, status])
@@ -908,22 +912,22 @@ model Payment {
   receivedBy      String        @map("received_by") @db.Uuid
   receivedAt      DateTime      @default(now()) @map("received_at")
   notes           String?
-  // Same void-not-delete pattern as Invoice — independent of the parent
-  // invoice's own void state, since a single payment (not the whole
+  // Same cancel-not-delete pattern as Invoice — independent of the parent
+  // invoice's own cancel state, since a single payment (not the whole
   // invoice) can be the one that was recorded in error.
-  voided          Boolean       @default(false)
-  voidReason      String?       @map("void_reason")
-  voidedAt        DateTime?     @map("voided_at")
-  voidedBy        String?       @map("voided_by") @db.Uuid
+  cancelled       Boolean       @default(false)
+  cancelReason    String?       @map("cancel_reason")
+  cancelledAt     DateTime?     @map("cancelled_at")
+  cancelledBy     String?       @map("cancelled_by") @db.Uuid
   createdAt       DateTime      @default(now()) @map("created_at")
 
-  company      Company @relation(fields: [companyId], references: [id])
-  invoice      Invoice @relation(fields: [invoiceId], references: [id])
-  receiver     User    @relation("PaymentReceivedBy", fields: [receivedBy], references: [id])
-  voidedByUser User?   @relation("PaymentVoidedBy", fields: [voidedBy], references: [id])
+  company         Company @relation(fields: [companyId], references: [id])
+  invoice         Invoice @relation(fields: [invoiceId], references: [id])
+  receiver        User    @relation("PaymentReceivedBy", fields: [receivedBy], references: [id])
+  cancelledByUser User?   @relation("PaymentCancelledBy", fields: [cancelledBy], references: [id])
 
   @@index([invoiceId])
-  @@index([voided])
+  @@index([cancelled])
   @@map("payments")
 }
 
@@ -950,6 +954,48 @@ model CustomerAdvance {
 
   @@index([customerId])
   @@map("customer_advances")
+}
+
+// Driver Payment Out ledger — money the business pays a driver against their
+// earned compensation. There is one row per payment transaction (partial
+// payments are multiple rows). The driver's earnings are NOT stored here —
+// they are derived live from work sessions × the driver's rate
+// (driverCompensation.service). `earnedSnapshot` captures the total earned at
+// the moment of THIS payment purely as an audit/history value. Remaining
+// payable = (live total earned) − Σ(non-cancelled payment amounts); a payment
+// is rejected if it would exceed that remaining (double-payment protection).
+// Cancel-not-delete mirrors Payment/Invoice: a reversed payment stays in
+// history with cancelled=true and stops counting toward "paid".
+model DriverPayment {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId       String        @map("company_id") @db.Uuid
+  driverId        String        @map("driver_id") @db.Uuid
+  amount          Decimal       @db.Decimal(10, 2)
+  earnedSnapshot  Decimal       @map("earned_snapshot") @db.Decimal(12, 2)
+  paymentMethod   PaymentMethod @map("payment_method")
+  referenceNumber String?       @map("reference_number")
+  // Optional descriptive work period this payment covers — informational for
+  // reports/receipts, NOT used to gate double-payment (remaining is always
+  // computed from live earnings vs. total non-cancelled paid).
+  periodFrom      DateTime?     @map("period_from")
+  periodTo        DateTime?     @map("period_to")
+  notes           String?
+  // Plain UUID audit columns (no relation), same pattern as JobWorkSession —
+  // resolved to names at read time.
+  paidBy          String        @map("paid_by") @db.Uuid
+  paidAt          DateTime      @default(now()) @map("paid_at")
+  cancelled       Boolean       @default(false)
+  cancelReason    String?       @map("cancel_reason")
+  cancelledAt     DateTime?     @map("cancelled_at")
+  cancelledBy     String?       @map("cancelled_by") @db.Uuid
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+  driver  Driver  @relation(fields: [driverId], references: [id])
+
+  @@index([companyId, driverId])
+  @@index([cancelled])
+  @@map("driver_payments")
 }
 
 // ---------- Auth support (§5) ----------

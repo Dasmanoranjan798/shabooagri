@@ -35,9 +35,8 @@ import '../../features/maintenance/presentation/maintenance_screen.dart';
 import '../../features/payments/presentation/new_invoice_screen.dart';
 import '../../features/payments/presentation/payment_detail_screen.dart';
 import '../../features/payments/presentation/payment_list_screen.dart';
-import '../../features/payments/presentation/record_advance_screen.dart';
-import '../../features/payments/presentation/take_payment_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
+import '../../features/reports/presentation/operational_reports_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/setup/presentation/setup_screen.dart';
 import '../../features/team/presentation/invite_staff_screen.dart';
@@ -201,14 +200,6 @@ GoRouter buildAppRouter(String initialLocation) {
       },
         routes: [
           GoRoute(
-            path: 'take',
-            builder: (context, state) => TakePaymentScreen(preselectedCustomerId: state.extra as String?),
-          ),
-          GoRoute(
-            path: 'advance/new',
-            builder: (context, state) => const RecordAdvanceScreen(),
-          ),
-          GoRoute(
             path: 'invoice/new',
             builder: (context, state) => const NewInvoiceScreen(),
           ),
@@ -297,6 +288,12 @@ GoRouter buildAppRouter(String initialLocation) {
       GoRoute(
         path: '/reports',
         builder: (context, state) => const ReportsScreen(),
+        routes: [
+          GoRoute(
+            path: 'operational',
+            builder: (context, state) => const OperationalReportsScreen(),
+          ),
+        ],
       ),
     ],
   );

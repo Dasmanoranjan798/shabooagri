@@ -19,26 +19,17 @@ export const createManualInvoiceSchema = z.object({
   dueDate: z.string().optional(),
 });
 
-export const recordCustomerAdvanceSchema = z.object({
-  customerId: z.string().uuid(),
-  amount: z.number().positive("Advance amount must be greater than zero"),
-  paymentMethod: z.enum(["CASH", "UPI", "BANK_TRANSFER", "CREDIT"]),
-  referenceNumber: z.string().trim().optional(),
-  notes: z.string().trim().optional(),
-});
-
 // § dependency-locked deletion, Rule 1: void reason is mandatory, never
-// just a nicety — it's what makes the permanent "Voided" history entry
+// just a nicety — it's what makes the permanent "Cancelled" history entry
 // meaningful.
-export const voidSchema = z.object({
-  reason: z.string().trim().min(1, "A reason is required to void this"),
+export const cancelSchema = z.object({
+  reason: z.string().trim().min(1, "A reason is required to cancel this"),
 });
 
 export type ReceivePaymentInput = z.infer<typeof receivePaymentSchema>;
 export type UpdateInvoiceTaxInput = z.infer<typeof updateInvoiceTaxSchema>;
 export type CreateManualInvoiceInput = z.infer<typeof createManualInvoiceSchema>;
-export type RecordCustomerAdvanceInput = z.infer<typeof recordCustomerAdvanceSchema>;
-export type VoidInput = z.infer<typeof voidSchema>;
+export type CancelInput = z.infer<typeof cancelSchema>;
 
 export const filterInvoicesSchema = z.object({
   status: z.array(z.string()).optional(),

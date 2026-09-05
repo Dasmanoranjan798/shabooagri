@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const employmentStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
-const compensationTypeSchema = z.enum(["HOURLY", "MONTHLY", "YEARLY"]);
+const compensationTypeSchema = z.enum(["HOURLY", "PER_MINUTE", "MONTHLY", "YEARLY"]);
 
 export const createEmployeeSchema = z.object({
   // Client-authoritative offline id (see villages validator); optional + UUID.
@@ -12,6 +12,7 @@ export const createEmployeeSchema = z.object({
   employmentStatus: employmentStatusSchema.optional(),
   compensationType: compensationTypeSchema.optional(),
   hourlyRate: z.coerce.number().min(0).optional().nullable(),
+  perMinuteRate: z.coerce.number().min(0).optional().nullable(),
   monthlySalary: z.coerce.number().min(0).optional().nullable(),
   yearlySalary: z.coerce.number().min(0).optional().nullable(),
   joinedDate: z.coerce.date().optional(),

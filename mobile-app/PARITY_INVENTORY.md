@@ -150,24 +150,24 @@ Produced by reading the entire website source (`frontend/src`) file by file — 
 ## PAYMENTS & INVOICING (`/payments`)
 
 ### List
-**Website:** 5 KPI cards (Total Invoices, Total Receivables, Total Collected, Outstanding Balance, Advance Balance). Status filter tabs — All/Unpaid/Partially Paid/Paid/Voided (counts). Search box. "Record Advance" button. "New Invoice" (manual) button. "Export Excel". Per-row "Receive Payment" button directly on the list. Kebab: View Receipt, Void Invoice. Secondary "Customer Advances" table section.
+**Website:** 5 KPI cards (Total Invoices, Total Receivables, Total Collected, Outstanding Balance, Advance Balance). Status filter tabs — All/Unpaid/Partially Paid/Paid/Cancelled (counts). Search box. "Record Advance" button. "New Invoice" (manual) button. "Export Excel". Per-row "Receive Payment" button directly on the list. Kebab: View Receipt, Cancel Invoice. Secondary "Customer Advances" table section.
 **Mobile:** ✅ Full. All 5 KPI cards, status filter tabs, search, direct-from-row Receive button, CSV export, Customer Advances section all added.
 
 ### Detail / Receipt
-**Mobile:** ✅ Full. Rebuilt entirely on the website's own `GET /invoices/:id/receipt` endpoint — company header, full conditional GST breakdown, bank/UPI details, Payment Collections History with per-payment void, Print/PDF, CSV, and WhatsApp share (message template text confirmed against source) all added. **Still missing:** the editable GST/Tax panel (view-only for now — a real remaining gap, not silently dropped).
+**Mobile:** ✅ Full. Rebuilt entirely on the website's own `GET /invoices/:id/receipt` endpoint — company header, full conditional GST breakdown, bank/UPI details, Payment Collections History with per-payment cancel, Print/PDF, CSV, and WhatsApp share (message template text confirmed against source) all added. **Still missing:** the editable GST/Tax panel (view-only for now — a real remaining gap, not silently dropped).
 
 ### Receive Payment
-**Mobile:** ✅ Matches structurally. Cosmetic gap unchanged: raw enum labels vs. website's friendly labels.
+**Mobile:** ✅ Matches structurally. Cosmetic gap unchanged: raw enum labels vs. website's friendly labels. **Overpayment is now supported here:** paying more than the invoice balance settles the customer's other open invoices (oldest-first) and turns any final leftover into their advance/credit balance — this is the single entry point for creating customer credit.
 
-### Record Advance
-**Mobile:** ✅ Full. New screen built.
+### ~~Record Advance~~ — REMOVED
+The standalone "Record Advance" screen/button/quick-action and the `POST /payments/advances` create endpoint were removed. Customer advance/credit is **not** a separate money-entry feature: it is created automatically as the leftover of an overpayment in the normal Receive Payment flow (see above). The read-only "Customer Advances" balance section and `GET /payments/advances` remain to display those balances.
 
 ### New Invoice (manual)
 **Mobile:** ✅ Full. New screen built (confirmed the real endpoint is `POST /invoices`, not `/invoices/manual`).
 
-### Void (invoice or individual payment)
-**Website:** Mandatory Reason, contextual description text, works at both invoice-level and individual-payment-level.
-**Mobile:** 🟡 Partial. Invoice-level void matches (mandatory reason). **Missing:** individual-payment-level void (only whole-invoice void exists), descriptive helper text.
+### Cancel (invoice or individual payment)
+**Website:** Mandatory Reason, contextual description text, works at both invoice-level and individual-payment-level. (Formerly labelled "Void".)
+**Mobile:** 🟡 Partial. Invoice-level cancel matches (mandatory reason). **Missing:** individual-payment-level cancel (only whole-invoice cancel exists), descriptive helper text.
 
 ---
 
@@ -297,7 +297,7 @@ This list was the initial audit's finding, before the full-parity build run. Kep
 7. ~~Villages: search box, Status column, Mark Inactive/Active action.~~ **Closed** (earlier checkpoint).
 8. Employees: filter tabs/search/Joined-Date ✅ (earlier checkpoint). No further gaps this run.
 9. ~~Team module: entirely unbuilt.~~ **Closed** (Checkpoint 5).
-10. ~~Payments: KPI cards, filter tabs, search, Record Advance, New Invoice, receipt/print view, per-payment void.~~ **Closed** (Checkpoint 3). One residual gap remains: editable GST/Tax panel (view-only).
+10. ~~Payments: KPI cards, filter tabs, search, Record Advance, New Invoice, receipt/print view, per-payment cancel.~~ **Closed** (Checkpoint 3). One residual gap remains: editable GST/Tax panel (view-only).
 11. ~~Expenses: KPI cards, filter tabs, search, Detail screen.~~ **Closed** (Checkpoint 2). Export Excel was built as CSV (disclosed deviation).
 12. ~~Fuel: machine/date filters, export, Total Cost KPI.~~ **Closed** (Checkpoint 2).
 13. Maintenance: machine filter on Records still missing — **not part of this run's 14-checkpoint scope, still open.**

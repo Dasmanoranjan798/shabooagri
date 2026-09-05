@@ -6,6 +6,7 @@ import '../../../core/repositories/auth_repository.dart';
 import '../../../core/widgets/role_shell.dart';
 import '../../jobs/presentation/job_list_screen.dart';
 import 'driver_home_screen.dart';
+import 'driver_my_earnings_screen.dart';
 import 'driver_profile_screen.dart';
 
 /// Which of the 3 nav destinations is active. Lifted to a provider (rather
@@ -38,11 +39,13 @@ class DriverShellScreen extends ConsumerWidget {
       tabs: const [
         RoleTab(icon: Icons.home_outlined, selectedIcon: Icons.home, label: 'Home'),
         RoleTab(icon: Icons.work_outline, selectedIcon: Icons.work, label: 'Job Cards'),
+        RoleTab(icon: Icons.payments_outlined, selectedIcon: Icons.payments, label: 'Earnings'),
         RoleTab(icon: Icons.person_outline, selectedIcon: Icons.person, label: 'Profile'),
       ],
       children: const [
         DriverHomeScreen(),
         JobListScreen(),
+        DriverMyEarningsScreen(),
         DriverProfileScreen(),
       ],
     );

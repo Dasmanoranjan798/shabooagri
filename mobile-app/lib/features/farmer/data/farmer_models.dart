@@ -48,7 +48,7 @@ class FarmerInvoice {
   final double totalAmount;
   final double paidAmount;
   final double balanceAmount;
-  final String status; // UNPAID | PARTIALLY_PAID | PAID | VOIDED
+  final String status; // UNPAID | PARTIALLY_PAID | PAID | CANCELLED
   final String? bookingNumber;
 
   FarmerInvoice.fromJson(Map<String, dynamic> json)

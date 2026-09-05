@@ -5,12 +5,14 @@ export interface DriverCompensationSummary {
   driverId: string;
   driverName: string;
   roleTitle: string | null;
-  compensationType: "HOURLY" | "MONTHLY" | "YEARLY";
+  compensationType: "HOURLY" | "PER_MINUTE" | "MONTHLY" | "YEARLY";
   hourlyRate: number | null;
+  perMinuteRate: number | null;
   monthlySalary: number | null;
   yearlySalary: number | null;
   totalCompletedJobs: number;
   totalWorkedHours: number;
+  totalWorkedMinutes: number;
   calculatedEarnings: number;
   explanation: string;
 }
@@ -72,10 +74,14 @@ export async function getDriverCompensationSummary(
   const emp = driver.employee;
   const compType = emp.compensationType;
   const hourlyRate = emp.hourlyRate ? Number(emp.hourlyRate) : null;
+  const perMinuteRate = emp.perMinuteRate ? Number(emp.perMinuteRate) : null;
   const monthlySalary = emp.monthlySalary ? Number(emp.monthlySalary) : null;
   const yearlySalary = emp.yearlySalary ? Number(emp.yearlySalary) : null;
 
   const roundedHours = Math.round(totalWorkedHours * 100) / 100;
+  // Minutes derive from the same canonical worked-hours value so the two
+  // never disagree; hourly pay uses hours, per-minute pay uses minutes.
+  const roundedMinutes = Math.round(totalWorkedHours * 60 * 100) / 100;
 
   let calculatedEarnings = 0;
   let explanation = "";
@@ -84,6 +90,10 @@ export async function getDriverCompensationSummary(
     const rate = hourlyRate ?? 0;
     calculatedEarnings = Math.round(roundedHours * rate * 100) / 100;
     explanation = `${roundedHours} worked hours × ₹${rate}/hr`;
+  } else if (compType === "PER_MINUTE") {
+    const rate = perMinuteRate ?? 0;
+    calculatedEarnings = Math.round(roundedMinutes * rate * 100) / 100;
+    explanation = `${roundedMinutes} worked minutes × ₹${rate}/min`;
   } else if (compType === "MONTHLY") {
     calculatedEarnings = monthlySalary ?? 0;
     explanation = `Fixed monthly salary: ₹${calculatedEarnings} (Job hours recorded: ${roundedHours} hrs)`;
@@ -98,10 +108,12 @@ export async function getDriverCompensationSummary(
     roleTitle: emp.roleTitle,
     compensationType: compType,
     hourlyRate,
+    perMinuteRate,
     monthlySalary,
     yearlySalary,
     totalCompletedJobs,
     totalWorkedHours: roundedHours,
+    totalWorkedMinutes: roundedMinutes,
     calculatedEarnings,
     explanation,
   };

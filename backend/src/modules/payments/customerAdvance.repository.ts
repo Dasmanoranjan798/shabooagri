@@ -12,30 +12,15 @@ export interface AdvanceListFilter {
   customerId?: string;
 }
 
+// Read-only. A CustomerAdvance row represents a customer's advance/credit
+// balance — the leftover of an overpayment, created inside
+// payment.repository.recordPaymentTx (the single authoritative write path).
+// There is deliberately no create/update helper here: credit is never
+// entered standalone, only produced as a side effect of a normal payment.
 export function findAllForCompany(companyId: string, filter: AdvanceListFilter = {}) {
   return prisma.customerAdvance.findMany({
     where: { companyId, ...filter },
     include: advanceIncludeRelations,
     orderBy: { receivedAt: "desc" },
-  });
-}
-
-export function create(
-  companyId: string,
-  data: Omit<Prisma.CustomerAdvanceUncheckedCreateInput, "companyId">,
-) {
-  return prisma.customerAdvance.create({
-    data: { ...data, companyId },
-    include: advanceIncludeRelations,
-  });
-}
-
-export async function setAppliedAmount(companyId: string, id: string, appliedAmount: number) {
-  const existing = await prisma.customerAdvance.findFirst({ where: { id, companyId } });
-  if (!existing) return null;
-  return prisma.customerAdvance.update({
-    where: { id },
-    data: { appliedAmount },
-    include: advanceIncludeRelations,
   });
 }

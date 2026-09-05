@@ -109,33 +109,33 @@ export async function create(
   });
 }
 
-// Void, not delete (§ dependency-locked deletion) — an Invoice stays
-// permanently in history/reports with status VOIDED instead of being
+// Cancel, not delete (§ dependency-locked deletion) — an Invoice stays
+// permanently in history/reports with status CANCELLED instead of being
 // removed. No deleteScoped export exists on this repository on purpose.
 //
-// Cascades to every non-voided Payment under this invoice: an invoice
-// voided as a whole must also stop each of its payments counting toward
-// revenue (payment.repository.ts's sum* queries filter on `voided`, not
-// on the parent invoice's status), so leaving them un-voided would let a
-// "Voided" invoice keep contributing to reported revenue. Each payment
-// keeps its own voidReason distinct from the invoice's, prefixed so the
+// Cascades to every non-cancelled Payment under this invoice: an invoice
+// cancelled as a whole must also stop each of its payments counting toward
+// revenue (payment.repository.ts's sum* queries filter on `cancelled`, not
+// on the parent invoice's status), so leaving them un-cancelled would let a
+// "Cancelled" invoice keep contributing to reported revenue. Each payment
+// keeps its own cancelReason distinct from the invoice's, prefixed so the
 // cascade is traceable from the payment side too.
-export async function voidScoped(companyId: string, id: string, reason: string, voidedBy: string) {
+export async function cancelScoped(companyId: string, id: string, reason: string, cancelledBy: string) {
   return prisma.$transaction(async (tx) => {
     const existing = await tx.invoice.findFirst({ where: { id, companyId } });
     if (!existing) return null;
-    if (existing.status === "VOIDED") {
-      throw new AppError(400, "This invoice has already been voided");
+    if (existing.status === "CANCELLED") {
+      throw new AppError(400, "This invoice has already been cancelled");
     }
 
     await tx.payment.updateMany({
-      where: { invoiceId: id, voided: false },
-      data: { voided: true, voidReason: `Invoice voided: ${reason}`, voidedAt: new Date(), voidedBy },
+      where: { invoiceId: id, cancelled: false },
+      data: { cancelled: true, cancelReason: `Invoice cancelled: ${reason}`, cancelledAt: new Date(), cancelledBy },
     });
 
     return tx.invoice.update({
       where: { id },
-      data: { status: "VOIDED", voidReason: reason, voidedAt: new Date(), voidedBy },
+      data: { status: "CANCELLED", cancelReason: reason, cancelledAt: new Date(), cancelledBy },
       include: invoiceIncludeRelations,
     });
   });
@@ -168,14 +168,14 @@ export async function filterInvoicesWithAnalytics(
   if (input.status && input.status.length > 0) {
     const statuses = new Set(input.status.map(s => s.toUpperCase()));
     if (statuses.has("ALL")) {
-      // By default, hide VOIDED invoices in the "All" view to prevent confusion
-      where.status = { not: "VOIDED" };
+      // By default, hide CANCELLED invoices in the "All" view to prevent confusion
+      where.status = { not: "CANCELLED" };
     } else {
       if (statuses.has("OVERDUE")) includeOverdue = true;
       if (statuses.has("DUE_TODAY")) includeDueToday = true;
       if (statuses.has("DUE_SOON")) includeDueSoon = true;
       
-      const dbStatuses = ["UNPAID", "PARTIALLY_PAID", "PAID", "VOIDED"].filter(s => statuses.has(s));
+      const dbStatuses = ["UNPAID", "PARTIALLY_PAID", "PAID", "CANCELLED"].filter(s => statuses.has(s));
       statusIn = dbStatuses;
       
       const orConditions: Prisma.InvoiceWhereInput[] = [];
@@ -228,7 +228,7 @@ export async function filterInvoicesWithAnalytics(
       } else if (field === "dueDate") {
         where.dueDate = dateFilter;
       } else if (field === "paymentDate") {
-        where.payments = { some: { receivedAt: dateFilter, voided: false } };
+        where.payments = { some: { receivedAt: dateFilter, cancelled: false } };
       } else if (field === "workCompletionDate") {
         where.booking = { job: { status: "COMPLETED", endTime: dateFilter } };
       }
@@ -335,7 +335,7 @@ export async function filterInvoicesWithAnalytics(
   if (pTo) pTo.setDate(pTo.getDate() + 1);
 
   for (const inv of invoices) {
-    if (inv.status === "VOIDED") continue;
+    if (inv.status === "CANCELLED") continue;
 
     const total = Number(inv.totalAmount || 0);
     const balance = Number(inv.balanceAmount || 0);
@@ -346,7 +346,7 @@ export async function filterInvoicesWithAnalytics(
     let scopedPaid = 0;
     if (inv.payments) {
       for (const p of inv.payments) {
-        if (p.voided) continue;
+        if (p.cancelled) continue;
         const pDate = new Date(p.receivedAt);
         if (pFrom && pDate < pFrom) continue;
         if (pTo && pDate >= pTo) continue;
@@ -403,7 +403,7 @@ export async function filterInvoicesWithAnalytics(
   for (const inv of invoices) {
     if (!inv.payments) continue;
     for (const p of inv.payments) {
-      if (p.voided) continue;
+      if (p.cancelled) continue;
       
       const pDate = new Date(p.receivedAt);
       if (pFrom && pDate < pFrom) continue;

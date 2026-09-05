@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { requireUser } from "../../shared/utils/requireUser";
 import * as machineService from "./machine.service";
+import * as machineUtilizationService from "./machineUtilization.service";
 import { createMachineSchema, updateMachineSchema } from "./machine.validators";
 
 export async function list(req: Request, res: Response) {
@@ -33,4 +34,13 @@ export async function remove(req: Request, res: Response) {
   const user = requireUser(req);
   await machineService.remove(user.companyId, req.params.id);
   res.status(204).send();
+}
+
+// Machine working-time + maintenance status (total worked, since-last-service,
+// remaining, next threshold, overdue-by, status). Computed authoritatively in
+// the backend from work sessions — clients render, never recompute.
+export async function getUtilization(req: Request, res: Response) {
+  const user = requireUser(req);
+  const status = await machineUtilizationService.getMachineMaintenanceStatus(user.companyId, req.params.id);
+  res.status(200).json(status);
 }

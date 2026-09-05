@@ -61,7 +61,7 @@ export async function getRecordById(req: Request, res: Response) {
 export async function createRecord(req: Request, res: Response) {
   const user = requireUser(req);
   const input = createRecordSchema.parse(req.body);
-  const record = await maintenanceService.createRecord(user.companyId, input);
+  const record = await maintenanceService.createRecord(user.companyId, input, user.id);
   res.status(201).json(record);
 }
 

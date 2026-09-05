@@ -39,30 +39,27 @@ invoiceRouter.patch(
   asyncHandler(paymentController.updateInvoiceTax),
 );
 
-// Void, not delete (§ dependency-locked deletion, Rule 1 & 5) — Owner-only.
+// Cancel, not delete (§ dependency-locked deletion, Rule 1 & 5) — Owner-only.
 invoiceRouter.post(
-  "/:id/void",
-  requirePermission("payment.void"),
-  asyncHandler(paymentController.voidInvoice),
+  "/:id/cancel",
+  requirePermission("payment.cancel"),
+  asyncHandler(paymentController.cancelInvoice),
 );
 
 // Scoped payment history routes
 paymentRouter.get("/", asyncHandler(paymentController.listPayments));
 
-// Customer advances (money received with no invoice yet) — registered
-// before the "/:id" route below so "/advances" doesn't get swallowed as an id.
+// Customer advance/credit balances (read-only). These are created
+// automatically as the leftover of an overpayment in recordPaymentTx — there
+// is no standalone endpoint to create one. Registered before the "/:id" route
+// below so "/advances" doesn't get swallowed as an id.
 paymentRouter.get("/advances", asyncHandler(paymentController.listCustomerAdvances));
-paymentRouter.post(
-  "/advances",
-  requirePermission("payment.receive"),
-  asyncHandler(paymentController.recordCustomerAdvance),
-);
 
 paymentRouter.get("/:id", asyncHandler(paymentController.getPaymentById));
 
-// Void, not delete (§ dependency-locked deletion, Rule 1 & 5) — Owner-only.
+// Cancel, not delete (§ dependency-locked deletion, Rule 1 & 5) — Owner-only.
 paymentRouter.post(
-  "/:id/void",
-  requirePermission("payment.void"),
-  asyncHandler(paymentController.voidPayment),
+  "/:id/cancel",
+  requirePermission("payment.cancel"),
+  asyncHandler(paymentController.cancelPayment),
 );

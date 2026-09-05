@@ -51,14 +51,29 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
     setState(() => _acting = true);
     try {
       final dio = ref.read(apiClientProvider);
-      await dio.post('/invoices/${widget.invoiceId}/payments', data: {
+      final response = await dio.post('/invoices/${widget.invoiceId}/payments', data: {
         'amount': amount,
         'paymentMethod': result['paymentMethod'],
         if ((result['referenceNumber'] ?? '').isNotEmpty) 'referenceNumber': result['referenceNumber'],
         if ((result['notes'] ?? '').isNotEmpty) 'notes': result['notes'],
       });
       _refresh();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment recorded.')));
+      if (mounted) {
+        // Overpayment beyond this invoice's balance is applied to the
+        // customer's other open invoices (oldest first); any final leftover
+        // becomes their advance/credit balance. Surface both if they happened.
+        final data = response.data as Map<String, dynamic>?;
+        final overflow = (data?['overflowApplications'] as List<dynamic>?) ?? const [];
+        final credit = double.tryParse(data?['creditCreated']?.toString() ?? '0') ?? 0.0;
+        final parts = <String>['Payment recorded.'];
+        if (overflow.isNotEmpty) {
+          parts.add('Applied to ${overflow.length} other open invoice${overflow.length == 1 ? '' : 's'}.');
+        }
+        if (credit > 0) {
+          parts.add('₹${credit.toStringAsFixed(0)} added to customer credit.');
+        }
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(parts.join(' '))));
+      }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
     } finally {
@@ -93,7 +108,11 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
     }
   }
 
-  Future<String?> _promptVoidReason(String title) {
+  // The destructive action is now "Cancel" (was "Void"). The dialog's own
+  // dismiss button therefore reads "Keep" — two "Cancel" buttons would be
+  // ambiguous. `confirmLabel` is the red action ("Cancel Invoice"/"Cancel
+  // Payment").
+  Future<String?> _promptCancelReason(String title, String confirmLabel) {
     final reasonController = TextEditingController();
     return showDialog<String>(
       context: context,
@@ -115,11 +134,11 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Keep')),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               onPressed: reasonController.text.trim().isEmpty ? null : () => Navigator.pop(context, reasonController.text.trim()),
-              child: const Text('Void'),
+              child: Text(confirmLabel),
             ),
           ],
         ),
@@ -127,13 +146,13 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
     );
   }
 
-  Future<void> _handleVoidInvoice() async {
-    final reason = await _promptVoidReason('Void this invoice?');
+  Future<void> _handleCancelInvoice() async {
+    final reason = await _promptCancelReason('Cancel this invoice?', 'Cancel Invoice');
     if (reason == null) return;
     setState(() => _acting = true);
     try {
       final dio = ref.read(apiClientProvider);
-      await dio.post('/invoices/${widget.invoiceId}/void', data: {'reason': reason});
+      await dio.post('/invoices/${widget.invoiceId}/cancel', data: {'reason': reason});
       _refresh();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
@@ -142,13 +161,13 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
     }
   }
 
-  Future<void> _handleVoidPayment(String paymentId) async {
-    final reason = await _promptVoidReason('Void this payment?');
+  Future<void> _handleCancelPayment(String paymentId) async {
+    final reason = await _promptCancelReason('Cancel this payment?', 'Cancel Payment');
     if (reason == null) return;
     setState(() => _acting = true);
     try {
       final dio = ref.read(apiClientProvider);
-      await dio.post('/payments/$paymentId/void', data: {'reason': reason});
+      await dio.post('/payments/$paymentId/cancel', data: {'reason': reason});
       _refresh();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
@@ -196,7 +215,7 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
                           p.receivedAt.split('T').first,
                           p.paymentMethod,
                           '₹${p.amount.toStringAsFixed(2)}',
-                          p.voided ? 'Voided' : 'Active',
+                          p.cancelled ? 'Cancelled' : 'Active',
                         ])
                     .toList(),
               ),
@@ -250,7 +269,7 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
           final inv = receipt.invoice;
           final balance = (double.tryParse(inv['balanceAmount'].toString()) ?? 0.0);
           final status = inv['status'] as String;
-          final isVoided = status == 'VOIDED';
+          final isCancelled = status == 'CANCELLED';
           final isGstApplicable = inv['isGstApplicable'] as bool? ?? false;
 
           return Padding(
@@ -283,7 +302,7 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
                 InfoRow('Total Amount', '₹${(double.tryParse(inv['totalAmount'].toString()) ?? 0.0).toStringAsFixed(2)}'),
                 InfoRow('Amount Received', '₹${(double.tryParse(inv['paidAmount'].toString()) ?? 0.0).toStringAsFixed(2)}'),
                 InfoRow('Balance Due', '₹${balance.toStringAsFixed(2)}'),
-                if (canReceivePayment && !isVoided) ...[
+                if (canReceivePayment && !isCancelled) ...[
                   const SizedBox(height: 8),
                   Align(
                     alignment: Alignment.centerLeft,
@@ -310,32 +329,32 @@ class _PaymentDetailScreenState extends ConsumerState<PaymentDetailScreen> {
                   ...receipt.payments.map((p) => Card(
                         child: ListTile(
                           title: Text('₹${p.amount.toStringAsFixed(2)} · ${p.paymentMethod}',
-                              style: TextStyle(decoration: p.voided ? TextDecoration.lineThrough : null)),
+                              style: TextStyle(decoration: p.cancelled ? TextDecoration.lineThrough : null)),
                           subtitle: Text(
-                              '${p.receivedAt.split('T').first} · ${p.receivedBy}${p.voided ? ' · Voided${p.voidReason != null ? ': ${p.voidReason}' : ''}' : ''}'),
-                          trailing: isOwner && !p.voided
+                              '${p.receivedAt.split('T').first} · ${p.receivedBy}${p.cancelled ? ' · Cancelled${p.cancelReason != null ? ': ${p.cancelReason}' : ''}' : ''}'),
+                          trailing: isOwner && !p.cancelled
                               ? TextButton(
-                                  onPressed: _acting ? null : () => _handleVoidPayment(p.id),
-                                  child: const Text('Void', style: TextStyle(color: Colors.red)),
+                                  onPressed: _acting ? null : () => _handleCancelPayment(p.id),
+                                  child: const Text('Cancel', style: TextStyle(color: Colors.red)),
                                 )
                               : null,
                         ),
                       )),
                 ],
                 const SizedBox(height: 24),
-                if (canReceivePayment && balance > 0 && !isVoided)
+                if (canReceivePayment && balance > 0 && !isCancelled)
                   ElevatedButton.icon(
                     icon: const Icon(Icons.payments),
                     label: const Text('Receive Payment'),
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(vertical: 16)),
                     onPressed: _acting ? null : () => _handleReceivePayment(balance),
                   ),
-                if (isOwner && !isVoided) ...[
+                if (isOwner && !isCancelled) ...[
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.block, color: Colors.red),
-                    label: const Text('Void Invoice', style: TextStyle(color: Colors.red)),
-                    onPressed: _acting ? null : _handleVoidInvoice,
+                    label: const Text('Cancel Invoice', style: TextStyle(color: Colors.red)),
+                    onPressed: _acting ? null : _handleCancelInvoice,
                   ),
                 ],
               ],
@@ -385,7 +404,10 @@ class _ReceivePaymentDialogState extends State<_ReceivePaymentDialog> {
                 labelText: 'Amount *',
                 border: const OutlineInputBorder(),
                 prefixText: '₹ ',
-                helperText: 'Balance due: ₹${widget.maxAmount.toStringAsFixed(2)}',
+                helperMaxLines: 2,
+                helperText: 'Balance due: ₹${widget.maxAmount.toStringAsFixed(2)}. '
+                    'Paying more settles the customer’s other open invoices; '
+                    'any leftover becomes their credit balance.',
               ),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               autofocus: true,

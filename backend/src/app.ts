@@ -18,6 +18,7 @@ import { pricingMethodRouter } from "./modules/pricing-methods/pricingMethod.rou
 import { pauseReasonRouter } from "./modules/pause-reasons/pauseReason.routes";
 import { invoiceRouter, paymentRouter } from "./modules/payments/payment.routes";
 import { dashboardRouter } from "./modules/dashboard/dashboard.routes";
+import { reportsRouter } from "./modules/reports/reports.routes";
 import { expenseRouter } from "./modules/expenses/expense.routes";
 import { fuelRouter } from "./modules/fuel/fuel.routes";
 import { maintenanceRouter } from "./modules/maintenance/maintenance.routes";
@@ -120,6 +121,7 @@ app.use("/settings", settingsRouter);
 app.use("/rbac", rbacRouter);
 app.use("/team", teamRouter);
 app.use("/dashboard", dashboardRouter);
+app.use("/reports", reportsRouter);
 
 // Must be registered after all routes.
 app.use(errorMiddleware);
