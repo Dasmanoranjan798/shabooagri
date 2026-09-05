@@ -7,7 +7,6 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/network/api_error.dart';
-import '../../../core/providers/session_provider.dart';
 import '../../../core/layout/responsive_form.dart';
 import '../../jobs/data/job_detail.dart';
 import '../../jobs/presentation/job_list_screen.dart';
@@ -76,9 +75,6 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final jobsAsync = ref.watch(jobsListProvider);
-    final user = ref.watch(currentUserProvider);
-    final firstName = (user?.fullName.split(' ').first) ?? 'Driver';
-    final dateStr = DateFormat('EEEE, d MMMM yyyy').format(DateTime.now());
 
     return Scaffold(
       appBar: AppBar(
@@ -113,31 +109,8 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
               child: ListView(
               padding: const EdgeInsets.all(16.0),
               children: [
-                Card(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Hello, $firstName', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 4),
-                            Text(dateStr, style: const TextStyle(fontSize: 12)),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(12)),
-                          child: const Text('Driver', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
+                // Greeting/date moved to the startup welcome (see SplashScreen);
+                // the driver home now opens straight into today's work.
                 const Text("Today's Job", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 activeJob != null ? _todayJobCard(context, activeJob) : _emptyTodayCard(),

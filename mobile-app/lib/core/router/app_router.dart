@@ -39,6 +39,7 @@ import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/reports/presentation/operational_reports_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/setup/presentation/setup_screen.dart';
+import '../../features/splash/presentation/splash_screen.dart';
 import '../../features/team/presentation/invite_staff_screen.dart';
 import '../../features/team/presentation/team_screen.dart';
 
@@ -46,15 +47,23 @@ import 'package:flutter/material.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
-/// Built once at startup (see main.dart) after resolving where this device
-/// should land: `/setup` if no company slug is persisted yet, `/login` if a
-/// slug exists but no session, or the role-appropriate home route if a
-/// session was restored.
+/// Built once at startup (see main.dart). A cold start opens on `/splash`,
+/// which reads the seeded session and routes onward: `/setup` if no company
+/// slug is persisted yet, `/login` if a slug exists but no session, or the
+/// role-appropriate home route (after a brief personalized welcome) if a
+/// session was restored. Deep links pass their own `initialLocation`.
 GoRouter buildAppRouter(String initialLocation) {
   return GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: initialLocation,
     routes: [
+      // Branded app-opening experience + (for restored sessions) a short
+      // personalized welcome. Reads the already-resolved session and routes
+      // onward; it is the initial location on a normal cold start.
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(
         path: '/setup',
         builder: (context, state) => const SetupScreen(),

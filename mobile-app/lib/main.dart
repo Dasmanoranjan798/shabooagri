@@ -21,20 +21,19 @@ Future<void> main() async {
 
   final slug = await TenantStorage.getSlug();
   AppUser? restoredUser;
-  String initialLocation;
 
-  if (slug == null) {
-    initialLocation = '/setup';
-  } else {
+  if (slug != null) {
     final accessToken = await AuthStorage.getAccessToken();
     final cachedUser = await AuthStorage.getUser();
     if (accessToken != null && cachedUser != null) {
       restoredUser = AppUser.fromJson(cachedUser);
-      initialLocation = restoredUser.homeRoute;
-    } else {
-      initialLocation = '/login';
     }
   }
+
+  // Cold start always opens on the branded splash, which reads the seeded
+  // session (below) to show a personalized welcome for a restored user and
+  // then routes onward (setup / login / role home) with the same rules.
+  const initialLocation = '/splash';
 
   final container = ProviderContainer(
     overrides: [

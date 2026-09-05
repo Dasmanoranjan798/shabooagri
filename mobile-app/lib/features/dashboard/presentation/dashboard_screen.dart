@@ -7,12 +7,10 @@ import '../../../core/layout/responsive.dart';
 import '../../../core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/company_profile_provider.dart';
 import '../../../core/providers/network_provider.dart';
-import '../../../core/providers/session_provider.dart';
 import '../../../core/storage/local_storage.dart';
 import '../../customers/presentation/customer_list_screen.dart';
 import '../../drivers/presentation/driver_list_screen.dart';
@@ -94,8 +92,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final networkStatusAsync = ref.watch(networkStatusProvider);
     final isOnline = networkStatusAsync.valueOrNull ?? false;
     final summaryAsync = ref.watch(dashboardSummaryProvider);
-    final user = ref.watch(currentUserProvider);
-    final dateStr = DateFormat('EEEE, d MMMM yyyy').format(DateTime.now());
     final isDesktop = context.responsive.isDesktop;
 
     return AdaptiveScaffold(
@@ -112,19 +108,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Compact greeting.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Hello, ${user?.fullName.split(' ').first ?? 'Partner'}',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                Text(dateStr, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              ],
-            ),
-          ),
           // 1. Horizontal, swipeable KPI carousel — every card is clickable.
+          // KPI cards are the first content below the header; the personalized
+          // "Hello, {name}" + date greeting now lives in the startup/splash
+          // welcome (see SplashScreen), not on the Dashboard.
           _kpiCarousel(context, summaryAsync),
           // 5. Quick-access pills.
           _pillsRow(context),

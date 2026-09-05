@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 
 import '../../../core/layout/responsive_form.dart';
 import '../../../core/network/api_error.dart';
-import '../../../core/providers/session_provider.dart';
 import '../../jobs/presentation/job_list_screen.dart';
 import '../data/farmer_models.dart';
 import 'farmer_shell_screen.dart';
@@ -20,9 +19,6 @@ class FarmerHomeScreen extends ConsumerWidget {
     final bookingsAsync = ref.watch(farmerBookingsProvider);
     final invoicesAsync = ref.watch(farmerInvoicesProvider);
     final jobsAsync = ref.watch(jobsListProvider);
-    final user = ref.watch(currentUserProvider);
-    final firstName = (user?.fullName.split(' ').first) ?? 'Customer';
-    final dateStr = DateFormat('EEEE, d MMMM yyyy').format(DateTime.now());
 
     return Scaffold(
       appBar: AppBar(
@@ -61,31 +57,8 @@ class FarmerHomeScreen extends ConsumerWidget {
               child: ListView(
               padding: const EdgeInsets.all(16.0),
               children: [
-                Card(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Hello, $firstName', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 4),
-                            Text(dateStr, style: const TextStyle(fontSize: 12)),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(12)),
-                          child: const Text('Customer Portal', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
+                // Greeting/date moved to the startup welcome (see SplashScreen);
+                // the customer portal now opens straight into the summary.
                 Row(children: [
                   Expanded(child: _kpiCard('Total Bookings', '${bookings.length}')),
                   const SizedBox(width: 12),
