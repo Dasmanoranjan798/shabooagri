@@ -1,34 +1,67 @@
-/* ShabooAgri Platform — Design Tokens. Same brand palette as the
-   operational product's tokens.css for visual continuity, kept as an
-   independent copy since these are two separate frontend builds. */
+/* ShabooAgri Platform — Design Tokens (enterprise refresh).
+   A very light, professional palette: refined agri-green brand accent on a
+   near-white slate canvas, layered soft shadows, and a proper type scale.
+   Kept as an independent copy of the operational product's tokens for visual
+   continuity across the two separate frontend builds. */
 
 :root {
-  --color-primary: #1b7a3e;
-  --color-primary-dark: #13582c;
-  --color-primary-light: #e6f4ea;
-  --color-primary-hover: #166533;
-  --color-accent: #2ecc71;
+  /* Brand — a deeper, more premium forest green than the old flat #1b7a3e,
+     with a soft tint for wash/pill backgrounds. */
+  --color-primary: #15713a;
+  --color-primary-dark: #0f5a2e;
+  --color-primary-light: #eaf5ee;
+  --color-primary-hover: #125e30;
+  --color-accent: #2fae66;
 
-  --color-bg: #f8fafc;
+  /* Canvas & surfaces — very light, layered. */
+  --color-bg: #fbfcfd;
+  --color-bg-subtle: #f5f7f9;
   --color-surface: #ffffff;
-  --color-border: #e2e8f0;
-  --color-border-light: #f1f5f9;
+  --color-surface-raised: #ffffff;
+  --color-border: #e7ebef;
+  --color-border-light: #f1f4f7;
+  --color-border-strong: #d6dce2;
 
-  --color-text: #0f172a;
-  --color-text-muted: #64748b;
+  /* Text — high-contrast slate, muted secondary, faint tertiary. */
+  --color-text: #101828;
+  --color-text-secondary: #475467;
+  --color-text-muted: #667085;
+  --color-text-faint: #98a2b3;
   --color-text-inverse: #ffffff;
 
-  --color-success: #16a34a;
-  --color-warning: #d97706;
+  --color-success: #15803d;
+  --color-warning: #b45309;
   --color-danger: #dc2626;
-  --color-info: #2563eb;
+  --color-info: #1d4ed8;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
+  /* Typography */
+  --font-sans: "Inter Variable", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+  --font-feature: "cv11", "ss01";       /* Inter's nicer alternates */
+
+  --text-xs: 0.78rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.35rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.35rem;
+  --text-4xl: 3rem;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
   --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-pill: 999px;
 
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
-  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  /* Layered, low-opacity shadows — the quiet depth enterprise UIs use. */
+  --shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.07), 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-md: 0 4px 8px -2px rgba(16, 24, 40, 0.08), 0 2px 4px -2px rgba(16, 24, 40, 0.05);
+  --shadow-lg: 0 12px 20px -6px rgba(16, 24, 40, 0.10), 0 4px 8px -4px rgba(16, 24, 40, 0.05);
+  --shadow-ring: 0 0 0 4px rgba(21, 113, 58, 0.12);
 
-  --transition: all 0.15s ease;
+  --transition: all 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+
+  --container: 1120px;
 }

@@ -7,10 +7,13 @@ export const PricingPage: React.FC = () => {
   return (
     <MarketingLayout>
       {(config) => (
-        <section style={{ padding: "60px 24px", maxWidth: 1000, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <h1 style={{ fontSize: "2rem", fontWeight: 800, marginBottom: 12 }}>Simple, machine-based pricing</h1>
-            <p style={{ color: "var(--color-text-muted)", fontSize: "1rem" }}>
+        <section className="pf-container" style={{ padding: "72px 24px", maxWidth: 1000 }}>
+          <div style={{ textAlign: "center", marginBottom: 44 }}>
+            <span className="pf-eyebrow">Pricing</span>
+            <h1 style={{ fontSize: "clamp(1.8rem, 4vw, 2.4rem)", fontWeight: 800, margin: "12px 0" }}>
+              Simple, machine-based pricing
+            </h1>
+            <p style={{ color: "var(--color-text-muted)", fontSize: "var(--text-lg)", maxWidth: 560, margin: "0 auto" }}>
               One plan, priced by how many machines you run. Drivers, managers, and staff accounts are always
               unlimited — on every plan.
             </p>
@@ -28,7 +31,7 @@ export const PricingPage: React.FC = () => {
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20 }}>
                 {config.plans.map((plan) => (
-                  <div key={plan.key} className="pf-card" style={{ padding: 28, display: "flex", flexDirection: "column" }}>
+                  <div key={plan.key} className="pf-card pf-card-hover" style={{ padding: 28, display: "flex", flexDirection: "column" }}>
                     <h2 style={{ fontSize: "1.15rem", fontWeight: 700, marginBottom: 4 }}>{plan.name}</h2>
                     <div style={{ marginBottom: 16 }}>
                       <span style={{ fontSize: "1.8rem", fontWeight: 800 }}>₹{plan.priceAnnual.toLocaleString("en-IN")}</span>
