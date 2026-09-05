@@ -190,7 +190,7 @@ export const DownloadAppPage: React.FC = () => {
                   borderLeft: "4px solid #eab308",
                 }}
               >
-                <strong>Updated:</strong> 5 September 2026. This is the latest preview release. Android is v0.8.16; the Windows and macOS downloads are the previous v0.8.15 build and will be refreshed to v0.8.16 shortly.
+                <strong>Updated:</strong> 5 September 2026. This is the latest preview release — Android, Windows and macOS are all v0.8.16. (iOS is pending App Store / TestFlight submission.)
               </div>
             </div>
 
