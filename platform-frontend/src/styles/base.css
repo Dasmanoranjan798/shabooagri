@@ -259,6 +259,54 @@ button {
   padding: 24px;
 }
 
+/* ---- Split-screen auth layout --------------------------------------- */
+.pf-auth {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr;
+  background: var(--color-bg);
+}
+.pf-auth-brand {
+  display: none;
+  position: relative;
+  overflow: hidden;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 48px;
+  color: #fff;
+  background:
+    radial-gradient(600px 300px at 85% 12%, rgba(255, 255, 255, 0.12), transparent 60%),
+    linear-gradient(160deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+}
+.pf-auth-form-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+}
+.pf-auth-form {
+  width: 100%;
+  max-width: 420px;
+}
+/* Compact brand shown above the form only when the side panel is hidden. */
+.pf-auth-topbrand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 24px;
+}
+@media (min-width: 940px) {
+  .pf-auth {
+    grid-template-columns: 46% 54%;
+  }
+  .pf-auth-brand {
+    display: flex;
+  }
+  .pf-auth-topbrand {
+    display: none;
+  }
+}
+
 /* ---- Nav links ------------------------------------------------------- */
 .pf-navlink {
   text-decoration: none;

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Tractor, CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
+import { AuthLayout } from "./AuthLayout";
 import { api, ApiError } from "../../lib/api";
 import { AppHandoff } from "./AppHandoff";
 
@@ -89,16 +90,9 @@ export const ResetPasswordPage: React.FC = () => {
   }
 
   return (
-    <div className="pf-center-viewport">
-      <div className="pf-card" style={{ width: "100%", maxWidth: 400, padding: 32 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-          <Tractor size={26} color="var(--color-primary)" />
-          <h1 style={{ fontSize: "1.3rem", fontWeight: 700 }}>ShabooAgri</h1>
-        </div>
-
+    <AuthLayout title={isConfirmMode ? "Set a new password" : "Reset your password"}>
         {!isConfirmMode && (
           <>
-            <h2 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: 6 }}>Reset your password</h2>
             {errorMsg && <div className="pf-alert pf-alert-danger">{errorMsg}</div>}
             {successMsg ? (
               <>
@@ -137,7 +131,6 @@ export const ResetPasswordPage: React.FC = () => {
 
         {isConfirmMode && (
           <>
-            <h2 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: 6 }}>Set new password</h2>
             {isValidatingToken ? (
               <p style={{ fontSize: "0.85rem", color: "var(--color-text-muted)" }}>Validating reset link...</p>
             ) : successMsg ? (
@@ -194,10 +187,9 @@ export const ResetPasswordPage: React.FC = () => {
           </>
         )}
 
-        <p style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", marginTop: 16, textAlign: "center" }}>
+        <p style={{ fontSize: "var(--text-sm)", color: "var(--color-text-muted)", marginTop: 20, textAlign: "center" }}>
           <Link to="/login" style={{ color: "var(--color-primary)", fontWeight: 600 }}>Back to Sign In</Link>
         </p>
-      </div>
-    </div>
+    </AuthLayout>
   );
 };

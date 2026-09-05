@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Tractor } from "lucide-react";
 import { usePlatformAuth } from "../../context/PlatformAuthContext";
 import { api, ApiError } from "../../lib/api";
+import { AuthLayout } from "./AuthLayout";
 
 export const LoginPage: React.FC = () => {
   const { login, user, isAuthenticated } = usePlatformAuth();
@@ -51,76 +51,65 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  return (
-    <div className="pf-center-viewport">
-      <div className="pf-card" style={{ width: "100%", maxWidth: 400, padding: 32 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-          <Tractor size={26} color="var(--color-primary)" />
-          <h1 style={{ fontSize: "1.3rem", fontWeight: 700 }}>ShabooAgri</h1>
-        </div>
-
-        {isAuthenticated && user ? (
-          <>
-            <p style={{ fontSize: "0.9rem", marginBottom: 16 }}>
-              Signed in as <strong>{user.email}</strong>
-              {user.businessName ? ` (${user.businessName})` : ""}.
-            </p>
-            {error && <div className="pf-alert pf-alert-danger">{error}</div>}
-            {user.isPlatformAdmin && (
-              <Link
-                to="/admin"
-                className="pf-btn pf-btn-primary"
-                style={{ width: "100%", textDecoration: "none", display: "block", textAlign: "center", marginBottom: 10 }}
-              >
-                Admin Dashboard
-              </Link>
-            )}
-            <button className="pf-btn pf-btn-secondary" style={{ width: "100%" }} onClick={handleGoToDashboard} disabled={isLaunching}>
-              {isLaunching ? "Opening..." : "Go to my dashboard"}
-            </button>
-          </>
-        ) : (
-          <>
-            {error && <div className="pf-alert pf-alert-danger">{error}</div>}
-            <form onSubmit={handleSubmit}>
-              <div className="pf-field">
-                <label className="pf-label" htmlFor="email">Email</label>
-                <input
-                  id="email"
-                  type="email"
-                  className="pf-input"
-                  required
-                  autoFocus
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="pf-field">
-                <label className="pf-label" htmlFor="password">Password</label>
-                <input
-                  id="password"
-                  type="password"
-                  className="pf-input"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <div style={{ textAlign: "right", marginTop: 6 }}>
-                  <Link to="/reset-password" style={{ fontSize: "0.82rem", color: "var(--color-primary)", fontWeight: 600 }}>
-                    Forgot password?
-                  </Link>
-                </div>
-              </div>
-              <button type="submit" className="pf-btn pf-btn-primary" style={{ width: "100%" }} disabled={isSubmitting}>
-                {isSubmitting ? "Signing in..." : "Sign In"}
-              </button>
-            </form>
-            <p style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", marginTop: 16, textAlign: "center" }}>
-              New here? <Link to="/register" style={{ color: "var(--color-primary)", fontWeight: 600 }}>Register your business</Link>
-            </p>
-          </>
+  if (isAuthenticated && user) {
+    return (
+      <AuthLayout title="Welcome back" subtitle={<>Signed in as <strong>{user.email}</strong>{user.businessName ? ` · ${user.businessName}` : ""}.</>}>
+        {error && <div className="pf-alert pf-alert-danger">{error}</div>}
+        {user.isPlatformAdmin && (
+          <Link
+            to="/admin"
+            className="pf-btn pf-btn-primary"
+            style={{ width: "100%", textDecoration: "none", display: "block", textAlign: "center", marginBottom: 10 }}
+          >
+            Admin Dashboard
+          </Link>
         )}
-      </div>
-    </div>
+        <button className="pf-btn pf-btn-secondary" style={{ width: "100%" }} onClick={handleGoToDashboard} disabled={isLaunching}>
+          {isLaunching ? "Opening..." : "Go to my dashboard"}
+        </button>
+      </AuthLayout>
+    );
+  }
+
+  return (
+    <AuthLayout title="Sign in to your account" subtitle="Welcome back — enter your details to continue.">
+      {error && <div className="pf-alert pf-alert-danger">{error}</div>}
+      <form onSubmit={handleSubmit}>
+        <div className="pf-field">
+          <label className="pf-label" htmlFor="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            className="pf-input"
+            required
+            autoFocus
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+        <div className="pf-field">
+          <label className="pf-label" htmlFor="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            className="pf-input"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <div style={{ textAlign: "right", marginTop: 8 }}>
+            <Link to="/reset-password" style={{ fontSize: "var(--text-sm)", color: "var(--color-primary)", fontWeight: 600 }}>
+              Forgot password?
+            </Link>
+          </div>
+        </div>
+        <button type="submit" className="pf-btn pf-btn-primary pf-btn-lg" style={{ width: "100%" }} disabled={isSubmitting}>
+          {isSubmitting ? "Signing in..." : "Sign In"}
+        </button>
+      </form>
+      <p style={{ fontSize: "var(--text-sm)", color: "var(--color-text-muted)", marginTop: 20, textAlign: "center" }}>
+        New here? <Link to="/register" style={{ color: "var(--color-primary)", fontWeight: 600 }}>Register your business</Link>
+      </p>
+    </AuthLayout>
   );
 };

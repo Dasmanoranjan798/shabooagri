@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Tractor, CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { api, ApiError, type PricingPlan } from "../../lib/api";
+import { AuthLayout } from "./AuthLayout";
 
 declare global {
   interface Window {
@@ -117,7 +118,7 @@ export const RegisterPage: React.FC = () => {
             window.location.href = result.provisioning.redirectUrl;
           }
         },
-        theme: { color: "#1b7a3e" },
+        theme: { color: "#15713a" },
       });
       razorpay.open();
     } catch (err) {
@@ -127,28 +128,45 @@ export const RegisterPage: React.FC = () => {
     }
   };
 
-  return (
-    <div className="pf-center-viewport">
-      <div className="pf-card" style={{ width: "100%", maxWidth: 440, padding: 32 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-          <Tractor size={26} color="var(--color-primary)" />
-          <h1 style={{ fontSize: "1.3rem", fontWeight: 700 }}>ShabooAgri</h1>
-        </div>
+  const titleForStep =
+    step === "payment" ? "Activate your workspace" : step === "redirecting" ? "Setting things up" : "Create your account";
+  const subtitleForStep =
+    step === "form" ? "Start running your hiring center in minutes." : undefined;
 
-        {purchasingBlocked ? (
-          <div className="pf-alert pf-alert-danger">
-            New signups are temporarily paused. Please check back shortly.
-          </div>
-        ) : (
-          <>
+  return (
+    <AuthLayout title={titleForStep} subtitle={subtitleForStep}>
+      {purchasingBlocked ? (
+        <div className="pf-alert pf-alert-danger">
+          New signups are temporarily paused. Please check back shortly.
+        </div>
+      ) : (
+        <>
             {step === "form" && (
               <>
                 {selectedPlan && (
-                  <p style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", marginBottom: 16 }}>
-                    Selected plan: <strong>{selectedPlan.name}</strong> — ₹
-                    {selectedPlan.priceAnnual.toLocaleString("en-IN")}/year ({selectedPlan.machineLimit} machines).{" "}
-                    <Link to="/pricing" style={{ color: "var(--color-primary)" }}>Change</Link>
-                  </p>
+                  <div
+                    className="pf-card"
+                    style={{
+                      padding: "12px 14px",
+                      marginBottom: 18,
+                      fontSize: "var(--text-sm)",
+                      color: "var(--color-text-secondary)",
+                      background: "var(--color-primary-light)",
+                      borderColor: "rgba(21,113,58,0.16)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 10,
+                    }}
+                  >
+                    <span>
+                      <strong>{selectedPlan.name}</strong> — ₹{selectedPlan.priceAnnual.toLocaleString("en-IN")}/year ·{" "}
+                      {selectedPlan.machineLimit} machines
+                    </span>
+                    <Link to="/pricing" style={{ color: "var(--color-primary)", fontWeight: 600, whiteSpace: "nowrap" }}>
+                      Change
+                    </Link>
+                  </div>
                 )}
                 {error && <div className="pf-alert pf-alert-danger">{error}</div>}
                 <form onSubmit={handleFormSubmit}>
@@ -205,7 +223,7 @@ export const RegisterPage: React.FC = () => {
                       onChange={(e) => setForm({ ...form, password: e.target.value })}
                     />
                   </div>
-                  <button type="submit" className="pf-btn pf-btn-primary" style={{ width: "100%" }} disabled={isSubmitting}>
+                  <button type="submit" className="pf-btn pf-btn-primary pf-btn-lg" style={{ width: "100%" }} disabled={isSubmitting}>
                     {isSubmitting ? "Creating account..." : "Continue to Payment"}
                   </button>
                 </form>
@@ -227,7 +245,7 @@ export const RegisterPage: React.FC = () => {
                   your workspace.
                 </p>
                 {error && <div className="pf-alert pf-alert-danger">{error}</div>}
-                <button className="pf-btn pf-btn-primary" style={{ width: "100%" }} onClick={handlePay} disabled={isSubmitting}>
+                <button className="pf-btn pf-btn-primary pf-btn-lg" style={{ width: "100%" }} onClick={handlePay} disabled={isSubmitting}>
                   {isSubmitting ? "Processing..." : "Pay & Activate"}
                 </button>
               </>
@@ -238,9 +256,8 @@ export const RegisterPage: React.FC = () => {
                 Payment successful — setting up your workspace...
               </p>
             )}
-          </>
-        )}
-      </div>
-    </div>
+        </>
+      )}
+    </AuthLayout>
   );
 };
