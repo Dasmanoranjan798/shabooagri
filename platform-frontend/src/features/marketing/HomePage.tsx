@@ -67,7 +67,7 @@ export const HomePage: React.FC = () => {
               borderBottom: "1px solid var(--color-border-light)",
             }}
           >
-            <div className="pf-container" style={{ padding: "84px 24px 72px", textAlign: "center" }}>
+            <div className="pf-container" style={{ padding: "84px var(--pf-pad-x) 72px", textAlign: "center" }}>
               <span className="pf-badge" style={{ marginBottom: 22 }}>
                 <ShieldCheck size={14} />
                 Built for custom hiring centers
@@ -114,7 +114,7 @@ export const HomePage: React.FC = () => {
           </section>
 
           {/* ---- Features --------------------------------------------- */}
-          <section className="pf-container" style={{ padding: "72px 24px 8px", textAlign: "center" }}>
+          <section className="pf-container" style={{ padding: "72px var(--pf-pad-x) 8px", textAlign: "center" }}>
             <span className="pf-eyebrow">Everything in one place</span>
             <h2 style={{ fontSize: "clamp(1.6rem, 3.5vw, 2.2rem)", fontWeight: 800, margin: "12px auto 0", maxWidth: 640 }}>
               One system for the whole operation
@@ -125,13 +125,12 @@ export const HomePage: React.FC = () => {
           </section>
 
           <section
+            className="pf-grid"
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: 20,
+              ["--pf-grid-min" as string]: "280px",
               maxWidth: "var(--container)",
               margin: "0 auto",
-              padding: "40px 24px 24px",
+              padding: "40px var(--pf-pad-x) 24px",
             }}
           >
             {FEATURES.map((f) => (
@@ -148,11 +147,11 @@ export const HomePage: React.FC = () => {
           </section>
 
           {/* ---- Get the app ------------------------------------------ */}
-          <section className="pf-container" style={{ padding: "40px 24px 8px" }}>
+          <section className="pf-container" style={{ padding: "40px var(--pf-pad-x) 8px" }}>
             <div
               className="pf-card"
               style={{
-                padding: "34px",
+                padding: "clamp(22px, 4vw, 34px)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -164,7 +163,7 @@ export const HomePage: React.FC = () => {
                 boxShadow: "var(--shadow-md)",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 20, minWidth: 260 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 20, flex: "1 1 260px", minWidth: 0 }}>
                 <div
                   style={{
                     width: 60,
@@ -205,7 +204,7 @@ export const HomePage: React.FC = () => {
           </section>
 
           {/* ---- Final CTA -------------------------------------------- */}
-          <section className="pf-container" style={{ padding: "64px 24px 88px", textAlign: "center" }}>
+          <section className="pf-container" style={{ padding: "64px var(--pf-pad-x) 88px", textAlign: "center" }}>
             <h2 style={{ fontSize: "clamp(1.6rem, 3.5vw, 2.2rem)", fontWeight: 800, marginBottom: 14 }}>
               Ready to leave the paperwork behind?
             </h2>

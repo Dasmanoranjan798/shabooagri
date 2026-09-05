@@ -40,7 +40,7 @@ export const FeedbackPage: React.FC = () => {
   return (
     <MarketingLayout>
       {() => (
-        <section style={{ padding: "60px 24px", maxWidth: 560, margin: "0 auto" }}>
+        <section style={{ padding: "60px var(--pf-pad-x)", maxWidth: 560, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 32 }}>
             <h1 style={{ fontSize: "1.8rem", fontWeight: 800, marginBottom: 10 }}>Share Your Feedback</h1>
             <p style={{ color: "var(--color-text-muted)", fontSize: "0.95rem" }}>

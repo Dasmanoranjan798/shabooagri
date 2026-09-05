@@ -7,7 +7,7 @@ export const PricingPage: React.FC = () => {
   return (
     <MarketingLayout>
       {(config) => (
-        <section className="pf-container" style={{ padding: "72px 24px", maxWidth: 1000 }}>
+        <section className="pf-container" style={{ padding: "72px var(--pf-pad-x)", maxWidth: 1000 }}>
           <div style={{ textAlign: "center", marginBottom: 44 }}>
             <span className="pf-eyebrow">Pricing</span>
             <h1 style={{ fontSize: "clamp(1.8rem, 4vw, 2.4rem)", fontWeight: 800, margin: "12px 0" }}>
@@ -29,7 +29,7 @@ export const PricingPage: React.FC = () => {
                 </div>
               )}
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20 }}>
+              <div className="pf-grid" style={{ ["--pf-grid-min" as string]: "240px" }}>
                 {config.plans.map((plan) => (
                   <div key={plan.key} className="pf-card pf-card-hover" style={{ padding: 28, display: "flex", flexDirection: "column" }}>
                     <h2 style={{ fontSize: "1.15rem", fontWeight: 700, marginBottom: 4 }}>{plan.name}</h2>

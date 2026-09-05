@@ -1,17 +1,34 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Tractor } from "lucide-react";
+import { Tractor, Menu, X } from "lucide-react";
 import { api, type PublicConfig } from "../lib/api";
 import { AnnouncementBar } from "./AnnouncementBar";
+
+const NAV_LINKS = [
+  { to: "/pricing", label: "Pricing" },
+  { to: "/app", label: "Download" },
+  { to: "/login", label: "Sign In" },
+];
 
 export const MarketingLayout: React.FC<{ children: (config: PublicConfig | null) => React.ReactNode }> = ({
   children,
 }) => {
   const [config, setConfig] = useState<PublicConfig | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     api.getPublicConfig().then(setConfig).catch(() => setConfig(null));
   }, []);
+
+  // Close the mobile menu on Escape for keyboard users.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
 
   const year = new Date().getFullYear();
 
@@ -58,21 +75,51 @@ export const MarketingLayout: React.FC<{ children: (config: PublicConfig | null)
               ShabooAgri
             </span>
           </Link>
-          <nav style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Link to="/pricing" className="pf-navlink" style={{ padding: "8px 12px" }}>
-              Pricing
-            </Link>
-            <Link to="/app" className="pf-navlink" style={{ padding: "8px 12px" }}>
-              Download
-            </Link>
-            <Link to="/login" className="pf-navlink" style={{ padding: "8px 12px" }}>
-              Sign In
-            </Link>
+          {/* Desktop navigation */}
+          <nav className="pf-nav-desktop" aria-label="Primary">
+            {NAV_LINKS.map((l) => (
+              <Link key={l.to} to={l.to} className="pf-navlink" style={{ padding: "8px 12px" }}>
+                {l.label}
+              </Link>
+            ))}
             <Link to="/register" className="pf-btn pf-btn-primary" style={{ textDecoration: "none", marginLeft: 4 }}>
               Get Started
             </Link>
           </nav>
+
+          {/* Mobile menu toggle */}
+          <button
+            type="button"
+            className="pf-nav-toggle"
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={menuOpen}
+            aria-controls="pf-mobile-nav"
+            onClick={() => setMenuOpen((o) => !o)}
+          >
+            {menuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
+
+        {/* Mobile navigation dropdown */}
+        {menuOpen && (
+          <nav id="pf-mobile-nav" className="pf-mobile-nav" aria-label="Primary">
+            <div className="pf-mobile-nav-inner">
+              {NAV_LINKS.map((l) => (
+                <Link key={l.to} to={l.to} className="pf-navlink" onClick={() => setMenuOpen(false)}>
+                  {l.label}
+                </Link>
+              ))}
+              <Link
+                to="/register"
+                className="pf-btn pf-btn-primary"
+                style={{ textDecoration: "none" }}
+                onClick={() => setMenuOpen(false)}
+              >
+                Get Started
+              </Link>
+            </div>
+          </nav>
+        )}
       </header>
 
       <main style={{ flex: 1 }}>{children(config)}</main>

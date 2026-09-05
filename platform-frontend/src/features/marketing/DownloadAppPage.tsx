@@ -44,7 +44,7 @@ export const DownloadAppPage: React.FC = () => {
               borderBottom: "1px solid var(--color-border-light)",
             }}
           >
-            <div className="pf-container" style={{ padding: "72px 24px 40px", textAlign: "center" }}>
+            <div className="pf-container" style={{ padding: "72px var(--pf-pad-x) 40px", textAlign: "center" }}>
               <span className="pf-badge pf-badge-amber" style={{ marginBottom: 20 }}>
                 Preview / Test Version
               </span>
@@ -58,12 +58,11 @@ export const DownloadAppPage: React.FC = () => {
 
             {/* Platform grid */}
             <div
-              className="pf-container"
+              className="pf-container pf-grid"
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                ["--pf-grid-min" as string]: "220px",
                 gap: 18,
-                padding: "0 24px 64px",
+                padding: "0 var(--pf-pad-x) 64px",
               }}
             >
               <PlatformCard icon={Smartphone} name="Android">
@@ -113,7 +112,7 @@ export const DownloadAppPage: React.FC = () => {
           {/* ---- Details --------------------------------------------- */}
           <section
             className="pf-container"
-            style={{ maxWidth: 760, padding: "56px 24px 88px", display: "flex", flexDirection: "column", gap: 24 }}
+            style={{ maxWidth: 760, padding: "56px var(--pf-pad-x) 88px", display: "flex", flexDirection: "column", gap: 24 }}
           >
             <div className="pf-card" style={{ padding: 32 }}>
               <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: 18, display: "flex", alignItems: "center", gap: 10 }}>
