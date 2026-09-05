@@ -59,8 +59,8 @@ export const DownloadAppPage: React.FC = () => {
                 </h3>
                 <div style={{ display: "flex", justifyContent: "center" }}>
                   <a
-                    href="/downloads/shabooagri-v0.8.15.apk"
-                    download="shabooagri-v0.8.15.apk"
+                    href="/downloads/shabooagri-v0.8.16.apk"
+                    download="shabooagri-v0.8.16.apk"
                     className="pf-btn pf-btn-primary"
                     style={{
                       textDecoration: "none",
@@ -70,7 +70,7 @@ export const DownloadAppPage: React.FC = () => {
                     }}
                   >
                     <Download size={20} />
-                    Download APK (v0.8.15)
+                    Download APK (v0.8.16)
                   </a>
                 </div>
               </div>
@@ -82,7 +82,7 @@ export const DownloadAppPage: React.FC = () => {
                   iPhone / iPad
                 </h3>
                 <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem", margin: 0 }}>
-                  <em>v0.8.15 submission pending. Will be available via TestFlight / App Store.</em>
+                  <em>v0.8.16 submission pending. Will be available via TestFlight / App Store.</em>
                 </p>
               </div>
 
@@ -159,7 +159,7 @@ export const DownloadAppPage: React.FC = () => {
                 }}
               >
                 <Info size={24} color="var(--color-primary)" />
-                What's New in v0.8.15
+                What's New in v0.8.16
               </h2>
               <ul
                 style={{
@@ -171,16 +171,12 @@ export const DownloadAppPage: React.FC = () => {
                   gap: 8,
                 }}
               >
-                <li>Redesigned dashboard: swipe through your key numbers — today's revenue, this month, pending collection, machines working, drivers active — and tap any card to jump straight to the details</li>
-                <li>Quick-access workspace: switch between Today, Customers, Invoices, Machines and Drivers right from the dashboard, without losing your place</li>
-                <li>One place for all invoices: a single Invoices view with All, Direct Invoice and After-Work tabs — create a direct invoice or record completed field work from the same screen</li>
-                <li>Simpler addresses: a farmer's village and full address are now entered right on their record — no separate Village list to maintain. Pick the farmer and the location fills in automatically, and you can still analyse business village-wise in reports</li>
-                <li>Fixed a fresh-install setup bug where the app jumped to Sign In while you were still typing your Company ID — it now stays on Company Setup until you press Continue</li>
-                <li>Works offline: view your data and record payments, bookings and jobs with no internet — everything syncs automatically when you reconnect, with no duplicates or lost entries</li>
-                <li>Fixed the Payments ledger getting stuck on "Loading…"</li>
-                <li>Clearer sign-in: sign-in errors now tell you exactly what went wrong, and you can see and switch which company this device is connected to</li>
-                <li>Live data everywhere: record a payment, booking or job and every open screen — dashboard KPIs, lists, ledgers, reports — updates instantly, no manual refresh</li>
-                <li>Quick-login PIN and full sign-in parity with the web app: password, PIN, and OTP</li>
+                <li>Driver pay made simple: see exactly how much each driver has earned from their work, record payments out to them (full or partial), and keep a complete payment history — with a built-in check so you never overpay</li>
+                <li>Pay drivers by the minute: alongside hourly and monthly, you can now set a per-minute rate</li>
+                <li>Machine hours &amp; service reminders: every machine's working hours are tracked automatically from its jobs, and maintenance is scheduled by operating hours — so you're told when a service is due or overdue, and completing it resets the clock</li>
+                <li>New Driver and Machine reports — including a machine-maintenance report — with CSV export. Drivers get a "My Earnings" screen to see their own pay, and nothing else</li>
+                <li>Overpayments now become customer credit automatically: pay more than an invoice's balance and the extra is kept as advance credit for that customer — no separate "Record Advance" step to remember</li>
+                <li>"Void" is now called "Cancel" everywhere — cancelling an invoice or payment keeps it in your history with a reason, just clearer wording</li>
                 <li>Performance &amp; bug fixes</li>
               </ul>
               <div
@@ -194,7 +190,7 @@ export const DownloadAppPage: React.FC = () => {
                   borderLeft: "4px solid #eab308",
                 }}
               >
-                <strong>Updated:</strong> 4 September 2026. This is the latest preview release.
+                <strong>Updated:</strong> 5 September 2026. This is the latest preview release. Android is v0.8.16; the Windows and macOS downloads are the previous v0.8.15 build and will be refreshed to v0.8.16 shortly.
               </div>
             </div>
 
