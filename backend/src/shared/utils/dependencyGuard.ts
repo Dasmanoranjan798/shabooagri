@@ -2,7 +2,7 @@ import { AppError } from "../errors/AppError";
 
 // Shared assertion functions for the dependency-locked deletion rules:
 // a record with real history elsewhere in the system can never be
-// hard-deleted, only voided/cancelled/deactivated. Deliberately a leaf
+// hard-deleted, only cancelled/cancelled/deactivated. Deliberately a leaf
 // module with no imports of its own module services — each caller already
 // owns the query needed to produce its count (bookingService counts
 // bookings, paymentService counts payments, ...); this file only owns the
@@ -42,13 +42,13 @@ export function assertBookingDeletable(hasAnyLinkedJob: boolean): void {
   }
 }
 
-// Rule 2: a Job cannot be cancelled while a non-voided Payment is linked
+// Rule 2: a Job cannot be cancelled while a non-cancelled Payment is linked
 // to it (via its booking's invoice).
-export function assertNoNonVoidedPayments(paymentCount: number): void {
+export function assertNoNonCancelledPayments(paymentCount: number): void {
   if (paymentCount > 0) {
     throw new AppError(
       409,
-      `Cannot cancel this job — ${pluralize(paymentCount, "payment")} linked to it. Void the payment(s) first.`,
+      `Cannot cancel this job — ${pluralize(paymentCount, "payment")} linked to it. Cancel the payment(s) first.`,
       { paymentCount },
     );
   }

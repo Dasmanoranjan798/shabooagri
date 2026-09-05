@@ -4,6 +4,7 @@ import { assertNoBookingReferences } from "../../shared/utils/dependencyGuard";
 import * as bookingRepository from "../bookings/booking.repository";
 import * as driverRepository from "../drivers/driver.repository";
 import * as employeeRepository from "./employee.repository";
+import { writeAudit } from "../../shared/audit/audit.service";
 import type { CreateEmployeeInput, UpdateEmployeeInput } from "./employee.validators";
 
 export function list(companyId: string) {
@@ -40,14 +41,57 @@ export async function create(companyId: string, input: CreateEmployeeInput) {
   return employeeRepository.create(companyId, input);
 }
 
-export async function update(companyId: string, id: string, input: UpdateEmployeeInput) {
+export async function update(companyId: string, id: string, input: UpdateEmployeeInput, actorUserId?: string) {
   if (input.userId) {
     await assertUserExists(companyId, input.userId);
   }
+
+  // Snapshot compensation before the change so a rate/type change is
+  // auditable (Part 31/39). Historical *settled* driver earnings are frozen
+  // via DriverPayment.earnedSnapshot; this record makes the rate change
+  // itself traceable.
+  const before = await employeeRepository.findByIdScoped(companyId, id);
+
   const updated = await employeeRepository.updateScoped(companyId, id, input);
   if (!updated) {
     throw new AppError(404, "Employee not found");
   }
+
+  if (before) {
+    const compChanged =
+      (input.compensationType !== undefined && input.compensationType !== before.compensationType) ||
+      (input.hourlyRate !== undefined && Number(input.hourlyRate) !== Number(before.hourlyRate ?? 0)) ||
+      (input.perMinuteRate !== undefined && Number(input.perMinuteRate) !== Number(before.perMinuteRate ?? 0)) ||
+      (input.monthlySalary !== undefined && Number(input.monthlySalary) !== Number(before.monthlySalary ?? 0)) ||
+      (input.yearlySalary !== undefined && Number(input.yearlySalary) !== Number(before.yearlySalary ?? 0));
+
+    if (compChanged) {
+      await writeAudit({
+        companyId,
+        userId: actorUserId ?? null,
+        entityType: "employee",
+        entityId: id,
+        action: "employee.compensation_changed",
+        changes: {
+          before: {
+            compensationType: before.compensationType,
+            hourlyRate: before.hourlyRate != null ? Number(before.hourlyRate) : null,
+            perMinuteRate: before.perMinuteRate != null ? Number(before.perMinuteRate) : null,
+            monthlySalary: before.monthlySalary != null ? Number(before.monthlySalary) : null,
+            yearlySalary: before.yearlySalary != null ? Number(before.yearlySalary) : null,
+          },
+          after: {
+            compensationType: updated.compensationType,
+            hourlyRate: updated.hourlyRate != null ? Number(updated.hourlyRate) : null,
+            perMinuteRate: updated.perMinuteRate != null ? Number(updated.perMinuteRate) : null,
+            monthlySalary: updated.monthlySalary != null ? Number(updated.monthlySalary) : null,
+            yearlySalary: updated.yearlySalary != null ? Number(updated.yearlySalary) : null,
+          },
+        },
+      });
+    }
+  }
+
   return updated;
 }
 

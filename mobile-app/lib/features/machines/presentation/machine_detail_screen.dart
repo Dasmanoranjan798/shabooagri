@@ -16,6 +16,33 @@ final machineDetailProvider = FutureProvider.family<Map<String, dynamic>, String
   return response.data as Map<String, dynamic>;
 });
 
+// Backend-computed working time + maintenance status (total worked,
+// since-last-service, remaining, next threshold, overdue-by, status). The
+// client only renders this — it never recomputes machine hours.
+final machineUtilizationProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
+  syncOn(ref, {SyncEntity.machine, SyncEntity.job, SyncEntity.maintenance});
+  final dio = ref.watch(apiClientProvider);
+  final response = await dio.get('/machines/$id/utilization');
+  return response.data as Map<String, dynamic>;
+});
+
+Color _maintenanceColor(String status) {
+  switch (status) {
+    case 'OVERDUE':
+      return Colors.red;
+    case 'DUE':
+      return Colors.deepOrange;
+    case 'DUE_SOON':
+      return Colors.orange;
+    case 'UNDER_MAINTENANCE':
+      return Colors.blueGrey;
+    case 'TRACKING_DISABLED':
+      return Colors.grey;
+    default:
+      return Colors.green;
+  }
+}
+
 class MachineDetailScreen extends ConsumerWidget {
   final String machineId;
 
@@ -109,6 +136,8 @@ class MachineDetailScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+                const SizedBox(height: 8),
+                _MachineUtilizationCard(machineId: machineId),
               ],
             ),
           );
@@ -116,6 +145,69 @@ class MachineDetailScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: ${apiErrorMessage(error)}')),
       ),
+    );
+  }
+}
+
+/// Working time & maintenance status card — all values from
+/// GET /machines/:id/utilization (the single authoritative machine-hour
+/// calculation). Answers: total worked, worked since last service, remaining
+/// to service, due/overdue.
+class _MachineUtilizationCard extends ConsumerWidget {
+  final String machineId;
+  const _MachineUtilizationCard({required this.machineId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(machineUtilizationProvider(machineId));
+    return async.when(
+      loading: () => const Card(child: Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))),
+      error: (e, _) => Card(child: Padding(padding: const EdgeInsets.all(16), child: Text('Could not load utilization: ${apiErrorMessage(e)}'))),
+      data: (u) {
+        final status = u['status'] as String? ?? 'NORMAL';
+        final total = u['totalWorked'] as Map<String, dynamic>? ?? const {};
+        final since = u['workedSinceLastService'] as Map<String, dynamic>? ?? const {};
+        final remaining = u['remainingToService'] as Map<String, dynamic>? ?? const {};
+        final overdue = u['overdueBy'] as Map<String, dynamic>? ?? const {};
+        final tracking = u['trackingEnabled'] == true;
+        final color = _maintenanceColor(status);
+
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Working Time & Maintenance', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
+                      child: Text(status.replaceAll('_', ' '), style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(u['message'] as String? ?? '', style: TextStyle(color: color)),
+                const SizedBox(height: 8),
+                InfoRow('Total Worked', total['text'] as String? ?? '—'),
+                if (tracking) ...[
+                  InfoRow('Maintenance Interval', '${u['intervalHours'] ?? '—'} h'),
+                  InfoRow('Worked Since Service', since['text'] as String? ?? '—'),
+                  if (status == 'OVERDUE')
+                    InfoRow('Overdue By', overdue['text'] as String? ?? '—')
+                  else
+                    InfoRow('Remaining', remaining['text'] as String? ?? '—'),
+                  InfoRow('Next Service At', u['nextServiceThresholdHours'] != null ? '${u['nextServiceThresholdHours']} h' : '—'),
+                  InfoRow('Last Service', (u['lastServiceDate'] as String?)?.split('T').first ?? 'Never'),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

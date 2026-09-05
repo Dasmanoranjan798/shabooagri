@@ -769,7 +769,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> with SingleTi
                     child: Padding(
                       padding: EdgeInsets.all(12.0),
                       child: Text(
-                        'This is now locked. Only the Owner can edit or void it — Manager/Driver view only from here.',
+                        'This is now locked. Only the Owner can edit or cancel it — Manager/Driver view only from here.',
                         style: TextStyle(fontSize: 12, color: Colors.black87),
                       ),
                     ),

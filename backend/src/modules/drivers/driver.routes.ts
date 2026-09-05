@@ -15,6 +15,25 @@ driverRouter.get("/:id", requirePermission("operations.view"), asyncHandler(driv
 // Owner/Manager via operations.view, only their own record for a Driver)
 // rather than a route-level permission check — same pattern as Bookings.
 driverRouter.get("/:id/compensation", asyncHandler(driverController.getCompensationSummary));
+
+// Driver Payment Out. Reads are scope-checked in the service (a Driver sees
+// only their own earnings/payments — self-service), so no route-level
+// permission gate on the GETs. Writes are gated: recording a payment needs
+// driver_payment.pay (Owner/Manager); cancelling needs driver_payment.cancel
+// (Owner only), mirroring the customer Payment In cancel rule.
+driverRouter.get("/:id/earnings", asyncHandler(driverController.getEarnings));
+driverRouter.get("/:id/payments", asyncHandler(driverController.listPayments));
+driverRouter.post(
+  "/:id/payments",
+  requirePermission("driver_payment.pay"),
+  asyncHandler(driverController.recordPayment),
+);
+driverRouter.post(
+  "/:id/payments/:paymentId/cancel",
+  requirePermission("driver_payment.cancel"),
+  asyncHandler(driverController.cancelPayment),
+);
+
 driverRouter.post("/", requirePermission("driver.manage"), asyncHandler(driverController.create));
 driverRouter.patch("/:id", requirePermission("driver.manage"), asyncHandler(driverController.update));
 // Owner-only (§ dependency-locked deletion, Rule 4 & 5) — distinct from

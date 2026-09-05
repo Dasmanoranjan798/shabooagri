@@ -11,7 +11,6 @@ import 'package:shabooagri_mobile/core/widgets/desktop_sidebar.dart';
 import 'package:shabooagri_mobile/features/customers/presentation/customer_detail_screen.dart';
 import 'package:shabooagri_mobile/features/customers/presentation/customer_form_screen.dart';
 import 'package:shabooagri_mobile/features/customers/presentation/customer_list_screen.dart';
-import 'package:shabooagri_mobile/features/payments/presentation/record_advance_screen.dart';
 import 'package:shabooagri_mobile/features/payments/presentation/new_invoice_screen.dart';
 import 'package:shabooagri_mobile/features/maintenance/presentation/maintenance_record_form_screen.dart';
 import 'package:shabooagri_mobile/features/machines/presentation/machine_list_screen.dart';
@@ -125,17 +124,6 @@ void main() {
       size: const Size(1920, 1080),
     );
     expect(find.byType(DesktopSidebar), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('Record Advance payment workflow uses the desktop shell', (tester) async {
-    await _pump(
-      tester,
-      const RecordAdvanceScreen(),
-      [customersListProvider.overrideWith((ref) async => [_customer('c1', 'Ramesh Kumar')])],
-    );
-    expect(find.byType(DesktopSidebar), findsOneWidget);
-    expect(find.byType(ResponsiveFormGrid), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 

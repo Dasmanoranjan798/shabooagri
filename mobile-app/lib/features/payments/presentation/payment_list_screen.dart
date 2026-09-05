@@ -162,12 +162,6 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
         ),
         if (canReceive)
           IconButton(
-            icon: const Icon(Icons.savings),
-            tooltip: 'Record Advance',
-            onPressed: () => context.go('/payments/advance/new'),
-          ),
-        if (canReceive)
-          IconButton(
             icon: const Icon(Icons.receipt_long),
             tooltip: 'New Invoice',
             onPressed: () => context.go('/payments/invoice/new'),
@@ -256,7 +250,7 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                           title: Text('${invoice.invoiceNumber} · ${invoice.customerName}'),
                           subtitle: Text('${invoice.status} · ${invoice.invoiceDate.split('T').first}'),
                           onTap: () => context.go('/payments/${invoice.id}'),
-                          trailing: canReceive && invoice.balanceAmount > 0 && invoice.status != 'VOIDED'
+                          trailing: canReceive && invoice.balanceAmount > 0 && invoice.status != 'CANCELLED'
                               ? TextButton(
                                   onPressed: () => context.go('/payments/${invoice.id}'),
                                   child: Text('Receive\n₹${invoice.balanceAmount.toStringAsFixed(0)}',
@@ -383,7 +377,7 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                         ),
                       )),
                       DataCell(
-                        canReceive && i.balanceAmount > 0 && i.status != 'VOIDED'
+                        canReceive && i.balanceAmount > 0 && i.status != 'CANCELLED'
                             ? FilledButton.tonal(
                                 onPressed: () => context.go('/payments/${i.id}'),
                                 child: const Text('Receive'),

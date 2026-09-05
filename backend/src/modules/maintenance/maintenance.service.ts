@@ -1,5 +1,8 @@
+import { prisma } from "../../db/prisma";
 import { AppError } from "../../shared/errors/AppError";
 import * as machineService from "../machines/machine.service";
+import * as machineUtilizationService from "../machines/machineUtilization.service";
+import { writeAudit } from "../../shared/audit/audit.service";
 import * as maintenanceRepo from "./maintenance.repository";
 import type { CreateScheduleInput, UpdateScheduleInput, CreateRecordInput, UpdateRecordInput } from "./maintenance.validators";
 
@@ -49,21 +52,62 @@ export async function getRecordById(companyId: string, id: string) {
   return record;
 }
 
-export async function createRecord(companyId: string, input: CreateRecordInput) {
-  // Validate machine and (optionally) schedule belong to company
+// Completing maintenance (§ Part 12): create a permanent, append-only record
+// AND establish the new baseline so the next-service threshold advances.
+// When the caller doesn't supply the hour reading, we snapshot the machine's
+// authoritative worked hours at completion time (so a machine serviced at
+// 152 h records 152 h, and the next 150 h interval counts from there). The
+// previous record is never overwritten — history is preserved. The machine's
+// own baseline columns (last_service_*, next_service_due_hours) are refreshed
+// so the machine record reflects the reset immediately.
+export async function createRecord(companyId: string, input: CreateRecordInput, actorUserId?: string) {
   await machineService.getById(companyId, input.machineId);
+
+  let intervalHours: number | null = null;
   if (input.maintenanceScheduleId) {
-    await getScheduleById(companyId, input.maintenanceScheduleId);
+    const schedule = await getScheduleById(companyId, input.maintenanceScheduleId);
+    intervalHours = schedule.intervalHours != null ? Number(schedule.intervalHours) : null;
   }
-  return maintenanceRepo.createRecord(companyId, {
+
+  const workedHours = await machineUtilizationService.getMachineWorkedHours(companyId, input.machineId);
+  const hourMeterAtService = input.hourMeterAtService ?? workedHours;
+
+  const record = await maintenanceRepo.createRecord(companyId, {
     machineId: input.machineId,
     maintenanceScheduleId: input.maintenanceScheduleId ?? null,
     serviceDate: new Date(input.serviceDate),
-    hourMeterAtService: input.hourMeterAtService ?? null,
+    hourMeterAtService,
     description: input.description ?? null,
     cost: input.cost ?? null,
     performedBy: input.performedBy ?? null,
   });
+
+  // Refresh the machine's baseline so the reset shows up on the machine record.
+  await prisma.machine.update({
+    where: { id: input.machineId },
+    data: {
+      lastServiceDate: new Date(input.serviceDate),
+      lastServiceHourMeter: hourMeterAtService,
+      ...(intervalHours != null ? { nextServiceDueHours: Math.round((hourMeterAtService + intervalHours) * 100) / 100 } : {}),
+    },
+  });
+
+  await writeAudit({
+    companyId,
+    userId: actorUserId ?? null,
+    entityType: "machine",
+    entityId: input.machineId,
+    action: "maintenance.completed",
+    changes: {
+      recordId: record.id,
+      hourMeterAtService,
+      serviceDate: input.serviceDate,
+      intervalHours,
+      nextServiceThresholdHours: intervalHours != null ? Math.round((hourMeterAtService + intervalHours) * 100) / 100 : null,
+    },
+  });
+
+  return record;
 }
 
 export async function updateRecord(companyId: string, id: string, input: UpdateRecordInput) {

@@ -14,10 +14,15 @@ export const PERMISSIONS = [
   { key: "driver.assign", description: "Assign a driver to a booking" },
   { key: "job.update_status", description: "Record job execution progress (start/pause/complete, hours, acres, fuel)" },
   { key: "payment.receive", description: "Record a payment against an invoice" },
-  // Void, not delete (§ dependency-locked deletion) — reversing a payment
+  // Cancel, not delete (§ dependency-locked deletion) — reversing a payment
   // or invoice while keeping it permanently visible in history/reports.
   // Owner-only: not granted to manager below.
-  { key: "payment.void", description: "Void a payment or invoice (Owner only)" },
+  { key: "payment.cancel", description: "Cancel a payment or invoice (Owner only)" },
+  // Driver Payment Out (money paid to a driver against earned compensation).
+  // Distinct from payment.receive (customer Payment In). pay = Owner/Manager;
+  // cancel = Owner only (mirrors payment.cancel).
+  { key: "driver_payment.pay", description: "Record a Payment Out to a driver" },
+  { key: "driver_payment.cancel", description: "Cancel a driver Payment Out (Owner only)" },
   { key: "report.generate", description: "View/generate reports" },
   { key: "user.manage", description: "Create/edit/deactivate users" },
   { key: "settings.manage", description: "Change company settings" },
@@ -38,7 +43,7 @@ export const PERMISSIONS = [
   { key: "driver.delete", description: "Hard-delete a driver profile with no linked bookings (Owner only)" },
   { key: "customer.delete", description: "Hard-delete a customer with no linked bookings (Owner only)" },
   // Cancelling a Job (distinct from the normal start/pause/complete
-  // lifecycle) is Owner-only because it can only happen after voiding any
+  // lifecycle) is Owner-only because it can only happen after cancelling any
   // linked payment — a deliberately rare, corrective action.
   { key: "job.cancel", description: "Cancel a job (Owner only)" },
   {
@@ -57,6 +62,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     "driver.assign",
     "job.update_status",
     "payment.receive",
+    "driver_payment.pay",
     "report.generate",
     "user.manage",
     "machine_type.manage",

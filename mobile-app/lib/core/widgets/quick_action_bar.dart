@@ -27,7 +27,7 @@ class QuickActionBar extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => context.go('/payments/take'),
+                  onPressed: () => context.go('/payments'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     foregroundColor: AppTheme.text,

@@ -178,7 +178,7 @@ class CustomerDetailScreen extends ConsumerWidget {
                 backgroundColor: AppTheme.success,
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              onPressed: () => context.go('/payments/take', extra: customerId),
+              onPressed: () => context.go('/payments'),
             ),
           );
 

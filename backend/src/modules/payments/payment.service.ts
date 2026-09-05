@@ -13,7 +13,6 @@ import * as settingsRepo from "../settings/settings.repository";
 import type {
   CreateManualInvoiceInput,
   ReceivePaymentInput,
-  RecordCustomerAdvanceInput,
   FilterInvoicesInput,
 } from "./payment.validators";
 
@@ -134,111 +133,12 @@ export async function createManualInvoice(
   });
 }
 
-// Money received from a customer with no invoice to apply it to yet (an
-// advance before a job starts, a walk-in collection). Tracked separately
-// from Payment, which always requires an invoiceId.
-// A customer who already owes money on open invoices and hands over cash
-// isn't giving a pure "advance" — that money settles the oldest debt first,
-// same as any other payment; only the leftover (if the amount exceeds what
-// they owe) is a real advance/credit. Mirrors how a manual payment against
-// a specific invoice works (recordPaymentTx), just applied automatically
-// across every open invoice this customer has, oldest first.
-export async function recordCustomerAdvance(
-  companyId: string,
-  user: AuthenticatedUser,
-  input: RecordCustomerAdvanceInput,
-) {
-  await customerService.getById(companyId, input.customerId);
-
-  const advance = await customerAdvanceRepository.create(companyId, {
-    customerId: input.customerId,
-    amount: input.amount,
-    paymentMethod: input.paymentMethod,
-    referenceNumber: input.referenceNumber,
-    receivedBy: user.id,
-    notes: input.notes,
-  });
-
-  const appliedTotal = await applyAmountToOutstandingInvoices(
-    companyId,
-    user.id,
-    input.customerId,
-    input.amount,
-    { paymentMethod: input.paymentMethod, referenceNumber: input.referenceNumber },
-  );
-
-  if (appliedTotal === 0) {
-    return advance;
-  }
-  const updated = await customerAdvanceRepository.setAppliedAmount(companyId, advance.id, appliedTotal);
-  return updated ?? advance;
-}
-
-// Shared by recordCustomerAdvance and the one-off backfill for advances
-// recorded before this auto-apply logic existed. Returns how much of
-// `amount` actually got applied (<= amount; less if the customer had fewer
-// open invoices than the amount received).
-async function applyAmountToOutstandingInvoices(
-  companyId: string,
-  receivedByUserId: string,
-  customerId: string,
-  amount: number,
-  paymentInfo: { paymentMethod: RecordCustomerAdvanceInput["paymentMethod"]; referenceNumber?: string },
-): Promise<number> {
-  const outstandingInvoices = await invoiceRepository.findOutstandingForCustomer(companyId, customerId);
-
-  let remaining = Math.round(amount * 100) / 100;
-  let appliedTotal = 0;
-  for (const invoice of outstandingInvoices) {
-    if (remaining <= 0) break;
-    const applyAmount = Math.min(remaining, Number(invoice.balanceAmount));
-    if (applyAmount <= 0) continue;
-
-    await paymentRepository.recordPaymentTx(companyId, invoice.id, {
-      amount: applyAmount,
-      paymentMethod: paymentInfo.paymentMethod,
-      referenceNumber: paymentInfo.referenceNumber,
-      receivedBy: receivedByUserId,
-      notes: "Auto-applied from advance payment",
-    });
-
-    appliedTotal = Math.round((appliedTotal + applyAmount) * 100) / 100;
-    remaining = Math.round((remaining - applyAmount) * 100) / 100;
-  }
-  return appliedTotal;
-}
-
-// One-off backfill for advances recorded before auto-apply existed, whose
-// unapplied balance should now settle against any open invoices the
-// customer has. Safe to call repeatedly — advances that are already fully
-// applied, or whose customer has no open invoices, are no-ops. Attributes
-// each auto-applied payment to the advance's original receiver, not
-// whoever runs the backfill.
-export async function backfillUnappliedAdvances(companyId: string) {
-  const advances = await customerAdvanceRepository.findAllForCompany(companyId);
-  const results: Array<{ advanceId: string; appliedNow: number }> = [];
-
-  for (const advance of advances) {
-    const unapplied = Math.round((Number(advance.amount) - Number(advance.appliedAmount)) * 100) / 100;
-    if (unapplied <= 0) continue;
-
-    const appliedNow = await applyAmountToOutstandingInvoices(
-      companyId,
-      advance.receivedBy,
-      advance.customerId,
-      unapplied,
-      { paymentMethod: advance.paymentMethod, referenceNumber: advance.referenceNumber ?? undefined },
-    );
-
-    if (appliedNow > 0) {
-      const newAppliedAmount = Math.round((Number(advance.appliedAmount) + appliedNow) * 100) / 100;
-      await customerAdvanceRepository.setAppliedAmount(companyId, advance.id, newAppliedAmount);
-      results.push({ advanceId: advance.id, appliedNow });
-    }
-  }
-  return results;
-}
-
+// Customer advance/credit balances. These are NOT a separate money-entry
+// feature — a credit row is created automatically by recordPaymentTx when a
+// customer pays more than all their open invoices' balances combined (the
+// leftover). This read surfaces those balances (balance = amount -
+// appliedAmount) for display; there is no standalone endpoint that creates
+// one.
 export async function listCustomerAdvances(companyId: string, user: AuthenticatedUser) {
   const scope = await resolveCallerScope(companyId, user);
   if (scope.kind === "company") {
@@ -298,26 +198,26 @@ export async function updateInvoiceTax(
 }
 
 // Rule 1 (§ dependency-locked deletion): void, not delete — permission
-// gating (Owner-only) is enforced at the route via payment.void, not here.
-export async function voidInvoice(companyId: string, invoiceId: string, user: AuthenticatedUser, reason: string) {
-  const voided = await invoiceRepository.voidScoped(companyId, invoiceId, reason, user.id);
-  if (!voided) {
+// gating (Owner-only) is enforced at the route via payment.cancel, not here.
+export async function cancelInvoice(companyId: string, invoiceId: string, user: AuthenticatedUser, reason: string) {
+  const cancelled = await invoiceRepository.cancelScoped(companyId, invoiceId, reason, user.id);
+  if (!cancelled) {
     throw new AppError(404, "Invoice not found");
   }
-  return voided;
+  return cancelled;
 }
 
-export async function voidPayment(companyId: string, paymentId: string, user: AuthenticatedUser, reason: string) {
-  return paymentRepository.voidPaymentTx(companyId, paymentId, reason, user.id);
+export async function cancelPayment(companyId: string, paymentId: string, user: AuthenticatedUser, reason: string) {
+  return paymentRepository.cancelPaymentTx(companyId, paymentId, reason, user.id);
 }
 
-// Rule 2 dependency-guard support: how many non-voided payments are
+// Rule 2 dependency-guard support: how many non-cancelled payments are
 // linked to a Job, via its booking's invoice. 0 if the booking has no
-// invoice yet (nothing to void first).
-export async function countNonVoidedPaymentsForBooking(companyId: string, bookingId: string): Promise<number> {
+// invoice yet (nothing to cancel first).
+export async function countNonCancelledPaymentsForBooking(companyId: string, bookingId: string): Promise<number> {
   const invoice = await invoiceRepository.findByBookingIdScoped(companyId, bookingId);
   if (!invoice) return 0;
-  return paymentRepository.countNonVoidedByInvoiceId(companyId, invoice.id);
+  return paymentRepository.countNonCancelledByInvoiceId(companyId, invoice.id);
 }
 
 export async function listInvoices(companyId: string, user: AuthenticatedUser) {
@@ -512,8 +412,8 @@ export async function getReceipt(companyId: string, invoiceId: string, user: Aut
       receivedAt: p.receivedAt,
       receivedBy: p.receiver.fullName,
       notes: p.notes,
-      voided: p.voided,
-      voidReason: p.voidReason,
+      cancelled: p.cancelled,
+      cancelReason: p.cancelReason,
     })),
   };
 }

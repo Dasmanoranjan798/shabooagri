@@ -56,7 +56,6 @@ class _QuickActionMenu extends StatelessWidget {
               _ActionItem(icon: Icons.category, label: 'Work Type', onTap: () { Navigator.pop(context); context.go('/settings'); }),
               _ActionItem(icon: Icons.money_off, label: 'Expense', onTap: () { Navigator.pop(context); context.go('/expenses/new'); }),
               _ActionItem(icon: Icons.build, label: 'Maintenance', onTap: () { Navigator.pop(context); context.go('/maintenance'); }),
-              _ActionItem(icon: Icons.payments, label: 'Advance', onTap: () { Navigator.pop(context); context.go('/payments/advance'); }),
               _ActionItem(icon: Icons.local_gas_station, label: 'Fuel', onTap: () { Navigator.pop(context); context.go('/fuel'); }),
             ],
           ),

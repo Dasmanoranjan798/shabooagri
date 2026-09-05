@@ -25,7 +25,7 @@ export async function create(req: Request, res: Response) {
 export async function update(req: Request, res: Response) {
   const user = requireUser(req);
   const input = updateEmployeeSchema.parse(req.body);
-  const employee = await employeeService.update(user.companyId, req.params.id, input);
+  const employee = await employeeService.update(user.companyId, req.params.id, input, user.id);
   res.status(200).json(employee);
 }
 

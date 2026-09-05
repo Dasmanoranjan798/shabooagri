@@ -8,8 +8,8 @@ class ReceiptPayment {
   final String? referenceNumber;
   final String receivedAt;
   final String receivedBy;
-  final bool voided;
-  final String? voidReason;
+  final bool cancelled;
+  final String? cancelReason;
 
   ReceiptPayment.fromJson(Map<String, dynamic> json)
       : id = json['id'] as String,
@@ -18,8 +18,8 @@ class ReceiptPayment {
         referenceNumber = json['referenceNumber'] as String?,
         receivedAt = json['receivedAt'] as String,
         receivedBy = json['receivedBy'] as String,
-        voided = json['voided'] as bool? ?? false,
-        voidReason = json['voidReason'] as String?;
+        cancelled = json['cancelled'] as bool? ?? false,
+        cancelReason = json['cancelReason'] as String?;
 }
 
 class Receipt {

@@ -5,7 +5,7 @@ import * as fuelService from "../fuel/fuel.service";
 import * as paymentService from "../payments/payment.service";
 import { resolveCallerScope } from "../../shared/access/callerScope";
 import { AppError } from "../../shared/errors/AppError";
-import { assertNoNonVoidedPayments } from "../../shared/utils/dependencyGuard";
+import { assertNoNonCancelledPayments } from "../../shared/utils/dependencyGuard";
 import * as jobPhotoRepository from "./jobPhoto.repository";
 import * as jobRepository from "./job.repository";
 import * as jobWorkSessionRepository from "./jobWorkSession.repository";
@@ -421,8 +421,8 @@ export async function submit(companyId: string, id: string, user: AuthenticatedU
 }
 
 // Rule 2 (§ dependency-locked deletion): Owner-only (gated by job.cancel
-// at the route), and only reachable while no non-voided Payment is linked
-// via the booking's invoice — void the payment(s) first. Mirrors
+// at the route), and only reachable while no non-cancelled Payment is linked
+// via the booking's invoice — cancel the payment(s) first. Mirrors
 // complete()'s pattern of keeping the Booking's status in lockstep with
 // the Job's: a cancelled Job leaves its Booking CANCELLED too, both
 // written in one transaction, same as complete() does for COMPLETED.
@@ -434,7 +434,7 @@ export async function submit(companyId: string, id: string, user: AuthenticatedU
 // make the payment-guard below unreachable: nothing would ever have a
 // linked payment left to block on. The real scenario this rule protects is
 // exactly "job was completed, invoice/payment generated, now needs
-// reversing" — void the payment, then cancel the (completed) job. STOPPED
+// reversing" — cancel the payment, then cancel the (completed) job. STOPPED
 // is included too — a job frozen but not yet submitted (e.g. blocked on a
 // missing required photo/fuel log) still needs a way out.
 export async function cancel(companyId: string, id: string, user: AuthenticatedUser, reason?: string) {
@@ -442,8 +442,8 @@ export async function cancel(companyId: string, id: string, user: AuthenticatedU
   if (!job) throw new AppError(404, "Job not found");
   assertStatus(job, ["NOT_STARTED", "WORKING", "PAUSED", "STOPPED", "COMPLETED"], "cancel");
 
-  const paymentCount = await paymentService.countNonVoidedPaymentsForBooking(companyId, job.bookingId);
-  assertNoNonVoidedPayments(paymentCount);
+  const paymentCount = await paymentService.countNonCancelledPaymentsForBooking(companyId, job.bookingId);
+  assertNoNonCancelledPayments(paymentCount);
 
   const wasWorking = job.status === "WORKING";
   const cancelledAt = new Date();

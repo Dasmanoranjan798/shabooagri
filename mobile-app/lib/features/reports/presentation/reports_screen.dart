@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart' show Share;
@@ -123,6 +124,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     return AdaptiveScaffold(
       currentRoute: '/reports',
       title: 'Reports',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.groups_2),
+          tooltip: 'Driver & Machine Reports',
+          onPressed: () => context.go('/reports/operational'),
+        ),
+      ],
       body: summaryAsync.when(
         // The dashboard/summary contract returns `kpis: null` for the narrow
         // (driver/non-company) scope. Reports are a company-level view, so

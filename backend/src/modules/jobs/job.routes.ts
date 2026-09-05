@@ -43,7 +43,7 @@ jobRouter.post("/:id/submit", requirePermission("job.update_status"), asyncHandl
 // Owner-only (§ dependency-locked deletion, Rule 2 & 5) — distinct from
 // job.update_status, which Driver/Manager also hold for the normal
 // start/pause/complete lifecycle. Cancelling is a rarer, corrective
-// action gated by dependencyGuard's non-voided-payment check in
+// action gated by dependencyGuard's non-cancelled-payment check in
 // job.service.ts.
 jobRouter.post("/:id/cancel", requirePermission("job.cancel"), asyncHandler(jobController.cancel));
 jobRouter.post(

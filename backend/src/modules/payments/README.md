@@ -4,7 +4,7 @@
 
 **Status:** Fully implemented (routes, controllers, services, repositories, monotonic counters, transactional payment handling, and tests).
 
-**Owns tables:** `invoices`, `payments`
+**Owns tables:** `invoices`, `payments`, `customer_advances` (advance/credit balances — created only as the leftover of an overpayment, see §3a; never entered standalone)
 
 **Spec reference:** `docs/ShabooAgri_Goal_Specification.md` §8.5, §6, §11.7
 
@@ -32,7 +32,14 @@
   - `UNPAID` (`paidAmount == 0`)
   - `PARTIALLY_PAID` (`0 < paidAmount < totalAmount`)
   - `PAID` (`paidAmount == totalAmount`)
-- Payment amounts exceeding remaining balance are rejected with HTTP 400.
+
+### 3a. Overpayment → automatic customer advance/credit
+- A customer handing over more than a single invoice's balance is normal, so **overpayment is allowed** (it is no longer rejected). `recordPaymentTx` allocates the money in one transaction:
+  1. Settle the invoice the payment was received against, capped at its balance.
+  2. Auto-apply any remainder to the customer's **other open invoices, oldest-first** — each as its own `Payment` row (`notes: "Applied from overpayment on <INV>"`).
+  3. Whatever is still left over after every open invoice is settled becomes the customer's **advance/credit balance**: a `customer_advances` row with `appliedAmount = 0`.
+- This is the **single authoritative place** a customer credit balance is created. There is **no** standalone "record advance" / "take advance" entry point — the old `POST /payments/advances` create endpoint, its service/validator, and the client screens were removed. `GET /payments/advances` remains, read-only, to display these credit balances (`balance = amount − appliedAmount`).
+- The response includes `overflowApplications` (other invoices settled by the spill) and `creditCreated` (the leftover credited) so clients can inform the user.
 
 ### 4. Supported Payment Methods
 - `CASH`

@@ -4,9 +4,8 @@ import * as paymentService from "./payment.service";
 import {
   createManualInvoiceSchema,
   receivePaymentSchema,
-  recordCustomerAdvanceSchema,
   updateInvoiceTaxSchema,
-  voidSchema,
+  cancelSchema,
   filterInvoicesSchema,
 } from "./payment.validators";
 
@@ -21,13 +20,6 @@ export async function createManualInvoice(req: Request, res: Response) {
   const input = createManualInvoiceSchema.parse(req.body);
   const invoice = await paymentService.createManualInvoice(user.companyId, input);
   res.status(201).json(invoice);
-}
-
-export async function recordCustomerAdvance(req: Request, res: Response) {
-  const user = requireUser(req);
-  const input = recordCustomerAdvanceSchema.parse(req.body);
-  const advance = await paymentService.recordCustomerAdvance(user.companyId, user, input);
-  res.status(201).json(advance);
 }
 
 export async function listCustomerAdvances(req: Request, res: Response) {
@@ -56,17 +48,17 @@ export async function updateInvoiceTax(req: Request, res: Response) {
   res.json(result);
 }
 
-export async function voidInvoice(req: Request, res: Response) {
+export async function cancelInvoice(req: Request, res: Response) {
   const user = requireUser(req);
-  const input = voidSchema.parse(req.body);
-  const result = await paymentService.voidInvoice(user.companyId, req.params.id, user, input.reason);
+  const input = cancelSchema.parse(req.body);
+  const result = await paymentService.cancelInvoice(user.companyId, req.params.id, user, input.reason);
   res.json(result);
 }
 
-export async function voidPayment(req: Request, res: Response) {
+export async function cancelPayment(req: Request, res: Response) {
   const user = requireUser(req);
-  const input = voidSchema.parse(req.body);
-  const result = await paymentService.voidPayment(user.companyId, req.params.id, user, input.reason);
+  const input = cancelSchema.parse(req.body);
+  const result = await paymentService.cancelPayment(user.companyId, req.params.id, user, input.reason);
   res.json(result);
 }
 

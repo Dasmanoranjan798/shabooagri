@@ -80,8 +80,8 @@ export const updateJobSchema = z.object({
   notes: z.string().optional(),
 });
 
-// Reason is optional (unlike Payment/Invoice void's mandatory reason) —
-// only the Payment/Invoice void action in § dependency-locked deletion
+// Reason is optional (unlike Payment/Invoice cancel's mandatory reason) —
+// only the Payment/Invoice cancel action in § dependency-locked deletion
 // requires one; logged as the JobStatusLog note when provided.
 export const cancelJobSchema = z.object({
   reason: z.string().trim().optional(),

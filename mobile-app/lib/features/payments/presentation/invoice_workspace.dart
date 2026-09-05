@@ -111,7 +111,7 @@ class _InvoiceWorkspaceBodyState extends ConsumerState<InvoiceWorkspaceBody> {
     final (statusColor, statusLabel) = switch (inv.status) {
       'PAID' => (Colors.green, 'Paid'),
       'PARTIALLY_PAID' => (Colors.orange, 'Partial'),
-      'VOIDED' => (Colors.grey, 'Voided'),
+      'CANCELLED' => (Colors.grey, 'Cancelled'),
       _ => (Colors.red, 'Unpaid'),
     };
     return Card(
