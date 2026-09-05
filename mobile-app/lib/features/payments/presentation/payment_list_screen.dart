@@ -134,7 +134,7 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
 
     return AdaptiveScaffold(
       currentRoute: '/payments',
-      title: 'Payments Analysis',
+      title: 'Payments',
       actions: [
         IconButton(
           icon: const Icon(Icons.filter_list),
@@ -270,33 +270,11 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
                         ),
                       )),
 
-                // Analytics Section
-                const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Text('Analytics', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                ),
-                if (analysis.dayWiseCollection.isNotEmpty) ...[
-                   const ListTile(title: Text('Day-wise Collection', style: TextStyle(fontWeight: FontWeight.bold))),
-                   ...analysis.dayWiseCollection.map((d) => ListTile(
-                     title: Text(d['date']),
-                     trailing: Text('₹${(double.tryParse(d['amount'].toString()) ?? 0.0).toStringAsFixed(0)}'),
-                   )),
-                ],
-                if (analysis.methodWiseCollection.isNotEmpty) ...[
-                   const ListTile(title: Text('Payment Methods', style: TextStyle(fontWeight: FontWeight.bold))),
-                   ...analysis.methodWiseCollection.map((m) => ListTile(
-                     title: Text(m['method']),
-                     trailing: Text('₹${(double.tryParse(m['amount'].toString()) ?? 0.0).toStringAsFixed(0)}'),
-                   )),
-                ],
-                if (analysis.customerWise.isNotEmpty) ...[
-                   const ListTile(title: Text('Customer Outstanding', style: TextStyle(fontWeight: FontWeight.bold))),
-                   ...analysis.customerWise.map((c) => ListTile(
-                     title: Text(c['name']),
-                     subtitle: Text('Invoiced: ₹${c['invoiced']} | Paid: ₹${c['paid']}'),
-                     trailing: Text('₹${(double.tryParse(c['outstanding'].toString()) ?? 0.0).toStringAsFixed(0)}', style: const TextStyle(color: AppTheme.receivable, fontWeight: FontWeight.bold)),
-                   )),
-                ],
+                // Reports (Payment Methods, Customer Outstanding, Day-wise
+                // Collections, Overdue, Analytics) now live on their own routes
+                // under Payments — reachable from the side menu's expandable
+                // Payments section — instead of being stacked here at the bottom
+                // of the transaction list.
               ],
             ),
           );

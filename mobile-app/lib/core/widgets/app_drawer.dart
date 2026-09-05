@@ -72,6 +72,34 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
     }
   }
 
+  /// An expandable module (e.g. Payments) whose children each navigate to their
+  /// own route. Starts expanded when the current route is inside the module so
+  /// the active child is visible.
+  Widget _buildGroup(BuildContext context, NavDestination item) {
+    return ExpansionTile(
+      leading: Icon(item.icon),
+      title: Text(item.label),
+      initiallyExpanded: isDestinationActive(item.route, widget.currentRoute),
+      childrenPadding: const EdgeInsets.only(left: 16),
+      shape: const Border(),
+      collapsedShape: const Border(),
+      children: [
+        for (final child in item.children)
+          ListTile(
+            leading: Icon(child.icon, size: 20),
+            title: Text(child.label),
+            selected: isLeafActive(child.route, widget.currentRoute),
+            onTap: () {
+              Navigator.of(context).pop();
+              if (!isLeafActive(child.route, widget.currentRoute)) {
+                context.go(child.route);
+              }
+            },
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -131,19 +159,23 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
             Expanded(
               child: ListView(
                 padding: EdgeInsets.zero,
-                children: _items
-                    .map((item) => ListTile(
-                          leading: Icon(item.icon),
-                          title: Text(item.label),
-                          selected: widget.currentRoute == item.route,
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            if (widget.currentRoute != item.route) {
-                              context.go(item.route);
-                            }
-                          },
-                        ))
-                    .toList(),
+                children: [
+                  for (final item in _items)
+                    if (item.hasChildren)
+                      _buildGroup(context, item)
+                    else
+                      ListTile(
+                        leading: Icon(item.icon),
+                        title: Text(item.label),
+                        selected: widget.currentRoute == item.route,
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          if (widget.currentRoute != item.route) {
+                            context.go(item.route);
+                          }
+                        },
+                      ),
+                ],
               ),
             ),
             

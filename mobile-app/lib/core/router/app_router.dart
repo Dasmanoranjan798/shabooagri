@@ -35,6 +35,7 @@ import '../../features/maintenance/presentation/maintenance_screen.dart';
 import '../../features/payments/presentation/new_invoice_screen.dart';
 import '../../features/payments/presentation/payment_detail_screen.dart';
 import '../../features/payments/presentation/payment_list_screen.dart';
+import '../../features/payments/presentation/payment_reports_screens.dart';
 import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/reports/presentation/operational_reports_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
@@ -211,6 +212,30 @@ GoRouter buildAppRouter(String initialLocation) {
           GoRoute(
             path: 'invoice/new',
             builder: (context, state) => const NewInvoiceScreen(),
+          ),
+          // Payments module reports — each its own dedicated screen (no longer
+          // stacked at the bottom of the transaction list). These single-segment
+          // paths MUST be declared before ':id' so the invoice-detail param
+          // doesn't swallow them (e.g. treat "overdue" as an invoice id).
+          GoRoute(
+            path: 'methods',
+            builder: (context, state) => const PaymentMethodsReportScreen(),
+          ),
+          GoRoute(
+            path: 'outstanding',
+            builder: (context, state) => const CustomerOutstandingReportScreen(),
+          ),
+          GoRoute(
+            path: 'collections',
+            builder: (context, state) => const DayWiseCollectionsReportScreen(),
+          ),
+          GoRoute(
+            path: 'overdue',
+            builder: (context, state) => const OverdueReportScreen(),
+          ),
+          GoRoute(
+            path: 'analytics',
+            builder: (context, state) => const PaymentsAnalyticsReportScreen(),
           ),
           GoRoute(
             path: ':id',
