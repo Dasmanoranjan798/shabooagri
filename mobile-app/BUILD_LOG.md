@@ -453,3 +453,14 @@ Closes every 🔴/🟡 Farmer-role item in PARITY_INVENTORY.md. Farmer previousl
 - The final `app-arm64-v8a-release.apk` has been published to `platform-frontend/public/downloads/shabooagri-v0.4.0.apk` and is actively served on the live website.
 
 This concludes the Flutter parity implementation. The app is fully built, tested, and distributed.
+
+---
+
+## Release v0.8.18+31 — branded splash, personalized welcome & expandable Payments menu (2026-09-06)
+
+**Shipped & deployed live.**
+
+- **Startup experience:** new branded `SplashScreen` (cold-start route) reusing the session already resolved in `main()` — restored session → short `Hello, {name}` + date welcome → role home; unauthenticated → brief brand flash → existing setup/login. No artificial delay; role-independent. Removed the in-screen greeting from Dashboard, Driver home and Farmer/Customer portal (KPIs now open at the top).
+- **Navigation:** Payments is now an expandable side-menu module (drawer + desktop sidebar) with dedicated routes/screens — Payments, Payment Methods, Customer Outstanding, Day-wise Collections, Overdue, Analytics — each reusing the existing `invoicesAnalysisProvider` (no new API/DB). New `/payments/*` routes declared before `:id`. Nav audit: module→route mapping was already correct; the "clicks open Payments" symptom was the reports having no destinations of their own.
+- **Release steps:** pubspec → 0.8.18+31; `/api/app-version` → 0.8.18/build 31; Download page → v0.8.18 APK + What's New; CHANGELOG updated. Production-signed APK (`CN=ShabooAgri`) built + copied to public/ & dist/ downloads; platform-frontend rebuilt; platform-backend recompiled + PM2-restarted. Verified live: app-version endpoint, marketing bundle, and 200-OK 69MB APK download. `flutter analyze` clean; 112 tests pass (5 desktop goldens regenerated for the Payments expand chevron).
+- **Standing gap (unchanged):** physical-Android acceptance still pending (no device in build env).

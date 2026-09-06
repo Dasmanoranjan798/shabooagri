@@ -10,7 +10,7 @@ set -e
 # /api/app-version values in platform-backend/src/app.ts, and update the
 # version string below.
 
-APK_VERSION="v0.8.1"
+APK_VERSION="v0.8.18"
 
 echo "Building mobile app (release)..."
 cd mobile-app
