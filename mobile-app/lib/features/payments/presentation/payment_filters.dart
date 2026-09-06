@@ -92,3 +92,20 @@ class PaymentFilterState {
     return m;
   }
 }
+
+/// Compact "applied filters" summary (label, value) for report export headers,
+/// derived from a [PaymentFilterState]. Only non-empty fields appear. Shared by
+/// the Payments transaction report and the Payments & Collections reports so
+/// there is one filter-summary implementation.
+List<(String, String)> appliedPaymentFilters(PaymentFilterState f) {
+  final out = <(String, String)>[];
+  if (f.status.isNotEmpty) out.add(('Status', f.status.join(', ')));
+  if (f.fromDate != null) out.add(('From', f.fromDate!));
+  if (f.toDate != null) out.add(('To', f.toDate!));
+  if (f.paymentMethods.isNotEmpty) out.add(('Method', f.paymentMethods.join(', ')));
+  if (f.villages.isNotEmpty) out.add(('Village', f.villages.join(', ')));
+  if (f.customerIds.isNotEmpty) out.add(('Customers', '${f.customerIds.length} selected'));
+  if (f.machineIds.isNotEmpty) out.add(('Machines', '${f.machineIds.length} selected'));
+  if (f.driverIds.isNotEmpty) out.add(('Drivers', '${f.driverIds.length} selected'));
+  return out;
+}

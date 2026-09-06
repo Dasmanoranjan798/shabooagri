@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart' show Share;
 import '../../../core/layout/responsive.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
@@ -11,6 +10,7 @@ import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/confirm_delete.dart';
 import '../../../core/widgets/desktop_table.dart';
 import '../../../core/widgets/search_field.dart';
+import '../../reports/presentation/report_export.dart';
 
 class ExpenseSummary {
   final String id;
@@ -54,13 +54,42 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
   String _query = '';
   String? _categoryFilter; // null = All Categories
 
-  Future<void> _exportCsv(List<ExpenseSummary> expenses) async {
-    final buffer = StringBuffer('Date,Category,Amount,Machine,Recorded By,Description\n');
-    for (final e in expenses) {
-      buffer.writeln(
-          '${e.expenseDate.split('T').first},${e.categoryName},${e.amount.toStringAsFixed(2)},${e.machineRegistration ?? ''},${e.recordedBy},"${(e.description ?? '').replaceAll('"', '""')}"');
+  /// The list after the on-screen category + search filters — the single source
+  /// for both the rendered list and the exports.
+  List<ExpenseSummary> _filtered(List<ExpenseSummary> expenses) {
+    var out = _categoryFilter == null ? expenses : expenses.where((e) => e.categoryId == _categoryFilter).toList();
+    if (_query.isNotEmpty) {
+      out = out
+          .where((e) =>
+              e.categoryName.toLowerCase().contains(_query) ||
+              (e.description?.toLowerCase().contains(_query) ?? false) ||
+              (e.machineRegistration?.toLowerCase().contains(_query) ?? false))
+          .toList();
     }
-    await Share.share(buffer.toString(), subject: 'ShabooAgri Expenses Export');
+    return out;
+  }
+
+  ReportDoc _buildDoc(List<ExpenseSummary> expenses) {
+    final rows = _filtered(expenses);
+    return ReportDoc(
+      title: 'Expense Report',
+      filters: [
+        if (_categoryFilter != null) ('Category', rows.isNotEmpty ? rows.first.categoryName : _categoryFilter!),
+        if (_query.isNotEmpty) ('Search', _query),
+      ],
+      columns: const [
+        ReportColumn('Date', type: ColType.date, width: 14),
+        ReportColumn('Category', width: 20),
+        ReportColumn('Machine', width: 14),
+        ReportColumn('Recorded By', width: 18),
+        ReportColumn('Description', width: 30),
+        ReportColumn('Amount', type: ColType.currency, width: 16),
+      ],
+      rows: rows
+          .map((e) => [e.expenseDate, e.categoryName, e.machineRegistration ?? '', e.recordedBy, e.description ?? '', e.amount])
+          .toList(),
+      totals: [null, null, null, null, null, rows.fold<double>(0, (s, e) => s + e.amount)],
+    );
   }
 
   Future<void> _delete(ExpenseSummary expense) async {
@@ -89,11 +118,10 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
       currentRoute: '/expenses',
       title: 'Expenses',
       actions: [
-        IconButton(
-          icon: const Icon(Icons.ios_share),
-          tooltip: 'Export CSV',
-          onPressed: () => expensesAsync.whenData(_exportCsv),
-        ),
+        ReportExportMenu(docBuilder: () {
+          final e = expensesAsync.valueOrNull;
+          return e == null ? null : _buildDoc(e);
+        }),
         IconButton(icon: const Icon(Icons.refresh), onPressed: () => ref.invalidate(expensesListProvider)),
         if (isDesktop && canManage)
           Padding(
@@ -114,15 +142,7 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
           for (final e in expenses) {
             if (e.categoryId.isNotEmpty) categories[e.categoryId] = e.categoryName;
           }
-          var filtered = _categoryFilter == null ? expenses : expenses.where((e) => e.categoryId == _categoryFilter).toList();
-          if (_query.isNotEmpty) {
-            filtered = filtered
-                .where((e) =>
-                    e.categoryName.toLowerCase().contains(_query) ||
-                    (e.description?.toLowerCase().contains(_query) ?? false) ||
-                    (e.machineRegistration?.toLowerCase().contains(_query) ?? false))
-                .toList();
-          }
+          final filtered = _filtered(expenses);
           final totalOutflow = expenses.fold<double>(0, (sum, e) => sum + e.amount);
           final machineryTotal =
               expenses.where((e) => e.machineRegistration != null).fold<double>(0, (sum, e) => sum + e.amount);

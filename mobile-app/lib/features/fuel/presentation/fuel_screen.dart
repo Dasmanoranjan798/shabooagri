@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart' show Share;
+import 'package:intl/intl.dart';
 import '../../../core/layout/responsive.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/desktop_table.dart';
 import '../../machines/presentation/machine_list_screen.dart';
+import '../../reports/presentation/report_export.dart';
 
 class FuelEntry {
   final String machineRegistration;
@@ -55,13 +56,33 @@ final fuelEntriesProvider = FutureProvider<List<FuelEntry>>((ref) async {
 class FuelScreen extends ConsumerWidget {
   const FuelScreen({super.key});
 
-  Future<void> _exportCsv(List<FuelEntry> entries) async {
-    final buffer = StringBuffer('Date,Machine,Litres,Cost,Recorded By\n');
-    for (final e in entries) {
-      buffer.writeln(
-          '${e.recordedAt.split('T').first},${e.machineRegistration},${e.litres.toStringAsFixed(2)},${e.cost?.toStringAsFixed(2) ?? ''},${e.recordedByName}');
-    }
-    await Share.share(buffer.toString(), subject: 'ShabooAgri Fuel Log Export');
+  ReportDoc _buildDoc(List<FuelEntry> entries, FuelFilter filter, String? machineLabel) {
+    final f = DateFormat('d MMM yyyy');
+    return ReportDoc(
+      title: 'Fuel Report',
+      filters: [
+        if (machineLabel != null) ('Machine', machineLabel),
+        if (filter.fromDate != null) ('From', f.format(filter.fromDate!)),
+        if (filter.toDate != null) ('To', f.format(filter.toDate!)),
+      ],
+      columns: const [
+        ReportColumn('Date', type: ColType.date, width: 14),
+        ReportColumn('Machine', width: 16),
+        ReportColumn('Litres', type: ColType.number, width: 12),
+        ReportColumn('Cost', type: ColType.currency, width: 16),
+        ReportColumn('Recorded By', width: 18),
+      ],
+      rows: entries
+          .map((e) => [e.recordedAt, e.machineRegistration, e.litres, e.cost, e.recordedByName])
+          .toList(),
+      totals: [
+        null,
+        null,
+        entries.fold<double>(0, (s, e) => s + e.litres),
+        entries.fold<double>(0, (s, e) => s + (e.cost ?? 0)),
+        null,
+      ],
+    );
   }
 
   Future<void> _pickDateRange(BuildContext context, WidgetRef ref, FuelFilter current) async {
@@ -88,11 +109,16 @@ class FuelScreen extends ConsumerWidget {
       currentRoute: '/fuel',
       title: 'Fuel Log',
       actions: [
-        IconButton(
-          icon: const Icon(Icons.ios_share),
-          tooltip: 'Export CSV',
-          onPressed: () => entriesAsync.whenData(_exportCsv),
-        ),
+        ReportExportMenu(docBuilder: () {
+          final entries = entriesAsync.valueOrNull;
+          if (entries == null) return null;
+          String? machineLabel;
+          if (filter.machineId != null) {
+            final m = machinesAsync.valueOrNull?.where((x) => x.id == filter.machineId);
+            machineLabel = (m != null && m.isNotEmpty) ? m.first.registrationNumber : null;
+          }
+          return _buildDoc(entries, filter, machineLabel);
+        }),
         IconButton(icon: const Icon(Icons.refresh), onPressed: () => ref.invalidate(fuelEntriesProvider)),
       ],
       body: Column(

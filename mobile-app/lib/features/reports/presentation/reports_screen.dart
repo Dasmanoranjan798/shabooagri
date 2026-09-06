@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
-import 'package:share_plus/share_plus.dart' show Share;
 import '../../../core/layout/responsive.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../dashboard/data/dashboard_summary.dart';
+import 'report_export.dart';
 
 class IncomePoint {
   final String label; // date or month
@@ -53,66 +50,57 @@ class ReportsScreen extends ConsumerStatefulWidget {
 
 class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   String _range = '30d';
-  bool _exporting = false;
 
-  Future<void> _exportPdf(DashboardSummary summary, List<IncomePoint> income) async {
-    setState(() => _exporting = true);
-    try {
-      final doc = pw.Document();
-      doc.addPage(
-        pw.Page(
-          build: (context) => pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text('ShabooAgri Report', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 4),
-              pw.Text('Generated ${DateTime.now().toIso8601String().split('T').first} · Range: $_range'),
-              pw.SizedBox(height: 20),
-              pw.Text('Key Metrics', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 8),
-              pw.TableHelper.fromTextArray(
-                headers: ['Metric', 'Value'],
-                data: [
-                  ['Today\'s Revenue', '₹${summary.kpis!.todayRevenue.current.toStringAsFixed(2)}'],
-                  ['This Month Revenue', '₹${summary.kpis!.monthRevenue.current.toStringAsFixed(2)}'],
-                  ['Pending Collection', '₹${summary.kpis!.pendingCollection.current.toStringAsFixed(2)}'],
-                  ['Machines Working', '${summary.kpis!.machinesWorking.working}/${summary.kpis!.machinesWorking.activeUsable}'],
-                  ['Drivers Active', '${summary.kpis!.driversActive.current.toInt()}'],
-                  ['Jobs Completed', '${summary.kpis!.jobsCompleted.current.toInt()}'],
-                ],
-              ),
-              pw.SizedBox(height: 20),
-              pw.Text('Income Overview', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 8),
-              pw.TableHelper.fromTextArray(
-                headers: ['Period', 'Amount'],
-                data: income.map((p) => [p.label, '₹${p.amount.toStringAsFixed(2)}']).toList(),
-              ),
-            ],
-          ),
+  /// One export document for the whole screen, built from the SAME
+  /// `reportsSummaryProvider` + `incomeSeriesProvider($_range)` data shown on
+  /// screen (no new calculation). It is presented as three professional,
+  /// correctly-typed sections rather than a generic Item/Value dump:
+  ///  1. Financial Summary — currency KPIs
+  ///  2. Operational Summary — numeric/count KPIs
+  ///  3. Income Overview — the range's time-series (currency, with a total)
+  ReportDoc _buildDoc(DashboardSummary summary, List<IncomePoint> income) {
+    final k = summary.kpis!;
+    return ReportDoc.multi(
+      title: 'Business Summary',
+      subtitle: 'Income range: $_range',
+      filters: [('Income Range', _range)],
+      sections: [
+        ReportSection(
+          heading: 'Financial Summary',
+          columns: const [
+            ReportColumn('Metric', width: 28),
+            ReportColumn('Amount', type: ColType.currency, width: 18),
+          ],
+          rows: [
+            ["Today's Revenue", k.todayRevenue.current],
+            ['This Month Revenue', k.monthRevenue.current],
+            ['Pending Collection', k.pendingCollection.current],
+          ],
         ),
-      );
-      await Printing.sharePdf(bytes: await doc.save(), filename: 'shabooagri-report-$_range.pdf');
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Export failed. Please try again.')));
-    } finally {
-      if (mounted) setState(() => _exporting = false);
-    }
-  }
-
-  Future<void> _exportCsv(List<IncomePoint> income) async {
-    setState(() => _exporting = true);
-    try {
-      final buffer = StringBuffer('Period,Amount\n');
-      for (final p in income) {
-        buffer.writeln('${p.label},${p.amount.toStringAsFixed(2)}');
-      }
-      await Share.share(buffer.toString(), subject: 'ShabooAgri Income Report ($_range)');
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Export failed. Please try again.')));
-    } finally {
-      if (mounted) setState(() => _exporting = false);
-    }
+        ReportSection(
+          heading: 'Operational Summary',
+          columns: const [
+            ReportColumn('Metric', width: 28),
+            ReportColumn('Count', type: ColType.number, width: 14),
+          ],
+          rows: [
+            ['Machines Working', k.machinesWorking.working],
+            ['Machines Usable', k.machinesWorking.activeUsable],
+            ['Drivers Active', k.driversActive.current.toInt()],
+            ['Jobs Completed', k.jobsCompleted.current.toInt()],
+          ],
+        ),
+        ReportSection(
+          heading: 'Income Overview ($_range)',
+          columns: const [
+            ReportColumn('Period', width: 22),
+            ReportColumn('Amount', type: ColType.currency, width: 18),
+          ],
+          rows: income.map((p) => [p.label, p.amount]).toList(),
+          totals: [null, income.fold<double>(0, (s, p) => s + p.amount)],
+        ),
+      ],
+    );
   }
 
   @override
@@ -122,14 +110,18 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final isDesktop = context.responsive.isDesktop;
 
     return AdaptiveScaffold(
+      // Reached directly from the Reports hub; the old "Operational Reports"
+      // hop is gone (driver/machine/maintenance are their own hub entries now).
       currentRoute: '/reports',
-      title: 'Reports',
+      title: 'Business Summary',
+      showBack: true,
       actions: [
-        IconButton(
-          icon: const Icon(Icons.groups_2),
-          tooltip: 'Driver & Machine Reports',
-          onPressed: () => context.go('/reports/operational'),
-        ),
+        ReportExportMenu(docBuilder: () {
+          final summary = summaryAsync.valueOrNull;
+          final income = incomeAsync.valueOrNull;
+          if (summary == null || summary.kpis == null || income == null) return null;
+          return _buildDoc(summary, income);
+        }),
       ],
       body: summaryAsync.when(
         // The dashboard/summary contract returns `kpis: null` for the narrow
@@ -150,48 +142,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           data: (income) {
             final rangeField = DropdownButtonFormField<String>(
               initialValue: _range,
-              decoration: const InputDecoration(labelText: 'Range', border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Income Range', border: OutlineInputBorder()),
               items: _ranges.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
               onChanged: (value) => setState(() => _range = value!),
-            );
-            final pdfButton = ElevatedButton.icon(
-              icon: const Icon(Icons.picture_as_pdf),
-              label: const Text('Export PDF'),
-              onPressed: _exporting ? null : () => _exportPdf(summary, income),
-            );
-            final csvButton = OutlinedButton.icon(
-              icon: const Icon(Icons.table_chart),
-              label: const Text('Export CSV'),
-              onPressed: _exporting ? null : () => _exportCsv(income),
             );
 
             return ListView(
               padding: const EdgeInsets.all(16.0),
               children: [
-                // Desktop: range + both export buttons in one compact toolbar
-                // row. Phone: range on its own line, buttons on the next.
-                if (isDesktop)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      SizedBox(width: 220, child: rangeField),
-                      const Spacer(),
-                      pdfButton,
-                      const SizedBox(width: 12),
-                      csvButton,
-                    ],
-                  )
-                else ...[
-                  rangeField,
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(child: pdfButton),
-                      const SizedBox(width: 12),
-                      Expanded(child: csvButton),
-                    ],
-                  ),
-                ],
+                // Export/Print live in the app-bar menu (Excel/PDF/Print/CSV).
+                if (isDesktop) SizedBox(width: 220, child: rangeField) else rangeField,
                 const SizedBox(height: 24),
                 const Text('Key Metrics', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shabooagri_mobile/core/sync/data_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart' show Share;
 import '../../../core/layout/responsive.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
@@ -10,7 +9,9 @@ import '../../../core/providers/session_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/adaptive_scaffold.dart';
 import '../../../core/widgets/search_field.dart';
+import '../../reports/presentation/report_export.dart';
 import '../data/invoice_analysis.dart';
+import 'payment_filters.dart';
 import 'payment_list_screen_provider.dart';
 import 'widgets/payment_filters_dialog.dart';
 import 'widgets/payment_filters_desktop_dialog.dart';
@@ -99,29 +100,57 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
     }
   }
 
-  Future<void> _exportCsv(InvoiceAnalysisResponse analysis) async {
-    final buffer = StringBuffer();
-    // Export Summary
-    buffer.writeln('PAYMENT OUTSTANDING REPORT');
-    buffer.writeln('Invoices:,${analysis.summary.invoicesCount}');
-    buffer.writeln('Total Invoiced:,₹${analysis.summary.totalInvoiced.toStringAsFixed(2)}');
-    buffer.writeln('Total Paid:,₹${analysis.summary.totalPaid.toStringAsFixed(2)}');
-    buffer.writeln('Outstanding:,₹${analysis.summary.totalOutstanding.toStringAsFixed(2)}');
-    buffer.writeln('Overdue Amount:,₹${analysis.summary.overdueAmount.toStringAsFixed(2)}');
-    buffer.writeln();
+  /// Invoices after the on-screen search — the same list the table shows.
+  List<InvoiceSummary> _filteredInvoices(InvoiceAnalysisResponse analysis) {
+    if (_query.isEmpty) return analysis.invoices;
+    return analysis.invoices
+        .where((i) =>
+            i.invoiceNumber.toLowerCase().contains(_query) ||
+            i.customerName.toLowerCase().contains(_query) ||
+            i.villageName.toLowerCase().contains(_query))
+        .toList();
+  }
 
-    // Details
-    buffer.writeln('Invoice Number,Customer,Village,Total,Paid,Balance,Status,Date,Due Date,Days Overdue');
-    for (final i in analysis.invoices) {
-      int daysOverdue = 0;
-      if (i.dueDate != null && i.balanceAmount > 0) {
-        final d = DateTime.parse(i.dueDate!);
-        daysOverdue = DateTime.now().difference(d).inDays;
-      }
-      buffer.writeln(
-          '${i.invoiceNumber},${i.customerName},${i.villageName},${i.totalAmount.toStringAsFixed(2)},${i.paidAmount.toStringAsFixed(2)},${i.balanceAmount.toStringAsFixed(2)},${i.status},${i.invoiceDate.split('T').first},${i.dueDate?.split('T').first ?? ''},$daysOverdue');
-    }
-    await Share.share(buffer.toString(), subject: 'ShabooAgri Payments Export');
+  ReportDoc _buildDoc(InvoiceAnalysisResponse analysis) {
+    final rows = _filteredInvoices(analysis);
+    return ReportDoc(
+      title: 'Payments / Transactions Report',
+      filters: [
+        ...appliedPaymentFilters(ref.read(paymentFilterProvider)),
+        if (_query.isNotEmpty) ('Search', _query),
+      ],
+      columns: const [
+        ReportColumn('Invoice', width: 14),
+        ReportColumn('Customer', width: 22),
+        ReportColumn('Village', width: 14),
+        ReportColumn('Date', type: ColType.date, width: 14),
+        ReportColumn('Due', type: ColType.date, width: 14),
+        ReportColumn('Total', type: ColType.currency, width: 15),
+        ReportColumn('Paid', type: ColType.currency, width: 15),
+        ReportColumn('Balance', type: ColType.currency, width: 15),
+        ReportColumn('Status', width: 12),
+      ],
+      rows: rows
+          .map((i) => [
+                i.invoiceNumber,
+                i.customerName,
+                i.villageName,
+                i.invoiceDate,
+                i.dueDate,
+                i.totalAmount,
+                i.paidAmount,
+                i.balanceAmount,
+                i.status,
+              ])
+          .toList(),
+      totals: [
+        null, null, null, null, null,
+        rows.fold<double>(0, (s, i) => s + i.totalAmount),
+        rows.fold<double>(0, (s, i) => s + i.paidAmount),
+        rows.fold<double>(0, (s, i) => s + i.balanceAmount),
+        null,
+      ],
+    );
   }
 
   @override
@@ -160,11 +189,17 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
             tooltip: 'New Invoice',
             onPressed: () => context.go('/payments/invoice/new'),
           ),
+        // Shortcut into the canonical Reports section (Payments & Collections);
+        // opens the same authoritative reports — no report lives here anymore.
         IconButton(
-          icon: const Icon(Icons.ios_share),
-          tooltip: 'Export CSV',
-          onPressed: () => analysisAsync.whenData(_exportCsv),
+          icon: const Icon(Icons.insights),
+          tooltip: 'Payment reports',
+          onPressed: () => context.go('/reports'),
         ),
+        ReportExportMenu(docBuilder: () {
+          final a = analysisAsync.valueOrNull;
+          return a == null ? null : _buildDoc(a);
+        }),
         IconButton(
           icon: const Icon(Icons.refresh),
           onPressed: () {
@@ -174,16 +209,7 @@ class _PaymentListScreenState extends ConsumerState<PaymentListScreen> {
       ],
       body: analysisAsync.when(
         data: (analysis) {
-          var filtered = analysis.invoices;
-          if (_query.isNotEmpty) {
-            filtered = filtered
-                .where((i) =>
-                    i.invoiceNumber.toLowerCase().contains(_query) ||
-                    i.customerName.toLowerCase().contains(_query) ||
-                    i.villageName.toLowerCase().contains(_query))
-                .toList();
-          }
-
+          final filtered = _filteredInvoices(analysis);
           bool hasFilter = filterState.toJson().isNotEmpty;
 
           return RefreshIndicator(

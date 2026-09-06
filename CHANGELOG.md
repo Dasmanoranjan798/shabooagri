@@ -91,6 +91,25 @@ the release they support. Format loosely follows
 - **Shared CSV exporter** (`report_export.dart`) builds exports from the exact
   rows a report displays. Permissions unchanged (Owner/Manager, backend-enforced).
 
+### Professional report exports (Excel .xlsx + PDF)
+- Extended the shared export layer (`report_export.dart`) into one `ReportDoc`
+  model driving **Excel (.xlsx)**, **PDF**, **Print** and **CSV** — screen ==
+  Excel == PDF == CSV, all from the same filtered dataset (no separate export
+  calculations). Added the `excel` package; PDF via existing `pdf`/`printing`.
+- Exports carry the company header (name, address, contact, GSTIN from the
+  existing `companyProfileProvider`), report title, applied filters, generated
+  timestamp; professional tables with typed columns (currency/number/date),
+  right-aligned amounts, totals, repeated headings, page numbers, and landscape
+  for wide reports. Dynamic filenames (`ShabooAgri_<Report>_<date>.xlsx/pdf`).
+- Embedded **DejaVu Sans** (bundled asset) into PDFs so the ₹ rupee sign and
+  other Unicode glyphs render (the default PDF Helvetica cannot).
+- Surfaced the backend's existing `from`/`to` filters on the Driver & Machine
+  reports. A shared `appliedPaymentFilters` summary feeds Payments exports.
+- Wired to: Business Summary, Payments/Transactions, Customer Outstanding,
+  Payment Methods, Collections, Overdue, Payment Analytics, Driver Work &
+  Payment, Machine Utilization, Maintenance, Expense, Fuel. No new report APIs,
+  calculations, or screens; deferred reports remain deferred.
+
 ### Added / Changed — Job Execution V2 (backend, Pass 1)
 - **Corrected resource occupancy to WORKING-only.** The earlier fix treated
   WORKING *and* PAUSED as occupying a Machine/Driver; for ShabooAgri a PAUSED

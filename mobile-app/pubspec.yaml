@@ -43,6 +43,7 @@ dependencies:
   pdf: ^3.11.1
   printing: ^5.13.4
   share_plus: ^10.1.4
+  excel: ^4.0.6
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -75,6 +76,12 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Unicode-capable font (incl. the ₹ rupee sign) embedded into generated PDF
+  # report exports — the default PDF Helvetica has no Unicode support.
+  assets:
+    - assets/fonts/DejaVuSans.ttf
+    - assets/fonts/DejaVuSans-Bold.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:
