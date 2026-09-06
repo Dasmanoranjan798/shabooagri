@@ -1,3 +1,3 @@
-cp mobile-app/build/app/outputs/flutter-apk/app-release.apk platform-frontend/public/downloads/shabooagri-v0.8.18.apk
-cp mobile-app/build/app/outputs/flutter-apk/app-release.apk platform-frontend/dist/downloads/shabooagri-v0.8.18.apk
-sed -i 's/v0.8.17/v0.8.18/g' platform-backend/src/app.ts
+cp mobile-app/build/app/outputs/flutter-apk/app-release.apk platform-frontend/public/downloads/shabooagri-v0.8.19.apk
+cp mobile-app/build/app/outputs/flutter-apk/app-release.apk platform-frontend/dist/downloads/shabooagri-v0.8.19.apk
+sed -i 's/v0.8.17/v0.8.19/g' platform-backend/src/app.ts

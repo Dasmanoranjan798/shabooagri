@@ -65,7 +65,7 @@ the release they support. Format loosely follows
 - **Pilot data:** the 8 test `customer_advances` rows were cleared (owner
   authorized; backup CSV in `backend/backups/`).
 
-## [Unreleased]
+## [0.8.19+32] - 2026-09-06
 
 ### Reports consolidation — one canonical Reports hub
 - **Single Reports section.** `/reports` is now a categorized hub (Overview,
@@ -109,6 +109,8 @@ the release they support. Format loosely follows
   Payment Methods, Collections, Overdue, Payment Analytics, Driver Work &
   Payment, Machine Utilization, Maintenance, Expense, Fuel. No new report APIs,
   calculations, or screens; deferred reports remain deferred.
+
+## [Unreleased]
 
 ### Added / Changed — Job Execution V2 (backend, Pass 1)
 - **Corrected resource occupancy to WORKING-only.** The earlier fix treated

@@ -464,3 +464,41 @@ This concludes the Flutter parity implementation. The app is fully built, tested
 - **Navigation:** Payments is now an expandable side-menu module (drawer + desktop sidebar) with dedicated routes/screens — Payments, Payment Methods, Customer Outstanding, Day-wise Collections, Overdue, Analytics — each reusing the existing `invoicesAnalysisProvider` (no new API/DB). New `/payments/*` routes declared before `:id`. Nav audit: module→route mapping was already correct; the "clicks open Payments" symptom was the reports having no destinations of their own.
 - **Release steps:** pubspec → 0.8.18+31; `/api/app-version` → 0.8.18/build 31; Download page → v0.8.18 APK + What's New; CHANGELOG updated. Production-signed APK (`CN=ShabooAgri`) built + copied to public/ & dist/ downloads; platform-frontend rebuilt; platform-backend recompiled + PM2-restarted. Verified live: app-version endpoint, marketing bundle, and 200-OK 69MB APK download. `flutter analyze` clean; 112 tests pass (5 desktop goldens regenerated for the Payments expand chevron).
 - **Standing gap (unchanged):** physical-Android acceptance still pending (no device in build env).
+
+---
+
+## Release v0.8.19+32 — canonical Reports hub + professional Excel/PDF exports (2026-09-06)
+
+**Shipped & deployed live.**
+
+- **Reports consolidation (commit 900fb61):** one canonical `/reports` hub with
+  categorized reports that open directly (no intermediate operational-reports
+  hop); Payments reverted to a plain operational transaction module (report
+  submenu removed); legacy report routes redirected to canonical `/reports/*`.
+- **Professional exports (commit dca05e6):** one shared `report_export.dart`
+  (`ReportDoc`/`ReportSection`) drives Excel (.xlsx), PDF, Print and CSV from the
+  SAME filtered data each report shows. Company header, filters, timestamp,
+  typed columns (currency/number/date), totals, repeated headings, page numbers,
+  landscape for wide reports, dynamic filenames. Embedded DejaVu Sans so ₹ and
+  other Unicode render in PDF. Business Summary exports three typed sections.
+  Added `excel` dep. No new report APIs/calculations; deferred reports deferred.
+- **Release steps:** pubspec → 0.8.19+32; `/api/app-version` → 0.8.19/32;
+  Download page → v0.8.19 APK + What's New. Production-signed APK
+  (`CN=ShabooAgri`, 75.2MB, DejaVu fonts bundled) copied to public/ & dist/
+  downloads; platform-frontend rebuilt; platform-backend recompiled +
+  PM2-restarted. Verified live: app-version 0.8.19+32, marketing bundle v0.8.19,
+  APK 200 (75.2MB), operational backend :4000 /health 200, marketing site 200.
+- **Standing gap (unchanged):** physical-Android acceptance still pending (no
+  device); Windows/macOS/iOS not built on this Linux host (Android-only).
+
+---
+
+## Release v0.8.19+32 — canonical Reports hub + professional Excel/PDF exports (2026-09-06)
+
+**Shipped & deployed live.**
+
+- **Reports consolidation:** one canonical `/reports` hub organizing every genuinely-backed report by category (Overview, Payments & Collections, Machines, Drivers & Employees, Expenses, Fuel); each report opens directly. Payments reverted to a plain operational transaction module (its expandable report submenu removed); the old `/reports → operational` intermediate hop removed. Legacy routes redirected to canonical ones. No new report APIs/calculations/queries; deferred reports (P&L, cash flow, profitability, operating cost, fuel efficiency, attendance, payroll) stay deferred.
+- **Professional exports:** one shared `report_export.dart` (`ReportDoc`/`ReportSection`) drives Excel (.xlsx), PDF, Print and CSV from the SAME filtered data each report shows (screen == Excel == PDF == CSV). Company header (name/address/contact/GSTIN from `companyProfileProvider`), title, applied filters, timestamp; typed columns (currency/number/date), totals, repeated headings, page numbers, landscape for wide reports; dynamic filenames. Added `excel` dep; embedded DejaVu Sans so ₹ renders in PDFs (default Helvetica can't). Business Summary export uses three typed sections (Financial / Operational / Income).
+- **Two feature commits** (900fb61 consolidation, dca05e6 exports) + release-shim commit. `flutter analyze` clean; **116 tests pass** (incl. new `report_export_test.dart` validating xlsx/pdf bytes).
+- **Release steps:** pubspec → 0.8.19+32; `/api/app-version` → 0.8.19/32; Download page → v0.8.19 APK + What's New. Production-signed APK (`CN=ShabooAgri`, 75.2MB incl. fonts) copied to public/ + dist/ downloads; platform-frontend rebuilt; platform-backend recompiled + PM2-restarted. Verified live: app-version endpoint, marketing bundle (v0.8.19), 200-OK APK, operational backend :4000 /health 200, marketing site 200.
+- **Standing gap (unchanged):** physical-Android acceptance still pending; Windows/macOS/iOS not buildable on this Linux host (remain at prior versions on the download page).
