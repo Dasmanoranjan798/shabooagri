@@ -502,3 +502,21 @@ This concludes the Flutter parity implementation. The app is fully built, tested
 - **Two feature commits** (900fb61 consolidation, dca05e6 exports) + release-shim commit. `flutter analyze` clean; **116 tests pass** (incl. new `report_export_test.dart` validating xlsx/pdf bytes).
 - **Release steps:** pubspec → 0.8.19+32; `/api/app-version` → 0.8.19/32; Download page → v0.8.19 APK + What's New. Production-signed APK (`CN=ShabooAgri`, 75.2MB incl. fonts) copied to public/ + dist/ downloads; platform-frontend rebuilt; platform-backend recompiled + PM2-restarted. Verified live: app-version endpoint, marketing bundle (v0.8.19), 200-OK APK, operational backend :4000 /health 200, marketing site 200.
 - **Standing gap (unchanged):** physical-Android acceptance still pending; Windows/macOS/iOS not buildable on this Linux host (remain at prior versions on the download page).
+
+---
+
+## Hotfix v0.8.20+33 — Farmer Profile finance/ops summaries (2026-09-06)
+
+**Shipped & deployed live.**
+
+- Fixed a pre-existing bug that broke the Financial Summary ("Validation failed")
+  and Operational Summary ("Something went wrong") on EVERY Farmer/Customer
+  Profile. Client/contract mismatches: finances sent `customerId` as a string to
+  `POST /invoices/filter` (validator requires an array) and read the wrong key —
+  now `{ customerId: [id] }` + authoritative server `summary`; ops read
+  `data['data']` from `GET /bookings` which returns a bare array — now reads the
+  array directly. No backend/API/calculation change.
+- flutter analyze clean; 116 tests pass. Production-signed APK (CN=ShabooAgri,
+  75.2MB) published to public/ + dist/ downloads; frontend rebuilt; platform
+  backend recompiled + PM2-restarted. Verified live: /api/app-version 0.8.20+33,
+  marketing bundle v0.8.20, APK 200, operational :4000 /health 200, site 200.

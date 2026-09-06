@@ -65,6 +65,18 @@ the release they support. Format loosely follows
 - **Pilot data:** the 8 test `customer_advances` rows were cleared (owner
   authorized; backup CSV in `backend/backups/`).
 
+## [0.8.20+33] - 2026-09-06
+
+### Fixed
+- **Farmer/Customer Profile summaries failed for every customer.** The Financial
+  Summary showed "Validation failed" and the Operational Summary showed
+  "Something went wrong". Two client/contract mismatches: the finances call sent
+  `customerId` as a bare string to `POST /invoices/filter` (the validator
+  requires an array) and read the wrong response key; the ops section read
+  `data['data']` from `GET /bookings`, which returns a bare array. Now sends
+  `{ customerId: [id] }` + uses the authoritative server `summary`, and reads the
+  bookings array directly. No backend/API/calculation change.
+
 ## [0.8.19+32] - 2026-09-06
 
 ### Reports consolidation — one canonical Reports hub
