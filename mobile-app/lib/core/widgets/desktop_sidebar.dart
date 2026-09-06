@@ -41,18 +41,15 @@ class DesktopSidebar extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
                 for (final d in ownerNavDestinations)
-                  if (d.hasChildren)
-                    _NavGroup(destination: d, currentRoute: currentRoute)
-                  else
-                    _NavTile(
-                      destination: d,
-                      selected: isDestinationActive(d.route, currentRoute),
-                      onTap: () {
-                        if (!isDestinationActive(d.route, currentRoute)) {
-                          context.go(d.route);
-                        }
-                      },
-                    ),
+                  _NavTile(
+                    destination: d,
+                    selected: isDestinationActive(d.route, currentRoute),
+                    onTap: () {
+                      if (!isDestinationActive(d.route, currentRoute)) {
+                        context.go(d.route);
+                      }
+                    },
+                  ),
               ],
             ),
           ),
@@ -147,19 +144,15 @@ class _NavTile extends StatelessWidget {
   final NavDestination destination;
   final bool selected;
   final VoidCallback onTap;
-  final bool indented;
 
   const _NavTile(
-      {required this.destination,
-      required this.selected,
-      required this.onTap,
-      this.indented = false});
+      {required this.destination, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final primary = AppTheme.primary;
     return Padding(
-      padding: EdgeInsets.only(left: indented ? 24 : 8, right: 8, top: 2, bottom: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: Material(
         color: selected ? primary.withValues(alpha: 0.10) : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
@@ -167,11 +160,11 @@ class _NavTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           onTap: onTap,
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: indented ? 9 : 11),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
             child: Row(
               children: [
                 Icon(destination.icon,
-                    size: indented ? 18 : 20,
+                    size: 20,
                     color: selected ? primary : AppTheme.textMuted),
                 const SizedBox(width: 14),
                 Expanded(
@@ -179,7 +172,7 @@ class _NavTile extends StatelessWidget {
                     destination.label,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: indented ? 13 : 14,
+                      fontSize: 14,
                       fontWeight:
                           selected ? FontWeight.w600 : FontWeight.w500,
                       color: selected ? primary : null,
@@ -191,91 +184,6 @@ class _NavTile extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// An expandable module (e.g. Payments) whose children each navigate to their
-/// own route. The group starts open when the current route is inside it, so the
-/// active child is visible; the header toggles open/closed.
-class _NavGroup extends StatefulWidget {
-  final NavDestination destination;
-  final String currentRoute;
-
-  const _NavGroup({required this.destination, required this.currentRoute});
-
-  @override
-  State<_NavGroup> createState() => _NavGroupState();
-}
-
-class _NavGroupState extends State<_NavGroup> {
-  late bool _open =
-      isDestinationActive(widget.destination.route, widget.currentRoute);
-
-  @override
-  void didUpdateWidget(_NavGroup old) {
-    super.didUpdateWidget(old);
-    // Auto-open when navigation moves into this module.
-    if (isDestinationActive(widget.destination.route, widget.currentRoute)) {
-      _open = true;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final primary = AppTheme.primary;
-    final parentActive =
-        isDestinationActive(widget.destination.route, widget.currentRoute);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          child: Material(
-            color: parentActive ? primary.withValues(alpha: 0.10) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () => setState(() => _open = !_open),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                child: Row(
-                  children: [
-                    Icon(widget.destination.icon,
-                        size: 20, color: parentActive ? primary : AppTheme.textMuted),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Text(
-                        widget.destination.label,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: parentActive ? FontWeight.w600 : FontWeight.w500,
-                          color: parentActive ? primary : null,
-                        ),
-                      ),
-                    ),
-                    Icon(_open ? Icons.expand_less : Icons.expand_more,
-                        size: 20, color: AppTheme.textMuted),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        if (_open)
-          for (final child in widget.destination.children)
-            _NavTile(
-              destination: child,
-              indented: true,
-              selected: isLeafActive(child.route, widget.currentRoute),
-              onTap: () {
-                if (!isLeafActive(child.route, widget.currentRoute)) {
-                  context.go(child.route);
-                }
-              },
-            ),
-      ],
     );
   }
 }

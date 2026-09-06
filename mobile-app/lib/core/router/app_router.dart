@@ -36,8 +36,9 @@ import '../../features/payments/presentation/new_invoice_screen.dart';
 import '../../features/payments/presentation/payment_detail_screen.dart';
 import '../../features/payments/presentation/payment_list_screen.dart';
 import '../../features/payments/presentation/payment_reports_screens.dart';
+import '../../features/reports/presentation/reports_hub_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
-import '../../features/reports/presentation/operational_reports_screen.dart';
+import '../../features/reports/presentation/operational_report_screens.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/setup/presentation/setup_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
@@ -213,30 +214,16 @@ GoRouter buildAppRouter(String initialLocation) {
             path: 'invoice/new',
             builder: (context, state) => const NewInvoiceScreen(),
           ),
-          // Payments module reports — each its own dedicated screen (no longer
-          // stacked at the bottom of the transaction list). These single-segment
-          // paths MUST be declared before ':id' so the invoice-detail param
-          // doesn't swallow them (e.g. treat "overdue" as an invoice id).
-          GoRoute(
-            path: 'methods',
-            builder: (context, state) => const PaymentMethodsReportScreen(),
-          ),
-          GoRoute(
-            path: 'outstanding',
-            builder: (context, state) => const CustomerOutstandingReportScreen(),
-          ),
-          GoRoute(
-            path: 'collections',
-            builder: (context, state) => const DayWiseCollectionsReportScreen(),
-          ),
-          GoRoute(
-            path: 'overdue',
-            builder: (context, state) => const OverdueReportScreen(),
-          ),
-          GoRoute(
-            path: 'analytics',
-            builder: (context, state) => const PaymentsAnalyticsReportScreen(),
-          ),
+          // LEGACY report routes: the Payments report screens moved into the
+          // canonical Reports hub. These aliases redirect old installs/deep
+          // links to the single implementation under /reports/*. They MUST be
+          // declared before ':id' so the invoice-detail param doesn't swallow
+          // them (e.g. treat "overdue" as an invoice id).
+          GoRoute(path: 'methods', redirect: (_, _) => '/reports/payment-methods'),
+          GoRoute(path: 'outstanding', redirect: (_, _) => '/reports/outstanding'),
+          GoRoute(path: 'collections', redirect: (_, _) => '/reports/collections'),
+          GoRoute(path: 'overdue', redirect: (_, _) => '/reports/overdue'),
+          GoRoute(path: 'analytics', redirect: (_, _) => '/reports/payment-analytics'),
           GoRoute(
             path: ':id',
             builder: (context, state) => PaymentDetailScreen(invoiceId: state.pathParameters['id']!),
@@ -319,14 +306,24 @@ GoRouter buildAppRouter(String initialLocation) {
         path: '/fuel',
         builder: (context, state) => const FuelScreen(),
       ),
+      // The ONE canonical Reports section: the hub lists categories, and each
+      // report opens directly from its own sub-route.
       GoRoute(
         path: '/reports',
-        builder: (context, state) => const ReportsScreen(),
+        builder: (context, state) => const ReportsHubScreen(),
         routes: [
-          GoRoute(
-            path: 'operational',
-            builder: (context, state) => const OperationalReportsScreen(),
-          ),
+          GoRoute(path: 'summary', builder: (context, state) => const ReportsScreen()),
+          GoRoute(path: 'drivers', builder: (context, state) => const DriverWorkReportScreen()),
+          GoRoute(path: 'machines', builder: (context, state) => const MachineUtilizationReportScreen()),
+          GoRoute(path: 'maintenance', builder: (context, state) => const MaintenanceReportScreen()),
+          GoRoute(path: 'outstanding', builder: (context, state) => const CustomerOutstandingReportScreen()),
+          GoRoute(path: 'collections', builder: (context, state) => const DayWiseCollectionsReportScreen()),
+          GoRoute(path: 'payment-methods', builder: (context, state) => const PaymentMethodsReportScreen()),
+          GoRoute(path: 'overdue', builder: (context, state) => const OverdueReportScreen()),
+          GoRoute(path: 'payment-analytics', builder: (context, state) => const PaymentsAnalyticsReportScreen()),
+          // Legacy: the old intermediate "Operational Reports" screen is gone;
+          // its reports are now direct hub entries. Send old links to the hub.
+          GoRoute(path: 'operational', redirect: (_, _) => '/reports'),
         ],
       ),
     ],

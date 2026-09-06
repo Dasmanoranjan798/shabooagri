@@ -67,6 +67,30 @@ the release they support. Format loosely follows
 
 ## [Unreleased]
 
+### Reports consolidation — one canonical Reports hub
+- **Single Reports section.** `/reports` is now a categorized hub (Overview,
+  Payments & Collections, Machines, Drivers & Employees, Expenses, Fuel) where
+  every report opens directly — no more `/reports` → button → operational-reports
+  → tab hop.
+- **Payments report submenu removed.** Payments reverts to the operational
+  transaction module (flat sidebar entry). Its former report children
+  (Payment Methods, Customer Outstanding, Collections, Overdue, Analytics) now
+  live under **Reports → Payments & Collections**, reusing the same
+  `invoicesAnalysisProvider` / `POST /invoices/filter` implementation. A single
+  "Payment reports" shortcut remains in Payments and opens the canonical hub.
+- **Operational reports promoted.** The Drivers / Machines / Maintenance tabs
+  became direct hub entries (Driver Work & Payment, Machine Utilization/Hours,
+  Maintenance/Due), reusing `/reports/drivers|machines|machine-maintenance`. The
+  backend's existing `from`/`to` date filters are now surfaced in the UI.
+- **No new backend, calculations, queries, or duplicate screens.** All reports
+  reuse existing authoritative endpoints. Deferred (no backing data model, not
+  built): P&L, Cash Flow, profitability, operating cost, fuel efficiency, driver
+  attendance, employee payroll.
+- **Legacy routes redirected** to the canonical ones (`/payments/methods` →
+  `/reports/payment-methods`, …; `/reports/operational` → `/reports`).
+- **Shared CSV exporter** (`report_export.dart`) builds exports from the exact
+  rows a report displays. Permissions unchanged (Owner/Manager, backend-enforced).
+
 ### Added / Changed — Job Execution V2 (backend, Pass 1)
 - **Corrected resource occupancy to WORKING-only.** The earlier fix treated
   WORKING *and* PAUSED as occupying a Machine/Driver; for ShabooAgri a PAUSED
