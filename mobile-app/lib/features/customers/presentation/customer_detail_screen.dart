@@ -16,22 +16,27 @@ final customerDetailProvider = FutureProvider.family<Map<String, dynamic>, Strin
   return response.data as Map<String, dynamic>;
 });
 
-final customerInvoicesProvider = FutureProvider.family<List<dynamic>, String>((ref, customerId) async {
+/// Customer financial totals. Uses the authoritative `POST /invoices/filter`
+/// analytics `summary` (server-computed over ALL matching invoices — no client
+/// re-calc, no pagination truncation). NOTE: the endpoint's `customerId` filter
+/// expects an ARRAY of ids (`z.array(z.string())`); passing a bare string fails
+/// validation — that was the "Validation failed" bug on every farmer profile.
+final customerFinancialsProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, customerId) async {
   syncOn(ref, {SyncEntity.customer, SyncEntity.invoice, SyncEntity.payment});
   final dio = ref.watch(apiClientProvider);
   final response = await dio.post('/invoices/filter', data: {
-    'customerId': customerId,
-    'limit': 100,
+    'customerId': [customerId],
   });
-  return response.data['data'] as List<dynamic>;
+  return (response.data as Map<String, dynamic>)['summary'] as Map<String, dynamic>;
 });
 
 final customerBookingsProvider = FutureProvider.family<List<dynamic>, String>((ref, customerId) async {
   syncOn(ref, {SyncEntity.customer, SyncEntity.booking, SyncEntity.job});
   final dio = ref.watch(apiClientProvider);
-  // Using the list and filtering locally or if the API supports it
+  // `GET /bookings` returns a bare JSON array (not `{ data: [...] }`); indexing
+  // it with ['data'] threw — that was the "Something went wrong" ops bug.
   final response = await dio.get('/bookings');
-  final all = response.data['data'] as List;
+  final all = response.data as List;
   return all.where((b) => b['customerId'] == customerId).toList();
 });
 
@@ -43,7 +48,7 @@ class CustomerDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final customerAsync = ref.watch(customerDetailProvider(customerId));
-    final invoicesAsync = ref.watch(customerInvoicesProvider(customerId));
+    final invoicesAsync = ref.watch(customerFinancialsProvider(customerId));
     final bookingsAsync = ref.watch(customerBookingsProvider(customerId));
     final isDesktop = context.responsive.isDesktop;
 
@@ -104,15 +109,11 @@ class CustomerDetailScreen extends ConsumerWidget {
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textMuted)),
               const SizedBox(height: 8),
               invoicesAsync.when(
-                data: (invoices) {
-                  double totalBilled = 0;
-                  double totalPaid = 0;
-                  double totalOutstanding = 0;
-                  for (final inv in invoices) {
-                    totalBilled += (inv['totalAmount'] as num).toDouble();
-                    totalPaid += (inv['paidAmount'] as num).toDouble();
-                    totalOutstanding += (inv['balanceAmount'] as num).toDouble();
-                  }
+                data: (summary) {
+                  double n(String key) => (num.tryParse('${summary[key]}') ?? 0).toDouble();
+                  final totalBilled = n('totalInvoiced');
+                  final totalPaid = n('totalPaid');
+                  final totalOutstanding = n('totalOutstanding');
 
                   return Card(
                     margin: EdgeInsets.zero,

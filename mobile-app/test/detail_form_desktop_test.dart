@@ -87,7 +87,11 @@ void main() {
               'isActive': true,
               'village': 'Anandpur',
             }),
-        customerInvoicesProvider('c1').overrideWith((ref) async => []),
+        customerFinancialsProvider('c1').overrideWith((ref) async => {
+              'totalInvoiced': 0,
+              'totalPaid': 0,
+              'totalOutstanding': 0,
+            }),
         customerBookingsProvider('c1').overrideWith((ref) async => []),
       ],
     );
