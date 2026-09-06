@@ -3,11 +3,10 @@ import { Download, Info, CheckCircle2, Smartphone, Monitor, Apple } from "lucide
 import { MarketingLayout } from "../../components/MarketingLayout";
 
 const CHANGELOG = [
-  "Customer list at a glance: every farmer now shows their address, phone and outstanding balance right on the card — no need to open each one",
-  "Driver cards show worked hours and how much is still payable; open a driver to see a customer-by-customer work breakdown alongside earned, paid and remaining",
-  "Machine cards show real working hours and maintenance status (due / overdue); open a machine to see which customers its hours came from",
-  "Cleaner, faster screens: a compact search-and-add on every list, tidier invoice cards, and clearer, easier-to-read numbers on the dashboard",
-  "One consistent colour language for money across the whole app — green for money coming in (what customers owe you), red for money going out (what you owe drivers)",
+  "A clean, branded ShabooAgri opening screen when you launch the app",
+  "A quick personal welcome — “Hello, [your name]” with today’s date — before the app opens; the dashboard now goes straight to your key numbers with more room on screen",
+  "Payments now has its own menu: Payments, Payment Methods, Customer Outstanding, Day-wise Collections, Overdue and Analytics — each opens its own screen instead of being buried at the bottom of the payments list",
+  "Fixed menu navigation so every section reliably opens its own screen",
   "Performance & bug fixes",
 ];
 
@@ -66,13 +65,13 @@ export const DownloadAppPage: React.FC = () => {
             >
               <PlatformCard icon={Smartphone} name="Android">
                 <a
-                  href="/downloads/shabooagri-v0.8.17.apk"
-                  download="shabooagri-v0.8.17.apk"
+                  href="/downloads/shabooagri-v0.8.18.apk"
+                  download="shabooagri-v0.8.18.apk"
                   className="pf-btn pf-btn-primary"
                   style={{ textDecoration: "none", width: "100%" }}
                 >
                   <Download size={18} />
-                  APK (v0.8.17)
+                  APK (v0.8.18)
                 </a>
               </PlatformCard>
 
@@ -116,7 +115,7 @@ export const DownloadAppPage: React.FC = () => {
             <div className="pf-card" style={{ padding: 32 }}>
               <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: 18, display: "flex", alignItems: "center", gap: 10 }}>
                 <Info size={22} color="var(--color-primary)" />
-                What's New in v0.8.17
+                What's New in v0.8.18
               </h2>
               <ul style={{ paddingLeft: 22, margin: 0, color: "var(--color-text-secondary)", display: "flex", flexDirection: "column", gap: 9, fontSize: "var(--text-sm)", lineHeight: 1.6 }}>
                 {CHANGELOG.map((item) => (
@@ -134,7 +133,7 @@ export const DownloadAppPage: React.FC = () => {
                   borderLeft: "3px solid var(--color-primary)",
                 }}
               >
-                <strong>Updated 5 September 2026.</strong> Android is now v0.8.17. Windows and macOS are v0.8.16 (rebuild to follow); iOS is pending App&nbsp;Store / TestFlight submission.
+                <strong>Updated 6 September 2026.</strong> Android is now v0.8.18. Windows and macOS are v0.8.16 (rebuild to follow); iOS is pending App&nbsp;Store / TestFlight submission.
               </div>
             </div>
 

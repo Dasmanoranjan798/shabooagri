@@ -5,6 +5,37 @@ mobile app (`mobile-app/pubspec.yaml`); backend and web changes ship alongside
 the release they support. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.8.18+31] - 2026-09-06
+
+### Startup experience — branded splash + personalized welcome
+- **New branded `SplashScreen`** shown on cold start. It reuses the session
+  already resolved and seeded in `main()` (no second auth or user-data
+  mechanism) and routes onward: a restored session sees a short personalized
+  `Hello, {name}` + current-date welcome before its role home; an
+  unauthenticated device sees only a brief brand flash before the existing
+  setup/login flow. No artificial splash delay — `main()` resolves state before
+  the first frame. Role-independent (owner/manager/driver/farmer).
+- **Removed the in-screen greeting** (`Hello, {name}` + date) from the Dashboard,
+  Driver home, and Farmer/Customer portal — it now lives solely in the startup
+  welcome, so the Dashboard opens straight into its KPI cards with more vertical
+  workspace. KPIs, permissions, data sources and role behaviour are unchanged.
+
+### Navigation — expandable Payments menu with dedicated report routes
+- **Payments is now an expandable side-menu module** (mobile drawer + desktop
+  sidebar): Payments, Payment Methods, Customer Outstanding, Day-wise
+  Collections, Overdue, and Analytics are each a real route/screen instead of
+  being stacked at the bottom of the transaction list.
+- Five new `/payments/*` routes, declared before `:id` so the invoice-detail
+  param can't swallow them (invoice navigation uses UUIDs — no literal
+  collision). New report screens re-present the SAME `invoicesAnalysisProvider`
+  data — no new API, provider, calculation, or DB change.
+- Main Payments screen retitled **"Payments"** (was "Payments Analysis") and now
+  holds only the transaction list + its controls.
+- **Navigation audit:** every module already mapped to its own correct route (no
+  redirect / state restoration / index→route map); the "unrelated clicks open
+  Payments" symptom was the payment reports having no destinations of their own,
+  which the routes above resolve.
+
 ## [0.8.17+30] - 2026-09-05
 
 ### Operational UI/UX, information density & financial-status correction
